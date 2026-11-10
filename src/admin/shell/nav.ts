@@ -1,0 +1,36 @@
+import { Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import type { DB } from '@/shared/data/seed'
+import { minsLeft } from '@/shared/lib/fa'
+
+export type NavItem = { id: string; label: string; icon: LucideIcon; path: string; group: string; soon?: boolean; count?: (d: DB) => number }
+// منوی کناری (بخش ۵.۱). آیکون‌ها جایگزین موقت خانوادهٔ Magicoon هستند.
+export const NAV: NavItem[] = [
+  { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
+  { id: 'live', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
+  { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'فروش و عملیات', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious', 'order.awaiting_credit'].includes(o.status)).length },
+  { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'فروش و عملیات', count: (d) => d.partnerQueue.length },
+  { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'فروش و عملیات' },
+  { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'فروش و عملیات', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
+  { id: 'shipping', label: 'ارسال و لجستیک', icon: Truck, path: '/admin/shipping', group: 'فروش و عملیات' },
+  { id: 'print', label: 'چاپ و خروجی', icon: Printer, path: '/admin/print', group: 'فروش و عملیات' },
+  { id: 'returns', label: 'مرجوعی و گارانتی', icon: RotateCcw, path: '/admin/returns', group: 'فروش و عملیات', count: (d) => d.returns.filter((r) => r.status === 'return.inspecting').length + d.warranties.filter((w) => w.status === 'warranty.pending').length },
+  { id: 'customers', label: 'مشتریان', icon: Users, path: '/admin/customers', group: 'مشتری' },
+  { id: 'support', label: 'پشتیبانی', icon: Headphones, path: '/admin/support', group: 'مشتری', count: (d) => d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length },
+  { id: 'reviews', label: 'دیدگاه‌ها و پرسش‌ها', icon: MessageSquareText, path: '/admin/reviews', group: 'مشتری', count: (d) => d.reviews.filter((r) => r.status === 'review.pending').length },
+  { id: 'pricing', label: 'قیمت‌گذاری و تخفیف‌ها', icon: Tags, path: '/admin/pricing', group: 'درآمد' },
+  { id: 'channels', label: 'کانال‌های فروش', icon: Share2, path: '/admin/channels', group: 'درآمد' },
+  { id: 'finance', label: 'مالی', icon: CircleDollarSign, path: '/admin/finance', group: 'درآمد', count: (d) => d.txns.filter((t) => t.status === 'pay.unknown').length },
+  { id: 'content', label: 'محتوا و صفحات سایت', icon: FileText, path: '/admin/content', group: 'رشد' },
+  { id: 'seo', label: 'سئو', icon: Search, path: '/admin/seo', group: 'رشد' },
+  { id: 'marketing', label: 'مارکتینگ', icon: Megaphone, path: '/admin/marketing', group: 'رشد' },
+  { id: 'growth', label: 'رشد و آزمایش', icon: Rocket, path: '/admin/growth', group: 'رشد' },
+  { id: 'analytics', label: 'تحلیل و گزارش', icon: BarChart3, path: '/admin/analytics', group: 'رشد' },
+  { id: 'ai', label: 'هوش مصنوعی', icon: Bot, path: '/admin/ai', group: 'رشد' },
+  { id: 'branches', label: 'شعب', icon: Building2, path: '/admin/branches', group: 'سازمان' },
+  { id: 'sellers', label: 'فروشندگان', icon: Store, path: '/admin/sellers', group: 'سازمان', soon: true },
+  { id: 'team', label: 'تیم و دسترسی', icon: UsersRound, path: '/admin/team', group: 'سازمان' },
+  { id: 'rules', label: 'قوانین کسب‌وکار', icon: Scale, path: '/admin/rules', group: 'سازمان' },
+  { id: 'settings', label: 'تنظیمات و سیستم', icon: Settings, path: '/admin/settings', group: 'سازمان' },
+  { id: 'infra', label: 'زیرساخت و سرویس‌ها', icon: ServerCog, path: '/admin/infra', group: 'سازمان' },
+  { id: 'design', label: 'سیستم طراحی', icon: Palette, path: '/admin/design', group: 'سازمان' },
+]

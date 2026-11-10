@@ -5,6 +5,8 @@ import { makeSeed, type DB } from '../data/seed'
 const DB_KEY = 'ghanimat-demo-db-v1'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
+/** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
+const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* فقط در حافظه */ } }
 
 let db: DB = read<DB>(DB_KEY) ?? makeSeed()
 const dbSubs = new Set<() => void>()
@@ -16,12 +18,12 @@ export function mutate(fn: (d: DB) => void, log?: { action: string; target: stri
   fn(next)
   if (log) next.audit.unshift({ at: new Date().toISOString(), who: currentUser()?.name ?? 'سیستم', before: '-', after: '-', ai: false, ...log })
   db = next
-  localStorage.setItem(DB_KEY, JSON.stringify(db))
+  write(DB_KEY, db)
   dbSubs.forEach((f) => f())
 }
 /** برای Undo: عکس فوری از داده و تابع بازگردانی */
-export function snapshot() { const prev = db; return () => { db = prev; localStorage.setItem(DB_KEY, JSON.stringify(db)); dbSubs.forEach((f) => f()) } }
-export function resetDB() { db = makeSeed(); localStorage.setItem(DB_KEY, JSON.stringify(db)); dbSubs.forEach((f) => f()) }
+export function snapshot() { const prev = db; return () => { db = prev; write(DB_KEY, db); dbSubs.forEach((f) => f()) } }
+export function resetDB() { db = makeSeed(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
 
 // ───── نقش‌ها و حساب‌های نمونه (بخش ۱۸.۳) ─────
 export type Face = 'full' | 'simple' | 'partner'
@@ -61,7 +63,7 @@ export const getSession = () => session
 export function useSession(): Session { return useSyncExternalStore(subS, getSession) }
 export function setSession(patch: Partial<Session>) {
   session = { ...session, ...patch }
-  localStorage.setItem(S_KEY, JSON.stringify(session))
+  write(S_KEY, session)
   applyTheme()
   sSubs.forEach((f) => f())
 }

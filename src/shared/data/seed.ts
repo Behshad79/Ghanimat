@@ -5,13 +5,15 @@ const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; allocReason: string }
-export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean
+export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; covered: string; notCovered: string }
+export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
 export type Order = { id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
+import { makeCxEntities, makeCxSettings } from './cx'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -235,7 +237,8 @@ export const makeSeed = () => ({
     { id: 'mahabad', name: 'انبار مهاباد', owner: 'شریک انبار مهاباد', province: 'آذربایجان غربی', city: 'مهاباد', district: 'محلهٔ نمونه', street: 'خیابان اصلی نمونه', alley: 'کوچهٔ نمونه', plaque: '۰', postalCode: '5900000001', phone: '044-00000001', manager: 'کاک هیوا', services: 'فقط ارسال پستی', assumed: true },
   ],
   carrierLogos: { post: '', tipax: '' } as Record<string, string>,
-  entities: makeEntities(),
+  entities: { ...makeEntities(), ...makeCxEntities() },
+  cx: makeCxSettings(),
   settleDue: {} as Record<string, string>,
   settlements: { 'GH-10458': { amount: 29850000, at: '2026-10-26T10:00:00+03:30', ref: 'MLT-77120' }, 'GH-10412': { amount: 29205000, at: ago(60 * 24 * 27), ref: 'ZP-55021' } } as Record<string, { amount: number; at: string; ref: string }>,
   packagingCost: 25000,

@@ -9,6 +9,7 @@ import { fa, rel } from '@/shared/lib/fa'
 import type { Link, Site } from '@/shared/data/site'
 import { REGION_LABEL, StorePreview, type Region } from '@/storefront/Preview'
 
+export const HOME_KINDS = ['هیرو', 'ردیف دسته‌ها', 'کاروسل قانون‌محور', 'کاروسل دستی', 'کاروسل شخصی‌سازی‌شده', 'کاروسل دسته‌ای', 'تأمین کالا', 'برندها', 'اعتماد', 'وبلاگ', 'نظرات', 'سؤالات متداول', 'اینستاگرام', 'خبرنامه', 'بنر', 'بلوک متنی']
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
 const set = (fn: (s: Site) => void) => mutate((x) => fn(x.site))
 const swap = <T,>(a: T[], i: number, j: number) => { if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]] }
@@ -87,18 +88,23 @@ export function SiteEditor() {
         <Group title="رفتار و دکمه‌ها">
           <Sw label="سربرگ چسبان هنگام اسکرول" on={s.header.sticky} onChange={(v) => set((x) => { x.header.sticky = v })} />
           <Sw label="دکمهٔ علاقه‌مندی‌ها" on={s.header.showWishlist} onChange={(v) => set((x) => { x.header.showWishlist = v })} />
+          <Sw label="زنگ اعلان‌ها (کاربر واردشده)" on={s.header.showNotifications} onChange={(v) => set((x) => { x.header.showNotifications = v })} />
+          <Sw label="دکمهٔ شناور دستیار خرید AI" on={s.header.showAiButton} onChange={(v) => set((x) => { x.header.showAiButton = v })} />
+          <Sw label="انتخاب آدرس در سربرگ" on={s.header.showAddress} onChange={(v) => set((x) => { x.header.showAddress = v })} />
+          {s.header.showAddress && <Input aria-label="متن انتخاب آدرس" value={s.header.addressLabel} onChange={(e) => set((x) => { x.header.addressLabel = e.target.value })} />}
           <Sw label="نمایش تلفن پشتیبانی" on={s.header.showPhone} onChange={(v) => set((x) => { x.header.showPhone = v })} />
           {s.header.showPhone && <Input aria-label="تلفن" className="ltr text-left" value={s.header.phone} onChange={(e) => set((x) => { x.header.phone = e.target.value })} />}
         </Group>
         <Group title="لینک‌های بالای سربرگ" desc="فقط در دسکتاپ نمایش داده می‌شوند."><Links get={(x) => x.header.utility} addLabel="افزودن لینک" /></Group>
       </>
-      case 'menu': return <Group title="منوی اصلی" desc="ترتیب، نام، نشانی، برچسب (مثل «جدید») و زیرمنوی هر آیتم. در موبایل همین منو در کشوی کناری نمایش داده می‌شود."><Links get={(x) => x.menu} nested badge addLabel="افزودن آیتم منو" />
+      case 'menu': return <Group title="منوی اصلی" desc="ترتیب، نام، نشانی، برچسب (مثل «جدید») و زیرمنوی هر آیتم. آیتمی که «مگامنو» دارد زیرمنویش را ستونی و با دسته‌ها نشان می‌دهد. در موبایل همین منو در کشوی کناری است.">
+        {s.menu.map((m, i) => <Sw key={m.id} label={`مگامنو برای «${m.label}»`} on={!!(m as { mega?: boolean }).mega} onChange={(v) => set((x) => { (x.menu[i] as { mega?: boolean }).mega = v })} />)}<Links get={(x) => x.menu} nested badge addLabel="افزودن آیتم منو" />
         <Button size="sm" onClick={() => set((x) => { const have = new Set(x.menu.map((m) => m.to)); (d.entities.categories ?? []).filter((c) => c.active && !have.has(`/c/${c.slug}`)).forEach((c) => x.menu.push({ id: uid('m'), label: c.name, to: `/c/${c.slug}`, children: [] })) })}>افزودن خودکار دسته‌های فعال</Button></Group>
       case 'home': return <Group title="بلوک‌های صفحهٔ خانه" desc="ترتیب، عنوان و نوع هر بلوک. کاروسل‌ها از کارت محصول همین سایت استفاده می‌کنند.">
         {blocks.map((b, i) => <RowCtl key={b.id} i={i} n={blocks.length} hidden={!b.active} onHide={() => mutate((x) => { const t = x.entities.homeBlocks.find((y) => y.id === b.id)!; t.active = !t.active })}
           onMove={(dir) => mutate((x) => { const j = i + dir; if (j < 0 || j >= blocks.length) return; const A = x.entities.homeBlocks.find((y) => y.id === blocks[i].id)!; const B = x.entities.homeBlocks.find((y) => y.id === blocks[j].id)!; [A.order, B.order] = [B.order, A.order] })}
           onDel={async () => { if (await confirm({ title: `بلوک «${b.name}» حذف شود؟`, body: 'بلوک از صفحهٔ خانه برداشته می‌شود.', danger: true, confirm: 'حذف' })) mutate((x) => { x.entities.homeBlocks = x.entities.homeBlocks.filter((y) => y.id !== b.id) }, { action: 'حذف بلوک صفحهٔ خانه', target: b.name }) }}>
-          <div className="flex gap-1.5"><Input aria-label="نام" className="h-8 w-28 text-12" value={b.name} onChange={(e) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.name = e.target.value })} /><Select className="h-8 flex-1 text-12" value={b.kind} onChange={(v) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.kind = v })} options={['هیرو', 'ردیف دسته‌ها', 'کاروسل قانون‌محور', 'کاروسل دستی', 'بنر', 'بلوک متنی']} /></div>
+          <div className="flex gap-1.5"><Input aria-label="نام" className="h-8 w-28 text-12" value={b.name} onChange={(e) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.name = e.target.value })} /><Select className="h-8 flex-1 text-12" value={b.kind} onChange={(v) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.kind = v })} options={HOME_KINDS} /></div>
           <Input aria-label="عنوان" className="h-8 text-12" value={b.title} onChange={(e) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.title = e.target.value })} /></RowCtl>)}
         <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => mutate((x) => { x.entities.homeBlocks.push({ id: uid('hb'), name: 'بلوک تازه', kind: 'کاروسل دستی', title: 'پیشنهاد ما', order: Math.max(0, ...x.entities.homeBlocks.map((y) => y.order)) + 1, active: true }) }, { action: 'افزودن بلوک صفحهٔ خانه', target: 'بلوک تازه' })}>افزودن بلوک</Button>
         <p className="text-11 text-t2">بلوک‌های صفحهٔ خانه بلافاصله منتشر می‌شوند. زمان‌بندی و نسخه‌ها در «محتوا و صفحات سایت» است.</p>
@@ -139,9 +145,11 @@ export function SiteEditor() {
           <Field label="ساعت پاسخ‌گویی"><Input value={s.footer.hours} onChange={(e) => set((x) => { x.footer.hours = e.target.value })} /></Field>
           <Field label="نشانی"><Input value={s.footer.address} onChange={(e) => set((x) => { x.footer.address = e.target.value })} /></Field>
         </Group>
+        <Group title="نوار اعتماد بالای فوتر">{s.footer.strip.map((it, i) => <RowCtl key={it.id} i={i} n={s.footer.strip.length} hidden={!it.on} onHide={() => set((x) => { x.footer.strip[i].on = !it.on })} onMove={(dir) => set((x) => swap(x.footer.strip, i, i + dir))} onDel={() => set((x) => { x.footer.strip.splice(i, 1) })}><Input aria-label="متن" className="h-8 text-12" value={it.text} onChange={(e) => set((x) => { x.footer.strip[i].text = e.target.value })} /></RowCtl>)}
+          <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.footer.strip.push({ id: uid('st'), text: 'مزیت تازه', on: true }) })}>افزودن مزیت</Button></Group>
         <Group title="ستون‌های لینک">{s.footer.columns.map((c, i) => <RowCtl key={c.id} i={i} n={s.footer.columns.length} onMove={(dir) => set((x) => swap(x.footer.columns, i, i + dir))} onDel={async () => { if (await confirm({ title: `ستون «${c.title}» حذف شود؟`, body: 'لینک‌های این ستون هم حذف می‌شوند.', danger: true, confirm: 'حذف' })) set((x) => { x.footer.columns.splice(i, 1) }) }}>
           <Input aria-label="عنوان ستون" className="h-8 text-12 font-semibold" value={c.title} onChange={(e) => set((x) => { x.footer.columns[i].title = e.target.value })} /><Links get={(x) => x.footer.columns[i].links} addLabel="افزودن لینک" /></RowCtl>)}
-          {s.footer.columns.length < 4 && <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.footer.columns.push({ id: uid('f'), title: 'ستون تازه', links: [] }) })}>افزودن ستون</Button>}</Group>
+          {s.footer.columns.length < 5 && <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.footer.columns.push({ id: uid('f'), title: 'ستون تازه', links: [] }) })}>افزودن ستون</Button>}</Group>
         <Group title="شبکه‌های اجتماعی">{s.footer.socials.map((so, i) => <RowCtl key={so.id} i={i} n={s.footer.socials.length} hidden={!so.on} onHide={() => set((x) => { x.footer.socials[i].on = !so.on })} onMove={(dir) => set((x) => swap(x.footer.socials, i, i + dir))} onDel={() => set((x) => { x.footer.socials.splice(i, 1) })}>
           <div className="flex gap-1.5"><Input aria-label="شبکه" className="h-8 w-24 text-12" value={so.kind} onChange={(e) => set((x) => { x.footer.socials[i].kind = e.target.value })} /><Input aria-label="نشانی" className="ltr h-8 flex-1 text-left text-11" value={so.url} onChange={(e) => set((x) => { x.footer.socials[i].url = e.target.value })} /></div></RowCtl>)}
           <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.footer.socials.push({ id: uid('s'), kind: 'شبکهٔ تازه', url: '', on: true }) })}>افزودن شبکه</Button></Group>
@@ -151,6 +159,9 @@ export function SiteEditor() {
           <Sw label="نشان اتحادیه" on={s.footer.trust.union} onChange={(v) => set((x) => { x.footer.trust.union = v })} />
           <Sw label="عضویت در خبرنامه" on={s.footer.newsletter} onChange={(v) => set((x) => { x.footer.newsletter = v })} />
           {s.footer.newsletter && <Input aria-label="متن خبرنامه" value={s.footer.newsletterText} onChange={(e) => set((x) => { x.footer.newsletterText = e.target.value })} />}
+          <Field label="عنوان متن سئوی پایین صفحه"><Input value={s.footer.seoTitle} onChange={(e) => set((x) => { x.footer.seoTitle = e.target.value })} /></Field>
+          <Field label="متن سئو (با «مشاهدهٔ بیشتر» باز می‌شود)"><Textarea rows={4} value={s.footer.seoText} onChange={(e) => set((x) => { x.footer.seoText = e.target.value })} /></Field>
+          <Sw label="دکمهٔ بازگشت به بالا" on={s.footer.backToTop} onChange={(v) => set((x) => { x.footer.backToTop = v })} />
           <Field label="متن کپی‌رایت"><Input value={s.footer.copyright} onChange={(e) => set((x) => { x.footer.copyright = e.target.value })} /></Field>
         </Group>
       </>

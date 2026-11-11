@@ -1,4 +1,4 @@
-import { Trash2, PanelsTopLeft, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -16,11 +16,13 @@ export const NAV: NavItem[] = [
   { id: 'returns', label: 'مرجوعی و گارانتی', icon: RotateCcw, path: '/admin/returns', group: 'فروش و عملیات', count: (d) => d.returns.filter((r) => r.status === 'return.inspecting').length + d.warranties.filter((w) => w.status === 'warranty.pending').length },
   { id: 'customers', label: 'مشتریان', icon: Users, path: '/admin/customers', group: 'مشتری' },
   { id: 'support', label: 'پشتیبانی', icon: Headphones, path: '/admin/support', group: 'مشتری', count: (d) => d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length },
+  { id: 'requests', label: 'درخواست‌های مشتری', icon: Inbox, path: '/admin/requests', group: 'مشتری', count: (d) => ['contactMessages', 'productReports', 'branchInquiries', 'cancelRequests', 'withdrawals'].reduce((a, k) => a + (d.entities[k] ?? []).filter((r) => /جدید|انتظار|بررسی/.test(String(r.status))).length, 0) },
   { id: 'reviews', label: 'دیدگاه‌ها و پرسش‌ها', icon: MessageSquareText, path: '/admin/reviews', group: 'مشتری', count: (d) => d.reviews.filter((r) => r.status === 'review.pending').length },
   { id: 'pricing', label: 'قیمت‌گذاری و تخفیف‌ها', icon: Tags, path: '/admin/pricing', group: 'درآمد' },
   { id: 'channels', label: 'کانال‌های فروش', icon: Share2, path: '/admin/channels', group: 'درآمد' },
   { id: 'finance', label: 'مالی', icon: CircleDollarSign, path: '/admin/finance', group: 'درآمد', count: (d) => d.txns.filter((t) => t.status === 'pay.unknown').length },
   { id: 'site', label: 'ویرایش سایت', icon: PanelsTopLeft, path: '/admin/site', group: 'رشد', count: (d) => (JSON.stringify(d.site) !== JSON.stringify(d.sitePublished) ? 1 : 0) },
+  { id: 'experience', label: 'تنظیمات سایت و پنل مشتری', icon: SlidersHorizontal, path: '/admin/experience', group: 'رشد' },
   { id: 'content', label: 'محتوا و صفحات سایت', icon: FileText, path: '/admin/content', group: 'رشد' },
   { id: 'seo', label: 'سئو', icon: Search, path: '/admin/seo', group: 'رشد' },
   { id: 'marketing', label: 'مارکتینگ', icon: Megaphone, path: '/admin/marketing', group: 'رشد' },

@@ -177,5 +177,5 @@ button:disabled { cursor: not-allowed; }
 .bin-mid { background: var(--surface); border-color: color-mix(in oklab, var(--brand) 35%, var(--border)); }
 .bin-high { background: var(--warning-bg); border-color: color-mix(in oklab, var(--warning) 45%, transparent); }
 .bin-full { background: repeating-linear-gradient(135deg, var(--neutral-bg) 0 6px, var(--surface) 6px 12px); border-color: var(--border); color: var(--text-2); }
-.bin-blocked { background: repeating-linear-gradient(135deg, var(--danger-bg) 0 6px, var(--surface) 6px 12px); border-color: color-mix(in oklab, var(--danger) 35%, transparent); color: var(--danger); }
+.bin-blocked { background: repeating-linear-gradient(135deg, var(--danger-bg) 0 6px, var(--surface) 6px 12px); border-color: color-mix(in oklab, var(--danger) 45%, transparent); color: var(--text-1); }
 .bin-swatch { border: 1px solid var(--border); }

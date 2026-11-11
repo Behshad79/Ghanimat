@@ -11,6 +11,8 @@ import { PrintCenter } from './admin/print/PrintCenter'
 import { Customers, Reviews, Support } from './admin/pages/People'
 import { Channels, Finance, Pricing } from './admin/pages/Revenue'
 import { SiteEditor } from './admin/site/SiteEditor'
+import { CustomerRequests } from './admin/cx/Requests'
+import { CxSettingsPage } from './admin/cx/CxSettings'
 import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo, Supply } from './admin/pages/Insights'
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
@@ -54,6 +56,8 @@ export function App() {
               <Route path="finance" element={<Finance />} />
               <Route path="content" element={<Content />} />
               <Route path="site" element={<SiteEditor />} />
+              <Route path="requests" element={<CustomerRequests />} />
+              <Route path="experience" element={<CxSettingsPage />} />
               <Route path="seo" element={<Seo />} />
               <Route path="marketing" element={<Marketing />} />
               <Route path="growth" element={<Growth />} />

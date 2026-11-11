@@ -42,6 +42,7 @@ export function StorePreview({ site, device = 'desktop', page = 'home', active, 
         <div className="flex items-center gap-3 px-4 py-3">
           {mob && <button onClick={() => setDrawer(true)} aria-label="منو"><Menu size={20} /></button>}
           <img src={site.header.logo === 'mark' ? './brand/logo-mark.png' : './brand/logo-full.png'} alt="غنیمت" className={site.header.logo === 'mark' ? 'h-8' : 'h-7'} onError={(e) => ((e.currentTarget.src = './brand/logo-full.png'))} />
+          {!mob && site.header.showAddress && <span className="flex items-center gap-1 text-11 text-[#5a5e78]"><Truck size={13} />{site.header.addressLabel}</span>}
           {!mob && <div className="mx-4 flex h-10 flex-1 items-center gap-2 rounded-xl bg-[#f2f3f7] px-3 text-12 text-[#5a5e78]"><Search size={15} />{site.header.search}</div>}
           <div className="mr-auto flex items-center gap-2">
             {!mob && <span className="flex h-9 items-center gap-1.5 rounded-xl border border-[#e6e8f0] px-3 text-12 font-medium"><UserRound size={15} />{site.header.login}</span>}
@@ -62,9 +63,19 @@ export function StorePreview({ site, device = 'desktop', page = 'home', active, 
 
       {page === 'home' ? <R id="home"><div className="space-y-4 p-4">
         {blocks.map((b) => {
+          const E = d.entities
+          const head = <div className="mb-2 flex items-center justify-between"><p className="font-bold">{b.title}</p><span className="text-12 text-[#0000ff]">مشاهدهٔ همه</span></div>
           if (b.kind === 'هیرو') return <div key={b.id} className="relative overflow-hidden rounded-2xl bg-[#10123d] p-6 text-white"><span className="absolute -left-10 -top-10 size-40 rounded-full bg-[#0000ff]/50 blur-2xl" /><p className="relative text-11 text-[#ffc24b]">کالای اصل وارداتی</p><p className={cx('relative mt-1 font-bold', mob ? 'text-16' : 'text-22')}>{b.title}</p><span className="relative mt-3 inline-flex h-9 items-center rounded-xl bg-[#0000ff] px-4 text-12 font-medium">مشاهدهٔ کالاها</span></div>
           if (b.kind === 'ردیف دسته‌ها') return <div key={b.id}><p className="mb-2 font-bold">{b.title}</p><div className="flex gap-2 overflow-x-auto">{(d.entities.categories ?? []).filter((c) => c.active).map((c) => <span key={c.id} className="shrink-0 rounded-xl bg-white px-3 py-2 text-12 font-medium shadow-sm">{c.name}</span>)}</div></div>
-          if (b.kind?.includes('کاروسل')) return <div key={b.id}><div className="mb-2 flex items-center justify-between"><p className="font-bold">{b.title}</p><span className="text-12 text-[#0000ff]">مشاهدهٔ همه</span></div><R id="card">{grid(prods.slice(0, cols))}</R></div>
+          if (b.kind?.includes('کاروسل')) return <div key={b.id}>{head}<R id="card">{grid(prods.slice(0, cols))}</R></div>
+          if (b.kind === 'تأمین کالا') return <div key={b.id}>{head}<div className={cx('grid gap-3', !mob && 'grid-cols-2')}>{(E.sourcingRoutes ?? []).filter((x) => x.active).map((x, i) => <div key={x.id} className="rounded-2xl bg-white p-4"><span className="text-11 text-[#0000ff]">{fa(String(i + 1).padStart(2, '0'))}</span><p className="font-bold">{x.title}</p><p className="text-12 text-[#5a5e78]">{x.subtitle}</p><p className="mt-2 line-clamp-2 text-12">{x.text}</p></div>)}</div></div>
+          if (b.kind === 'اعتماد') return <div key={b.id}>{head}<div className={cx('grid gap-2', mob ? 'grid-cols-2' : 'grid-cols-3')}>{(E.trustItems ?? []).filter((x) => x.active).map((x) => <div key={x.id} className="rounded-2xl bg-white p-3"><ShieldCheck size={16} className="text-[#0000ff]" /><p className="mt-1 text-12 font-bold">{x.title}</p><p className="line-clamp-2 text-11 text-[#5a5e78]">{x.text}</p></div>)}</div></div>
+          if (b.kind === 'نظرات') return <div key={b.id}>{head}<div className="flex gap-2 overflow-x-auto">{(E.testimonials ?? []).filter((x) => x.active).map((x) => <div key={x.id} className="w-56 shrink-0 rounded-2xl bg-white p-3"><p className="text-12 font-bold">{x.title}</p><p className="line-clamp-3 text-11 text-[#5a5e78]">{x.text}</p><p className="mt-1 text-11">{x.name} · خریدار غنیمت</p></div>)}</div></div>
+          if (b.kind === 'وبلاگ') return <div key={b.id}>{head}<div className="flex gap-2 overflow-x-auto">{(E.articles ?? []).slice(0, 4).map((x) => <div key={x.id} className="w-52 shrink-0 rounded-2xl bg-white p-3"><div className="mb-2 h-20 rounded-xl bg-[#eef0ff]" /><p className="line-clamp-2 text-12 font-bold">{x.title}</p></div>)}</div></div>
+          if (b.kind === 'سؤالات متداول') return <div key={b.id}>{head}<div className="space-y-1.5">{(E.faqs ?? []).slice(0, 4).map((x) => <p key={x.id} className="flex justify-between rounded-xl bg-white px-3 py-2 text-12">{x.q}<span>+</span></p>)}</div></div>
+          if (b.kind === 'اینستاگرام') return <div key={b.id}>{head}<div className={cx('grid gap-2', mob ? 'grid-cols-2' : 'grid-cols-4')}>{(E.instagramPosts ?? []).filter((x) => x.active).map((x) => <div key={x.id} className="aspect-square rounded-2xl bg-gradient-to-br from-[#eef0ff] to-[#fff3d6] p-2 text-11"><span className="rounded-md bg-white px-1.5">{x.kind}</span><p className="mt-1 font-medium">{x.title}</p></div>)}</div></div>
+          if (b.kind === 'برندها') return <div key={b.id}>{head}<div className="flex gap-2 overflow-x-auto">{(E.brands ?? []).filter((x) => x.active).map((x) => <span key={x.id} className="shrink-0 rounded-xl bg-white px-4 py-3 text-12 font-bold">{x.en}</span>)}</div></div>
+          if (b.kind === 'خبرنامه') return <div key={b.id} className="rounded-2xl bg-[#10123d] p-5 text-white"><p className="font-bold">{d.cx?.newsletter.title ?? b.title}</p><p className="mt-1 text-12 text-white/80">{d.cx?.newsletter.text}</p><span className="mt-3 inline-flex h-9 items-center rounded-xl bg-[#0000ff] px-4 text-12">عضویت در خبرنامه</span></div>
           if (b.kind === 'بنر') return <div key={b.id} className="rounded-2xl bg-[#ffc24b] p-5 font-bold">{b.title}</div>
           return <div key={b.id} className="flex items-center gap-3 rounded-2xl bg-white p-4"><span className="grid size-10 place-items-center rounded-full bg-[#eef0ff] text-[#0000ff]"><ShieldCheck size={18} /></span><div><p className="font-bold">{b.title}</p><p className="text-12 text-[#5a5e78]">QC ورودی و پیش از ارسال؛ عکس همان واحدی که می‌خرید.</p></div></div>
         })}
@@ -77,6 +88,7 @@ export function StorePreview({ site, device = 'desktop', page = 'home', active, 
       </div></R>}
 
       <R id="footer"><footer className="mt-2 bg-white px-5 pt-6 pb-4 text-12">
+        {site.footer.strip.some((x) => x.on) && <div className="mb-5 flex flex-wrap justify-around gap-3 border-b border-[#eef0f6] pb-4">{site.footer.strip.filter((x) => x.on).map((x) => <span key={x.id} className="flex items-center gap-1.5 font-medium"><ShieldCheck size={15} className="text-[#0000ff]" />{x.text}</span>)}</div>}
         <div className={cx('grid gap-6', !mob && 'grid-cols-[1.4fr_repeat(3,1fr)]')}>
           <div><img src="./brand/logo-full.png" alt="غنیمت" className="h-7" /><p className="mt-3 leading-6 text-[#5a5e78]">{site.footer.about}</p>
             <p className="mt-3 flex items-center gap-1.5"><Phone size={13} /><span className="ltr">{site.footer.phone}</span> · {site.footer.hours}</p></div>
@@ -87,6 +99,7 @@ export function StorePreview({ site, device = 'desktop', page = 'home', active, 
           <div className="flex gap-2">{site.footer.socials.filter((s) => s.on).map((s) => <span key={s.id} title={s.url} className="grid size-8 place-items-center rounded-full bg-[#eef0ff] text-11 font-bold text-[#0000ff]">{s.kind.slice(0, 1)}</span>)}</div>
           <div className="flex gap-2">{([['enamad', 'نماد اعتماد', <BadgeCheck size={16} />], ['samandehi', 'ساماندهی', <ShieldCheck size={16} />], ['union', 'اتحادیه', <Truck size={16} />]] as const).filter(([k]) => site.footer.trust[k]).map(([k, l, ic]) => <span key={k} className="flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-lg border border-[#e6e8f0] text-[10px] text-[#5a5e78]">{ic}{l}</span>)}</div>
         </div>
+        {site.footer.seoTitle && <div className="mt-4 rounded-2xl bg-[#f7f8fb] p-3"><p className="font-bold">{site.footer.seoTitle}</p><p className="mt-1 line-clamp-2 leading-6 text-[#5a5e78]">{site.footer.seoText}</p><span className="text-[#0000ff]">مشاهدهٔ بیشتر</span></div>}
         <p className="mt-3 text-center text-11 text-[#5a5e78]">{site.footer.copyright}</p>
       </footer></R>
     </div>

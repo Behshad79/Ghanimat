@@ -3,7 +3,6 @@ export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purp
 export const STATUS: Record<string, { label: string; tone: Tone }> = {
   // سفارش
   'order.awaiting_payment': { label: 'در انتظار پرداخت', tone: 'neutral' },
-  'order.awaiting_credit': { label: 'در انتظار اعتبار اقساطی', tone: 'warning' },
   'order.paid': { label: 'پرداخت‌شده', tone: 'info' },
   'order.needs_decision': { label: 'نیازمند تصمیم مشتری', tone: 'warning' },
   'order.preparing': { label: 'در حال آماده‌سازی', tone: 'info' },

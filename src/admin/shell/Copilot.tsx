@@ -30,7 +30,7 @@ function answer(q: string, push: (m: Msg) => void): Msg {
   }
   if (/چرا|علت|افت/.test(q)) return {
     from: 'ai', meta: 'منبع: قیف خرید و تراکنش‌ها · بازه: دیروز در برابر میانگین ۷ روز · اطمینان: متوسط',
-    body: (<div><p>سه عامل بیشترین سهم را دارند:</p><div className="mt-2"><Bars data={[{ label: 'قطعی سرویس اقساطی تارا (رد اعتبار)', value: 46 }, { label: 'ناموجودی ۲ کالای پربازدید', value: 31 }, { label: 'تأخیر پیامک کد ورود', value: 23 }]} fmt={(n) => pct(n)} color="var(--danger)" /></div><p className="mt-2 text-12 text-t2">اقدام پیشنهادی: سرویس قطع‌شده تا پایدار شدن پنهان بماند و برای کالاهای ناموجود فرصت خرید ثبت شود.</p></div>),
+    body: (<div><p>سه عامل بیشترین سهم را دارند:</p><div className="mt-2"><Bars data={[{ label: 'قطعی درگاه اقساطی تارا (پرداخت ناموفق)', value: 46 }, { label: 'ناموجودی ۲ کالای پربازدید', value: 31 }, { label: 'تأخیر پیامک کد ورود', value: 23 }]} fmt={(n) => pct(n)} color="var(--danger)" /></div><p className="mt-2 text-12 text-t2">اقدام پیشنهادی: سرویس قطع‌شده تا پایدار شدن پنهان بماند و برای کالاهای ناموجود فرصت خرید ثبت شود.</p></div>),
   }
   const h = Object.values(HINTS).find((x) => q.includes(x.title.split(' (')[0]) || q.includes(x.title))
   if (h) return { from: 'ai', meta: 'منبع: فرهنگ شاخص‌های غنیمت', body: <div><p>{h.def}</p>{h.here && <p className="mt-1">{h.here}</p>}{h.formula && <p className="mt-1 rounded-sm bg-neutral-bg px-2 py-1">{h.formula}</p>}{h.effect && <p className="mt-1">{h.effect}</p>}</div> }

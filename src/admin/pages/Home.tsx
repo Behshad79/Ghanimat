@@ -12,7 +12,7 @@ import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 const HOURS = ['۸', '۹', '۱۰', '۱۱', '۱۲', '۱۳', '۱۴', '۱۵', '۱۶', '۱۷', '۱۸', '۱۹']
 export function Home() {
   const { d, product, rule } = useLookup(); const nav = useNavigate()
-  const live = d.orders.filter((o) => !['order.cancelled', 'order.awaiting_payment', 'order.awaiting_credit'].includes(o.status))
+  const live = d.orders.filter((o) => !['order.cancelled', 'order.awaiting_payment'].includes(o.status))
   const today = live.filter((o) => Date.now() - new Date(o.createdAt).getTime() < 864e5)
   const gmv = today.reduce((a, o) => a + o.total, 0)
   const published = d.units.filter((u) => u.status === 'unit.published')
@@ -34,7 +34,7 @@ export function Home() {
         ]} />
         <AISummary source="سفارش‌ها، موجودی و هشدارهای ۲۴ ساعت اخیر" lines={[
           `فروش امروز ${compactToman(gmv)} از ${fa(today.length)} سفارش است؛ ۱۲٪ بالاتر از سه‌شنبهٔ معمول.`,
-          'سرویس اقساطی تارا پاسخ نمی‌دهد و خودکار از صفحهٔ پرداخت پنهان شده است؛ ۲ سفارش در انتظار اعتبار مانده.',
+          'درگاه اقساطی تارا پاسخ نمی‌دهد و خودکار از صفحهٔ پرداخت پنهان شده است؛ پرداخت‌ها از سایر درگاه‌ها ادامه دارد.',
           'یک مرسوله از انبار مهاباد منتظر تأیید موجودی شریک است و مهلت آن رو به پایان است.',
           `${fa(d.units.filter((u) => Date.now() - new Date(u.received).getTime() > 30 * 864e5 && u.status === 'unit.published').length)} واحد بیش از ۳۰ روز در انبار مانده؛ پیشنهاد: کاهش پلکانی قیمت.`,
         ]} />
@@ -43,7 +43,7 @@ export function Home() {
           <KPI label="تعداد سفارش" value={fa(today.length)} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
           <KPI label="AOV" hint="aov" value={compactToman(gmv / Math.max(1, today.length))} delta={3.9} spark={[5, 5, 6, 6, 7, 6, 7]} to="/admin/analytics" />
           <KPI label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" note="افت اصلی در مرحلهٔ اعتبارسنجی اقساط" />
-          <KPI label="حاشیهٔ سود ناخالص" hint="margin" value={pct(14.8, 1)} delta={0.6} spark={[5, 6, 6, 6, 7, 7, 7]} to="/admin/finance?tab=unit" />
+          <KPI label="حاشیهٔ سود ناخالص" hint="margin" value={pct(14.8, 1)} delta={0.6} spark={[5, 6, 6, 6, 7, 7, 7]} to="/admin/finance?tab=profit" />
           <KPI label="موجودی قابل فروش" value={`${fa(published.length)} واحد`} full={toman(published.reduce((a, u) => a + u.price, 0))} note={`ارزش: ${compactToman(published.reduce((a, u) => a + u.price, 0))}`} to="/admin/warehouse" />
           <KPI label="تحویل به‌موقع" hint="sla" value={pct(94)} delta={1.2} spark={[7, 8, 8, 9, 8, 9, 9]} to="/admin/shipping" />
           <KPI label="نرخ مرجوعی" value={pct(6.4, 1)} delta={-1.1} goodDown spark={[8, 8, 7, 7, 6, 7, 6]} to="/admin/returns" />
@@ -70,7 +70,7 @@ export function Home() {
 const TOWER: [string, [string, 'ok' | 'warn' | 'crit', string, string][]][] = [
   ['کسب‌وکار', [['فروش لحظه‌ای در برابر پیش‌بینی', 'ok', '۱۰۸٪ پیش‌بینی', '/admin'], ['نرخ تبدیل زنده', 'warn', '۲٫۱٪ (معمول ۲٫۴٪)', '/admin/growth']]],
   ['عملیات', [['صف‌های QC، عکاسی و انتشار', 'ok', 'در مهلت', '/admin/warehouse'], ['سفارش‌های در خطر مهلت', 'warn', '۲ مرسوله', '/admin/orders'], ['مرسوله‌های بی‌حرکت', 'ok', 'صفر', '/admin/shipping']]],
-  ['پرداخت', [['درگاه‌های نقدی', 'ok', 'موفقیت ۹۹٪', '/admin/finance'], ['سرویس‌های اقساطی', 'crit', 'یک سرویس قطع', '/admin/finance?tab=bnpl'], ['تراکنش‌های نامشخص', 'warn', '۲ مورد', '/admin/finance?tab=txns']]],
+  ['پرداخت', [['درگاه‌های نقدی', 'ok', 'موفقیت ۹۹٪', '/admin/finance'], ['سرویس‌های اقساطی', 'crit', 'یک سرویس قطع', '/admin/finance?tab=gateways'], ['تراکنش‌های نامشخص', 'warn', '۲ مورد', '/admin/finance?tab=txns']]],
   ['ارتباطات', [['تحویل پیامک کد ورود', 'ok', '۴ ثانیه', '/admin/infra'], ['اعتبار پنل پیامک', 'warn', '۹ روز مانده', '/admin/infra']]],
   ['کانال‌ها', [['فید کانال‌های فروش', 'ok', '۳ دقیقه پیش', '/admin/channels'], ['ناهماهنگی موجودی شریک', 'warn', '۲ کالا', '/admin/warehouse?tab=sync']]],
   ['فنی', [['در دسترس بودن سایت', 'ok', '۹۹٫۹۶٪', '/admin/infra'], ['آزمون خودکار مسیر خرید', 'ok', '۶ دقیقه پیش موفق', '/admin/infra']]],

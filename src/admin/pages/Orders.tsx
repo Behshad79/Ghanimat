@@ -7,6 +7,7 @@ import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { PackPhotos } from '../shared/PackPhotos'
+import { OrderProfitCard } from '../finance/Money'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
@@ -14,8 +15,7 @@ import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
 
 const TABS: [string, string, (o: Order) => boolean][] = [
   ['all', 'همه', () => true],
-  ['action', 'نیازمند اقدام', (o) => ['order.paid', 'order.needs_decision', 'order.suspicious', 'order.awaiting_credit'].includes(o.status)],
-  ['credit', 'در انتظار اعتبار اقساطی', (o) => o.status === 'order.awaiting_credit'],
+  ['action', 'نیازمند اقدام', (o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status)],
   ['decision', 'نیازمند تصمیم مشتری', (o) => o.status === 'order.needs_decision'],
   ['preparing', 'آماده‌سازی', (o) => ['order.paid', 'order.preparing'].includes(o.status)],
   ['shipped', 'ارسال‌شده', (o) => o.status === 'order.shipped'],
@@ -131,7 +131,7 @@ export function OrderDetail() {
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
   const c = customer(o.customerId)
-  const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
+  const step = ({ 'order.awaiting_payment': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
   const advance = (sid: string, to: string, label: string) => { const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const cancelShip = async (sid: string, total: number) => {
@@ -221,6 +221,7 @@ export function OrderDetail() {
             <Row k={<>امتیاز ریسک<Hint k="risk" /></>}><Badge tone={o.risk > 70 ? 'danger' : o.risk > 30 ? 'warning' : 'success'}>{fa(o.risk)}</Badge></Row>
             <div className="mt-2 flex gap-2"><Button size="sm" icon={<Phone size={12} />} onClick={() => toast('تماس با مشتری برقرار شد.')}>تماس</Button><Button size="sm" onClick={() => nav('/admin/support')}>ساخت تیکت</Button><Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => toast('پیش‌نویس پیام ساخته شد.')}>پیش‌نویس پیام</Button></div>
           </Card>
+          <OrderProfitCard o={o} />
           <Card title="مالی">
             <Row k="جمع کالاها"><Money v={sub} /></Row><Row k="هزینهٔ ارسال">{o.shippingFee ? <Money v={o.shippingFee} /> : 'رایگان'}</Row>
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}

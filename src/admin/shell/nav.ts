@@ -7,7 +7,7 @@ export type NavItem = { id: string; label: string; icon: LucideIcon; path: strin
 export const NAV: NavItem[] = [
   { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
   { id: 'live', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
-  { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'فروش و عملیات', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious', 'order.awaiting_credit'].includes(o.status)).length },
+  { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'فروش و عملیات', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status)).length },
   { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'فروش و عملیات', count: (d) => d.partnerQueue.length },
   { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'فروش و عملیات' },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'فروش و عملیات', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },

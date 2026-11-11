@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronLeft, Sparkles, WifiOff } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, Sparkles, WifiOff } from 'lucide-react'
+import { CountUp } from './motion'
 import { Button, Card, cx, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
 import { askCopilot, Hint } from './overlay'
 import { Spark } from './charts'
@@ -38,26 +39,31 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   )
 }
 
-/** کارت شاخص: مقدار، تغییر، Sparkline، هدف، تفسیر، «چرا تغییر کرد؟» و Drill-down با کلیک (بخش ۳ قاعدهٔ ۳ و ۴) */
-export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown }: { label: string; value: ReactNode; full?: string; delta?: number; spark?: number[]; hint?: string; note?: string; to?: string; goodDown?: boolean }) {
+/** کارت شاخص: آیکون در دایرهٔ رنگی، مقدار (با شمارش متحرک)، قرص تغییر، Sparkline، «چرا تغییر کرد؟» و پیکان رفتن به جزئیات */
+export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown, icon, featured, num, fmt }: { label: string; value?: ReactNode; full?: string; delta?: number; spark?: number[]; hint?: string; note?: string; to?: string; goodDown?: boolean; icon?: ReactNode; featured?: boolean; num?: number; fmt?: (n: number) => string }) {
   const nav = useNavigate()
   const good = delta === undefined ? true : goodDown ? delta <= 0 : delta >= 0
   return (
-    <div role={to ? 'link' : undefined} tabIndex={to ? 0 : undefined} onClick={() => to && nav(to)} onKeyDown={(e) => e.key === 'Enter' && to && nav(to)} className={cx('group rounded-lg border border-line bg-surface p-3 text-right transition-colors', to && 'cursor-pointer hover:border-brand')}>
-      <div className="flex items-center justify-between gap-1 text-12 text-t2">
-        <span className="flex items-center gap-1">{label}{hint && <Hint k={hint} />}</span>
-        <button title="چرا تغییر کرد؟" onClick={(e) => { e.stopPropagation(); askCopilot(`چرا «${label}» تغییر کرد؟`) }} className="text-t3 opacity-0 group-hover:opacity-100 hover:text-brand"><Sparkles size={13} /></button>
+    <div role={to ? 'link' : undefined} tabIndex={to ? 0 : undefined} onClick={() => to && nav(to)} onKeyDown={(e) => e.key === 'Enter' && to && nav(to)}
+      className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : 'border-line bg-surface', to && 'lift cursor-pointer', to && !featured && 'hover:border-brand/40')}>
+      {featured && <span className="pointer-events-none absolute -top-12 -left-12 size-36 rounded-full bg-white/10" />}
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2">{icon && <span className={cx('grid size-9 shrink-0 place-items-center rounded-full', featured ? 'bg-white/15 text-white' : 'bg-brand-tint text-brand')}>{icon}</span>}<span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
+        <span className="flex items-center gap-1">
+          <button title="چرا تغییر کرد؟" onClick={(e) => { e.stopPropagation(); askCopilot(`چرا «${label}» تغییر کرد؟`) }} className={cx('hidden opacity-0 sm:inline transition-opacity group-hover:opacity-100', featured ? 'text-white/80' : 'text-t3 hover:text-brand')}><Sparkles size={13} /></button>
+          {to && <span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}
+        </span>
       </div>
-      <p className="tnum mt-1 text-20 font-bold whitespace-nowrap" title={full}>{value}</p>
-      <div className="mt-1 flex min-h-7 items-end justify-between gap-2">
+      <p className="tnum relative mt-3 truncate text-18 font-bold whitespace-nowrap sm:text-24" title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>
+      <div className="relative mt-2 flex min-h-7 items-end justify-between gap-2">
         {delta !== undefined ? (
-          <span className={cx('tnum flex items-center gap-0.5 text-11', good ? 'text-success' : 'text-danger')}>
-            {delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}{signedPct(delta)}<span className="hidden text-t3 sm:inline">نسبت به دورهٔ قبل</span>
+          <span className={cx('tnum inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-11 font-medium', featured ? 'bg-white/15 text-white' : good ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>
+            {delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}{signedPct(delta)}<span className={cx('mr-1 hidden font-normal sm:inline', featured ? 'text-white/85' : '')}>نسبت به دورهٔ قبل</span>
           </span>
-        ) : <span />}
-        {spark && <Spark data={spark} w={64} h={24} color={good ? 'var(--success)' : 'var(--danger)'} />}
+        ) : note ? <span className={cx('text-11', featured ? 'text-white/85' : 'text-t2')}>{note}</span> : <span />}
+        {spark && <Spark data={spark} w={64} h={24} color={featured ? '#ffffff' : good ? 'var(--success)' : 'var(--danger)'} />}
       </div>
-      {note && <p className="mt-1 text-11 leading-4 text-t3">{note}</p>}
+      {note && delta !== undefined && <p className={cx('relative mt-1 text-11 leading-4', featured ? 'text-white/85' : 'text-t2')}>{note}</p>}
     </div>
   )
 }

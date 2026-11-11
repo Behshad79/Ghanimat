@@ -17,6 +17,7 @@ import { ProductCard } from './ProductCard'
 import { WIZARD_STEPS } from './Wizard'
 import { LABEL_BG, LABEL_SIZES, ProductLabel } from '../print/ProductLabel'
 import { CardRules } from '../pages/Catalog'
+import { CatalogInsights, ProductBoard } from './ProductBoard'
 
 export const stockOf = (d: DB, p: Product) => (p.mode === 'qty' ? (p.qty?.tehran ?? 0) + (p.qty?.mahabad ?? 0) : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').length)
 const openOrdersWith = (d: DB, pid: string) => d.orders.filter((o) => !['order.delivered', 'order.cancelled', 'order.returned'].includes(o.status) && o.shipments.some((s) => s.items.some((i) => i.productId === pid)))
@@ -94,7 +95,7 @@ export function UnitDrawer({ u, onClose }: { u: Unit | null; onClose: () => void
 
 export function Catalog() {
   const { d, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('products'); const [sp, setSp] = useSearchParams()
-  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all')
+  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all'); const [pv, setPvRaw] = useState<'board' | 'table'>(() => (localStorage.getItem('gh-catalog-view') as 'table') || 'board'); const setPv = (v: 'board' | 'table') => { setPvRaw(v); try { localStorage.setItem('gh-catalog-view', v) } catch { /* حافظهٔ مرورگر پر است */ } }
   const pa = useProductActions()
   const unitActions = (u: Unit) => {
     const inOrder = unitInOpenOrder(d, u.id)
@@ -135,7 +136,8 @@ export function Catalog() {
       actions={<><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/labels')}>چاپ برچسب</Button><Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => nav('/admin/trash')}>سطل بازیافت{d.trash.length > 0 && ` (${fa(d.trash.length)})`}</Button></>}
       primary={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن کالا</Button>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={tabs} />}>
-      {tab === 'products' && <DataTable name="محصولات" rows={prodRows} cols={pcols} rowKey={(p) => p.id} onRow={(p) => nav(`/admin/catalog/${p.id}`)} search={(p) => `${p.title} ${p.en} ${p.brand} ${p.code}`} actions={pa.items}
+      {tab === 'products' && <div className="mb-4 space-y-4"><CatalogInsights /><div className="flex items-center justify-between"><p className="text-15 font-bold">همهٔ محصولات</p><Segmented size="sm" value={pv} onChange={setPv} options={[['board', 'کارت و فیلتر'], ['table', 'جدول']]} /></div>{pv === 'board' && <ProductBoard items={pa.items} onAdd={() => setAdd(true)} />}</div>}
+      {tab === 'products' && pv === 'table' && <DataTable name="محصولات" rows={prodRows} cols={pcols} rowKey={(p) => p.id} onRow={(p) => nav(`/admin/catalog/${p.id}`)} search={(p) => `${p.title} ${p.en} ${p.brand} ${p.code}`} actions={pa.items}
         filters={<Select className="w-36" value={st} onChange={setSt} options={[['all', 'همهٔ وضعیت‌ها'], ['product.published', 'منتشرشده'], ['product.draft', 'پیش‌نویس'], ['product.pending', 'منتظر تأیید']]} />}
         empty={{ title: 'هنوز محصولی ثبت نشده است.', action: <Button variant="primary" onClick={() => setAdd(true)}>افزودن کالا</Button> }}
         bulk={(ids, clear) => <>

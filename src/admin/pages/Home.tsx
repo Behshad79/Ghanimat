@@ -2,7 +2,16 @@ import { useNavigate } from 'react-router-dom'
 import { Maximize2, Plus } from 'lucide-react'
 import { Badge, Button, Card, Light, Progress, StatusBadge } from '@/shared/ui/base'
 import { ActionChips, AISummary, KPI, Page } from '@/shared/ui/page'
-import { Bars, Donut, Funnel, LineChart } from '@/shared/ui/charts'
+import { Bars, Columns, Donut, Funnel, Gauge, IranTiles, LineChart } from '@/shared/ui/charts'
+import { CountUp } from '@/shared/ui/motion'
+import { Boxes, Download, LayoutGrid, Package, Percent, Receipt, RotateCcw, ShoppingBag, TrendingUp, Truck } from 'lucide-react'
+import { Modal } from '@/shared/ui/overlay'
+import { Toggle } from '@/shared/ui/base'
+import { currentUser } from '@/shared/lib/store'
+import { counted, orderProfit } from '@/shared/lib/profit'
+import { ProductImg } from './_shared'
+import { useState } from 'react'
+import { csv, download, rel } from '@/shared/lib/fa'
 import { Hint, toast } from '@/shared/ui/overlay'
 import { mutate, notify } from '@/shared/lib/store'
 import { compactToman, fa, minsLeft, pct, toman } from '@/shared/lib/fa'
@@ -10,18 +19,31 @@ import { SlaChip, useLookup } from './_shared'
 import { NAV } from '../shell/nav'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 
-const HOURS = ['۸', '۹', '۱۰', '۱۱', '۱۲', '۱۳', '۱۴', '۱۵', '۱۶', '۱۷', '۱۸', '۱۹']
+const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
+const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
+const WIDGETS: [string, string][] = [['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
 export function Home() {
-  const { d, product, rule } = useLookup(); const nav = useNavigate()
-  const live = d.orders.filter((o) => !['order.cancelled', 'order.awaiting_payment'].includes(o.status))
+  const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false)
+  const hidden: string[] = (d.entities.homeHidden?.[0]?.list as string[]) ?? []
+  const on = (k: string) => !hidden.includes(k)
+  const toggleW = (k: string) => mutate((x) => { const l = new Set((x.entities.homeHidden?.[0]?.list as string[]) ?? []); l.has(k) ? l.delete(k) : l.add(k); x.entities.homeHidden = [{ id: 'hh', list: [...l] }] }, { action: 'تغییر ویجت‌های خانه', target: k })
+  const live = d.orders.filter(counted)
   const today = live.filter((o) => Date.now() - new Date(o.createdAt).getTime() < 864e5)
   const gmv = today.reduce((a, o) => a + o.total, 0)
+  const profitToday = today.reduce((a, o) => a + orderProfit(d, o).profit, 0)
+  const profitMonth = live.filter((o) => Date.now() - new Date(o.createdAt).getTime() < 30 * 864e5).reduce((a, o) => a + orderProfit(d, o).profit, 0)
   const published = d.units.filter((u) => u.status === 'unit.published')
   const cnt = (id: string) => NAV.find((n) => n.id === id)!.count!(d)
+  const me = currentUser()!
+  const sold = new Map<string, number>(); live.forEach((o) => o.shipments.forEach((s) => s.items.forEach((i) => sold.set(i.productId, (sold.get(i.productId) ?? 0) + i.price * i.qty))))
+  const top = [...sold.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const cats = new Map<string, number>(); live.forEach((o) => o.shipments.forEach((s) => s.items.forEach((i) => { const c = d.products.find((p) => p.id === i.productId)?.category ?? '—'; cats.set(c, (cats.get(c) ?? 0) + i.price * i.qty) })))
+  const prov: Record<string, number> = { تهران: 0 }; live.forEach((o) => { const p = d.customers.find((c) => c.id === o.customerId)?.addr?.province; if (p) prov[p] = (prov[p] ?? 0) + o.total })
+  const featuredCards = d.products.filter((p) => p.status === 'product.published' && p.image).slice(0, 4)
   return (
-    <Page title="خانه" sub="داشبورد اجرایی · به‌روز تا همین حالا" module="home"
-      empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند. چک‌لیست راه‌اندازی را دنبال کنید.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
-      actions={<Button icon={<Plus size={14} />} onClick={() => toast('ویجت‌ها قابل افزودن، حذف و جابه‌جایی‌اند. در نسخهٔ نمایشی چیدمان ثابت است.')}>افزودن ویجت</Button>}>
+    <Page title={`سلام ${me.name}`} sub={new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date())} module="home"
+      empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
+      actions={<><Button icon={<Download size={14} />} onClick={() => { download('خلاصهٔ-امروز.csv', csv([['شاخص', 'مقدار'], ['فروش امروز', gmv], ['سفارش امروز', today.length], ['سود امروز', profitToday]])); toast('خلاصهٔ امروز دانلود شد.') }}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
         <ActionChips items={[
           { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', tone: 'danger' },
@@ -33,37 +55,44 @@ export function Home() {
           { label: 'کالای شریک منتظر تأیید', count: d.partnerQueue.length, to: '/admin/catalog?tab=partner' },
           { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals' },
         ]} />
-        <AISummary source="سفارش‌ها، موجودی و هشدارهای ۲۴ ساعت اخیر" lines={[
+        {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note="هدف روزانه: ۶۰۰ میلیون" />
+          <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit" />
+          <KPI icon={<Package size={17} />} label="تعداد سفارش" num={today.length} fmt={(n) => fa(Math.round(n))} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
+          <KPI icon={<Percent size={17} />} label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" />
+          <KPI icon={<Receipt size={17} />} label="AOV" hint="aov" num={gmv / Math.max(1, today.length)} fmt={compactToman} delta={3.9} to="/admin/analytics" />
+          <KPI icon={<Boxes size={17} />} label="موجودی قابل فروش" num={published.length} fmt={(n) => `${fa(Math.round(n))} واحد`} note={`ارزش: ${compactToman(published.reduce((a, u) => a + u.price, 0))}`} to="/admin/warehouse?tab=stock" />
+          <KPI icon={<Truck size={17} />} label="تحویل به‌موقع" hint="sla" value={pct(94)} delta={1.2} to="/admin/shipping" />
+          <KPI icon={<RotateCcw size={17} />} label="نرخ مرجوعی" value={pct(6.4, 1)} delta={-1.1} goodDown to="/admin/returns" />
+        </div>}
+        {on('ai') && <AISummary source="سفارش‌ها، موجودی و هشدارهای ۲۴ ساعت اخیر" lines={[
           `فروش امروز ${compactToman(gmv)} از ${fa(today.length)} سفارش است؛ ۱۲٪ بالاتر از سه‌شنبهٔ معمول.`,
           'درگاه اقساطی تارا پاسخ نمی‌دهد و خودکار از صفحهٔ پرداخت پنهان شده است؛ پرداخت‌ها از سایر درگاه‌ها ادامه دارد.',
-          'یک مرسوله از انبار مهاباد منتظر تأیید موجودی شریک است و مهلت آن رو به پایان است.',
           `${fa(d.units.filter((u) => Date.now() - new Date(u.received).getTime() > 30 * 864e5 && u.status === 'unit.published').length)} واحد بیش از ۳۰ روز در انبار مانده؛ پیشنهاد: کاهش پلکانی قیمت.`,
-        ]} />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KPI label="فروش امروز" hint="gmv" value={compactToman(gmv)} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note="هدف روزانه: ۶۰۰ میلیون تومان" />
-          <KPI label="تعداد سفارش" value={fa(today.length)} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
-          <KPI label="AOV" hint="aov" value={compactToman(gmv / Math.max(1, today.length))} delta={3.9} spark={[5, 5, 6, 6, 7, 6, 7]} to="/admin/analytics" />
-          <KPI label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" note="افت اصلی در مرحلهٔ اعتبارسنجی اقساط" />
-          <KPI label="حاشیهٔ سود ناخالص" hint="margin" value={pct(14.8, 1)} delta={0.6} spark={[5, 6, 6, 6, 7, 7, 7]} to="/admin/finance?tab=profit" />
-          <KPI label="موجودی قابل فروش" value={`${fa(published.length)} واحد`} full={toman(published.reduce((a, u) => a + u.price, 0))} note={`ارزش: ${compactToman(published.reduce((a, u) => a + u.price, 0))}`} to="/admin/warehouse" />
-          <KPI label="تحویل به‌موقع" hint="sla" value={pct(94)} delta={1.2} spark={[7, 8, 8, 9, 8, 9, 9]} to="/admin/shipping" />
-          <KPI label="نرخ مرجوعی" value={pct(6.4, 1)} delta={-1.1} goodDown spark={[8, 8, 7, 7, 6, 7, 6]} to="/admin/returns" />
+        ]} />}
+        <div className="grid gap-4 xl:grid-cols-3">
+          {on('monthly') && <Card className="xl:col-span-2" title="فروش ماهانه از اول سال" actions={<><Badge tone="success">+۲۸٪ نسبت به آبان پارسال</Badge><Button size="sm" variant="ghost" icon={<Maximize2 size={13} />} onClick={() => nav('/admin/analytics')}>کاوش</Button></>}>
+            <div className="mb-3 flex items-baseline gap-2"><span className="tnum text-24 font-bold">{fa(MONTH_SALES.reduce((a, b) => a + b, 0).toFixed(1))} میلیارد تومان</span><span className="text-12 text-t2">جمع ۸ ماه</span></div>
+            <Columns data={MONTHS.map((m, i) => ({ label: m, value: MONTH_SALES[i], sub: `${fa(Math.round(MONTH_SALES[i] * 26))} سفارش` }))} fmt={(n) => `${fa(n.toFixed(1))} میلیارد`} onPick={() => nav('/admin/analytics')} /></Card>}
+          {on('top') && <Card title="پرفروش‌ها" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/finance?tab=profit')}>همه</Button>} pad={false}><ul className="divide-y divide-line">{top.map(([pid, v]) => { const p = d.products.find((x) => x.id === pid)!; return <li key={pid}><button onClick={() => nav(`/admin/catalog/${pid}`)} className="flex w-full items-center gap-3 px-5 py-3 text-right hover:bg-surface-2"><ProductImg pid={pid} size={44} /><span className="min-w-0 flex-1"><span className="block truncate text-13 font-medium">{p.en}</span><span className="text-11 text-t2">{p.category}</span></span><span className="tnum text-13 font-bold">{compactToman(v)}</span></button></li> })}</ul></Card>}
         </div>
         <div className="grid gap-4 xl:grid-cols-3">
-          <Card className="xl:col-span-2" title="فروش امروز از دیروز بهتر است؟" actions={<Button size="sm" variant="ghost" icon={<Maximize2 size={13} />} onClick={() => nav('/admin/analytics')}>کاوش</Button>}>
-            <LineChart labels={HOURS} events={[{ i: 6, label: 'قطعی تارا' }]} series={[{ name: 'امروز', color: 'var(--brand)', data: [12, 30, 58, 92, 140, 171, 180, 236, 301, 352, 410, 468] }, { name: 'دیروز', color: 'var(--text-3)', dashed: true, data: [10, 26, 49, 80, 118, 150, 189, 220, 262, 300, 349, 402] }]} />
-            <p className="mt-2 text-11 text-t3">واحد: میلیون تومان، تجمعی · محور زمان از چپ به راست</p>
-          </Card>
-          <Card title="قیف خرید امروز"><Funnel onPick={() => nav('/admin/growth')} steps={[{ label: 'بازدید', value: 4820 }, { label: 'صفحهٔ کالا', value: 2910 }, { label: 'سبد', value: 402 }, { label: 'پرداخت', value: 148 }, { label: 'موفق', value: 101 }]} /></Card>
+          {on('orders') && <Card className="xl:col-span-2" title="سفارش‌های اخیر" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/orders')}>همهٔ سفارش‌ها</Button>} pad={false}><ul className="divide-y divide-line">{d.orders.slice(0, 6).map((o) => { const c = d.customers.find((x) => x.id === o.customerId)!; return <li key={o.id}><button onClick={() => nav(`/admin/orders/${o.id}`)} className="flex w-full items-center gap-3 px-5 py-3 text-right hover:bg-surface-2"><span className="flex">{o.shipments.flatMap((s) => s.items).slice(0, 2).map((i, k) => <ProductImg key={k} pid={i.productId} size={40} className={k ? '-mr-3 ring-2 ring-surface' : ''} />)}</span><span className="min-w-0 flex-1"><span className="block text-13 font-medium">{c.name}</span><span className="ltr block text-right font-mono text-11 text-t2">{o.id}</span></span><span className="hidden text-12 text-t2 sm:block">{rel(o.createdAt)}</span><span className="tnum text-13 font-semibold">{compactToman(o.total)}</span><StatusBadge s={o.status} /></button></li> })}</ul></Card>}
+          <div className="space-y-4">
+            {on('goal') && <Card title="هدف این ماه"><Gauge value={72} label={pct(72)} sub="از هدف ۱۵ میلیارد تومان" /><div className="mt-3 grid grid-cols-3 gap-2 text-center">{[['هدف', '۱۵ میلیارد'], ['فروش', '۱۰٫۸ میلیارد'], ['امروز', compactToman(gmv)]].map(([k, v]) => <div key={k} className="rounded-xl bg-neutral-bg p-2"><p className="text-11 text-t2">{k}</p><p className="tnum text-12 font-bold">{v}</p></div>)}</div></Card>}
+            {on('profit') && <Card onClick={() => nav('/admin/finance?tab=profit')} title="سود من"><p className="tnum text-24 font-bold text-success"><CountUp value={profitMonth} format={compactToman} /></p><p className="text-12 text-t2">سود خالص ۳۰ روز اخیر، پس از کسر خرید، کارمزد، ارسال و بسته‌بندی</p></Card>}
+          </div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card title="پرفروش‌های این هفته"><Bars onPick={() => nav('/admin/catalog')} data={d.products.filter((p) => p.cvr > 0).sort((a, b) => b.cvr - a.cvr).slice(0, 5).map((p) => ({ label: p.en, value: Math.round(p.cvr * 9) }))} fmt={(n) => `${fa(n)} فروش`} /></Card>
-          <Card title="سهم روش پرداخت"><Donut center={<span>نقدی<br />{fa(67)}٪</span>} data={[{ label: 'درگاه نقدی', value: 63, color: 'var(--brand)' }, ...d.providers.filter((p) => p.family === 'bnpl' && p.status !== 'prov.retired').map((p, i) => ({ label: p.name, value: p.share, color: ['var(--info)', 'var(--purple)', 'var(--warning)', 'var(--success)'][i % 4] })), { label: 'کیف پول', value: 4, color: 'var(--text-3)' }]} /></Card>
-          <Card title="اهداف این ماه">
-            {[['فروش ماهانه', 62], ['حاشیهٔ سود ۱۵٪', 98], ['رعایت وعدهٔ تحویل سریع', 94], ['واحد منتشرشده', 71]].map(([l, v]) => <div key={l} className="mb-3 last:mb-0"><div className="mb-1 flex justify-between text-12"><span className="text-t2">{l}</span><span className="tnum font-medium">{pct(v as number)}</span></div><Progress value={v as number} tone={(v as number) > 90 ? 'success' : 'brand'} /></div>)}
-          </Card>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {on('cats') && <Card title="فروش به تفکیک دسته"><Donut data={[...cats.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, v], i) => ({ label: l, value: v, color: ['var(--brand-solid)', 'var(--info)', 'var(--purple)', 'var(--warning)', 'var(--success)'][i] }))} center={<span>{fa(cats.size)}<br />دسته</span>} /></Card>}
+          {on('sources') && <Card title="منابع ورودی امروز"><Donut data={[{ label: 'ترب', value: 39, color: 'var(--brand-solid)' }, { label: 'جست‌وجوی گوگل', value: 27, color: 'var(--info)' }, { label: 'مستقیم', value: 18, color: 'var(--purple)' }, { label: 'اینستاگرام', value: 10, color: 'var(--warning)' }, { label: 'پیام‌رسان‌ها', value: 6, color: 'var(--success)' }]} center={<span>{fa('4,820')}<br />بازدید</span>} /></Card>}
+          {on('map') && <Card title="فروش به تفکیک استان" className="md:col-span-2"><IranTiles values={{ ...prov, البرز: (prov['البرز'] ?? 0) + 4e7, خوزستان: 2.2e7, 'خراسان رضوی': 3.1e7, گیلان: 1.4e7, مازندران: 1.9e7 }} fmt={compactToman} onPick={() => nav('/admin/analytics')} /><p className="mt-2 text-11 text-t2">تهران بیشترین سهم را دارد؛ هر خانه یک استان است و پررنگی آن، فروش ۳۰ روز اخیر را نشان می‌دهد.</p></Card>}
         </div>
+        {on('cards') && <Card title="کالاهای برتر این هفته" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/catalog')}>همهٔ کالاها</Button>}><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{featuredCards.map((p) => { const u = d.units.find((x) => x.productId === p.id && x.status === 'unit.published'); const price = u?.price ?? p.price ?? 0; const off = p.priceNew > price ? Math.round((1 - price / p.priceNew) * 100) : 0; return (
+          <button key={p.id} onClick={() => nav(`/admin/catalog/${p.id}`)} className="lift group overflow-hidden rounded-2xl border border-line bg-surface text-right"><div className="relative aspect-[4/3] overflow-hidden bg-white"><img src={p.image} alt={p.title} style={{ objectPosition: p.imagePos ?? '50% 50%' }} className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />{off > 0 && <span className="tnum absolute top-2 left-2 rounded-md bg-danger-solid px-1.5 py-0.5 text-11 font-bold text-white">{fa(off)}٪ ارزان‌تر از نو</span>}</div><div className="p-3"><p className="truncate text-13 font-semibold">{p.en}</p><p className="text-11 text-t2">{p.category}</p><div className="mt-2 flex items-center justify-between"><span className="tnum text-13 font-bold">{compactToman(price)}</span><span className="rounded-md bg-neutral-bg px-1.5 py-0.5 text-11">{fa(Math.round(p.cvr * 9))} فروش</span></div></div></button>) })}</div></Card>}
+        {(d.entities.homeWidgets ?? []).length > 0 && <div className="grid gap-4 md:grid-cols-2">{d.entities.homeWidgets.map((w) => <Card key={w.id} title={w.name} actions={<Button size="sm" variant="ghost" onClick={() => mutate((x) => { x.entities.homeWidgets = x.entities.homeWidgets.filter((y) => y.id !== w.id) }, { action: 'حذف ویجت سنجاق‌شده', target: w.name })}>برداشتن</Button>}><Bars data={[['استوک', 46], ['جعبه‌باز', 31], ['اکبند', 23]].map(([l, v]) => ({ label: l as string, value: v as number }))} fmt={pct} /></Card>)}</div>}
       </div>
+      <Modal open={pick} onClose={() => setPick(false)} title="چیدمان ویجت‌های خانه"><ul className="space-y-2">{WIDGETS.map(([k, l]) => <li key={k} className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-13"><span>{l}</span><Toggle on={on(k)} label={l} onChange={() => toggleW(k)} /></li>)}</ul><p className="mt-3 text-11 text-t2">از «تحلیل و گزارش» یا دستیار غنیمت هم می‌توانید نمودار دلخواه را به خانه سنجاق کنید.</p></Modal>
     </Page>
   )
 }

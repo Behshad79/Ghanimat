@@ -5,17 +5,18 @@ const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; allocReason: string }
-export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean
+export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
 export type Order = { id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
 import { makeEntities, type Rec } from './entities'
+import { makeSite, makeLayout } from './site'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
   products: ([
-    { id: 'p1', image: './products/p1-500.webp', imagePos: '50% 30%', title: 'گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت', en: 'Apple iPhone 16 Pro 256GB', brand: 'اپل', category: 'گوشی موبایل', status: 'product.published', mode: 'serial', priceNew: 132690000, rating: 4.7, reviews: 38, views: 4210, cvr: 2.4, health: 92, fastEligible: true, seller: 'غنیمت', torob: true },
+    { id: 'p1', image: './products/p1-500.webp', imagePos: '50% 62%', title: 'گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت', en: 'Apple iPhone 16 Pro 256GB', brand: 'اپل', category: 'گوشی موبایل', status: 'product.published', mode: 'serial', priceNew: 132690000, rating: 4.7, reviews: 38, views: 4210, cvr: 2.4, health: 92, fastEligible: true, seller: 'غنیمت', torob: true },
     { id: 'p2', image: './products/p2-500.webp', title: 'هدست بلوتوثی اپل AirPods Max ۲۰۲۴', en: 'Apple AirPods Max 2024', brand: 'اپل', category: 'هدفون', status: 'product.published', mode: 'serial', priceNew: 20000000, compareAt: 18750000, rating: 4.5, reviews: 21, views: 2890, cvr: 3.1, health: 88, fastEligible: true, seller: 'غنیمت', torob: true },
     { id: 'p3', image: './products/p3-500.webp', title: 'لپ‌تاپ اپل MacBook Air 13 M3', en: 'Apple MacBook Air 13 M3', brand: 'اپل', category: 'لپ‌تاپ', status: 'product.published', mode: 'serial', priceNew: 98000000, rating: 4.8, reviews: 12, views: 1980, cvr: 1.6, health: 81, fastEligible: true, seller: 'غنیمت', torob: true },
     { id: 'p4', image: './products/p4-500.webp', title: 'ساعت هوشمند اپل Watch Series 10', en: 'Apple Watch Series 10 46mm', brand: 'اپل', category: 'ساعت هوشمند', status: 'product.published', mode: 'serial', priceNew: 36500000, rating: 4.4, reviews: 9, views: 1320, cvr: 2.0, health: 74, fastEligible: true, seller: 'غنیمت', torob: false },
@@ -241,5 +242,15 @@ export const makeSeed = () => ({
   docSettings: {} as Record<string, { paper?: string; font?: number; margin?: number; footer?: string; seal?: boolean; hide?: string[] }>,
   codeFormat: { product: 'GH-P-', unit: 'GH-U-', pDigits: 6, uDigits: 7, nextProduct: 110, nextUnit: 20480 },
   trash: [] as TrashItem[],
+  site: makeSite(),
+  sitePublished: makeSite(),
+  siteVersions: [{ id: 'v1', at: ago(60 * 24 * 3), by: 'بهراد', note: 'نسخهٔ اولیهٔ سایت' }] as { id: string; at: string; by: string; note: string; data?: ReturnType<typeof makeSite> }[],
+  layout: makeLayout(),
+  moves: [
+    { id: 'mv1', at: ago(25), who: 'نیما', kind: 'ورود', unit: 'GU-20413', product: 'p1', from: 'رسید', to: 'QC-1', read: false },
+    { id: 'mv2', at: ago(90), who: 'نیما', kind: 'جابه‌جایی', unit: 'GU-20412', product: 'p1', from: 'A-02', to: 'A-03', read: false },
+    { id: 'mv3', at: ago(60 * 5), who: 'کاک هیوا', kind: 'ورود', unit: '', product: 'p8', from: 'رسید', to: 'M-08', qty: 6, read: true },
+    { id: 'mv4', at: ago(60 * 26), who: 'نیما', kind: 'خروج', unit: 'GU-20471', product: 'p2', from: 'B-01', to: 'بسته‌بندی', read: true },
+  ] as { id: string; at: string; who: string; kind: string; unit: string; product: string; from: string; to: string; qty?: number; read: boolean }[],
 })
 export type DB = ReturnType<typeof makeSeed>

@@ -10,6 +10,7 @@ import { Returns, Shipping, Warehouse } from './admin/pages/Ops'
 import { PrintCenter } from './admin/print/PrintCenter'
 import { Customers, Reviews, Support } from './admin/pages/People'
 import { Channels, Finance, Pricing } from './admin/pages/Revenue'
+import { SiteEditor } from './admin/site/SiteEditor'
 import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo, Supply } from './admin/pages/Insights'
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
@@ -52,6 +53,7 @@ export function App() {
               <Route path="channels" element={<Channels />} />
               <Route path="finance" element={<Finance />} />
               <Route path="content" element={<Content />} />
+              <Route path="site" element={<SiteEditor />} />
               <Route path="seo" element={<Seo />} />
               <Route path="marketing" element={<Marketing />} />
               <Route path="growth" element={<Growth />} />

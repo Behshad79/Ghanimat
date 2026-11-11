@@ -49,7 +49,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   }
 
   return (
-    <div className="rounded-lg border border-line bg-surface">
+    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="no-print flex flex-wrap items-center gap-2 border-b border-line p-2">
         {search && (
           <div className="relative min-w-40 flex-1 sm:max-w-xs">

@@ -47,14 +47,14 @@ export const StatusBadge = ({ s }: { s: string }) => { const x = st(s); return <
 
 export function Card({ title, hint, actions, children, className, pad = true, onClick }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void }) {
   return (
-    <section onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined} className={cx('rounded-xl border border-line bg-surface', onClick && 'lift cursor-pointer hover:border-brand/40', className)}>
+    <section onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined} className={cx('rounded-2xl border border-line bg-surface', onClick && 'lift cursor-pointer hover:border-brand/40', className)}>
       {(title || actions) && (
-        <header className="flex min-h-11 items-center justify-between gap-2 border-b border-line px-4 py-2">
-          <h3 className="flex items-center gap-1 text-13 font-semibold">{title}{hint}</h3>
+        <header className="flex min-h-12 items-center justify-between gap-2 border-b border-line px-5 py-2.5">
+          <h3 className="flex items-center gap-1.5 text-14 font-semibold">{title}{hint}</h3>
           <div className="flex items-center gap-1">{actions}</div>
         </header>
       )}
-      <div className={pad ? 'p-4' : ''}>{children}</div>
+      <div className={pad ? 'p-5' : ''}>{children}</div>
     </section>
   )
 }

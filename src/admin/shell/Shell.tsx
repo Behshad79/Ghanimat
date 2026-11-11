@@ -4,12 +4,12 @@ import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, 
 import { NAV } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
-import { ProductCard } from '../catalog/ProductCard'
 import { CommandPalette } from './CommandPalette'
 import { Avatar, Badge, Button, cx, Kbd, Light, Segmented, Select, StatusBadge } from '@/shared/ui/base'
 import { Drawer, Modal, toast } from '@/shared/ui/overlay'
 import { can, currentUser, effectiveRole, mutate, resetDB, ROLES, setSession, useDB, useSession, type ViewState } from '@/shared/lib/store'
 import { compactToman, fa, rel } from '@/shared/lib/fa'
+import { StorePreview } from '@/storefront/Preview'
 
 /** نوار «نسخهٔ نمایشی»: تعویض سریع نقش، منوی حالت‌ها، نتیجهٔ سرویس‌های بیرونی، بازنشانی داده (بخش ۱۸) */
 export function DemoBar() {
@@ -38,11 +38,11 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   const groups = [...new Set(items.map((n) => n.group))]
   const link = (n: (typeof NAV)[number]) => { const c = n.count?.(d) ?? 0; return (
     <NavLink key={n.id} to={n.path} end={n.path === '/admin'} onClick={onNav} title={mini ? n.label : undefined}
-      className={({ isActive }) => cx('group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-13 transition-colors', isActive ? 'bg-brand-tint font-semibold text-brand' : 'text-t2 hover:bg-neutral-bg hover:text-t1', mini && 'justify-center px-0')}>
+      className={({ isActive }) => cx('group relative flex h-10 items-center gap-2.5 rounded-xl px-3 text-13 transition-colors', isActive ? 'bg-brand-solid font-semibold text-white shadow-sm [&_.navcount]:bg-white/20 [&_.navcount]:text-white' : 'text-t2 hover:bg-neutral-bg hover:text-t1', mini && 'justify-center px-0')}>
       <n.icon size={17} className="shrink-0" />
       {!mini && <span className="flex-1 truncate">{n.label}</span>}
       {!mini && n.soon && <Badge dot={false}>به‌زودی</Badge>}
-      {c > 0 && <span className={cx('tnum rounded-full bg-danger-bg px-1.5 text-11 font-semibold text-danger', mini && 'absolute top-0.5 left-1 px-1')}>{fa(c)}</span>}
+      {c > 0 && <span className={cx('navcount tnum rounded-full bg-danger-bg px-1.5 text-11 font-semibold text-danger', mini && 'absolute top-0.5 left-1 px-1')}>{fa(c)}</span>}
       {!mini && !n.soon && c === 0 && <button aria-label="سنجاق" onClick={(e) => { e.preventDefault(); setSession({ pinned: s.pinned.includes(n.id) ? s.pinned.filter((x) => x !== n.id) : [...s.pinned, n.id] }) }} className={cx('text-t3 hover:text-brand', s.pinned.includes(n.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}><Pin size={12} /></button>}
     </NavLink>
   ) }
@@ -82,7 +82,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
     <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-3">
       <button aria-label="منو" onClick={onMenu} className="grid size-9 place-items-center rounded-md text-t2 hover:bg-neutral-bg lg:hidden"><Menu size={18} /></button>
       <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-sm"><Search size={15} /><span className="truncate">جست‌وجو یا اجرای دستور</span><span className="mr-auto hidden md:block"><Kbd>Ctrl K</Kbd></span></button>
-      {['super', 'ops'].includes(me.role) && !s.viewAs && <Button variant="ghost" icon={<Zap size={15} />} onClick={() => nav('/simple')} className="hidden sm:inline-flex">حالت سریع</Button>}
+      {['super', 'ops'].includes(me.role) && !s.viewAs && <Button variant="ghost" icon={<Zap size={15} />} onClick={() => nav('/simple')} className="max-sm:!hidden">حالت سریع</Button>}
       <div className="relative hidden md:block">
         <Button icon={<Plus size={15} />} onClick={() => setPanel(panel === 'quick' ? null : 'quick')}>ایجاد سریع</Button>
         {panel === 'quick' && <div className="anim-pop absolute top-10 right-0 w-44 rounded-md border border-line bg-surface p-1 shadow-float">{QUICK.map(([l, p]) => <button key={l} onClick={() => { nav(p); setPanel(null) }} className="block w-full rounded-sm px-3 py-1.5 text-right text-13 hover:bg-neutral-bg">{l}</button>)}</div>}
@@ -196,15 +196,10 @@ export function Shell() {
 
 /** پیش‌نمایش سایت مشتری با همین داده و همین کارت محصول (تا ساخت کامل سایت) */
 function SitePreview({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const d = useDB(); const thr = d.rules.find((r) => r.key === 'free_shipping_threshold')?.value ?? 0
+  const d = useDB(); const nav = useNavigate(); const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   return (
-    <Modal open={open} onClose={onClose} wide title="پیش‌نمایش سایت غنیمت">
-      <div className="overflow-hidden rounded-xl border border-line bg-[#f5f6fa]">
-        <p className="bg-[#0000ff] py-2 text-center text-12 text-white">ارسال رایگان برای خریدهای بالای {compactToman(thr)}</p>
-        <div className="flex items-center justify-between bg-white px-4 py-3"><img src="./brand/logo-full.png" alt="غنیمت" className="h-7" /><span className="text-12 text-[#5a5e78]">جست‌وجو در کالاهای اصل…</span></div>
-        <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">{d.products.filter((p) => p.status === 'product.published').slice(0, 6).map((p) => <ProductCard key={p.id} p={p} mini />)}</div>
-      </div>
-      <p className="mt-2 text-11 text-t2">سایت و پنل مشتری کامل، پس از دریافت طرح‌های آن، روی همین داده و کامپوننت‌ها ساخته می‌شود.</p>
+    <Modal open={open} onClose={onClose} wide title="پیش‌نمایش سایت غنیمت (نسخهٔ منتشرشده)" footer={<><Button variant="primary" onClick={() => { onClose(); nav('/admin/site') }}>ویرایش سایت</Button><Segmented value={device} onChange={setDevice} options={[['desktop', 'دسکتاپ'], ['mobile', 'موبایل']]} /></>}>
+      <div className={cx('mx-auto overflow-hidden rounded-xl border border-line', device === 'mobile' && 'w-[390px] max-w-full')}><StorePreview site={d.sitePublished} device={device} /></div>
     </Modal>
   )
 }

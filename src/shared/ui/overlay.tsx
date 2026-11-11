@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { CircleHelp, Search, Sparkles, X, BookOpen } from 'lucide-react'
 import { Button, cx, Input } from './base'
+import { SuccessCheck } from './motion'
 import { HINTS } from '../data/hints'
 import { useSession } from '../lib/store'
 
@@ -40,7 +41,7 @@ const subs = new Set<() => void>()
 const emit = () => subs.forEach((f) => f())
 export function toast(msg: string, opts: { undo?: () => void; tone?: 'ok' | 'err' } = {}) {
   const t = { id: Date.now() + Math.random(), msg, ...opts }
-  toasts = [...toasts, t]; emit()
+  toasts = [...toasts, t].slice(-3); emit()
   setTimeout(() => { toasts = toasts.filter((x) => x.id !== t.id); emit() }, opts.undo ? 7000 : 4000)
 }
 export function ToastHost() {
@@ -49,7 +50,7 @@ export function ToastHost() {
     <div className="no-print pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6" aria-live="polite">
       {list.map((t) => (
         <div key={t.id} className={cx('anim-pop pointer-events-auto flex max-w-lg items-center gap-3 rounded-md px-4 py-2.5 text-13 text-white shadow-float', t.tone === 'err' ? 'bg-[#b02a2a]' : 'bg-[#10123d]')}>
-          <span>{t.msg}</span>
+          {t.tone !== 'err' && <SuccessCheck />}<span>{t.msg}</span>
           {t.undo && <button className="font-semibold text-[#aab0ff] hover:underline" onClick={() => { t.undo!(); toasts = toasts.filter((x) => x.id !== t.id); emit() }}>بازگردانی</button>}
         </div>
       ))}

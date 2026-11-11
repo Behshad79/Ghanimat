@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Trash2, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -32,5 +32,6 @@ export const NAV: NavItem[] = [
   { id: 'rules', label: 'قوانین کسب‌وکار', icon: Scale, path: '/admin/rules', group: 'سازمان' },
   { id: 'settings', label: 'تنظیمات و سیستم', icon: Settings, path: '/admin/settings', group: 'سازمان' },
   { id: 'infra', label: 'زیرساخت و سرویس‌ها', icon: ServerCog, path: '/admin/infra', group: 'سازمان' },
+  { id: 'trash', label: 'سطل بازیافت', icon: Trash2, path: '/admin/trash', group: 'سازمان', count: (d) => d.trash.length },
   { id: 'design', label: 'سیستم طراحی', icon: Palette, path: '/admin/design', group: 'سازمان' },
 ]

@@ -29,7 +29,7 @@ export function resetDB() { db = makeSeed(); write(DB_KEY, db); dbSubs.forEach((
 export type Face = 'full' | 'simple' | 'partner'
 export const ROLES: Record<string, { label: string; face: Face; modules: string[] | '*'; home: string; opens: string }> = {
   super: { label: 'مدیر کل', face: 'full', modules: '*', home: '/admin', opens: 'پنل کامل، همهٔ ماژول‌ها' },
-  ops: { label: 'مدیر عملیات', face: 'full', modules: ['home', 'live', 'orders', 'warehouse', 'shipping', 'print', 'returns', 'catalog', 'team'], home: '/admin/live', opens: 'سفارش‌ها، انبار، ارسال، مرجوعی' },
+  ops: { label: 'مدیر عملیات', face: 'full', modules: ['home', 'live', 'orders', 'warehouse', 'shipping', 'print', 'returns', 'catalog', 'team', 'trash'], home: '/admin/live', opens: 'سفارش‌ها، انبار، ارسال، مرجوعی' },
   simple: { label: 'اپراتور ساده', face: 'simple', modules: [], home: '/simple', opens: 'حالت ساده' },
   partner: { label: 'شریک انبار مهاباد', face: 'partner', modules: [], home: '/partner', opens: 'پرتال شریک' },
   support: { label: 'کارشناس پشتیبانی', face: 'full', modules: ['home', 'support', 'customers', 'orders', 'reviews', 'returns'], home: '/admin/support', opens: 'صندوق ورودی' },
@@ -80,3 +80,26 @@ export const effectiveRole = (s: Session = session) => s.viewAs ?? currentUser()
 export const can = (module: string, s: Session = session) => { const m = ROLES[effectiveRole(s)]?.modules; return m === '*' || (m ?? []).includes(module) }
 /** شبیه‌سازی سرویس بیرونی با نتیجهٔ قابل انتخاب از نوار نمایشی */
 export const fakeCall = <T,>(ok: T, ms = 900) => new Promise<T>((res, rej) => setTimeout(() => (session.simulate === 'fail' ? rej(new Error('سرویس پاسخ نداد')) : res(ok)), session.simulate === 'slow' ? ms * 4 : ms))
+
+// ───── ابزارهای مشترک ─────
+/** اعلان درون‌پنل برای مدیر (و طبق قوانین اعلان، پیامک یا پیام‌رسان) */
+export function notify(title: string, body: string, to: string, cat = 'عملیات', tone: 'info' | 'warning' | 'danger' | 'success' = 'info') {
+  mutate((x) => { x.alerts.unshift({ id: `al-${Date.now()}`, cat, tone, title, body, to, at: new Date().toISOString(), read: false }) })
+}
+/** بازگردانی از سطل بازیافت به جای اصلی */
+export function restoreTrash(id: string) {
+  mutate((x) => {
+    const t = x.trash.find((i) => i.id === id); if (!t) return
+    if (t.ek === 'products') (x.products as any[]).unshift(t.data)
+    else if (t.ek === 'units') (x.units as any[]).unshift(t.data)
+    else (x.entities[t.ek] ??= []).unshift(t.data)
+    x.trash = x.trash.filter((i) => i.id !== id)
+  }, { action: 'بازگردانی از سطل بازیافت', target: id })
+}
+/** کد داخلی بعدی محصول یا واحد (قالب و شمارنده از تنظیمات) */
+export function takeCode(kind: 'product' | 'unit'): string {
+  const f = getDB().codeFormat
+  const n = kind === 'product' ? f.nextProduct : f.nextUnit
+  mutate((x) => { if (kind === 'product') x.codeFormat.nextProduct++; else x.codeFormat.nextUnit++ })
+  return `${kind === 'product' ? f.product : f.unit}${String(n).padStart(kind === 'product' ? f.pDigits : f.uDigits, '0')}`
+}

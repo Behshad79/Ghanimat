@@ -3,7 +3,9 @@ import { Shell } from './admin/shell/Shell'
 import { Login } from './admin/Login'
 import { Home, Live } from './admin/pages/Home'
 import { Orders, OrderDetail } from './admin/pages/Orders'
-import { Catalog, ImportLink, ProductDetail, UnitDetail } from './admin/pages/Catalog'
+import { ImportLink } from './admin/pages/Catalog'
+import { Catalog, Labels, ProductDetail, Trash, UnitDetail } from './admin/catalog/Catalog'
+import { ProductWizard } from './admin/catalog/Wizard'
 import { Print, Returns, Shipping, Warehouse } from './admin/pages/Ops'
 import { Customers, Reviews, Support } from './admin/pages/People'
 import { Channels, Finance, Pricing } from './admin/pages/Revenue'
@@ -31,6 +33,10 @@ export function App() {
               <Route path="orders/:id" element={<OrderDetail />} />
               <Route path="catalog" element={<Catalog />} />
               <Route path="catalog/import" element={<ImportLink />} />
+              <Route path="catalog/new" element={<ProductWizard />} />
+              <Route path="catalog/:id/edit" element={<ProductWizard />} />
+              <Route path="labels" element={<Labels />} />
+              <Route path="trash" element={<Trash />} />
               <Route path="catalog/unit/:id" element={<UnitDetail />} />
               <Route path="catalog/:id" element={<ProductDetail />} />
               <Route path="supply" element={<Supply />} />

@@ -86,7 +86,10 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
       </div>
       <div className="mr-auto hidden xl:block"><Select value={s.scope} onChange={(v) => setSession({ scope: v as any })} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="h-9 w-36" /></div>
       <div className="mr-auto flex items-center xl:mr-0">
-        <IconBtn label="وضعیت سیستم" onClick={() => setPanel('status')}><Light s={bad.some((b) => b.status === 'prov.error') ? 'crit' : bad.length ? 'warn' : 'ok'} /></IconBtn>
+        {(() => { const lv = bad.some((b) => b.status === 'prov.error') ? 'crit' : bad.length ? 'warn' : 'ok'; return (
+          <button onClick={() => setPanel('status')} title="وضعیت سیستم" className="btn flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg hover:text-t1">
+            <Light s={lv} /><span className="hidden md:inline">{lv === 'ok' ? 'سیستم سالم' : lv === 'warn' ? `${fa(bad.length)} هشدار` : `${fa(bad.filter((b) => b.status === 'prov.error').length)} سرویس قطع`}</span>
+          </button>) })()}
         <IconBtn label="صندوق تأییدها" n={pend.length} onClick={() => setPanel('approvals')}><CheckCheck size={18} /></IconBtn>
         <IconBtn label="هشدارها" n={unread} onClick={() => setPanel('alerts')}><Bell size={18} /></IconBtn>
         <span className="hidden sm:block"><IconBtn label="تغییر تم" onClick={() => setSession({ theme: s.theme === 'dark' ? 'light' : 'dark' })}>{s.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</IconBtn></span>

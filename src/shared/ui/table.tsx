@@ -1,20 +1,22 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, Download, Printer, Search, SearchX } from 'lucide-react'
 import { Button, cx, EmptyState, Input } from './base'
-import { toast } from './overlay'
+import { Drawer, toast } from './overlay'
+import { RowMenu, type MenuItem } from './menu'
 import { csv, download, fa } from '../lib/fa'
 import { mutate } from '../lib/store'
 
-export type Col<R> = { key: string; title: ReactNode; render: (r: R) => ReactNode; sort?: (r: R) => number | string; text?: (r: R) => string | number; align?: 'left'; hideMobile?: boolean; optional?: boolean }
+export type Col<R> = { key: string; title: ReactNode; render: (r: R) => ReactNode; sort?: (r: R) => number | string; text?: (r: R) => string | number; align?: 'left'; hideMobile?: boolean; optional?: boolean; wrap?: boolean }
 type Props<R> = {
   rows: R[]; cols: Col<R>[]; rowKey: (r: R) => string; name: string
   onRow?: (r: R) => void; search?: (r: R) => string; filters?: ReactNode
   bulk?: (ids: string[], clear: () => void) => ReactNode
   empty: { title: string; desc?: string; action?: ReactNode }
   pageSize?: number; flashId?: string | null
+  actions?: (r: R) => MenuItem[]
 }
 /** جدول داده: جست‌وجو، مرتب‌سازی، انتخاب گروهی (Shift برای بازه)، انتخاب ستون، خروجی همین نما، چاپ، کارت موبایل */
-export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters, bulk, empty, pageSize = 12, flashId }: Props<R>) {
+export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters, bulk, empty, pageSize = 12, flashId, actions }: Props<R>) {
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
   const [sel, setSel] = useState<string[]>([])
@@ -22,6 +24,9 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   const [hidden, setHidden] = useState<string[]>(cols.filter((c) => c.optional).map((c) => c.key))
   const [colMenu, setColMenu] = useState(false)
   const [page, setPage] = useState(0)
+  const [peek, setPeek] = useState<R | null>(null)
+  // هیچ ردیفی بی‌واکنش نیست: اگر صفحه جزئیات اختصاصی ندارد، کشوی جزئیات همهٔ ستون‌ها باز می‌شود
+  const rowClick = onRow ?? ((r: R) => setPeek(r))
 
   const view = useMemo(() => {
     let v = q && search ? rows.filter((r) => search(r).toLowerCase().includes(q.toLowerCase())) : rows
@@ -90,13 +95,15 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
                       ) : c.title}
                     </th>
                   ))}
+                  {actions && <th className="sticky left-0 h-9 w-12 border-b border-line bg-surface-2 px-2"><span className="sr-only">اقدام‌ها</span></th>}
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((r, i) => { const id = rowKey(r); return (
-                  <tr key={id} onClick={() => onRow?.(r)} className={cx('border-b border-line last:border-0 transition-colors', onRow && 'cursor-pointer hover:bg-surface-2', sel.includes(id) && 'bg-brand-tint/60', flashId === id && 'row-flash')} style={{ height: 'var(--row-h)' }}>
+                  <tr key={id} onClick={() => rowClick(r)} className={cx('border-b border-line last:border-0 transition-colors', 'cursor-pointer hover:bg-surface-2', sel.includes(id) && 'bg-brand-tint/60', flashId === id && 'row-flash')} style={{ height: 'var(--row-h)' }}>
                     {bulk && <td className="px-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label="انتخاب ردیف" checked={sel.includes(id)} onChange={() => {}} onClick={(e) => toggle(id, i, e.shiftKey)} /></td>}
-                    {shown.map((c) => <td key={c.key} className={cx('px-3', c.align === 'left' && 'tnum text-left')}>{c.render(r)}</td>)}
+                    {shown.map((c) => <td key={c.key} className={cx('px-3', c.wrap ? 'min-w-48' : 'whitespace-nowrap', c.align === 'left' && 'tnum text-left')}>{c.render(r)}</td>)}
+                    {actions && <td className="sticky left-0 bg-surface px-2" onClick={(e) => e.stopPropagation()}><RowMenu items={actions(r)} /></td>}
                   </tr>
                 ) })}
               </tbody>
@@ -105,8 +112,9 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
           {/* موبایل: فهرست کارتی (بخش ۵.۸) */}
           <ul className="divide-y divide-line md:hidden">
             {pageRows.map((r) => (
-              <li key={rowKey(r)} onClick={() => onRow?.(r)} className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2.5 active:bg-surface-2">
-                {shown.filter((c) => !c.hideMobile).slice(0, 5).map((c, i) => <div key={c.key} className={cx(i === 0 && 'w-full font-medium', i > 0 && 'text-12 text-t2')}>{c.render(r)}</div>)}
+              <li key={rowKey(r)} onClick={() => rowClick(r)} className="relative cursor-pointer flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2.5 active:bg-surface-2">
+                {shown.filter((c) => !c.hideMobile).slice(0, 5).map((c, i) => <div key={c.key} className={cx(i === 0 && 'w-full font-medium', i === 0 && actions && 'pl-9', i > 0 && 'text-12 text-t2')}>{c.render(r)}</div>)}
+                {actions && <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}><RowMenu items={actions(r)} /></div>}
               </li>
             ))}
           </ul>
@@ -122,6 +130,9 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
           </div>
         </>
       )}
+      <Drawer open={!!peek} onClose={() => setPeek(null)} title={`جزئیات ${name}`} footer={peek && actions ? <div className="flex flex-wrap gap-2">{actions(peek).flatMap((a) => (a === 'sep' ? [] : [a])).slice(0, 4).map((a, i) => <button key={i} onClick={() => { setPeek(null); a.onClick() }} className={cx('btn inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-13 font-medium', a.danger ? 'border-transparent bg-danger-bg text-danger' : 'border-line bg-surface hover:bg-surface-2')}>{a.icon}{a.label}</button>)}</div> : undefined}>
+        {peek && <dl className="divide-y divide-line">{cols.map((c) => <div key={c.key} className="flex items-start justify-between gap-4 py-2.5 text-13"><dt className="shrink-0 text-t2">{c.title}</dt><dd className="min-w-0 text-left font-medium">{c.render(peek)}</dd></div>)}</dl>}
+      </Drawer>
       {/* نوار اقدام گروهی شناور */}
       {bulk && sel.length > 0 && (
         <div className="no-print anim-pop fixed inset-x-0 bottom-20 z-30 mx-auto flex w-fit max-w-[92vw] flex-wrap items-center gap-2 rounded-lg bg-[#10123d] px-3 py-2 text-white shadow-float md:bottom-6">

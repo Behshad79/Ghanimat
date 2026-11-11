@@ -16,7 +16,7 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   const nav = useNavigate()
   const denied = (module && !can(module, s)) || s.viewState === 'noaccess'
   return (
-    <div className="mx-auto w-full max-w-[1600px] p-4 md:p-6">
+    <div key={typeof title === 'string' ? title : undefined} className="page-enter mx-auto w-full max-w-[1600px] p-4 md:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           {back && <button onClick={() => nav(back)} className="mb-1 flex items-center gap-0.5 text-12 text-t2 hover:text-brand">بازگشت به فهرست<ChevronLeft size={13} /></button>}

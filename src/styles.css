@@ -122,6 +122,31 @@ button:disabled { cursor: not-allowed; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes popIn { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes draw { from { stroke-dashoffset: var(--len, 1200); } to { stroke-dashoffset: 0; } }
+@keyframes check-pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes check-draw { from { stroke-dashoffset: 18; } to { stroke-dashoffset: 0; } }
+@keyframes rot-in { from { opacity: 0; transform: translateY(70%); } to { opacity: 1; transform: none; } }
+@keyframes rot-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-70%); } }
+.page-enter { animation: enter .28s cubic-bezier(.2,.7,.2,1) both; }
+.stagger > * { animation: enter .32s cubic-bezier(.2,.7,.2,1) both; }
+.stagger > *:nth-child(2) { animation-delay: 40ms } .stagger > *:nth-child(3) { animation-delay: 80ms } .stagger > *:nth-child(4) { animation-delay: 120ms } .stagger > *:nth-child(5) { animation-delay: 160ms } .stagger > *:nth-child(n+6) { animation-delay: 200ms }
+.bar-grow { transform-origin: bottom; animation: grow-y .55s cubic-bezier(.2,.7,.2,1) both; }
+.bar-grow-x { transform-origin: right; animation: grow-x .55s cubic-bezier(.2,.7,.2,1) both; }
+.line-draw { stroke-dasharray: var(--len, 1200); animation: draw .9s ease-out both; }
+.check-pop { transform-origin: center; animation: check-pop .35s ease-out both; }
+.check-draw { stroke-dasharray: 18; animation: check-draw .3s .15s ease-out both; }
+.rot-in { animation: rot-in .32s cubic-bezier(.2,.7,.2,1) both; }
+/* کارت پیونددار: ۲ پیکسل بالا آمدن در هاور (taste-skill) */
+.lift { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(16,18,61,.22); }
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn { transition: background-color .15s, color .15s, transform .08s, box-shadow .15s; }
+/* اسکرول افقی با محو لبه‌ها تا معلوم باشد ادامه دارد */
+.scroll-fade { mask-image: linear-gradient(to left, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+@media (min-width: 768px) { .scroll-fade { mask-image: none; } }
 @keyframes flash { from { background: var(--brand-tint); } to { background: transparent; } }
 .anim-fade { animation: fadeIn 0.15s ease-out; }
 .anim-slide { animation: slideIn 0.2s ease-out; }

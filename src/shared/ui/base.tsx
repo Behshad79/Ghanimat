@@ -45,9 +45,9 @@ export function Badge({ tone = 'neutral', children, dot = true }: { tone?: Tone;
 }
 export const StatusBadge = ({ s }: { s: string }) => { const x = st(s); return <Badge tone={x.tone}>{x.label}</Badge> }
 
-export function Card({ title, hint, actions, children, className, pad = true }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean }) {
+export function Card({ title, hint, actions, children, className, pad = true, onClick }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void }) {
   return (
-    <section className={cx('rounded-lg border border-line bg-surface', className)}>
+    <section onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined} className={cx('rounded-xl border border-line bg-surface', onClick && 'lift cursor-pointer hover:border-brand/40', className)}>
       {(title || actions) && (
         <header className="flex min-h-11 items-center justify-between gap-2 border-b border-line px-4 py-2">
           <h3 className="flex items-center gap-1 text-13 font-semibold">{title}{hint}</h3>
@@ -68,19 +68,21 @@ export function Field({ label, help, error, hint, children }: { label: string; h
     </label>
   )
 }
-const inputCls = 'ctl h-9 w-full rounded-md border border-line bg-surface px-3 text-13 text-t1 placeholder:font-sans placeholder:text-t3 focus:border-brand focus:outline-none disabled:opacity-60'
-export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(inputCls, p.className)} />
-export const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(inputCls, 'h-auto py-2 leading-6', p.className)} />
+/** اگر پهنا داده نشده، تمام‌عرض (رفع تداخل w-full با w-36) */
+const withW = (c?: string) => cx(inputBase, /(^|\s)(w-|min-w-|max-w-|flex-1)/.test(c ?? '') ? '' : 'w-full')
+const inputBase = 'ctl h-9 rounded-md border border-line bg-surface px-3 text-13 text-t1 placeholder:font-sans placeholder:text-t3 focus:border-brand focus:outline-none disabled:opacity-60'
+export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(withW(p.className), p.className)} />
+export const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(withW(p.className), 'h-auto py-2 leading-6', p.className)} />
 export function Select({ value, onChange, options, className }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[]; className?: string }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={cx(inputCls, 'pe-8', className)}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={cx(withW(className), 'pe-8', className)}>
       {options.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={v} value={v}>{l}</option> })}
     </select>
   )
 }
 export function Toggle({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-50', on ? 'bg-brand' : 'bg-line')}>
+    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-50', on ? 'bg-brand-solid' : 'bg-line')}>
       <span className={cx('absolute top-0.5 size-4 rounded-full bg-white shadow transition-all duration-150', on ? 'right-[18px]' : 'right-0.5')} />
     </button>
   )
@@ -96,7 +98,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
 }
 export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: string; count?: number }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-line">
+    <div role="tablist" className="scroll-fade flex gap-1 overflow-x-auto border-b border-line">
       {tabs.map((t) => (
         <button key={t.id} role="tab" aria-selected={t.id === value} onClick={() => onChange(t.id)} className={cx('-mb-px flex h-10 shrink-0 items-center gap-1.5 border-b-2 px-3 text-13 font-medium transition-colors', t.id === value ? 'border-brand text-brand' : 'border-transparent text-t2 hover:text-t1')}>
           {t.label}

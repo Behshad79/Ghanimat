@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
+import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
 import { Copilot } from './Copilot'
+import { LiveAlert } from '../shared/LiveAlert'
 import { CommandPalette } from './CommandPalette'
 import { Avatar, Badge, Button, cx, Kbd, Light, Segmented, Select, StatusBadge } from '@/shared/ui/base'
 import { Drawer, Modal, toast } from '@/shared/ui/overlay'
@@ -80,6 +81,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
     <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-3">
       <button aria-label="منو" onClick={onMenu} className="grid size-9 place-items-center rounded-md text-t2 hover:bg-neutral-bg lg:hidden"><Menu size={18} /></button>
       <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-sm"><Search size={15} /><span className="truncate">جست‌وجو یا اجرای دستور</span><span className="mr-auto hidden md:block"><Kbd>Ctrl K</Kbd></span></button>
+      {['super', 'ops'].includes(me.role) && !s.viewAs && <Button variant="ghost" icon={<Zap size={15} />} onClick={() => nav('/simple')} className="hidden sm:inline-flex">حالت سریع</Button>}
       <div className="relative hidden md:block">
         <Button icon={<Plus size={15} />} onClick={() => setPanel(panel === 'quick' ? null : 'quick')}>ایجاد سریع</Button>
         {panel === 'quick' && <div className="anim-pop absolute top-10 right-0 w-44 rounded-md border border-line bg-surface p-1 shadow-float">{QUICK.map(([l, p]) => <button key={l} onClick={() => { nav(p); setPanel(null) }} className="block w-full rounded-sm px-3 py-1.5 text-right text-13 hover:bg-neutral-bg">{l}</button>)}</div>}
@@ -179,6 +181,7 @@ export function Shell() {
           <MobileNav onMore={() => setMenu(true)} onAI={() => setAI(true)} />
         </div>
       </div>
+      <LiveAlert />
       <CommandPalette open={cmd} onClose={() => setCmd(false)} />
       <Copilot open={ai} onClose={() => setAI(false)} />
       <Modal open={keys} onClose={() => setKeys(false)} title="میان‌برهای صفحه‌کلید">

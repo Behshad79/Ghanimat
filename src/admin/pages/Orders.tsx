@@ -5,7 +5,8 @@ import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, 
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
-import { fakeCall, mutate, snapshot } from '@/shared/lib/store'
+import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
+import { PackPhotos } from '../shared/PackPhotos'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
@@ -74,6 +75,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
     if (/^\d+$/.test(x)) {
       if (x.length !== 24 && x.length !== 11) { setState('err'); return setMsg('کد رهگیری نامعتبر است. کد پست ۲۴ رقم و کد تیپاکس ۱۱ رقم است.') }
       if (used.some((s) => s.tracking === x)) { setState('err'); return setMsg('این کد قبلاً به مرسولهٔ دیگری وصل شده است. کد را بررسی کنید.') }
+      if (!getDB().orders.find((o) => o.id === orderId)?.shipments.find((y) => y.id === shipId)?.packPhotos?.length) { setState('err'); return setMsg('اول عکس پیش از ارسال را ثبت کنید.') }
       mutate((db) => { const s = db.orders.find((o) => o.id === orderId)!.shipments.find((s) => s.id === shipId)!; s.tracking = x; s.status = 'ship.in_transit'; db.orders.find((o) => o.id === orderId)!.status = 'order.shipped' }, { action: 'الحاق کد رهگیری', target: shipId, after: x })
       setV(''); setState('idle'); return toast(`کد رهگیری ${x.length === 24 ? 'پست' : 'تیپاکس'} ثبت شد و لینک رهگیری برای مشتری ارسال شد.`)
     }
@@ -91,6 +93,8 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
     } catch { setState('down'); setMsg(`${carrierName} پاسخ نمی‌دهد. اطلاعات پیک را دستی وارد کنید؛ خواندن لینک در پس‌زمینه دوباره تلاش می‌شود.`); setC({ name: '', phone: '', plate: '', vehicle: 'موتور', eta: 0, code, cost: 0 }) }
   }
   const save = () => {
+    const sh = getDB().orders.find((o) => o.id === orderId)?.shipments.find((x) => x.id === shipId)
+    if (!sh?.packPhotos?.length) return toast('اول عکس پیش از ارسال را ثبت کنید؛ این عکس‌ها برای مقایسه در مرجوعی بایگانی می‌شوند.', { tone: 'err' })
     const undo = snapshot()
     mutate((db) => { const o = db.orders.find((o) => o.id === orderId)!; const s = o.shipments.find((s) => s.id === shipId)!; s.courier = c; s.status = 'ship.handed'; o.status = 'order.shipped' }, { action: 'ثبت پیک با لینک', target: shipId, after: c.name })
     setState('idle'); setV(''); setC(null); toast('پیک ثبت شد و لینک رصد برای مشتری ارسال شد.', { undo })
@@ -181,6 +185,7 @@ export function OrderDetail() {
                     <Money v={it.price * it.qty} />
                   </li>) })}
               </ul>
+              {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
               {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => toast('تماس با پیک برقرار شد.')}>تماس</Button></div>}
               {s.tracking && <p className="mb-3 text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
               {s.status === 'ship.partner_confirm' && <p className="mb-3 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">منتظر تأیید موجودی شریک انبار. پیامک و پیام‌رسان برای او ارسال شده است. اگر تا پایان مهلت تأیید نکند، سفارش به جریان تصمیم مشتری می‌رود.</p>}

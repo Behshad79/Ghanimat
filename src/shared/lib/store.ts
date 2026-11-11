@@ -30,7 +30,7 @@ export type Face = 'full' | 'simple' | 'partner'
 export const ROLES: Record<string, { label: string; face: Face; modules: string[] | '*'; home: string; opens: string }> = {
   super: { label: 'مدیر کل', face: 'full', modules: '*', home: '/admin', opens: 'پنل کامل، همهٔ ماژول‌ها' },
   ops: { label: 'مدیر عملیات', face: 'full', modules: ['home', 'live', 'orders', 'warehouse', 'shipping', 'print', 'returns', 'catalog', 'team', 'trash'], home: '/admin/live', opens: 'سفارش‌ها، انبار، ارسال، مرجوعی' },
-  simple: { label: 'اپراتور ساده', face: 'simple', modules: [], home: '/simple', opens: 'حالت ساده' },
+  simple: { label: 'اپراتور', face: 'simple', modules: [], home: '/simple', opens: 'حالت سریع (کامل، بدون نیاز به تأیید)' },
   partner: { label: 'شریک انبار مهاباد', face: 'partner', modules: [], home: '/partner', opens: 'پرتال شریک' },
   support: { label: 'کارشناس پشتیبانی', face: 'full', modules: ['home', 'support', 'customers', 'orders', 'reviews', 'returns'], home: '/admin/support', opens: 'صندوق ورودی' },
   finance: { label: 'کارشناس مالی', face: 'full', modules: ['home', 'finance', 'orders', 'pricing', 'returns', 'analytics'], home: '/admin/finance', opens: 'مالی و تسویه' },
@@ -102,4 +102,10 @@ export function takeCode(kind: 'product' | 'unit'): string {
   const n = kind === 'product' ? f.nextProduct : f.nextUnit
   mutate((x) => { if (kind === 'product') x.codeFormat.nextProduct++; else x.codeFormat.nextUnit++ })
   return `${kind === 'product' ? f.product : f.unit}${String(n).padStart(kind === 'product' ? f.pDigits : f.uDigits, '0')}`
+}
+
+/** مجوز سه‌حالته برای کاربر فعلی (مدیر کل همیشه مجاز) */
+export function permOf(action: string): 'allow' | 'approve' | 'deny' {
+  const u = currentUser(); if (!u || u.role === 'super' || u.role === 'ops') return 'allow'
+  return getDB().perms[u.id]?.[action]?.mode ?? 'allow'
 }

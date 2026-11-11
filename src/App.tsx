@@ -65,7 +65,7 @@ export function App() {
               <Route path="infra" element={<Infra />} />
               <Route path="design" element={<Design />} />
             </Route>
-            <Route path="/simple" element={face === 'simple' ? <Simple /> : <Navigate to="/admin" replace />} />
+            <Route path="/simple" element={face === 'simple' || (!s.viewAs && ['super', 'ops'].includes(me.role)) ? <Simple /> : <Navigate to="/admin" replace />} />
             <Route path="/partner" element={face === 'partner' ? <Partner /> : <Navigate to="/admin" replace />} />
             <Route path="*" element={<Navigate to={ROLES[s.viewAs ?? me.role].home} replace />} />
           </>

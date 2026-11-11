@@ -31,7 +31,7 @@ export function ProductCard({ p, u, compact: mini, hover, out }: { p: P; u?: U; 
   const off = Math.round((1 - price / p.priceNew) * 100)
   return (
     <div className={cx('relative w-full overflow-hidden rounded-lg border bg-white text-[#10123d]', hover ? 'border-[#0000ff] shadow-float' : 'border-[#e6e8f0]', mini ? 'max-w-[170px]' : 'max-w-[232px]', out && 'opacity-70')}>
-      <div className="relative grid aspect-square place-items-center bg-[#f5f6fa] text-11 text-[#8a90a2]">{u && u.condition !== 'sealed' ? 'عکس واقعی همین واحد' : 'تصویر مدل'}
+      <div className="relative grid aspect-square place-items-center overflow-hidden bg-[#f5f6fa]">{p.image ? <img src={p.image} alt={p.title} style={{ objectPosition: p.imagePos ?? '50% 50%' }} className={cx('absolute inset-0 size-full object-cover transition-transform duration-300', hover && 'scale-[1.03]', out && 'grayscale')} /> : <span className="text-11 text-[#5a5e78]">تصویر کالا</span>}
         {fast && <span className="absolute top-2 right-2 flex items-center gap-1 rounded-sm bg-[#0000ff] px-1.5 py-0.5 text-11 font-medium text-white"><Zap size={11} />تحویل {fa(rule('fast_delivery_hours'))} ساعته</span>}
         {on('hot') && p.cvr > 2.5 && <span className="absolute top-2 left-2 grid size-6 place-items-center rounded-full bg-[#fff3e8] text-[#b45309]"><Flame size={13} /></span>}
         {hover && !out && <span className="absolute inset-x-2 bottom-2 flex h-8 items-center justify-center gap-1 rounded-md bg-[#0000ff] text-12 font-medium text-white"><ShoppingCart size={13} />افزودن به سبد خرید</span>}
@@ -57,7 +57,7 @@ export function ProductCard({ p, u, compact: mini, hover, out }: { p: P; u?: U; 
 export function Catalog() {
   const { d, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('products')
   const pcols: Col<P>[] = [
-    { key: 'title', title: 'محصول', render: (p) => <Cell thumb={p.en} a={p.title} b={<span className="ltr">{p.en}</span>} />, sort: (p) => p.title, text: (p) => p.title },
+    { key: 'title', title: 'محصول', render: (p) => <Cell pid={p.id} size={44} a={p.title} b={<span className="ltr">{p.en}</span>} />, sort: (p) => p.title, text: (p) => p.title },
     { key: 'cat', title: 'دسته', hideMobile: true, render: (p) => p.category, sort: (p) => p.category, text: (p) => p.category },
     { key: 'mode', title: <>نگهداری<Hint k="product_unit" /></>, hideMobile: true, render: (p) => <Badge dot={false}>{p.mode === 'serial' ? 'واحد سریال‌دار' : 'موجودی تعدادی'}</Badge> },
     { key: 'stock', title: 'موجود', align: 'left', render: (p) => { const n = stock(d, p); return <span className={n === 0 ? 'text-danger' : ''}>{fa(n)}</span> }, sort: (p) => stock(d, p), text: (p) => stock(d, p) },
@@ -69,7 +69,7 @@ export function Catalog() {
   ]
   const ucols: Col<U>[] = [
     { key: 'id', title: 'واحد', render: (u) => <CopyId v={u.id} />, sort: (u) => u.id, text: (u) => u.id },
-    { key: 'p', title: 'محصول', render: (u) => <Cell a={product(u.productId).en} b={u.color} />, text: (u) => product(u.productId).en },
+    { key: 'p', title: 'محصول', render: (u) => <Cell pid={u.productId} a={product(u.productId).en} b={u.color} />, text: (u) => product(u.productId).en },
     { key: 'serial', title: 'سریال', hideMobile: true, render: (u) => <CopyId v={u.serial} />, text: (u) => u.serial },
     { key: 'cond', title: 'وضعیت کالا', render: (u) => `${CONDITION[u.condition]} · ${g(u.grade)}`, sort: (u) => u.condition },
     { key: 'wh', title: 'انبار', hideMobile: true, render: (u) => WAREHOUSE[u.warehouse], sort: (u) => u.warehouse },

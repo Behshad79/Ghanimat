@@ -62,7 +62,7 @@ export function Copilot({ open, onClose }: { open: boolean; onClose: () => void 
       {msgs.length === 0 && <div className="space-y-2">{SUGGEST.map((s) => <button key={s} onClick={() => ask(s)} className="block w-full rounded-md border border-line px-3 py-2 text-right text-13 hover:border-brand">{s}</button>)}</div>}
       <div className="space-y-3">
         {msgs.map((m, i) => (
-          <div key={i} className={m.from === 'me' ? 'mr-8 rounded-lg bg-brand px-3 py-2 text-13 text-white dark:text-[#0c0d1a]' : 'ml-8 rounded-lg border border-line bg-surface-2 px-3 py-2 text-13 leading-6'}>
+          <div key={i} className={m.from === 'me' ? 'mr-8 rounded-lg bg-brand-solid px-3 py-2 text-13 text-white' : 'ml-8 rounded-lg border border-line bg-surface-2 px-3 py-2 text-13 leading-6'}>
             {m.body}{m.meta && <p className="mt-2 border-t border-line pt-1.5 text-11 text-t3">{m.meta}</p>}
           </div>
         ))}

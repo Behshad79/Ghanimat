@@ -74,7 +74,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
   const bad = d.providers.filter((p) => ['prov.error', 'prov.slow'].includes(p.status))
   const decide = (id: string, ok: boolean) => { mutate((x) => { x.approvals.find((a) => a.id === id)!.status = ok ? 'approval.approved' : 'approval.rejected' }, { action: ok ? 'تأیید درخواست' : 'رد درخواست', target: id }); toast(ok ? 'درخواست تأیید شد.' : 'درخواست رد شد.') }
   const IconBtn = ({ label, n, onClick, children }: { label: string; n?: number; onClick: () => void; children: ReactNode }) => (
-    <button aria-label={label} title={label} onClick={onClick} className="relative grid size-9 shrink-0 place-items-center rounded-md text-t2 hover:bg-neutral-bg hover:text-t1">{children}{!!n && <span className="tnum absolute top-0.5 left-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">{fa(n)}</span>}</button>
+    <button aria-label={label} title={label} onClick={onClick} className="relative grid size-9 shrink-0 place-items-center rounded-md text-t2 hover:bg-neutral-bg hover:text-t1">{children}{!!n && <span className="tnum absolute top-0.5 left-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-danger-solid px-1 text-[10px] font-bold text-white">{fa(n)}</span>}</button>
   )
   return (
     <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-3">
@@ -132,11 +132,11 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
 function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
   const d = useDB()
   const Item = ({ to, icon, label, n }: { to: string; icon: ReactNode; label: string; n?: number }) => (
-    <NavLink to={to} end className={({ isActive }) => cx('relative flex flex-1 flex-col items-center justify-center gap-0.5 text-11', isActive ? 'text-brand' : 'text-t2')}>{icon}{label}{!!n && <span className="tnum absolute top-1 right-1/4 rounded-full bg-danger px-1 text-[10px] text-white">{fa(n)}</span>}</NavLink>
+    <NavLink to={to} end className={({ isActive }) => cx('relative flex flex-1 flex-col items-center justify-center gap-0.5 text-11', isActive ? 'text-brand' : 'text-t2')}>{icon}{label}{!!n && <span className="tnum absolute top-1 right-1/4 rounded-full bg-danger-solid px-1 text-[10px] text-white">{fa(n)}</span>}</NavLink>
   )
   return (
     <>
-      <button aria-label="دستیار غنیمت" onClick={onAI} className="no-print fixed bottom-20 left-4 z-30 grid size-12 place-items-center rounded-full bg-brand text-white shadow-float lg:hidden"><Sparkles size={20} /></button>
+      <button aria-label="دستیار غنیمت" onClick={onAI} className="no-print fixed bottom-20 left-4 z-30 grid size-12 place-items-center rounded-full bg-brand-solid text-white shadow-float lg:hidden"><Sparkles size={20} /></button>
       <nav className="no-print flex h-16 shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="ناوبری موبایل">
         <Item to="/admin" icon={<HomeIcon size={20} />} label="خانه" />
         <Item to="/admin/orders" icon={<ShoppingBag size={20} />} label="سفارش‌ها" n={NAV[2].count!(d)} />

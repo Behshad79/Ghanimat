@@ -78,7 +78,7 @@ export const Stepper = ({ steps, current }: { steps: string[]; current: number }
   <ol className="flex items-center overflow-x-auto">
     {steps.map((s, i) => (
       <li key={s} className="flex shrink-0 items-center">
-        <span className={cx('grid size-6 place-items-center rounded-full text-11 font-semibold', i < current ? 'bg-success text-white' : i === current ? 'bg-brand text-white' : 'bg-neutral-bg text-t3')}>{i < current ? <Check size={13} /> : i + 1}</span>
+        <span className={cx('grid size-6 place-items-center rounded-full text-11 font-semibold', i < current ? 'bg-success-solid text-white' : i === current ? 'bg-brand-solid text-white' : 'bg-neutral-bg text-t3')}>{i < current ? <Check size={13} /> : i + 1}</span>
         <span className={cx('mx-2 text-12', i === current ? 'font-semibold text-t1' : 'text-t2')}>{s}</span>
         {i < steps.length - 1 && <span className={cx('ml-2 h-px w-6', i < current ? 'bg-success' : 'bg-line')} />}
       </li>

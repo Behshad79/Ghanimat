@@ -9,7 +9,7 @@ import { fakeCall, mutate, snapshot } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
-import { Cell, Money, SlaChip, useLookup, useTab } from './_shared'
+import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
 
 const TABS: [string, string, (o: Order) => boolean][] = [
   ['all', 'همه', () => true],
@@ -29,7 +29,7 @@ export function Orders() {
   const cols: Col<Order>[] = [
     { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={customer(o.customerId).name} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
-    { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => <span className="text-12 text-t2">{o.shipments.flatMap((s) => s.items).map((i) => product(i.productId).en).join('، ') || '—'}</span> },
+    { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
     { key: 'pay', title: 'روش پرداخت', hideMobile: true, render: (o) => o.pay, text: (o) => o.pay },
     { key: 'wh', title: 'انبار مبدأ', hideMobile: true, render: (o) => <span className="text-12">{[...new Set(o.shipments.map((s) => WAREHOUSE[s.warehouse]))].join(' + ') || '—'}</span> },
@@ -177,7 +177,7 @@ export function OrderDetail() {
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
                   <li key={k} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                    <Cell thumb={product(it.productId).en} a={product(it.productId).title} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
+                    <Cell pid={it.productId} size={48} a={product(it.productId).title} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
                     <Money v={it.price * it.qty} />
                   </li>) })}
               </ul>

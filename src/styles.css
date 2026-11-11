@@ -1,21 +1,33 @@
 @import 'vazirmatn/Vazirmatn-Variable-font-face.css';
 @import 'tailwindcss';
 
+/* تم تیره کلاس‌محور: منبع حقیقت، ویژگی data-theme روی <html> است، نه ترجیح سیستم‌عامل.
+   (قبلاً `dark:` به prefers-color-scheme وصل بود و در سیستم تاریک + پنل روشن، متن دکمهٔ آبی مشکی می‌شد.) */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /* ───────── Design tokens (بخش ۴.۱) — تنها منبع رنگ، تایپ، فاصله و شعاع ───────── */
 :root {
+  /* --brand: متن، لینک، آیکون و حالت انتخاب. --brand-solid: پس‌زمینهٔ دکمه و سطح پر؛ متن روی آن همیشه سفید (۸٫۵۹ به ۱). */
   --brand: #0000ff;
   --brand-pressed: #0000c4;
   --brand-tint: #eef0ff;
+  --brand-solid: #0000ff;
+  --brand-solid-pressed: #0000c4;
+  --on-brand: #ffffff;
+  /* سطح پر با متن سفید (شمارنده، تیک مرحله، دکمهٔ بزرگ حالت سریع): در هر دو تم ثابت */
+  --success-solid: #12733f;
+  --danger-solid: #c42f2f;
   --text-1: #10123d;
   --text-2: #5a5e78;
-  --text-3: #8a90a2;
+  /* ثالث برند #8A90A2 روی سفید ۳٫۱۹ است و برای متن کوچک مردود؛ برای AA تیره‌تر شد (۴٫۵+ روی سفید، پس‌زمینه و خاکستری) */
+  --text-3: #5f6479;
   --bg: #f5f6fa;
   --surface: #ffffff;
   --surface-2: #fafbfd;
   --border: #e6e8f0;
-  --success: #14804a; --success-bg: #e8f7ee;
-  --warning: #b45309; --warning-bg: #fff3e8;
-  --danger: #d23a3a;  --danger-bg: #fef2f2;
+  --success: #12733f; --success-bg: #e8f7ee;
+  --warning: #a64b07; --warning-bg: #fff3e8;
+  --danger: #c42f2f;  --danger-bg: #fef2f2;
   --info: #0e7490;    --info-bg: #e6f4f7;
   --purple: #6d28d9;  --purple-bg: #f3eeff;
   --neutral-bg: #eff0f5;
@@ -24,12 +36,18 @@
   --sidebar-w: 264px;
 }
 [data-theme='dark'] {
-  --brand: #7b83ff;
-  --brand-pressed: #9aa0ff;
+  /* روی زمینهٔ تیره: --brand فقط برای متن و لینک. دکمه همان آبی برند با متن سفید می‌ماند. */
+  --brand: #8c9bff;
+  --brand-pressed: #a9b4ff;
   --brand-tint: #1c1f4a;
+  --brand-solid: #0000ff;
+  --brand-solid-pressed: #2b2bff;
+  --on-brand: #ffffff;
+  --success-solid: #12733f;
+  --danger-solid: #c42f2f;
   --text-1: #eceefa;
   --text-2: #a9aec6;
-  --text-3: #767c96;
+  --text-3: #9196b0;
   --bg: #0c0d1a;
   --surface: #15172a;
   --surface-2: #1a1c33;
@@ -51,6 +69,11 @@
   --color-brand: var(--brand);
   --color-brand-pressed: var(--brand-pressed);
   --color-brand-tint: var(--brand-tint);
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-solid-pressed: var(--brand-solid-pressed);
+  --color-on-brand: var(--on-brand);
+  --color-success-solid: var(--success-solid);
+  --color-danger-solid: var(--danger-solid);
   --color-t1: var(--text-1);
   --color-t2: var(--text-2);
   --color-t3: var(--text-3);

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v1'
+const DB_KEY = 'ghanimat-demo-db-v2'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -56,7 +56,10 @@ export type Session = {
   pinned: string[]
 }
 const defaults: Session = { userId: null, viewAs: null, theme: 'light', density: 'normal', collapsed: false, hints: 'hover', askAI: true, google: true, level: 'معمولی', viewState: 'normal', simulate: 'success', scope: 'all', revealed: [], pinned: ['orders', 'warehouse'] }
-let session: Session = { ...defaults, ...(read<Session>(S_KEY) ?? {}), viewState: 'normal' }
+// تم پیش‌فرض از ترجیح سیستم‌عامل خوانده می‌شود؛ از لحظه‌ای که کاربر تم را عوض کند، انتخاب او منبع حقیقت است.
+const systemTheme = (): Session['theme'] => { try { return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' } catch { return 'light' } }
+const stored = read<Session>(S_KEY)
+let session: Session = { ...defaults, theme: systemTheme(), ...(stored ?? {}), viewState: 'normal' }
 const sSubs = new Set<() => void>()
 const subS = (f: () => void) => { sSubs.add(f); return () => sSubs.delete(f) }
 export const getSession = () => session

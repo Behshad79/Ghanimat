@@ -15,7 +15,7 @@ const toneDot: Record<Tone, string> = { neutral: 'bg-t3', info: 'bg-info', succe
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'ai'; size?: 'sm' | 'md' | 'lg'; icon?: ReactNode; loading?: boolean }
 export function Button({ variant = 'secondary', size = 'md', icon, loading, className, children, ...p }: BtnProps) {
   const v = {
-    primary: 'bg-brand text-white hover:bg-brand-pressed active:bg-brand-pressed dark:text-[#0c0d1a]',
+    primary: 'bg-brand-solid text-on-brand shadow-sm hover:bg-brand-solid-pressed active:bg-brand-solid-pressed',
     secondary: 'bg-surface text-t1 border border-line hover:bg-surface-2',
     ghost: 'text-t2 hover:bg-neutral-bg hover:text-t1',
     danger: 'bg-danger-bg text-danger hover:brightness-95',

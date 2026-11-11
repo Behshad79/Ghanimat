@@ -162,5 +162,8 @@ button:disabled { cursor: not-allowed; }
 @media print {
   body { background: #fff; }
   .no-print { display: none !important; }
-  .print-area { position: fixed; inset: 0; background: #fff; z-index: 9999; }
+  .print-area { position: static !important; border: 0 !important; background: #fff !important; padding: 0 !important; overflow: visible !important; }
+  .doc-sheet { box-shadow: none !important; margin: 0 !important; }
+  aside, header, nav { display: none !important; }
+  main { overflow: visible !important; }
 }

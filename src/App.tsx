@@ -6,7 +6,8 @@ import { Orders, OrderDetail } from './admin/pages/Orders'
 import { ImportLink } from './admin/pages/Catalog'
 import { Catalog, Labels, ProductDetail, Trash, UnitDetail } from './admin/catalog/Catalog'
 import { ProductWizard } from './admin/catalog/Wizard'
-import { Print, Returns, Shipping, Warehouse } from './admin/pages/Ops'
+import { Returns, Shipping, Warehouse } from './admin/pages/Ops'
+import { PrintCenter } from './admin/print/PrintCenter'
 import { Customers, Reviews, Support } from './admin/pages/People'
 import { Channels, Finance, Pricing } from './admin/pages/Revenue'
 import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo, Supply } from './admin/pages/Insights'
@@ -42,7 +43,7 @@ export function App() {
               <Route path="supply" element={<Supply />} />
               <Route path="warehouse" element={<Warehouse />} />
               <Route path="shipping" element={<Shipping />} />
-              <Route path="print" element={<Print />} />
+              <Route path="print" element={<PrintCenter />} />
               <Route path="returns" element={<Returns />} />
               <Route path="customers" element={<Customers />} />
               <Route path="support" element={<Support />} />

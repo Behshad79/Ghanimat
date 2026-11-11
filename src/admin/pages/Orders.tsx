@@ -191,7 +191,7 @@ export function OrderDetail() {
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
                     {s.status === 'ship.picking' && <Button variant="primary" onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی')}>تأیید بسته‌بندی</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <Button variant="primary" onClick={() => advance(s.id, 'ship.delivered', 'ثبت تحویل')}>ثبت تحویل</Button>}
-                    <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
+                    <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
                     <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => toast('نشانی فقط برای مرسولهٔ ارسال‌نشده قابل ویرایش است.')}>ویرایش نشانی</Button>
                     <Button variant="danger" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button>
                   </div>

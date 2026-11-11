@@ -6,7 +6,7 @@ import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Bars } from '@/shared/ui/charts'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
-import { mutate, snapshot, useSession } from '@/shared/lib/store'
+import { fakeCall, mutate, snapshot, useSession } from '@/shared/lib/store'
 import { EntityManager } from '@/shared/ui/entity'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
@@ -17,6 +17,7 @@ import { PackPhotos } from '../shared/PackPhotos'
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
 export function Warehouse() {
   const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('qc')
+  const [scan, setScan] = useState<string | null>(null)
   const [focus, setFocus] = useState<string | null>(null); const [checks, setChecks] = useState<Record<string, boolean>>({}); const [grade, setGrade] = useState('A')
   const inScope = (w: string) => s.scope === 'all' || s.scope === w
   const q = (st: string) => d.units.filter((u) => u.status === st && inScope(u.warehouse))
@@ -39,7 +40,7 @@ export function Warehouse() {
   return (
     <Page title="انبار و موجودی" module="warehouse" sub={`محدوده: ${s.scope === 'all' ? 'همهٔ انبارها' : WAREHOUSE[s.scope]}`}
       empty={{ title: 'انبار خالی است.', desc: 'با دریافت اولین محموله، واحدها ساخته می‌شوند و به صف QC می‌آیند.', action: <Button variant="primary" onClick={() => nav('/admin/supply')}>ثبت محمولهٔ ورودی</Button> }}
-      actions={<Button icon={<ScanLine size={14} />} onClick={() => toast('اسکنر در نسخهٔ نمایشی شبیه‌سازی شده است. بارکد ناشناخته: «این بارکد در سیستم نیست؛ واحد را دستی جست‌وجو کنید».')}>اسکن بارکد</Button>}
+      actions={<Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button>}
       primary={qc.length > 0 ? <Button variant="primary" onClick={() => { setTab('qc'); setFocus(qc[0].id) }}>شروع QC ({fa(qc.length)} واحد)</Button> : undefined}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'stock', label: 'نمای موجودی' }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
       {tab === 'qc' && <QueueCard list={qc} label="بازرسی این واحد" action={setFocus} emptyT="صف QC خالی است." emptyD="واحدهای دریافت‌شده بعد از ثبت ورود، اینجا می‌آیند." />}
@@ -61,6 +62,10 @@ export function Warehouse() {
         <DataTable name="ناهماهنگی‌ها" rows={d.syncIssues} rowKey={(x) => x.id} empty={{ title: 'ناهماهنگی‌ای نیست.', desc: 'موجودی غنیمت و سایت‌های شریک یکی است.' }}
           cols={[{ key: 'p', title: 'کالا', render: (x) => x.product }, { key: 'o', title: 'غنیمت', align: 'left', render: (x) => fa(x.ours) }, { key: 't', title: 'سایت شریک', align: 'left', render: (x) => fa(x.theirs) }, { key: 's', title: 'منبع', render: (x) => x.source }, { key: 'at', title: 'تشخیص', render: (x) => rel(x.at) },
             { key: 'a', title: '', render: (x) => <Button size="sm" onClick={() => { mutate((db) => { db.syncIssues = db.syncIssues.filter((y) => y.id !== x.id) }, { action: 'اصلاح موجودی طبق سایت شریک', target: x.product, before: String(x.ours), after: String(x.theirs) }); toast(`موجودی ${x.product} به ${fa(x.theirs)} اصلاح شد.`) }}>اصلاح به {fa(x.theirs)}</Button> }]} /></div>}
+      <Modal open={scan !== null} onClose={() => setScan(null)} title="اسکن بارکد یا QR" footer={<Button variant="primary" onClick={() => { const v = (scan ?? '').trim().toUpperCase(); const u = d.units.find((x) => [x.code, x.id, x.serial, x.ean].includes(v)); const pr = d.products.find((x) => [x.code, x.ean].includes(v)); if (u) { setScan(null); nav(`/admin/catalog/unit/${u.id}`) } else if (pr) { setScan(null); nav(`/admin/catalog/${pr.id}`) } else toast('این بارکد در سیستم نیست. کد را دوباره اسکن کنید یا واحد را با سریال جست‌وجو کنید.', { tone: 'err' }) }}>باز کردن</Button>}>
+        <Field label="کد را اسکن یا تایپ کنید" help="کد داخلی (GH-U-…)، سریال، IMEI یا بارکد کارخانه. اسکنر بارکد مثل صفحه‌کلید عمل می‌کند."><Input autoFocus className="ltr h-12 text-left font-mono" value={scan ?? ''} onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget.closest('[role=dialog]')?.querySelector('footer button') as HTMLButtonElement)?.click() }} placeholder="GH-U-0020411" /></Field>
+        <div className="mt-2 flex flex-wrap gap-1 text-11 text-t2">نمونه: {['GH-U-0020411', '356789104529934', 'GH-P-000102', 'XXXX'].map((c) => <button key={c} className="rounded-sm bg-neutral-bg px-1.5 py-0.5 hover:text-brand" onClick={() => setScan(c)}>{c}</button>)}</div>
+      </Modal>
       {/* حالت تمرکز صف QC: یک واحد در هر لحظه، «تأیید و بعدی» */}
       <Modal wide open={!!cur} onClose={() => setFocus(null)} title={cur ? <span className="flex items-center gap-2">بازرسی QC<CopyId v={cur.id} /><span className="text-12 font-normal text-t3">{fa(qc.length)} واحد مانده</span></span> : ''}
         footer={<><Button variant="primary" size="lg" onClick={() => finish(true)}>تأیید و بعدی</Button><Button variant="danger" size="lg" onClick={() => finish(false)}>رد واحد</Button><span className="mr-auto hidden self-center text-11 text-t3 sm:block">Enter: تأیید و بعدی</span></>}>
@@ -87,11 +92,10 @@ export function Shipping() {
   return (
     <Page title="ارسال و لجستیک" module="shipping" sub={`ارسال رایگان برای سبدهای بالای ${compactToman(rule('free_shipping_threshold'))} (از قوانین کسب‌وکار)`}
       empty={{ title: 'هنوز روش ارسالی تعریف نشده است.', desc: 'دست‌کم یک روش ارسال تعریف کنید تا مشتری بتواند سفارش ثبت کند.' }}
-      primary={<Button variant="primary" onClick={() => toast('فرم تعریف روش ارسال: نام، قیمت‌گذاری، انبار، شهر، ساعت و کلاس کالا.')}>تعریف روش ارسال</Button>}
+      primary={<Button variant="primary" onClick={() => setTab('methods')}>روش‌های ارسال</Button>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'methods', label: 'روش‌ها و ظرفیت' }, { id: 'trips', label: 'سفرهای پیک', count: ships.filter((s) => s.courier).length }, { id: 'track', label: 'پست و الحاق رهگیری' }, { id: 'photos', label: 'بایگانی عکس ارسال', count: ships.filter((x) => x.packPhotos?.length).length }, { id: 'zones', label: 'مناطق و بازه‌ها' }, { id: 'carriers', label: 'شرکت‌های حمل' }]} />}>
       {tab === 'methods' && <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <Card title="روش‌های ارسال" pad={false}><ul className="divide-y divide-line">{methods.map(([n, c, p]) => <li key={n} className="flex items-center justify-between gap-3 px-4 py-3"><div><p className="text-13 font-medium">{n}</p><p className="text-11 text-t3">{c}</p></div><div className="flex items-center gap-3"><span className="tnum text-12">{p ? toman(p) : 'رایگان'}</span><Toggle on label={n} onChange={() => toast('روش ارسال خاموش شد.', { undo: () => {} })} /></div></li>)}</ul>
-          <p className="border-t border-line px-4 py-2 text-11 text-t3">نام و مدت وعدهٔ هر روش از «قوانین کسب‌وکار» خوانده می‌شود. <button className="text-brand" onClick={() => nav('/admin/rules')}>تغییر مدت تحویل سریع</button></p></Card>
+        <div><EntityManager ek="shipMethods" kind="روش ارسال" fields={[{ k: 'name', label: 'نام روش', required: true, help: 'متغیر {مدت_تحویل_سریع} از قوانین کسب‌وکار خوانده می‌شود.', render: (r) => String(r.name).replace('{مدت_تحویل_سریع}', fa(rule('fast_delivery_hours'))) }, { k: 'scope', label: 'انبار، شهر و شرایط', type: 'textarea' }, { k: 'price', label: 'هزینه', type: 'money' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /><p className="mt-2 text-11 text-t2">مدت وعدهٔ تحویل سریع از «قوانین کسب‌وکار» خوانده می‌شود. <button className="text-brand" onClick={() => nav('/admin/rules')}>تغییر مدت تحویل سریع</button></p></div>
         <Card title="ظرفیت بازه‌های امروز">{[['۹ تا ۱۲', 100], ['۱۲ تا ۱۵', 80], ['۱۵ تا ۱۸', 55], ['۱۸ تا ۲۱', 100]].map(([l, v]) => <div key={l} className="mb-3"><div className="mb-1 flex justify-between text-12"><span>{l}</span><span className={v === 100 ? 'text-danger' : 'text-t2'}>{v === 100 ? 'تکمیل ظرفیت' : pct(v as number)}</span></div><Progress value={v as number} tone={v === 100 ? 'danger' : 'brand'} /></div>)}<KPI label="تحویل به‌موقع این هفته" hint="sla" value={pct(94)} delta={1.2} /></Card></div>}
       {tab === 'trips' && <DataTable name="سفرهای پیک" rows={ships.filter((s) => s.courier)} rowKey={(s) => s.id} onRow={(s) => nav(`/admin/orders/${s.orderId}`)} empty={{ title: 'هنوز سفری ثبت نشده است.', desc: 'با چسباندن لینک سفر در کارت مرسوله، سفر اینجا ثبت می‌شود.' }}
         cols={[{ key: 'c', title: 'کد سفر', render: (s) => <CopyId v={s.courier!.code} /> }, { key: 'n', title: 'پیک', render: (s) => <Cell a={s.courier!.name} b={`${s.courier!.vehicle} · ${s.courier!.plate}`} /> }, { key: 'o', title: 'مرسوله', render: (s) => <CopyId v={s.id} /> }, { key: 'cost', title: 'هزینه', align: 'left', render: (s) => <Money v={s.courier!.cost} />, sort: (s) => s.courier!.cost, text: (s) => s.courier!.cost }, { key: 's', title: 'وضعیت', render: (s) => <StatusBadge s={s.status} /> }]} />}
@@ -126,7 +130,7 @@ export function Providers({ family, title, list }: { family: string; title: stri
             {p.status === 'prov.error' && <p className="mt-2 rounded-sm bg-danger-bg px-2 py-1.5 text-12 text-danger">{p.name} پاسخ نمی‌دهد. خودکار از صفحهٔ پرداخت پنهان شده و با پایدار شدن برمی‌گردد.</p>}
             {p.status === 'prov.soon' ? <p className="mt-2 text-12 text-t2">اتصال، قواعد انتشار، همگام‌سازی قیمت و موجودی و دریافت سفارش این کانال به‌زودی اضافه می‌شود.</p> : p.status !== 'prov.retired' && (
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => toast(`اتصال ${p.name} آزمایش شد: پاسخ در ۳۲۰ میلی‌ثانیه.`)}>تست اتصال</Button>
+                <Button size="sm" onClick={async () => { try { await fakeCall(true); mutate((x) => { const t = x.providers.find((y) => y.id === p.id)!; if (t.status === 'prov.error') t.status = 'prov.slow'; t.health = Math.max(t.health, 95) }, { action: 'تست اتصال', target: p.name, after: 'موفق' }); toast(`اتصال ${p.name} برقرار است: پاسخ در ۳۲۰ میلی‌ثانیه.`) } catch { mutate(() => {}, { action: 'تست اتصال', target: p.name, after: 'ناموفق' }); toast(`${p.name} پاسخ نداد. کلید اتصال و وضعیت سرویس را بررسی کنید.`, { tone: 'err' }) } }}>تست اتصال</Button>
                 {!p.isDefault && p.status === 'prov.active' && <Button size="sm" onClick={() => { mutate((x) => x.providers.filter((y) => y.family === p.family).forEach((y) => (y.isDefault = y.id === p.id)), { action: 'تغییر پیش‌فرض', target: p.name }); toast(`${p.name} پیش‌فرض شد. متن‌های وابسته در سایت به‌روز شد.`) }}>پیش‌فرض کن</Button>}
                 {['prov.paused', 'prov.testing'].includes(p.status) ? <Button size="sm" onClick={() => mutate((x) => { x.providers.find((y) => y.id === p.id)!.status = 'prov.active' }, { action: 'فعال‌سازی ارائه‌دهنده', target: p.name })}>فعال برای همه</Button> : <Button size="sm" variant="danger" onClick={() => setImpact(p.id)}>توقف یا حذف</Button>}
               </div>)}
@@ -147,44 +151,6 @@ export function Providers({ family, title, list }: { family: string; title: stri
         {openOrders > 0 && <p className="mt-3 rounded-sm bg-warning-bg px-2 py-1.5 text-12 text-warning">تا بسته‌شدن {fa(openOrders)} سفارش باز، بازنشستگی ممکن نیست. توقف موقت را انتخاب کنید تا سفارش تازه‌ای نگیرد.</p>}
       </Modal>
     </>
-  )
-}
-
-// ───────── چاپ و خروجی ─────────
-const DOCS = ['برچسب مرسولهٔ پستی', 'برچسب مرسولهٔ پیک', 'برچسب واحد کالا', 'برگهٔ کنترل کیفیت', 'کارت گارانتی', 'فاکتور فروش', 'لیست جمع‌آوری', 'مانیفست تحویل', 'برچسب و فرم مرجوعی', 'رسید دریافت حضوری']
-export function Print() {
-  const { d, customer, product } = useLookup(); const [sp] = useSearchParams(); const s0 = useSession()
-  const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, order: o })))
-  const first = sp.get('ship') ?? ships.find((s) => (sp.get('orders') ?? '').split(',').includes(s.order.id))?.id ?? 'GH-10479-1'
-  const [sid, setSid] = useState(first); const [doc, setDoc] = useState(sp.get('doc') === 'invoice' ? DOCS[5] : sp.get('doc') === 'manifest' ? DOCS[7] : DOCS[0]); const [size, setSize] = useState('A6')
-  const s = ships.find((x) => x.id === sid)!; const c = customer(s.order.customerId); const cancelled = s.status === 'ship.cancelled'
-  const print = () => { if (cancelled) return toast('این مرسوله لغو شده است و برچسب برای آن چاپ نمی‌شود.', { tone: 'err' }); if (s0.simulate === 'fail') return toast('چاپگر در دسترس نیست. اتصال را بررسی کنید یا PDF ذخیره کنید.', { tone: 'err' }); mutate(() => {}, { action: 'چاپ سند', target: `${doc} · ${sid}` }); window.print() }
-  return (
-    <Page title="چاپ و خروجی" module="print" sub="هر سند قالب قابل ویرایش، پیش‌نمایش و چاپ تکی و گروهی دارد." primary={<Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc}</Button>}
-      empty={{ title: 'سندی برای چاپ انتخاب نشده است.', desc: 'از فهرست سفارش‌ها چند سفارش را انتخاب و «چاپ بستهٔ کامل» را بزنید.' }}>
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="no-print space-y-4">
-          <Card title="سند"><div className="space-y-3"><Field label="نوع سند"><Select value={doc} onChange={setDoc} options={DOCS} /></Field><Field label="مرسوله"><Select value={sid} onChange={setSid} options={ships.map((x) => x.id)} /></Field><Field label="اندازه"><Select value={size} onChange={setSize} options={['A6', 'A5', 'A4', 'حرارتی ۱۰۰×۱۵۰', 'حرارتی ۸۰ میلی‌متر']} /></Field>
-            <Button className="w-full" onClick={() => toast('بستهٔ کامل: برچسب + فاکتور + برگهٔ QC + کارت گارانتی، به ترتیب جمع‌آوری آماده شد.')}>چاپ بستهٔ کامل سفارش</Button></div></Card>
-          <Card title="مرکز دانلودها"><ul className="space-y-2 text-12">{[['فایل تسویهٔ اقساط · مهر', 'آماده'], ['فهرست ارسال پست · امروز', 'آماده'], ['فید محصول کانال‌ها', 'در حال ساخت ۶۰٪']].map(([n, st]) => <li key={n} className="flex justify-between gap-2"><span>{n}</span><span className="text-t3">{st}</span></li>)}</ul></Card>
-        </div>
-        <div className="print-area overflow-auto rounded-lg border border-line bg-neutral-bg p-4 md:p-8">
-          {cancelled && <p className="no-print mb-3 rounded-sm bg-danger-bg px-3 py-2 text-12 text-danger">این مرسوله لغو شده است؛ چاپ برچسب مسدود است.</p>}
-          <div className={cx('mx-auto bg-white p-5 text-[#10123d] shadow-float', size.startsWith('A4') ? 'max-w-2xl' : 'max-w-sm')} dir="rtl">
-            <div className="flex items-center justify-between border-b-2 border-black pb-2"><img src="./brand/logo-full.png" alt="غنیمت" className="h-7" /><b className="text-13">{doc}</b></div>
-            {doc === DOCS[5] ? (
-              <div className="mt-3 text-12"><p>خریدار: <b>{c.name}</b> · شمارهٔ سفارش <span className="ltr font-mono">{s.order.id}</span></p><table className="mt-2 w-full border-collapse"><thead><tr className="border-y border-black"><th className="py-1 text-right">شرح</th><th>تعداد</th><th className="text-left">مبلغ (تومان)</th></tr></thead><tbody>{s.items.map((i, k) => <tr key={k} className="border-b border-gray-300"><td className="py-1">{product(i.productId).title}</td><td className="text-center">{fa(i.qty)}</td><td className="tnum text-left">{(i.price * i.qty).toLocaleString('fa-IR')}</td></tr>)}</tbody></table><p className="mt-2 text-left font-bold">جمع: {toman(s.items.reduce((a, i) => a + i.price * i.qty, 0))}</p></div>
-            ) : (
-              <div className="mt-3 space-y-2 text-12">
-                {(() => { const w = d.warehouses.find((x) => x.id === s.warehouse)!; return <div className="rounded border border-black p-2"><p className="text-11">فرستنده</p><p><b>{d.seller.brand} · {w.name}</b></p><p>{w.province}، {w.city}، {w.district}، {w.street}، {w.alley}، پلاک {fa(w.plaque)}</p><p>کد پستی <span className="ltr font-mono">{w.postalCode}</span> · تلفن <span className="ltr font-mono">{w.phone}</span></p></div> })()}
-                <div className="rounded border-2 border-black p-2"><p className="text-11">گیرنده</p><p className="text-14 font-bold">{c.name}</p><p>{c.city}، خیابان نمونه، کوچهٔ یکم، پلاک ۱۲، واحد ۳</p><p>کد پستی ۱۹۸۷۶۵۴۳۲۱ · موبایل {fa(c.mobile.slice(0, 4))}•••{fa(c.mobile.slice(-2))}</p></div>
-                <div className="flex items-end justify-between"><div><p>سفارش <span className="ltr font-mono">{s.order.id}</span></p><p>مرسوله <span className="ltr font-mono">{s.id}</span></p><p>{s.method} · وزن ۴۲۰ گرم</p><p className="font-bold">شکستنی · کالای الکترونیک</p></div>
-                  <div className="text-center"><div className="ltr h-10 w-36 bg-[repeating-linear-gradient(90deg,#000_0_2px,#fff_2px_3px,#000_3px_6px,#fff_6px_8px)]" aria-label="بارکد رهگیری" /><p className="ltr font-mono text-[9px]">{s.tracking || 'کد رهگیری پس از الحاق'}</p></div></div>
-              </div>)}
-          </div>
-        </div>
-      </div>
-    </Page>
   )
 }
 

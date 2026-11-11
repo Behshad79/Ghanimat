@@ -8,6 +8,7 @@ import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { PackPhotos } from '../shared/PackPhotos'
 import { OrderProfitCard } from '../finance/Money'
+import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
@@ -51,15 +52,9 @@ export function Orders() {
         empty={{ title: 'سفارشی در این نما نیست.', desc: 'نمای دیگری را انتخاب کنید یا فیلتر انبار را بردارید.' }}
         bulk={(ids, clear) => <>
           <Button size="sm" icon={<Printer size={13} />} onClick={() => { nav(`/admin/print?orders=${ids.join(',')}`); clear() }}>چاپ بستهٔ کامل {fa(ids.length)} سفارش</Button>
-          <Button size="sm" onClick={() => { toast(`${fa(ids.length)} سفارش به نیما تخصیص یافت.`, { undo: () => {} }); clear() }}>تخصیص به انباردار</Button>
+          <Button size="sm" onClick={() => { const undo = snapshot(); mutate((x) => x.orders.filter((o) => ids.includes(o.id)).forEach((o) => (o.lockedBy = null, o.tags = [...new Set([...o.tags, 'تخصیص: نیما'])])), { action: 'تخصیص سفارش به انباردار', target: ids.join('، ') }); toast(`${fa(ids.length)} سفارش به نیما تخصیص یافت.`, { undo }); clear() }}>تخصیص به انباردار</Button>
         </>} />
-      <Modal open={manual} onClose={() => setManual(false)} title="ثبت سفارش دستی" footer={<><Button variant="primary" onClick={() => { setManual(false); toast('لینک پرداخت با پیامک برای مشتری ارسال شد.') }}>ارسال لینک پرداخت با پیامک</Button><Button variant="ghost" onClick={() => setManual(false)}>انصراف</Button></>}>
-        <div className="space-y-3">
-          <Field label="کالا" help="فقط واحدهای منتشرشده قابل انتخاب‌اند."><Select value="p2" onChange={() => {}} options={d.products.filter((p) => p.status === 'product.published').map((p) => [p.id, p.title])} /></Field>
-          <Field label="موبایل مشتری"><Input className="ltr text-left font-mono" placeholder="مثلاً 09121234567" /></Field>
-          <Field label="نشانی" help="متن نشانی را بچسبانید؛ استان، شهر، خیابان، پلاک و کد پستی خودکار تفکیک می‌شود."><Input placeholder="مثلاً تهران، ولیعصر، کوچهٔ نور، پلاک ۱۲، واحد ۳" /></Field>
-        </div>
-      </Modal>
+      <ManualOrder open={manual} onClose={() => setManual(false)} />
     </Page>
   )
 }
@@ -128,6 +123,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
 export function OrderDetail() {
   const { id } = useParams(); const { d, customer, product, unit, rule } = useLookup(); const nav = useNavigate()
   const [refund, setRefund] = useState(false); const [amount, setAmount] = useState(''); const [dest, setDest] = useState('کیف پول')
+  const [editOpen, setEditOpen] = useState(false); const [addrOpen, setAddrOpen] = useState(false); const [msg, setMsg] = useState<string | null>(null)
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
   const c = customer(o.customerId)
@@ -153,6 +149,7 @@ export function OrderDetail() {
         <Button size="sm" variant="ghost" disabled={idx <= 0} icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${d.orders[idx - 1].id}`)}>قبلی</Button>
         <Button size="sm" variant="ghost" disabled={idx >= d.orders.length - 1} onClick={() => nav(`/admin/orders/${d.orders[idx + 1].id}`)}>بعدی<ChevronLeft size={14} /></Button>
         <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?orders=${o.id}`)}>چاپ بستهٔ کامل</Button>
+        <Button onClick={() => setEditOpen(true)}>ویرایش سفارش</Button>
         <Button onClick={() => { setAmount(''); setRefund(true) }}>بازگشت وجه</Button>
       </>}>
       {o.lockedBy && <div className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><Avatar name={o.lockedBy} size={20} />{o.lockedBy} همین سفارش را باز کرده است. ویرایش هم‌زمان ممکن است تعارض بسازد؛ تغییر او اول ذخیره می‌شود.</div>}
@@ -164,7 +161,7 @@ export function OrderDetail() {
               <p className="mb-3 text-13 text-t2">شریک انبار اعلام «ندارم» کرده است. سه گزینه برای مشتری ارسال شده و اگر تا پایان مهلت {fa(rule('decision_hours'))} ساعته پاسخ ندهد، قلم خودکار لغو و وجه بازگردانده می‌شود.</p>
               <div className="flex flex-wrap gap-2">
                 {['مشتری کالای جایگزین را پذیرفت', 'مشتری همین قلم را لغو کرد', 'مشتری کل سفارش را لغو کرد'].map((l, i) => <Button key={l} onClick={() => { mutate((db) => { db.orders.find((x) => x.id === o.id)!.status = i === 0 ? 'order.preparing' : 'order.cancelled' }, { action: 'ثبت نتیجهٔ تصمیم مشتری', target: o.id, after: l }); toast(i === 0 ? 'نتیجه ثبت شد و سفارش به آماده‌سازی رفت.' : `سفارش لغو شد و ${toman(o.total)} بازگردانده می‌شود.`) }}>{l}</Button>)}
-                <Button variant="ghost" icon={<Phone size={14} />} onClick={() => toast('تماس با مشتری برقرار شد.')}>پیگیری تلفنی</Button>
+                <Button variant="ghost" icon={<Phone size={14} />} onClick={() => callTo(c.mobile, c.name)}>پیگیری تلفنی</Button>
               </div>
             </Card>
           )}
@@ -186,7 +183,7 @@ export function OrderDetail() {
                   </li>) })}
               </ul>
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
-              {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => toast('تماس با پیک برقرار شد.')}>تماس</Button></div>}
+              {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
               {s.tracking && <p className="mb-3 text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
               {s.status === 'ship.partner_confirm' && <p className="mb-3 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">منتظر تأیید موجودی شریک انبار. پیامک و پیام‌رسان برای او ارسال شده است. اگر تا پایان مهلت تأیید نکند، سفارش به جریان تصمیم مشتری می‌رود.</p>}
               {!dead && s.status !== 'ship.partner_confirm' && (
@@ -197,7 +194,7 @@ export function OrderDetail() {
                     {s.status === 'ship.picking' && <Button variant="primary" onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی')}>تأیید بسته‌بندی</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <Button variant="primary" onClick={() => advance(s.id, 'ship.delivered', 'ثبت تحویل')}>ثبت تحویل</Button>}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
-                    <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => toast('نشانی فقط برای مرسولهٔ ارسال‌نشده قابل ویرایش است.')}>ویرایش نشانی</Button>
+                    <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
                     <Button variant="danger" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button>
                   </div>
                 </div>
@@ -219,7 +216,7 @@ export function OrderDetail() {
             <Row k={<>LTV<Hint k="ltv" /></>}><Money v={c.ltv} compact /></Row>
             <Row k="تعداد سفارش">{fa(c.orders)}</Row><Row k="نرخ مرجوعی">{pct(c.returnRate)}</Row>
             <Row k={<>امتیاز ریسک<Hint k="risk" /></>}><Badge tone={o.risk > 70 ? 'danger' : o.risk > 30 ? 'warning' : 'success'}>{fa(o.risk)}</Badge></Row>
-            <div className="mt-2 flex gap-2"><Button size="sm" icon={<Phone size={12} />} onClick={() => toast('تماس با مشتری برقرار شد.')}>تماس</Button><Button size="sm" onClick={() => nav('/admin/support')}>ساخت تیکت</Button><Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => toast('پیش‌نویس پیام ساخته شد.')}>پیش‌نویس پیام</Button></div>
+            <div className="mt-2 flex gap-2"><Button size="sm" icon={<Phone size={12} />} onClick={() => callTo(c.mobile, c.name)}>تماس</Button><Button size="sm" onClick={() => { mutate((x) => { x.tickets.unshift({ id: `TK-${482200 + x.tickets.length}`, customerId: c.id, orderId: o.id, subject: `پیگیری سفارش ${o.id}`, channel: 'پنل ادمین', status: 'ticket.open', priority: 'عادی', sla: new Date(Date.now() + 4 * 36e5).toISOString(), assignee: 'من', sentiment: 'خنثی', messages: [{ from: 'agent', text: `تیکت برای پیگیری سفارش ${o.id} ساخته شد.`, at: new Date().toISOString() }] }) }, { action: 'ساخت تیکت', target: o.id }); nav(`/admin/support?t=TK-${482200 + d.tickets.length}`) }}>ساخت تیکت</Button><Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => setMsg(`سلام ${c.name.split(' ')[0]} عزیز. سفارش ${o.id} شما ${o.status === 'order.shipped' ? 'در مسیر است و به‌زودی می‌رسد' : o.status === 'order.delivered' ? 'تحویل شده است؛ از خرید شما سپاسگزاریم' : 'در حال آماده‌سازی است'}. غنیمت`)}>پیش‌نویس پیام</Button></div>
           </Card>
           <OrderProfitCard o={o} />
           <Card title="مالی">
@@ -233,6 +230,9 @@ export function OrderDetail() {
           </Card>
         </div>
       </div>
+      <OrderEdit o={editOpen ? o : null} onClose={() => setEditOpen(false)} />
+      <AddressEdit o={addrOpen ? o : null} onClose={() => setAddrOpen(false)} />
+      <MessageModal to={msg !== null ? { name: c.name, mobile: c.mobile } : null} draft={msg ?? ''} onClose={() => setMsg(null)} />
       <Modal open={refund} onClose={() => setRefund(false)} title={`بازگشت وجه سفارش ${o.id}`} footer={<><Button variant="primary" onClick={doRefund}>واریز {amount ? toman(Number(amount.replace(/\D/g, ''))) : 'مبلغ'}</Button><Button variant="ghost" onClick={() => setRefund(false)}>انصراف</Button></>}>
         <div className="space-y-3">
           <Field label="مبلغ (تومان)" help={`حداکثر ${toman(o.total)}. بالاتر از ${compactToman(rule('refund_cap'))} به تأیید نفر دوم نیاز دارد.`} hint={<Hint k="maker_checker" />}><Input className="ltr text-left font-mono" inputMode="numeric" value={amount ? Number(amount.replace(/\D/g, '')).toLocaleString('en-US') : ''} onChange={(e) => setAmount(e.target.value)} placeholder="مثلاً 15,820,000" /></Field>

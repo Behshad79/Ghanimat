@@ -1,6 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AIButton, AITag, Badge, Button, Card, Input, Progress, Select, Tabs, Toggle } from '@/shared/ui/base'
+import { AIButton, AITag, Badge, Button, Card, cx, EmptyState, Field, Input, Progress, Segmented, Select, Tabs, Textarea, Toggle } from '@/shared/ui/base'
+import { EntityManager } from '@/shared/ui/entity'
+import { ProductImg } from './_shared'
+import { Calculator, Download, FilePlus2, PackageCheck, Rocket, ShieldCheck, Sparkles } from 'lucide-react'
+import { Drawer, Modal } from '@/shared/ui/overlay'
+import { Stepper } from '@/shared/ui/page'
+import { csv, download, toman } from '@/shared/lib/fa'
 import { KPI, Page } from '@/shared/ui/page'
 import { Bars, Funnel, Heat, LineChart, NoData } from '@/shared/ui/charts'
 import { askCopilot, Hint, toast } from '@/shared/ui/overlay'
@@ -8,105 +14,127 @@ import { mutate } from '@/shared/lib/store'
 import { compactToman, fa, pct } from '@/shared/lib/fa'
 import { useLookup, useTab } from './_shared'
 
-type K = { label: string; value: string; delta?: number; hint?: string; goodDown?: boolean; note?: string }
-type Item = [string, string, string?] // عنوان، توضیح، وضعیت
-/** قالب مشترک ماژول‌های رشد: شاخص‌ها، فهرست کار، نمودار تصمیم‌محور و «راه گسترش» */
-function Module({ id, title, sub, primary, kpis, sections, children, extend }: { id: string; title: string; sub: string; primary: string; kpis: K[]; sections: { title: string; items: Item[] }[]; children?: ReactNode; extend: string }) {
+// هر ماژول: شاخص‌های بالای صفحه + تب‌های واقعی با EntityManager (ایجاد، ویرایش، کپی، بایگانی، حذف)
+type K = { label: string; value: string; delta?: number; hint?: string; goodDown?: boolean; note?: string; to?: string }
+const KpiRow = ({ kpis }: { kpis: K[] }) => <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">{kpis.map((k) => <KPI key={k.label} {...k} spark={[4, 5, 5, 6, 6, 7, k.delta && k.delta < 0 ? 5 : 8]} />)}</div>
+const today = () => new Date().toISOString().slice(0, 10)
+
+export function Supply() {
+  const { d } = useLookup(); const [tab, setTab] = useTab('po'); const [fx, setFx] = useState<Record<string, number>>({ دلار: 61500, درهم: 16700, دینار: 47 })
   return (
-    <Page title={title} sub={sub} module={id} primary={<Button variant="primary" onClick={() => toast(`«${primary}» در نسخهٔ نمایشی جای‌گذاری شده است.`)}>{primary}</Button>}
-      actions={<AIButton onClick={() => askCopilot(`وضعیت ${title} را خلاصه کن`)}>خلاصه با AI</AIButton>}
-      empty={{ title: `هنوز داده‌ای برای ${title} نیست.`, desc: 'با اولین رویداد، شاخص‌ها و فهرست‌ها اینجا نمایش داده می‌شوند.' }}>
+    <Page title="تأمین و خرید" module="supply" sub="دو مسیر تأمین: انبارگردانی آمازون و خرید مستقیم اقلیم کردستان" actions={<AIButton onClick={() => askCopilot('پیشنهاد سبد خرید بعدی بر اساس تقاضا')}>پیشنهاد خرید با AI</AIButton>}
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'po', label: 'سفارش‌های خرید', count: d.entities.purchaseOrders?.length }, { id: 'inbound', label: 'محموله‌ها', count: d.entities.inbound?.length }, { id: 'suppliers', label: 'تأمین‌کنندگان' }, { id: 'fx', label: 'نرخ ارز' }, { id: 'opps', label: 'فرصت‌های خرید' }]} />}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{kpis.map((k) => <KPI key={k.label} {...k} spark={[4, 5, 5, 6, 6, 7, k.delta && k.delta < 0 ? 5 : 8]} />)}</div>
-        {children}
-        <div className="grid gap-4 md:grid-cols-2">{sections.map((s) => (
-          <Card key={s.title} title={s.title} pad={false}><ul className="divide-y divide-line">{s.items.map(([t, desc, st]) => (
-            <li key={t} className="flex items-center justify-between gap-3 px-4 py-2.5"><div className="min-w-0"><p className="truncate text-13 font-medium">{t}</p><p className="truncate text-11 text-t3">{desc}</p></div>{st && <Badge tone={/خطا|افت|قطع|رد/.test(st) ? 'danger' : /منتظر|پیش‌نویس|هشدار|زمان‌بندی/.test(st) ? 'warning' : /به‌زودی/.test(st) ? 'neutral' : 'success'}>{st}</Badge>}</li>))}</ul></Card>))}</div>
-        <p className="rounded-md border border-dashed border-line px-4 py-3 text-12 text-t2"><b className="text-t1">راه گسترش:</b> {extend}</p>
+        <KpiRow kpis={[{ label: 'محمولهٔ در راه', value: fa((d.entities.inbound ?? []).filter((x) => x.stage !== 'دریافت در تهران').length), note: `${fa((d.entities.inbound ?? []).filter((x) => x.late).length)} محموله دیرکرده` }, { label: 'سفارش خرید باز', value: fa((d.entities.purchaseOrders ?? []).filter((x) => x.status !== 'دریافت‌شده').length) }, { label: 'نرخ مغایرت دریافت', value: pct(2.4, 1), delta: -0.6, goodDown: true }, { label: 'تقاضای برآورده‌نشده', value: `${fa(41)} درخواست`, to: '/admin/supply?tab=opps' }]} />
+        {tab === 'po' && <EntityManager ek="purchaseOrders" kind="سفارش خرید" titleKey="id" fields={[{ k: 'id', label: 'شماره', required: true, ltr: true }, { k: 'supplier', label: 'تأمین‌کننده', type: 'select', options: (d.entities.suppliers ?? []).map((x) => x.name), required: true }, { k: 'items', label: 'اقلام', type: 'textarea', required: true }, { k: 'currency', label: 'ارز', type: 'select', options: ['دلار', 'درهم', 'دینار', 'تومان'] }, { k: 'amountFx', label: 'مبلغ ارزی', type: 'number' }, { k: 'rate', label: 'نرخ ارز روز', type: 'number' }, { k: 'prepaid', label: 'پیش‌پرداخت (٪)', type: 'number' }, { k: 'status', label: 'وضعیت', type: 'select', options: ['پیش‌نویس', 'ثبت‌شده', 'در راه', 'دریافت‌شده'] }, { k: 'eta', label: 'رسیدن برآوردی', type: 'date' }, { k: 'toman', label: 'معادل تومانی', form: false, render: (r) => <span className="tnum">{compactToman((r.amountFx ?? 0) * (r.rate ?? 1))}</span> }]} />}
+        {tab === 'inbound' && <EntityManager ek="inbound" kind="محموله" titleKey="id" fields={[{ k: 'id', label: 'شماره', required: true, ltr: true }, { k: 'po', label: 'سفارش خرید', ltr: true }, { k: 'units', label: 'تعداد واحد', type: 'number' }, { k: 'stage', label: 'مرحله', type: 'select', options: ['خرید', 'ارسال بین‌المللی', 'انبار مرزی', 'انتقال به تهران', 'دریافت در تهران'], render: (r) => <span className="flex items-center gap-1.5"><Progress value={(['خرید', 'ارسال بین‌المللی', 'انبار مرزی', 'انتقال به تهران', 'دریافت در تهران'].indexOf(r.stage) + 1) * 20} tone={r.late ? 'warning' : 'brand'} /><span className="shrink-0 text-12">{r.stage}</span></span> }, { k: 'freight', label: 'حمل (تومان)', type: 'money' }, { k: 'customs', label: 'ترخیص (تومان)', type: 'money' }, { k: 'eta', label: 'رسیدن برآوردی', type: 'date' }, { k: 'late', label: 'دیرکرد', type: 'toggle' }]}
+          extraActions={(r) => [{ label: 'تخصیص هزینه‌ها به واحدها', icon: <Calculator size={14} />, onClick: () => { const per = Math.round(((r.freight ?? 0) + (r.customs ?? 0)) / Math.max(1, r.units ?? 1)); toast(`به هر واحد این محموله ${toman(per)} هزینهٔ جانبی اضافه می‌شود؛ قیمت تمام‌شده‌ها به‌روز شد.`); mutate(() => {}, { action: 'تخصیص هزینهٔ محموله', target: r.id, after: toman(per) }) } }, { label: 'دریافت در انبار', icon: <PackageCheck size={14} />, onClick: () => { mutate((x) => { const t = x.entities.inbound.find((y) => y.id === r.id)!; t.stage = 'دریافت در تهران'; t.late = false }, { action: 'دریافت محموله', target: r.id }); toast(`محمولهٔ ${r.id} دریافت شد؛ واحدها به صف QC می‌روند.`) } }]} />}
+        {tab === 'suppliers' && <EntityManager ek="suppliers" kind="تأمین‌کننده" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'city', label: 'شهر' }, { k: 'channel', label: 'مسیر تأمین', type: 'select', options: ['انبارگردانی آمازون', 'خرید مستقیم اقلیم کردستان'] }, { k: 'currency', label: 'ارز', type: 'select', options: ['دلار', 'درهم', 'دینار', 'تومان'] }, { k: 'terms', label: 'شرایط پرداخت' }, { k: 'quality', label: 'کیفیت (٪)', type: 'number' }, { k: 'leadDays', label: 'زمان تحویل (روز)', type: 'number' }, { k: 'phone', label: 'تماس', ltr: true }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
+        {tab === 'fx' && <Card title="نرخ مرجع امروز" actions={<span className="text-11 text-t2">در قیمت تمام‌شدهٔ سفارش‌های خرید تازه استفاده می‌شود</span>}><div className="grid gap-4 sm:grid-cols-3">{Object.entries(fx).map(([k, v]) => <Field key={k} label={`${k} (تومان)`}><Input className="ltr text-left font-mono" value={v.toLocaleString('en-US')} onChange={(e) => setFx({ ...fx, [k]: Number(e.target.value.replace(/\D/g, '')) })} /></Field>)}</div><Button className="mt-4" variant="primary" onClick={() => { mutate(() => {}, { action: 'ثبت نرخ ارز روز', target: Object.entries(fx).map(([k, v]) => `${k}: ${v}`).join('، ') }); toast('نرخ‌های امروز ثبت شد.') }}>ثبت نرخ‌های امروز</Button></Card>}
+        {tab === 'opps' && <Card title="فرصت‌های خرید (از «خبرم کن»، جست‌وجوی بی‌نتیجه و دستیار خرید)" pad={false}><ul className="divide-y divide-line">{[['AirPods Pro 2', '۱۴ نفر منتظر · حاشیهٔ برآوردی ۱۹٪'], ['PlayStation 5 Slim', '۹ جست‌وجوی بی‌نتیجه در ۷ روز'], ['iPhone 16 Pro Max', '۱۱ درخواست از دستیار خرید']].map(([t, desc]) => <li key={t} className="flex items-center justify-between gap-3 px-4 py-3"><div><p className="text-13 font-medium">{t}</p><p className="text-11 text-t2">{desc}</p></div><Button size="sm" onClick={() => { const id = `PO-${2042 + (d.entities.purchaseOrders?.length ?? 0)}`; mutate((x) => { x.entities.purchaseOrders.unshift({ id, supplier: 'دفتر اربیل', items: `${t} ×۳`, currency: 'دلار', amountFx: 0, rate: 61500, prepaid: 0, status: 'پیش‌نویس', eta: today() }) }, { action: 'ساخت سفارش خرید از فرصت', target: t }); toast(`سفارش خرید پیش‌نویس ${id} برای ${t} ساخته شد.`); setTab('po') }}>ساخت سفارش خرید</Button></li>)}</ul></Card>}
       </div>
     </Page>
   )
 }
 
-export const Supply = () => {
-  const { d } = useLookup()
-  return (
-    <Module id="supply" title="تأمین و خرید" sub="دو مسیر تأمین: انبارگردانی آمازون و خرید مستقیم اقلیم کردستان" primary="ثبت سفارش خرید"
-      kpis={[{ label: 'محمولهٔ در راه', value: fa(2), note: 'یکی ۳ روز دیرکرده است' }, { label: 'نرخ دلار مرجع', value: '+۱٫۸٪', delta: 1.8, goodDown: true, hint: 'landed' }, { label: 'نرخ مغایرت دریافت', value: pct(2.4, 1), delta: -0.6, goodDown: true }, { label: 'تقاضای برآورده‌نشده', value: `${fa(41)} درخواست` }]}
-      sections={[
-        { title: 'محموله‌ها', items: [['SH-118 · ۲۴ واحد', 'خرید ← مرز ← انبار مرزی ← تهران · اکنون: انبار مرزی', 'در راه'], ['SH-117 · ۱۲ واحد', 'برآورد رسیدن ۳ روز پیش بود', 'هشدار دیرکرد'], ['SH-116 · ۳۰ واحد', 'دریافت شد · ۱ مغایرت مدل ثبت شد', 'دریافت‌شده']] },
-        { title: 'فرصت‌های خرید (از «خبرم کن» و جست‌وجوهای بی‌نتیجه)', items: [['AirPods Pro 2', '۱۴ نفر منتظر · حاشیهٔ برآوردی ۱۹٪', 'پیشنهاد AI'], ['PlayStation 5 Slim', '۹ جست‌وجوی بی‌نتیجه در ۷ روز', 'پیشنهاد AI'], ['iPhone 16 Pro Max', '۱۱ درخواست از دستیار خرید', 'پیشنهاد AI']] },
-        { title: 'تأمین‌کنندگان', items: [['دفتر اربیل', 'کیفیت ۹۶٪ · تحویل ۹ روز · ارز: دلار', 'فعال'], ['تأمین‌کنندهٔ دبی', 'کیفیت ۹۲٪ · تحویل ۱۲ روز · ارز: درهم', 'فعال'], ['شریک انبار مهاباد', `کارنامه: نرخ «ندارم» ۴٪ · ${fa(d.syncIssues.length)} ناهماهنگی باز`, 'هشدار']] },
-        { title: 'نرخ ارز و قیمت تمام‌شده', items: [['دلار', 'نرخ مرجع روز برای محموله‌های تازه', 'ثبت‌شده'], ['دینار', 'برای خرید مستقیم', 'ثبت‌شده'], ['درهم', 'نرخ امروز ثبت نشده است؛ محمولهٔ دبی قیمت‌گذاری نمی‌شود', 'خطا']] },
-      ]} extend="تأمین‌کننده، منبع تأمین و برچسب مبدأ تازه از همین صفحه تعریف می‌شود؛ خواندن خودکار فاکتور (OCR) با دکمهٔ ✦ فعال می‌شود." />
-  )
-}
-
 export function Content() {
-  const { d, rule } = useLookup(); const [bar, setBar] = useState(`ارسال رایگان برای خریدهای بالای {آستانه_ارسال_رایگان}`)
+  const { d, rule } = useLookup(); const [tab, setTab] = useTab('home'); const [bar, setBar] = useState('ارسال رایگان برای خریدهای بالای {آستانه_ارسال_رایگان}')
+  const blocks = [...(d.entities.homeBlocks ?? [])].sort((a, b) => a.order - b.order)
+  const move = (id: string, dir: -1 | 1) => { const i = blocks.findIndex((b) => b.id === id); const j = i + dir; if (j < 0 || j >= blocks.length) return; mutate((x) => { const A = x.entities.homeBlocks.find((b) => b.id === blocks[i].id)!; const B = x.entities.homeBlocks.find((b) => b.id === blocks[j].id)!; [A.order, B.order] = [B.order, A.order] }, { action: 'جابه‌جایی بلوک خانه', target: blocks[i].name }) }
   return (
-    <Module id="content" title="محتوا و صفحات سایت" sub="هر بلوک هر صفحهٔ سایت از اینجا مدیریت می‌شود؛ با پیش‌نمایش، زمان‌بندی و نسخه‌ها." primary="ساخت صفحه یا مقاله"
-      kpis={[{ label: 'صفحهٔ منتشرشده', value: fa(48) }, { label: 'پیش‌نویس', value: fa(6) }, { label: 'ناسازگاری با راهنمای نگارش', value: fa(13), note: 'اصلاح یک‌کلیکی با AI' }, { label: 'تناقض بین صفحات', value: fa(1), note: 'دو مدت گارانتی متفاوت' }]}
-      sections={[
-        { title: 'صفحهٔ خانه (بلوک‌ها)', items: [['Hero', 'تیتر، زیرتیتر، تصویر، دکمه · کلیک ۶٫۲٪', 'منتشرشده'], ['بلوک استوک', 'مبتنی بر قانون: استوک گرید A+', 'منتشرشده'], ['بلوک دو مسیر تأمین', 'انبارگردانی و خرید مستقیم', 'منتشرشده'], ['بلوک یلدا', 'از ۲۵ آذر تا ۱ دی', 'زمان‌بندی‌شده']] },
-        { title: 'صفحات حقوقی و سیستم', items: [['قوانین و مقررات · نسخهٔ ۴', 'منتظر تأیید حقوقی؛ بدون تأیید منتشر نمی‌شود', 'منتظر تأیید'], ['حریم خصوصی · نسخهٔ ۲', 'تاریخ اعمال: ۱ مهر', 'منتشرشده'], ['صفحهٔ ۴۰۴ و ۵۰۰', 'با پیشنهاد کالا', 'منتشرشده'], ['وبلاگ: راهنمای خرید استوک', 'در حال نگارش', 'پیش‌نویس']] },
-      ]} extend="بلوک صفحه، قالب لندینگ و نوع صفحهٔ تازه بدون توسعه‌دهنده تعریف می‌شود. ریزمتن‌های سایت در «مدیریت ریزمتن» قابل جست‌وجو و ویرایش است.">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="نوار بالای سایت"><Input value={bar} onChange={(e) => setBar(e.target.value)} /><p className="mt-2 text-11 text-t3">پیش‌نمایش (متغیر از قوانین کسب‌وکار خوانده می‌شود):</p><p className="mt-1 rounded-md bg-[#0000ff] px-3 py-2 text-center text-12 text-white">{bar.replace('{آستانه_ارسال_رایگان}', compactToman(rule('free_shipping_threshold')))}</p></Card>
-        <Card title="کلیدهای سایت (Feature Flags)">{([['maintenance', 'حالت تعمیر سایت'], ['shopAssistant', 'دستیار خرید'], ['compare', 'مقایسهٔ محصولات'], ['storeFinder', 'شعبه‌یاب'], ['sellerLink', 'لینک «فروشنده شوید»'], ['showSoon', 'نمایش برچسب‌های «به‌زودی» در پنل']] as const).map(([k, l]) => <div key={k} className="flex items-center justify-between border-b border-line py-2 text-13 last:border-0"><span>{l}{k === 'maintenance' && d.flags[k] && <span className="mr-2"><Badge tone="danger">سایت در حالت تعمیر است</Badge></span>}</span><Toggle on={d.flags[k]} label={l} onChange={(v) => { mutate((x) => { x.flags[k] = v }, { action: v ? 'روشن‌کردن' : 'خاموش‌کردن', target: l }); toast(`${l} ${v ? 'روشن' : 'خاموش'} شد.`, { undo: () => mutate((x) => { x.flags[k] = !v }) }) }} /></div>)}</Card>
+    <Page title="محتوا و صفحات سایت" module="content" sub="هر بلوک هر صفحهٔ سایت از اینجا مدیریت می‌شود؛ با پیش‌نمایش، زمان‌بندی و نسخه‌ها."
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'home', label: 'صفحهٔ خانه' }, { id: 'bar', label: 'نوار بالا و کلیدها' }, { id: 'articles', label: 'وبلاگ' }, { id: 'faqs', label: 'پرسش‌های متداول' }, { id: 'legal', label: 'متن‌های حقوقی' }]} />}>
+      {tab === 'home' && <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <Card title="بلوک‌های صفحهٔ خانه (ترتیب نمایش)" pad={false}><ul className="divide-y divide-line">{blocks.map((b, i) => <li key={b.id} className="flex items-center gap-3 px-4 py-3"><span className="tnum grid size-7 place-items-center rounded-full bg-neutral-bg text-12 font-bold">{fa(i + 1)}</span><div className="min-w-0 flex-1"><p className="text-13 font-medium">{b.name} <span className="text-11 text-t2">· {b.kind}</span></p><p className="truncate text-12 text-t2">{b.title}</p></div><Button size="sm" variant="ghost" aria-label="بالاتر" disabled={i === 0} onClick={() => move(b.id, -1)}>▲</Button><Button size="sm" variant="ghost" aria-label="پایین‌تر" disabled={i === blocks.length - 1} onClick={() => move(b.id, 1)}>▼</Button><Toggle on={b.active} label={b.name} onChange={(v) => mutate((x) => { x.entities.homeBlocks.find((y) => y.id === b.id)!.active = v }, { action: v ? 'نمایش بلوک' : 'پنهان‌کردن بلوک', target: b.name })} /></li>)}</ul></Card>
+        <Card title="پیش‌نمایش خانه (موبایل)"><div className="mx-auto w-[220px] space-y-2 rounded-2xl border-4 border-[#10123d] bg-white p-2">{blocks.filter((b) => b.active).map((b) => <div key={b.id} className={cx('rounded-md p-2 text-[10px] text-[#10123d]', b.kind === 'هیرو' ? 'bg-[#0000ff] py-5 text-center font-bold text-white' : 'bg-[#f5f6fa]')}>{b.title}</div>)}</div></Card>
+        <div className="lg:col-span-2"><EntityManager ek="homeBlocks" kind="بلوک" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'kind', label: 'نوع', type: 'select', options: ['هیرو', 'ردیف دسته‌ها', 'کاروسل قانون‌محور', 'کاروسل دستی', 'بلوک متنی', 'بنر'] }, { k: 'title', label: 'تیتر', required: true }, { k: 'order', label: 'ترتیب', type: 'number' }, { k: 'active', label: 'نمایش', type: 'toggle' }]} /></div>
+      </div>}
+      {tab === 'bar' && <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="نوار بالای سایت"><Input value={bar} onChange={(e) => setBar(e.target.value)} /><p className="mt-2 text-11 text-t2">پیش‌نمایش (متغیر از قوانین کسب‌وکار خوانده می‌شود):</p><p className="mt-1 rounded-md bg-[#0000ff] px-3 py-2 text-center text-12 text-white">{bar.replace('{آستانه_ارسال_رایگان}', compactToman(rule('free_shipping_threshold')))}</p><Button className="mt-3" variant="primary" onClick={() => { mutate(() => {}, { action: 'ذخیرهٔ نوار بالا', target: bar }); toast('نوار بالای سایت به‌روز شد.') }}>ذخیرهٔ نوار بالا</Button></Card>
+        <Card title="کلیدهای سایت (Feature Flags)">{([['maintenance', 'حالت تعمیر سایت'], ['shopAssistant', 'دستیار خرید'], ['compare', 'مقایسهٔ محصولات'], ['storeFinder', 'شعبه‌یاب'], ['sellerLink', 'لینک «فروشنده شوید»'], ['showSoon', 'نمایش برچسب‌های «به‌زودی» در پنل']] as const).map(([k, l]) => <div key={k} className="flex items-center justify-between border-b border-line py-2 text-13 last:border-0"><span>{l}{k === 'maintenance' && d.flags[k] && <span className="mr-2"><Badge tone="danger">سایت در حالت تعمیر است</Badge></span>}</span><Toggle on={d.flags[k]} label={l} onChange={(v) => { mutate((x) => { x.flags[k] = v }, { action: v ? 'روشن‌کردن' : 'خاموش‌کردن', target: l }); toast(`${l} ${v ? 'روشن' : 'خاموش'} شد.`, { undo: () => mutate((x) => { x.flags[k] = !v }) }) }} /></div>)}</Card></div>}
+      {tab === 'articles' && <EntityManager ek="articles" kind="مقاله" titleKey="title" fields={[{ k: 'title', label: 'عنوان', required: true }, { k: 'category', label: 'دسته', type: 'select', options: ['راهنمای خرید', 'آموزشی', 'خبر', 'مقایسه'] }, { k: 'author', label: 'نویسنده' }, { k: 'status', label: 'وضعیت', type: 'select', options: ['ایده', 'در حال نگارش', 'بازبینی', 'زمان‌بندی‌شده', 'منتشرشده'] }, { k: 'date', label: 'تاریخ انتشار', type: 'date' }, { k: 'body', label: 'متن', type: 'textarea', table: false }]} />}
+      {tab === 'faqs' && <EntityManager ek="faqs" kind="پرسش" titleKey="q" fields={[{ k: 'q', label: 'پرسش', required: true }, { k: 'a', label: 'پاسخ', type: 'textarea', required: true, help: 'متغیرهایی مثل {مهلت_مرجوعی} از قوانین کسب‌وکار خوانده می‌شوند.' }, { k: 'group', label: 'گروه' }, { k: 'helpful', label: 'مفید بودن (٪)', type: 'number' }]} />}
+      {tab === 'legal' && <EntityManager ek="legal" kind="متن حقوقی" titleKey="title" fields={[{ k: 'title', label: 'عنوان', required: true }, { k: 'version', label: 'نسخه', type: 'number' }, { k: 'effective', label: 'تاریخ اعمال', type: 'date' }, { k: 'status', label: 'وضعیت', type: 'select', options: ['پیش‌نویس', 'منتظر تأیید حقوقی', 'منتشرشده'] }, { k: 'body', label: 'متن', type: 'textarea', table: false }]}
+        extraActions={(r) => [{ label: 'نسخهٔ تازه', icon: <FilePlus2 size={14} />, onClick: () => { mutate((x) => { x.entities.legal.unshift({ ...r, id: `lg-${Date.now().toString(36)}`, version: (r.version ?? 1) + 1, status: 'پیش‌نویس', effective: today() }) }, { action: 'ساخت نسخهٔ تازهٔ متن حقوقی', target: r.title }); toast(`نسخهٔ ${fa((r.version ?? 1) + 1)} «${r.title}» به‌صورت پیش‌نویس ساخته شد. انتشار به تأیید حقوقی نیاز دارد.`) } }, { label: 'تأیید حقوقی و انتشار', icon: <ShieldCheck size={14} />, disabled: r.status === 'منتشرشده', onClick: () => { mutate((x) => { x.entities.legal.find((y) => y.id === r.id)!.status = 'منتشرشده' }, { action: 'تأیید حقوقی متن', target: r.title }); toast(`«${r.title}» منتشر شد.`) } }]} />}
+    </Page>
+  )
+}
+
+export function Seo() {
+  const { d } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('meta')
+  const [issues, setIssues] = useState([['۳۴ صفحه بدون توضیح متا', 'اثر بالا', 'meta'], ['۷ زنجیرهٔ ریدایرکت', 'کالاهای فروخته‌شده', 'redirects'], ['۱۲ تصویر بدون Alt', 'Alt خودکار آماده است', 'alt']])
+  return (
+    <Page title="سئو" module="seo" sub="منبع داده: ابزار جست‌وجو و خزش داخلی (بدون وابستگی به سرویس تحریم‌پذیر)"
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'meta', label: 'متای صفحات' }, { id: 'audit', label: 'سلامت فنی', count: issues.length }, { id: 'redirects', label: 'ریدایرکت‌ها' }, { id: 'keywords', label: 'کلیدواژه‌ها' }]} />}>
+      <div className="space-y-4">
+        <KpiRow kpis={[{ label: 'کلیک ارگانیک', value: fa('18,420'), delta: 9.3 }, { label: 'CTR', value: pct(3.8, 1), delta: 0.4 }, { label: 'میانگین رتبه', value: fa(11.2), delta: -1.3, goodDown: true }, { label: 'صفحهٔ ایندکس‌شده', value: fa(412), delta: 2.1 }]} />
+        {tab === 'meta' && <EntityManager ek="seoPages" kind="صفحه" titleKey="page" fields={[{ k: 'page', label: 'صفحه', required: true }, { k: 'url', label: 'نشانی', ltr: true }, { k: 'title', label: 'عنوان متا', required: true }, { k: 'desc', label: 'توضیح متا', type: 'textarea', render: (r) => r.desc ? <span className="block max-w-72 truncate">{r.desc}</span> : <Badge tone="danger">خالی</Badge> }, { k: 'score', label: 'نمرهٔ سئو', type: 'number', render: (r) => <Badge tone={r.score > 80 ? 'success' : r.score > 60 ? 'warning' : 'danger'}>{fa(r.score)}</Badge> }]}
+          extraActions={(r) => [{ label: 'نوشتن توضیح با AI', icon: <Sparkles size={14} />, onClick: () => { mutate((x) => { const t = x.entities.seoPages.find((y) => y.id === r.id)!; t.desc = t.desc || `خرید ${r.page} اصل با عکس واقعی همان واحد، کنترل کیفیت دو مرحله‌ای و تحویل سریع در تهران؛ غنیمت.`; t.score = Math.max(t.score, 82) }, { action: 'نوشتن توضیح متا با AI', target: r.page, ai: true }); toast('توضیح متا نوشته شد؛ پیش از انتشار بازبینی کنید.') } }]} />}
+        {tab === 'audit' && <Card title="خطاهای فنی (اولویت بر اساس اثر)" pad={false}>{issues.length ? <ul className="divide-y divide-line">{issues.map(([t, desc, k]) => <li key={t} className="flex items-center justify-between gap-3 px-4 py-3"><div><p className="text-13 font-medium">{t}</p><p className="text-11 text-t2">{desc}</p></div><Button size="sm" variant="primary" onClick={() => { setIssues(issues.filter((x) => x[0] !== t)); mutate(() => {}, { action: 'رفع خطای سئو', target: t, ai: k !== 'redirects' }); toast(`«${t}» رفع شد و در خزش بعدی بررسی می‌شود.`) }}>رفع</Button></li>)}</ul> : <EmptyState title="خطای فنی باز نیست." desc="خزش بعدی فردا ساعت ۳ صبح انجام می‌شود." />}</Card>}
+        {tab === 'redirects' && <EntityManager ek="redirects" kind="ریدایرکت" titleKey="from" fields={[{ k: 'from', label: 'از نشانی', required: true, ltr: true }, { k: 'to', label: 'به نشانی', required: true, ltr: true }, { k: 'code', label: 'کد', type: 'select', options: ['301', '302'] }, { k: 'hits', label: 'بازدید', type: 'number' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
+        {tab === 'keywords' && <Card title="فرصت‌های کلیدواژه (رتبهٔ ۴ تا ۲۰)" pad={false}><ul className="divide-y divide-line">{[['خرید آیفون استوک', '۶', '۲٬۴۰۰', 'p1'], ['ایرپاد مکس اصل', '۹', '۱٬۳۰۰', 'p2'], ['مک بوک ایر جعبه باز', '۱۴', '۵۹۰', 'p3']].map(([k, r, v, pid]) => <li key={k} className="flex items-center gap-3 px-4 py-3"><ProductImg pid={pid} size={36} /><div className="flex-1"><p className="text-13 font-medium">{k}</p><p className="text-11 text-t2">رتبهٔ {r} · {v} جست‌وجو در ماه</p></div><Button size="sm" onClick={() => { mutate((x) => { x.entities.articles.unshift({ id: `ar-${Date.now().toString(36)}`, title: `بریف: ${k}`, category: 'راهنمای خرید', author: 'پویا', status: 'ایده', date: new Date().toISOString().slice(0, 10) }) }, { action: 'ساخت بریف محتوا', target: k }); toast(`بریف «${k}» در وبلاگ ساخته شد.`); nav('/admin/content?tab=articles') }}>ساخت بریف محتوا</Button></li>)}</ul></Card>}
       </div>
-    </Module>
+    </Page>
   )
 }
 
-export const Seo = () => (
-  <Module id="seo" title="سئو" sub="منبع داده: ابزار جست‌وجو و خزش داخلی (بدون وابستگی به سرویس تحریم‌پذیر)" primary="رفع گروهی خطاها با AI"
-    kpis={[{ label: 'کلیک ارگانیک', value: fa('18,420'), delta: 9.3 }, { label: 'CTR', value: pct(3.8, 1), delta: 0.4 }, { label: 'میانگین رتبه', value: fa(11.2), delta: -1.3, goodDown: true }, { label: 'صفحهٔ ایندکس‌شده', value: fa(412), delta: 2.1 }]}
-    sections={[
-      { title: 'سلامت فنی (اولویت بر اساس اثر)', items: [['۳۴ صفحه بدون توضیح متا', 'اثر بالا · رفع با یک کلیک', 'خطا'], ['۷ زنجیرهٔ ریدایرکت', 'کالاهای فروخته‌شده', 'هشدار'], ['۱۲ تصویر بدون Alt', 'Alt خودکار آماده است', 'هشدار'], ['نقشهٔ سایت', 'آخرین ساخت ۲ ساعت پیش', 'سالم']] },
-      { title: 'فرصت‌های کلیدواژه (رتبهٔ ۴ تا ۲۰)', items: [['خرید آیفون استوک', 'رتبهٔ ۶ · ۲٬۴۰۰ جست‌وجو در ماه', 'فرصت'], ['ایرپاد مکس اصل', 'رتبهٔ ۹ · ۱٬۳۰۰ جست‌وجو', 'فرصت'], ['مک بوک ایر جعبه باز', 'رتبهٔ ۱۴ · ۵۹۰ جست‌وجو', 'فرصت']] },
-    ]} extend="قالب متای مبتنی بر متغیر برای نوع صفحهٔ تازه، و منبع دادهٔ رتبهٔ تازه از «ثبت ارائه‌دهنده» اضافه می‌شود." />
-)
-
-export const Marketing = () => {
-  const { d } = useLookup(); const sms = d.providers.find((p) => p.family === 'sms' && p.isDefault)!
+export function Marketing() {
+  const { d } = useLookup(); const [tab, setTab] = useTab('campaigns'); const [wiz, setWiz] = useState(false); const [step, setStep] = useState(0)
+  const [cp, setCp] = useState({ name: '', audience: 'در خطر ریزش', channel: 'پیامک', text: 'غنیمت | {نام} عزیز، کد BACK8 تا جمعه ۸٪ تخفیف دارد. {لینک}', send: today() })
+  const sms = d.providers.find((p) => p.family === 'sms' && p.isDefault)!
+  const reach = d.entities.segments?.find((x) => x.name === cp.audience)?.size ?? d.customers.filter((c) => c.segment === cp.audience).length
   return (
-    <Module id="marketing" title="مارکتینگ" sub="سقف پیام به هر مشتری و ساعات سکوت روی همهٔ ارسال‌ها اعمال می‌شود." primary="ساخت کمپین"
-      kpis={[{ label: 'درآمد منتسب', value: compactToman(2140000000), delta: 11 }, { label: 'ROAS', value: fa(6.4), delta: 0.8, hint: 'roas' }, { label: 'CAC', value: compactToman(1280000), delta: -5.2, goodDown: true, hint: 'cac' }, { label: 'اعتبار پیامک', value: compactToman(sms.credit ?? 0), note: `حدود ${fa(Math.round((sms.credit ?? 0) / (sms.burn ?? 1)))} روز دیگر تمام می‌شود` }]}
-      sections={[
-        { title: 'کمپین‌ها', items: [['بازگشت مشتریان خفته', 'پیامک + بله · ۲۴۰ نفر · کد ۸٪', 'زمان‌بندی‌شده'], ['یلدای هدفون', 'بخش «علاقه‌مند به هدفون» · قالب پیامک تأیید نشده است', 'خطا'], ['خوش‌آمد', 'اتوماسیون · نرخ تبدیل ۷٫۱٪', 'فعال']] },
-        { title: 'اتوماسیون‌ها', items: [['سبد رهاشده', '۳ گام · بازیابی ۱۲٪', 'فعال'], ['موجودشدن کالا', 'برای منتظران «خبرم کن»', 'فعال'], ['درخواست دیدگاه', 'پس از پایان مهلت مرجوعی', 'فعال'], ['پایان گارانتی', 'یادآور ۳۰ روز مانده', 'پیش‌نویس']] },
-      ]} extend="کانال پیام‌رسانی، قالب پیام و نوع اتوماسیون تازه از همین ماژول اضافه می‌شود؛ همکاری در فروش و اینفلوئنسرها با برچسب «به‌زودی»." />
+    <Page title="مارکتینگ" module="marketing" sub="سقف پیام به هر مشتری و ساعات سکوت روی همهٔ ارسال‌ها اعمال می‌شود." primary={<Button variant="primary" onClick={() => { setWiz(true); setStep(0) }}>ساخت کمپین</Button>}
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'campaigns', label: 'کمپین‌ها' }, { id: 'automations', label: 'اتوماسیون‌ها' }, { id: 'templates', label: 'قالب پیام‌ها' }, { id: 'codes', label: 'کدها و کارت هدیه' }]} />}>
+      <div className="space-y-4">
+        <KpiRow kpis={[{ label: 'درآمد منتسب', value: compactToman(2140000000), delta: 11 }, { label: 'ROAS', value: fa(6.4), delta: 0.8, hint: 'roas' }, { label: 'CAC', value: compactToman(1280000), delta: -5.2, goodDown: true, hint: 'cac' }, { label: 'اعتبار پیامک', value: compactToman(sms.credit ?? 0), note: `حدود ${fa(Math.round((sms.credit ?? 0) / (sms.burn ?? 1)))} روز دیگر`, to: '/admin/infra' }]} />
+        {tab === 'campaigns' && <EntityManager ek="campaigns" kind="کمپین" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'audience', label: 'مخاطب', type: 'select', options: (d.entities.segments ?? []).map((x) => x.name) }, { k: 'channel', label: 'کانال', type: 'select', options: ['پیامک', 'پیامک + بله', 'بله', 'ایمیل', 'پوش'] }, { k: 'code', label: 'کد تخفیف', ltr: true }, { k: 'send', label: 'زمان ارسال', type: 'date' }, { k: 'status', label: 'وضعیت', type: 'select', options: ['پیش‌نویس', 'زمان‌بندی‌شده', 'فعال', 'پایان‌یافته'] }, { k: 'reach', label: 'مخاطب', type: 'number' }]} />}
+        {tab === 'automations' && <EntityManager ek="automations" kind="اتوماسیون" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'trigger', label: 'محرک', required: true }, { k: 'steps', label: 'گام‌ها', type: 'number' }, { k: 'conv', label: 'نرخ تبدیل (٪)', type: 'number' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
+        {tab === 'templates' && <EntityManager ek="templates" kind="قالب پیام" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'channel', label: 'کانال', type: 'select', options: ['پیامک', 'بله', 'ایمیل', 'پوش'] }, { k: 'text', label: 'متن', type: 'textarea', required: true, help: 'متغیرها: {نام}، {شماره_سفارش}، {لینک}، {کد_رهگیری}' }, { k: 'approved', label: 'تأیید الگو در پنل پیامک', type: 'toggle' }]} />}
+        {tab === 'codes' && <EntityManager ek="giftCards" kind="کارت هدیه" titleKey="id" fields={[{ k: 'id', label: 'کد', required: true, ltr: true }, { k: 'holder', label: 'دارنده' }, { k: 'amount', label: 'مبلغ', type: 'money' }, { k: 'balance', label: 'مانده', type: 'money' }, { k: 'expires', label: 'انقضا', type: 'date' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
+      </div>
+      <Modal open={wiz} onClose={() => setWiz(false)} wide title={`ساخت کمپین · گام ${fa(step + 1)} از ۴`} footer={<><Button variant="ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>قبلی</Button>{step < 3 ? <Button variant="primary" onClick={() => { if (step === 0 && !cp.name.trim()) return toast('نام کمپین را بنویسید.', { tone: 'err' }); setStep(step + 1) }}>بعدی</Button> : <Button variant="primary" onClick={() => { mutate((x) => { x.entities.campaigns.unshift({ id: `cp-${Date.now().toString(36)}`, name: cp.name, audience: cp.audience, channel: cp.channel, code: (cp.text.match(/[A-Z]{3,}\d*/) ?? [''])[0], send: cp.send, status: 'زمان‌بندی‌شده', reach }) }, { action: 'ساخت کمپین', target: cp.name }); setWiz(false); toast(`کمپین «${cp.name}» برای ${fa(reach)} نفر زمان‌بندی شد.`) }}>زمان‌بندی کمپین برای {fa(reach)} نفر</Button>}</>}>
+        <Stepper steps={['نام و هدف', 'مخاطب', 'پیام و کانال', 'زمان']} current={step} />
+        <div className="mt-4 space-y-3">
+          {step === 0 && <Field label="نام کمپین"><Input value={cp.name} onChange={(e) => setCp({ ...cp, name: e.target.value })} placeholder="مثلاً بازگشت مشتریان خفته" /></Field>}
+          {step === 1 && <><Field label="بخش مخاطب"><Select value={cp.audience} onChange={(v) => setCp({ ...cp, audience: v })} options={(d.entities.segments ?? []).map((x) => x.name)} /></Field><p className="rounded-md bg-neutral-bg px-3 py-2 text-13">اندازهٔ مخاطب: <b>{fa(reach)}</b> نفر · افرادی که رضایت پیام ندارند خودکار حذف می‌شوند.</p></>}
+          {step === 2 && <><Field label="کانال"><Segmented value={cp.channel} onChange={(v) => setCp({ ...cp, channel: v })} options={[['پیامک', 'پیامک'], ['پیامک + بله', 'پیامک + بله'], ['ایمیل', 'ایمیل']]} /></Field><Field label="متن پیام" help={`${fa(cp.text.length)} نویسه · ${fa(Math.ceil(cp.text.length / 70))} پیامک · هزینهٔ تقریبی ${compactToman(reach * Math.ceil(cp.text.length / 70) * 1200)}`}><Textarea rows={4} value={cp.text} onChange={(e) => setCp({ ...cp, text: e.target.value })} /></Field><AIButton size="sm" onClick={() => setCp({ ...cp, text: 'غنیمت | {نام} عزیز، دلمان برایتان تنگ شده. با کد BACK8 تا جمعه ۸٪ تخفیف بگیرید. {لینک}' })}>نوشتن متن با AI</AIButton></>}
+          {step === 3 && <><Field label="تاریخ ارسال" help="ساعات سکوت (۲۳ تا ۷) خودکار رعایت می‌شود."><Input type="date" className="ltr w-48 text-left font-mono" value={cp.send} onChange={(e) => setCp({ ...cp, send: e.target.value })} /></Field><div className="rounded-lg border border-line p-3 text-13"><p><b>{cp.name || '—'}</b> · {cp.audience} · {cp.channel}</p><p className="mt-1 text-t2">{cp.text}</p></div></>}
+        </div>
+      </Modal>
+    </Page>
   )
 }
-
 export function Growth() {
   const [tab, setTab] = useTab('funnel'); const nav = useNavigate()
   return (
     <Page title="رشد و آزمایش" module="growth" sub="شاخص ستارهٔ شمالی: سفارش تحویل‌شدهٔ بدون مرجوعی در هفته" empty={{ title: 'داده برای تحلیل رشد کافی نیست.', desc: 'دست‌کم یک هفته داده لازم است.' }}
-      primary={<Button variant="primary" onClick={() => toast('فرم آزمایش: فرضیه، شاخص اصلی و محافظ، تخصیص ترافیک.')}>ساخت آزمایش</Button>}
+      primary={<Button variant="primary" onClick={() => setTab('ab')}>ساخت آزمایش</Button>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'funnel', label: 'قیف‌ها' }, { id: 'cohort', label: 'کوهورت و ریزش' }, { id: 'ab', label: 'آزمایش‌ها', count: 2 }]} />}>
-      {tab === 'funnel' && <div className="grid gap-4 lg:grid-cols-2"><Card title="کاربران کجای قیف خرید می‌افتند؟"><Funnel onPick={(l) => toast(`فهرست کاربران افتاده در مرحلهٔ «${l}» باز شد.`)} steps={[{ label: 'بازدید', value: 33740 }, { label: 'صفحهٔ کالا', value: 20370 }, { label: 'سبد', value: 2814 }, { label: 'ورود', value: 1930 }, { label: 'نشانی', value: 1410 }, { label: 'پرداخت', value: 1036 }, { label: 'موفق', value: 707 }]} /></Card>
+      {tab === 'funnel' && <div className="grid gap-4 lg:grid-cols-2"><Card title="کاربران کجای قیف خرید می‌افتند؟"><Funnel onPick={(l) => nav(`/admin/customers?tab=builder`)} steps={[{ label: 'بازدید', value: 33740 }, { label: 'صفحهٔ کالا', value: 20370 }, { label: 'سبد', value: 2814 }, { label: 'ورود', value: 1930 }, { label: 'نشانی', value: 1410 }, { label: 'پرداخت', value: 1036 }, { label: 'موفق', value: 707 }]} /></Card>
         <Card title="دلایل شکست پرداخت"><Bars onPick={() => nav('/admin/finance?tab=gateways')} data={[{ label: 'پرداخت ناموفق در درگاه اقساطی', value: 38 }, { label: 'انصراف کاربر', value: 27 }, { label: 'خطای درگاه', value: 18 }, { label: 'پایان زمان', value: 11 }, { label: 'موجودی ناکافی کارت', value: 6 }]} fmt={pct} color="var(--danger)" /><div className="mt-3"><AITag confidence="بالا" source="تراکنش‌های ۷ روز اخیر" /></div></Card></div>}
       {tab === 'cohort' && <div className="space-y-4"><div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><KPI label="نرخ خرید تکراری" value={pct(31)} delta={2.4} /><KPI label="نرخ ریزش ۹۰ روزه" hint="churn" value={pct(44)} delta={-1.8} goodDown /><KPI label="نسبت LTV به CAC" hint="ltv" value={fa(4.2)} delta={0.3} /><KPI label="مشتری در خطر ریزش" value={fa(1)} to="/admin/customers?tab=segments" /></div>
         <Card title="نگهداشت کوهورتی (درصد خرید دوباره)"><Heat cols={['ماه ۰', 'ماه ۱', 'ماه ۲', 'ماه ۳', 'ماه ۴']} rows={[{ label: 'تیر', values: [100, 24, 17, 14, 12] }, { label: 'مرداد', values: [100, 27, 19, 15] }, { label: 'شهریور', values: [100, 29, 21] }, { label: 'مهر', values: [100, 31] }, { label: 'آبان', values: [100] }]} /></Card></div>}
-      {tab === 'ab' && <div className="grid gap-4 md:grid-cols-2"><Card title="نمایش قسط ماهانه روی کارت محصول" actions={<Badge tone="success">معنادار · ۹۶٪</Badge>}><p className="text-13">نسخهٔ ب نرخ تبدیل را <b className="text-success">+۸٫۴٪</b> بالا برد. شاخص محافظ (نرخ مرجوعی) تغییری نکرد.</p><div className="mt-3 flex gap-2"><Button variant="primary" onClick={() => toast('نسخهٔ ب برای همه فعال شد.')}>فعال‌سازی نسخهٔ ب برای همه</Button><Button>بایگانی آموخته</Button></div></Card>
-        <Card title="آستانهٔ ارسال رایگان ۸ در برابر ۱۰ میلیون" actions={<Badge tone="warning">دادهٔ ناکافی</Badge>}><NoData what="معناداری آماری" /></Card></div>}
+      {tab === 'ab' && <EntityManager ek="experiments" kind="آزمایش" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'hypothesis', label: 'فرضیه', type: 'textarea', required: true }, { k: 'metric', label: 'شاخص اصلی' }, { k: 'split', label: 'سهم نسخهٔ ب (٪)', type: 'number' }, { k: 'status', label: 'وضعیت', render: (r) => <Badge tone={/معنادار/.test(r.status) ? 'success' : /ناکافی/.test(r.status) ? 'warning' : 'info'}>{r.status}</Badge> }, { k: 'result', label: 'نتیجه' }]} extraActions={(r) => [{ label: 'فعال‌سازی نسخهٔ ب برای همه', icon: <Rocket size={14} />, disabled: !/معنادار/.test(r.status), onClick: () => { mutate((x) => { x.entities.experiments.find((y) => y.id === r.id)!.status = 'اعمال‌شده برای همه' }, { action: 'اعمال نسخهٔ برنده', target: r.name }); toast(`نسخهٔ ب «${r.name}» برای همهٔ کاربران فعال شد.`) } }]} />}
     </Page>
   )
 }
 
 const REPORTS = ['عملکرد سایت', 'ورودی‌ها', 'خروجی‌ها', 'کمپین‌ها', 'فروش', 'سفارش‌ها', 'کالا و موجودی', 'ارسال', 'مرجوعی و گارانتی', 'مشتریان و رشد', 'پشتیبانی', 'مالی', 'شریک انبار', 'تیم', 'فنی']
 export function Analytics() {
-  const [metric, setMetric] = useState('فروش'); const [dim, setDim] = useState('وضعیت کالا'); const [tab, setTab] = useTab('explore')
+  const [metric, setMetric] = useState('فروش'); const [dim, setDim] = useState('وضعیت کالا'); const [tab, setTab] = useTab('explore'); const [rep, setRep] = useState<string | null>(null); const nav = useNavigate()
   const data: Record<string, [string, number][]> = { 'وضعیت کالا': [['استوک - تست‌شده', 46], ['جعبه‌باز', 31], ['اکبند - پلمپ', 23]], انبار: [['انبار تهران', 78], ['انبار مهاباد', 22]], 'کانال تأمین': [['انبارگردانی آمازون', 64], ['خرید مستقیم اقلیم کردستان', 36]], 'روش ارسال': [['تحویل سریع', 41], ['پست پیشتاز', 33], ['پیک غنیمت', 15], ['تیپاکس', 11]] }
   return (
     <Page title="تحلیل و گزارش" module="analytics" sub="سه لایه: داشبوردهای آماده، کاوشگر آزاد، پرسش از AI" empty={{ title: 'داده‌ای در این بازه نیست.', desc: 'بازهٔ زمانی را تغییر دهید.' }}
       primary={<Button variant="primary" onClick={() => askCopilot(`${metric} به تفکیک ${dim} در این ماه چطور بوده؟`)}>پرسش از دستیار</Button>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'explore', label: 'کاوشگر' }, { id: 'catalog', label: 'کاتالوگ گزارش‌ها', count: REPORTS.length }, { id: 'dict', label: 'فرهنگ شاخص‌ها' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'explore', label: 'کاوشگر' }, { id: 'catalog', label: 'کاتالوگ گزارش‌ها', count: REPORTS.length }, { id: 'scheduled', label: 'گزارش‌های زمان‌بندی‌شده' }, { id: 'dict', label: 'فرهنگ شاخص‌ها' }]} />}>
+      {tab === 'scheduled' && <EntityManager ek="reports" kind="گزارش زمان‌بندی‌شده" fields={[{ k: 'name', label: 'نام', required: true }, { k: 'schedule', label: 'زمان‌بندی', type: 'select', options: ['هر روز ساعت ۸', 'هر شنبه ساعت ۹', 'اول هر ماه'] }, { k: 'to', label: 'گیرنده' }, { k: 'format', label: 'قالب', type: 'select', options: ['PDF', 'Excel', 'CSV'] }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
+      <Drawer open={!!rep} onClose={() => setRep(null)} width={560} title={`گزارش ${rep ?? ''}`} footer={<><Button variant="primary" icon={<Download size={14} />} onClick={() => { download(`${rep}.csv`, csv([['شاخص', 'مقدار', 'تغییر'], ['فروش', '۱۰٫۸ میلیارد', '+۹٪'], ['سفارش', '۲۸۴', '+۶٪'], ['نرخ تبدیل', '۲٫۱٪', '−۰٫۳٪']])); toast('خروجی گزارش ساخته شد.') }}>خروجی Excel</Button><Button onClick={() => window.print()}>چاپ</Button></>}>
+        {rep && <div className="space-y-4"><div className="grid grid-cols-3 gap-2">{[['فروش', '۱۰٫۸ میلیارد'], ['سفارش', fa(284)], ['نرخ تبدیل', '۲٫۱٪']].map(([k, v]) => <div key={k} className="rounded-lg bg-neutral-bg p-3"><p className="text-11 text-t2">{k}</p><p className="tnum font-bold">{v}</p></div>)}</div><LineChart h={160} labels={['هفتهٔ ۱', '۲', '۳', '۴']} series={[{ name: 'این ماه', color: 'var(--brand)', data: [2.1, 2.6, 2.9, 3.2] }, { name: 'ماه قبل', color: 'var(--text-3)', dashed: true, data: [1.9, 2.2, 2.4, 2.8] }]} /><AITag confidence="متوسط" source="سفارش‌ها و رویدادهای ۳۰ روز اخیر" /><p className="text-13 text-t2">فروش این ماه ۹٪ بالاتر از ماه قبل است؛ بیشترین رشد در دستهٔ هدفون و از کانال ترب.</p></div>}
+      </Drawer>
       {tab === 'explore' && <Card title={`${metric} به تفکیک ${dim}`} actions={<><Select className="h-8 w-32" value={metric} onChange={setMetric} options={['فروش', 'تعداد سفارش', 'حاشیهٔ سود', 'نرخ مرجوعی']} /><Select className="h-8 w-36" value={dim} onChange={setDim} options={Object.keys(data)} /></>}>
-        <Bars data={data[dim].map(([label, value]) => ({ label, value }))} fmt={pct} onPick={(l) => toast(`فهرست سفارش‌های «${l}» باز شد.`)} /><div className="mt-4 flex gap-2"><Button size="sm" onClick={() => toast('به داشبورد خانه اضافه شد.')}>افزودن به داشبورد</Button><Button size="sm" onClick={() => toast('ارسال هفتگی این گزارش به ایمیل زمان‌بندی شد.')}>زمان‌بندی ارسال هفتگی</Button></div></Card>}
-      {tab === 'catalog' && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{REPORTS.map((r) => <button key={r} onClick={() => toast(`گزارش «${r}» با فیلتر، مقایسه، خروجی و زمان‌بندی باز می‌شود.`)} className="rounded-lg border border-line bg-surface p-4 text-right hover:border-brand"><p className="text-13 font-semibold">{r}</p><p className="mt-1 text-11 text-t3">قابل فیلتر · خروجی · چاپ · زمان‌بندی</p></button>)}</div>}
+        <Bars data={data[dim].map(([label, value]) => ({ label, value }))} fmt={pct} onPick={() => nav('/admin/orders')} /><div className="mt-4 flex gap-2"><Button size="sm" onClick={() => { mutate((x) => { (x.entities.homeWidgets ??= []).unshift({ id: `w-${Date.now().toString(36)}`, name: `${metric} به تفکیک ${dim}`, metric, dim }) }, { action: 'افزودن ویجت به داشبورد', target: `${metric} / ${dim}` }); toast('به داشبورد خانه اضافه شد.') }}>افزودن به داشبورد</Button><Button size="sm" onClick={() => { mutate((x) => { x.entities.reports.unshift({ id: `rp-${Date.now().toString(36)}`, name: `${metric} به تفکیک ${dim}`, schedule: 'هر شنبه ساعت ۹', to: 'مدیر کل · ایمیل', format: 'PDF', active: true }) }, { action: 'زمان‌بندی گزارش', target: `${metric} / ${dim}` }); toast('ارسال هفتگی این گزارش زمان‌بندی شد.'); setTab('scheduled') }}>زمان‌بندی ارسال هفتگی</Button></div></Card>}
+      {tab === 'catalog' && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{REPORTS.map((r) => <button key={r} onClick={() => setRep(r)} className="rounded-lg border border-line bg-surface p-4 text-right hover:border-brand"><p className="text-13 font-semibold">{r}</p><p className="mt-1 text-11 text-t3">قابل فیلتر · خروجی · چاپ · زمان‌بندی</p></button>)}</div>}
       {tab === 'dict' && <Card title="فرهنگ شاخص‌ها" pad={false}><ul className="divide-y divide-line">{['gmv', 'aov', 'cvr', 'margin', 'landed', 'ltv', 'churn', 'roas', 'cac', 'csat', 'sla'].map((k) => <li key={k} className="flex items-center gap-2 px-4 py-2.5 text-13"><Hint k={k} /><span className="ltr font-mono text-12 text-t3">{k}</span><span>برای تعریف، فرمول و منبع روی علامت راهنما بزنید.</span></li>)}</ul></Card>}
     </Page>
   )
@@ -123,12 +151,17 @@ export function AiCenter() {
   )
 }
 
-export const Branches = () => (
-  <Module id="branches" title="شعب" sub="موجودی شعبه، دریافت حضوری و پرسش‌های شعبه" primary="افزودن شعبه"
-    kpis={[{ label: 'سفارش آمادهٔ دریافت حضوری', value: fa(2) }, { label: 'پرسش بی‌پاسخ شعبه', value: fa(1) }, { label: 'فروش حضوری این ماه', value: compactToman(412000000), delta: 6.5 }, { label: 'امتیاز در نقشه‌ها', value: fa(4.6) }]}
-    sections={[{ title: 'شعبه‌ها', items: [['شعبهٔ مرکزی تهران', 'شنبه تا پنجشنبه ۱۰ تا ۲۰ · تست حضوری فعال', 'باز'], ['شعبهٔ کرج', 'افتتاح برنامه‌ریزی‌شده', 'به‌زودی']] }, { title: 'صف دریافت حضوری', items: [['GH-10470', 'پیامک آمادگی ارسال شد · تحویل با کد', 'آماده'], ['GH-10466', 'در حال آماده‌سازی', 'منتظر']] }]}
-    extend="شعبهٔ تازه با نشانی، ساعت کاری و خدمات از همین صفحه تعریف می‌شود و صفحهٔ آن در سایت خودکار ساخته می‌شود." />
-)
+export function Branches() {
+  const { d } = useLookup()
+  return (
+    <Page title="شعب" module="branches" sub="شعبه، ساعت کاری، موجودی شعبه و صف دریافت حضوری">
+      <div className="space-y-4">
+        <KpiRow kpis={[{ label: 'سفارش آمادهٔ دریافت حضوری', value: fa(d.orders.filter((o) => o.shipments.some((s) => /حضوری/.test(s.method))).length) }, { label: 'شعبهٔ فعال', value: fa((d.entities.branches ?? []).filter((b) => b.active).length) }, { label: 'فروش حضوری این ماه', value: compactToman(412000000), delta: 6.5 }, { label: 'امتیاز در نقشه‌ها', value: fa(4.6) }]} />
+        <EntityManager ek="branches" kind="شعبه" fields={[{ k: 'name', label: 'نام شعبه', required: true }, { k: 'address', label: 'نشانی', required: true }, { k: 'hours', label: 'ساعت کاری' }, { k: 'phone', label: 'تلفن', ltr: true }, { k: 'pickup', label: 'دریافت حضوری', type: 'toggle' }, { k: 'test', label: 'تست حضوری', type: 'toggle' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />
+      </div>
+    </Page>
+  )
+}
 export const Sellers = () => (
   <Page title="فروشندگان" module="sellers" badge={<Badge dot={false}>به‌زودی</Badge>}><Card><div className="px-6 py-16 text-center text-14 text-t2">مدیریت فروشندگان و درخواست‌های «فروشنده شوید» به‌زودی اینجا اضافه می‌شود.</div></Card></Page>
 )

@@ -118,6 +118,33 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'bh1', name: 'شعبهٔ مرکزی تهران', address: 'تهران، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '021-00000002', pickup: true, test: true, active: true },
     { id: 'bh2', name: 'شعبهٔ کرج', address: 'کرج، خیابان نمونه', hours: '—', phone: '026-00000000', pickup: false, test: false, active: false },
   ],
+  segments: [
+    { id: 'sg1', name: 'VIP', rule: 'LTV > ۳۰۰ میلیون تومان', size: 1, active: true },
+    { id: 'sg2', name: 'در خطر ریزش', rule: 'آخرین خرید > ۳۰ روز و احتمال ریزش > ۵۰٪', size: 1, active: true },
+    { id: 'sg3', name: 'علاقه‌مند به هدفون', rule: 'بازدید یا خرید دستهٔ هدفون در ۹۰ روز اخیر', size: 3, active: true },
+  ],
+  experiments: [
+    { id: 'ex1', name: 'نمایش قسط ماهانه روی کارت محصول', hypothesis: 'نمایش مبلغ قسط، نرخ تبدیل را بالا می‌برد.', metric: 'نرخ تبدیل', split: 50, status: 'معنادار · ۹۶٪', result: '+۸٫۴٪' },
+    { id: 'ex2', name: 'آستانهٔ ارسال رایگان ۸ در برابر ۱۰ میلیون', hypothesis: 'آستانهٔ پایین‌تر AOV را کم و تبدیل را زیاد می‌کند.', metric: 'AOV و نرخ تبدیل', split: 50, status: 'دادهٔ ناکافی', result: '—' },
+  ],
+  incidents: [
+    { id: 'in1', title: 'قطعی درگاه اقساطی تارا', owner: 'مسئول فنی', severity: 'بالا', status: 'باز', at: new Date(now - 9 * 6e4).toISOString().slice(0, 16) },
+  ],
+  shipMethods: [
+    { id: 'sm1', name: 'تحویل {مدت_تحویل_سریع} ساعته', scope: 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', price: 150000, active: true },
+    { id: 'sm2', name: 'پیک غنیمت با انتخاب بازه', scope: 'انبار تهران · تهران و کرج', price: 95000, active: true },
+    { id: 'sm3', name: 'پست پیشتاز', scope: 'هر دو انبار · سراسر کشور', price: 90000, active: true },
+    { id: 'sm4', name: 'تیپاکس', scope: 'هر دو انبار · مراکز استان', price: 140000, active: true },
+    { id: 'sm5', name: 'باربری کالای سنگین', scope: 'انبار تهران · کلاس سنگین', price: 450000, active: true },
+    { id: 'sm6', name: 'دریافت حضوری از شعبه', scope: 'شعبهٔ مرکزی', price: 0, active: true },
+  ],
+  reports: [
+    { id: 'rp1', name: 'خلاصهٔ فروش هفتگی', schedule: 'هر شنبه ساعت ۹', to: 'مدیر کل · ایمیل', format: 'PDF', active: true },
+  ],
+  partnerSites: [
+    { id: 'ps1', name: 'سایت اول', url: 'https://partner-one.example', mode: 'اتصال مستقیم', last: '۲ دقیقه پیش', active: true },
+    { id: 'ps2', name: 'سایت دوم', url: 'https://partner-two.example', mode: 'خزش دوره‌ای', last: '۷۵ دقیقه پیش', active: true },
+  ],
   notifRules: [
     { id: 'nr1', event: 'سفارش جدید', to: 'مدیر کل', channels: 'پیامک، پوش', cond: 'همهٔ سفارش‌ها', quiet: true, active: true },
     { id: 'nr2', event: 'کالای منتشرشده توسط اپراتور', to: 'مدیر کل', channels: 'بله، درون‌پنل', cond: 'همه', quiet: true, active: true },

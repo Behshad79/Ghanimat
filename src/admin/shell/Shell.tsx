@@ -4,6 +4,7 @@ import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, 
 import { NAV } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
+import { ProductCard } from '../catalog/ProductCard'
 import { CommandPalette } from './CommandPalette'
 import { Avatar, Badge, Button, cx, Kbd, Light, Segmented, Select, StatusBadge } from '@/shared/ui/base'
 import { Drawer, Modal, toast } from '@/shared/ui/overlay'
@@ -104,7 +105,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
           <Segmented size="sm" value={s.density} onChange={(v) => setSession({ density: v })} options={[['comfortable', 'راحت'], ['normal', 'معمولی'], ['compact', 'فشرده']]} />
           {me.role === 'super' && <><p className="mt-3 mb-1 flex items-center gap-1 text-11 text-t3"><Eye size={12} />مشاهده به‌جای… (فقط مشاهده)</p>
             <Select value={s.viewAs ?? ''} onChange={(v) => { setSession({ viewAs: v || null }); setPanel(null); if (v) nav(ROLES[v].home) }} options={[['', 'خودم (مدیر کل)'], ...Object.entries(ROLES).filter(([k]) => k !== 'super').map(([k, r]) => [k, r.label] as [string, string])]} /></>}
-          <a href="#/" onClick={() => toast('سایت مشتری در مرحلهٔ بعد اضافه می‌شود.')} className="mt-3 flex items-center gap-2 rounded-sm px-1 py-1.5 text-t2 hover:text-brand"><ExternalLink size={14} />مشاهدهٔ سایت</a>
+          <button onClick={() => { setPanel(null); window.dispatchEvent(new Event('site-preview')) }} className="mt-3 flex w-full items-center gap-2 rounded-sm px-1 py-1.5 text-t2 hover:text-brand"><ExternalLink size={14} />پیش‌نمایش سایت</button>
           <button onClick={() => { setSession({ userId: null, viewAs: null }); nav('/login') }} className="flex w-full items-center gap-2 rounded-sm px-1 py-1.5 text-danger"><LogOut size={14} />خروج از حساب</button>
         </div>
       )}
@@ -155,7 +156,8 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
 
 export function Shell() {
   const s = useSession(); const loc = useLocation(); const nav = useNavigate()
-  const [menu, setMenu] = useState(false); const [cmd, setCmd] = useState(false); const [ai, setAI] = useState(false); const [keys, setKeys] = useState(false)
+  const [menu, setMenu] = useState(false); const [cmd, setCmd] = useState(false); const [ai, setAI] = useState(false); const [keys, setKeys] = useState(false); const [site, setSite] = useState(false)
+  useEffect(() => { const f = () => setSite(true); window.addEventListener('site-preview', f); return () => window.removeEventListener('site-preview', f) }, [])
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCmd((v) => !v) }
@@ -182,11 +184,27 @@ export function Shell() {
         </div>
       </div>
       <LiveAlert />
+      <SitePreview open={site} onClose={() => setSite(false)} />
       <CommandPalette open={cmd} onClose={() => setCmd(false)} />
       <Copilot open={ai} onClose={() => setAI(false)} />
       <Modal open={keys} onClose={() => setKeys(false)} title="میان‌برهای صفحه‌کلید">
         <ul className="space-y-2">{[['Ctrl K', 'جست‌وجوی سراسری و دستور'], ['?', 'همین راهنما'], ['g سپس o', 'رفتن به سفارش‌ها'], ['g سپس h', 'رفتن به خانه'], ['g سپس w', 'رفتن به انبار'], ['g سپس s', 'رفتن به پشتیبانی'], ['Esc', 'بستن کشو یا مودال'], ['Shift + کلیک', 'انتخاب بازه‌ای ردیف‌ها'], ['Enter در صف کار', 'تأیید و بعدی']].map(([k, l]) => <li key={k} className="flex items-center justify-between"><span>{l}</span><Kbd>{k}</Kbd></li>)}</ul>
       </Modal>
     </div>
+  )
+}
+
+/** پیش‌نمایش سایت مشتری با همین داده و همین کارت محصول (تا ساخت کامل سایت) */
+function SitePreview({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const d = useDB(); const thr = d.rules.find((r) => r.key === 'free_shipping_threshold')?.value ?? 0
+  return (
+    <Modal open={open} onClose={onClose} wide title="پیش‌نمایش سایت غنیمت">
+      <div className="overflow-hidden rounded-xl border border-line bg-[#f5f6fa]">
+        <p className="bg-[#0000ff] py-2 text-center text-12 text-white">ارسال رایگان برای خریدهای بالای {compactToman(thr)}</p>
+        <div className="flex items-center justify-between bg-white px-4 py-3"><img src="./brand/logo-full.png" alt="غنیمت" className="h-7" /><span className="text-12 text-[#5a5e78]">جست‌وجو در کالاهای اصل…</span></div>
+        <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">{d.products.filter((p) => p.status === 'product.published').slice(0, 6).map((p) => <ProductCard key={p.id} p={p} mini />)}</div>
+      </div>
+      <p className="mt-2 text-11 text-t2">سایت و پنل مشتری کامل، پس از دریافت طرح‌های آن، روی همین داده و کامپوننت‌ها ساخته می‌شود.</p>
+    </Modal>
   )
 }

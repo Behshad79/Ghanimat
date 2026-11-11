@@ -19,6 +19,7 @@ export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' |
   { id: 'manifest', label: 'مانیفست تحویل به پست', src: 'batch', papers: ['A4'], fields: [] },
   { id: 'return', label: 'برچسب و فرم مرجوعی', src: 'ret', papers: ['A5'], fields: [] },
   { id: 'pickup', label: 'رسید دریافت حضوری', src: 'order', papers: ['۸۰ میلی‌متر'], fields: [] },
+  { id: 'bundle', label: 'بستهٔ کامل سفارش', src: 'order', papers: ['A4 و برچسب'], fields: [] },
 ]
 const DEF: DocOpts = { font: 1, margin: 10, footer: '', seal: true, hide: [] }
 
@@ -61,7 +62,7 @@ export function PrintCenter() {
             {doc.src === 'batch' && <p className="text-12 text-t2">{fa(batch.length)} مرسوله {doc.id === 'pick' ? 'منتظر جمع‌آوری در انبار تهران' : 'پستی آمادهٔ تحویل'} در این سند می‌آید.</p>}
             <Field label="اندازهٔ کاغذ"><Select value={paper} onChange={setPaper} options={doc.papers} /></Field>
             {doc.id === 'warranty' && <label className="flex items-center gap-2 text-13"><Toggle on={bw} label="سیاه‌وسفید" onChange={setBw} />نسخهٔ چاپی سیاه‌وسفید</label>}
-            {doc.src === 'order' && <Button className="w-full" onClick={() => toast(`بستهٔ کامل سفارش ${order.id}: فاکتور، برچسب ${fa(order.shipments.length)} مرسوله، برگهٔ QC و کارت گارانتی هر واحد به صف چاپ رفت.`)}>چاپ بستهٔ کامل سفارش</Button>}
+            {doc.src === 'order' && <Button className="w-full" onClick={() => go({ doc: 'bundle', orders: order.id })}>چاپ بستهٔ کامل سفارش</Button>}
           </div></Card>
           <Card title="لاگ چاپ" pad={false}><ul className="max-h-40 divide-y divide-line overflow-y-auto text-12">{d.audit.filter((a) => a.action === 'چاپ سند').slice(0, 8).map((a, i) => <li key={i} className="px-3 py-2">{a.target}</li>)}{!d.audit.some((a) => a.action === 'چاپ سند') && <li className="px-3 py-3 text-t2">هنوز سندی چاپ نشده است.</li>}</ul></Card>
         </div>
@@ -77,6 +78,7 @@ export function PrintCenter() {
           {doc.id === 'manifest' && <Manifest ships={batch} opts={opts} />}
           {doc.id === 'return' && retId && <ReturnForm retId={retId} opts={opts} />}
           {doc.id === 'pickup' && <PickupReceipt o={order} opts={opts} />}
+          {doc.id === 'bundle' && <div className="space-y-8"><Invoice o={order} opts={opts} />{order.shipments.map((s) => <div key={s.id}>{/پست|تیپاکس|باربری/.test(s.method) ? <PostLabel o={order} s={s} opts={opts} paper="A6" /> : <CourierLabel o={order} s={s} opts={opts} />}</div>)}{order.shipments.flatMap((s) => s.items.filter((i) => i.unitId)).map((i) => <div key={i.unitId} className="space-y-6"><QCSheet unitId={i.unitId} opts={opts} /><WarrantyCard unitId={i.unitId} opts={opts} /></div>)}</div>}
         </div>
       </div>
       <Drawer open={editor} onClose={() => setEditor(false)} title={`ویرایش قالب: ${doc.label}`} footer={<><Button variant="primary" onClick={() => { setEditor(false); toast('قالب ذخیره شد و برای چاپ‌های بعدی هم اعمال می‌شود.') }}>ذخیرهٔ قالب</Button><Button variant="ghost" icon={<RotateCcw size={14} />} onClick={() => { mutate((x) => { delete x.docSettings[doc.id] }); toast('قالب به حالت پیش‌فرض برگشت.') }}>بازگشت به پیش‌فرض</Button></>}>

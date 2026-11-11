@@ -12,6 +12,7 @@ export type EField = {
   k: string; label: string; type?: 'text' | 'textarea' | 'number' | 'money' | 'select' | 'toggle' | 'date'
   options?: (string | [string, string])[]; required?: boolean; ltr?: boolean; help?: string; table?: boolean; def?: any
   render?: (r: Rec) => ReactNode
+  form?: false
 }
 const showVal = (f: EField, v: any): ReactNode => {
   if (f.render) return null
@@ -46,7 +47,7 @@ export function EntityManager({ ek, kind, fields, titleKey = 'name', blockDelete
   const save = () => {
     if (!edit) return
     const e: Record<string, string> = {}
-    fields.forEach((f) => { if (f.required && (edit[f.k] === '' || edit[f.k] == null)) e[f.k] = `${f.label} را وارد کنید.` })
+    fields.filter((f) => f.form !== false).forEach((f) => { if (f.required && (edit[f.k] === '' || edit[f.k] == null)) e[f.k] = `${f.label} را وارد کنید.` })
     setErr(e); if (Object.keys(e).length) return
     const undo = snapshot()
     mutate((x) => { const list = (x.entities[ek] ??= []); const i = list.findIndex((r) => r.id === edit.id); if (i >= 0) list[i] = edit; else list.unshift(edit) }, { action: isNew ? `افزودن ${kind}` : `ویرایش ${kind}`, target: label(edit) })
@@ -81,7 +82,7 @@ export function EntityManager({ ek, kind, fields, titleKey = 'name', blockDelete
       <Drawer open={!!edit} onClose={() => setEdit(null)} title={isNew ? `افزودن ${kind}` : `ویرایش ${kind}: ${edit ? label(edit) : ''}`}
         footer={<><Button variant="primary" onClick={save}>{isNew ? `افزودن ${kind}` : 'ذخیرهٔ تغییرها'}</Button><Button variant="ghost" onClick={() => setEdit(null)}>انصراف</Button>{!isNew && edit && <Button variant="danger" className="mr-auto" icon={<Trash2 size={14} />} onClick={() => { del([edit]); setEdit(null) }}>حذف</Button>}</>}>
         {edit && <div className="space-y-4">
-          {fields.map((f) => (
+          {fields.filter((f) => f.form !== false).map((f) => (
             <Field key={f.k} label={f.label + (f.required ? ' *' : '')} help={f.help} error={err[f.k]}>
               {f.type === 'textarea' ? <Textarea rows={4} value={edit[f.k] ?? ''} onChange={(e) => setEdit({ ...edit, [f.k]: e.target.value })} />
                 : f.type === 'select' ? <Select value={String(edit[f.k] ?? '')} onChange={(v) => setEdit({ ...edit, [f.k]: v })} options={f.options ?? []} />

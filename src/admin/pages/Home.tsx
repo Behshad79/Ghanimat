@@ -4,6 +4,7 @@ import { Badge, Button, Card, Light, Progress, StatusBadge } from '@/shared/ui/b
 import { ActionChips, AISummary, KPI, Page } from '@/shared/ui/page'
 import { Bars, Donut, Funnel, LineChart } from '@/shared/ui/charts'
 import { Hint, toast } from '@/shared/ui/overlay'
+import { mutate, notify } from '@/shared/lib/store'
 import { compactToman, fa, minsLeft, pct, toman } from '@/shared/lib/fa'
 import { SlaChip, useLookup } from './_shared'
 import { NAV } from '../shell/nav'
@@ -84,7 +85,7 @@ export function Live() {
     <Page title="مرکز عملیات زنده" sub="هر چراغ سه حالت دارد: سالم، هشدار، بحران" module="live" badge={<Badge tone="success">زنده</Badge>}
       empty={{ title: 'امروز هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های امروز به تفکیک مرحله اینجا نمایش داده می‌شوند.' }}
       actions={<Button icon={<Maximize2 size={14} />} onClick={() => document.documentElement.requestFullscreen?.()}>تمام‌صفحه</Button>}
-      primary={<Button variant="primary" onClick={() => toast('رخداد باز شد و به مسئول فنی اطلاع داده شد.')}>باز کردن رخداد</Button>}>
+      primary={<Button variant="primary" onClick={() => { mutate((x) => { x.entities.incidents.unshift({ id: `in-${Date.now().toString(36)}`, title: 'رخداد تازه از مرکز عملیات', owner: 'مسئول فنی', severity: 'متوسط', status: 'باز', at: new Date().toISOString().slice(0, 16) }) }, { action: 'باز کردن رخداد', target: 'مرکز عملیات' }); notify('رخداد تازه باز شد', 'از مرکز عملیات زنده؛ به مسئول فنی اطلاع داده شد.', '/admin/infra', 'سیستم', 'warning'); toast('رخداد باز شد و به مسئول فنی اطلاع داده شد.'); nav('/admin/infra') }}>باز کردن رخداد</Button>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI label="کاربر آنلاین" value={fa(138)} spark={[4, 6, 7, 6, 8, 9, 8]} />

@@ -117,12 +117,12 @@ export const makeSeed = () => ({
     { id: 'AP-700', type: 'تغییر قیمت گروهی', title: 'کاهش ۴٪ قیمت ۶ واحد راکد بیش از ۳۰ روز', ref: 'قیمت‌گذاری', amount: 0, by: 'مدیر عملیات', byRole: 'ops', status: 'approval.pending', at: ago(60 * 3) },
     { id: 'AP-698', type: 'درخواست اپراتور', title: 'تغییر آدرس سفارش GH-10479', ref: 'GH-10479', amount: 0, by: 'اپراتور ساده', byRole: 'simple', status: 'approval.pending', at: ago(25) },
   ],
-  reviews: [
-    { id: 'RV-1', productId: 'p1', customerId: 'c1', rating: 5, text: 'دقیقاً همان چیزی بود که در عکس‌ها دیدم. خط کنار قاب هم همان‌قدر ریز بود که نوشته بودید.', status: 'review.pending', verified: true, at: ago(60 * 5), ai: 'سالم' },
-    { id: 'RV-2', productId: 'p5', customerId: 'c3', rating: 2, text: 'رنگش با عکس فرق داشت. مرجوع کردم.', status: 'review.pending', verified: true, at: ago(60 * 26), ai: 'سالم' },
-    { id: 'RV-3', productId: 'p2', customerId: 'c6', rating: 5, text: 'عالی عالی عالی بخرید شماره من ۰۹۱۲...', status: 'review.pending', verified: false, at: ago(60 * 30), ai: 'اطلاعات شخصی + احتمال اسپم' },
-    { id: 'RV-4', productId: 'p3', customerId: 'c7', rating: 4, text: 'بسته‌بندی خوب بود و برگهٔ کنترل کیفیت داخل جعبه بود.', status: 'review.approved', verified: true, at: ago(60 * 24 * 4), ai: 'سالم' },
-  ],
+  reviews: ([
+    { id: 'RV-1', productId: 'p1', customerId: 'c1', rating: 5, text: 'دقیقاً همان چیزی بود که در عکس‌ها دیدم. خط کنار قاب هم همان‌قدر ریز بود که نوشته بودید.', status: 'review.pending', verified: true, at: ago(60 * 5), ai: 'سالم', media: [{ id: 'm1', type: 'image', src: './products/p1-500.webp', status: 'pending', flag: '' }, { id: 'm2', type: 'image', src: './products/p1-500.webp', status: 'pending', flag: '' }] },
+    { id: 'RV-2', productId: 'p5', customerId: 'c3', rating: 2, text: 'رنگش با عکس فرق داشت. مرجوع کردم.', status: 'review.pending', verified: true, at: ago(60 * 26), ai: 'سالم', media: [{ id: 'm3', type: 'image', src: './products/p5-500.webp', status: 'pending', flag: '' }, { id: 'm4', type: 'video', src: './products/p5-500.webp', status: 'pending', flag: '' }] },
+    { id: 'RV-3', productId: 'p2', customerId: 'c6', rating: 5, text: 'عالی عالی عالی بخرید شماره من ۰۹۱۲...', status: 'review.pending', verified: false, at: ago(60 * 30), ai: 'اطلاعات شخصی + احتمال اسپم', media: [{ id: 'm5', type: 'image', src: './products/p2-500.webp', status: 'pending', flag: 'شمارهٔ تلفن روی عکس' }] },
+    { id: 'RV-4', productId: 'p3', customerId: 'c7', rating: 4, text: 'بسته‌بندی خوب بود و برگهٔ کنترل کیفیت داخل جعبه بود.', status: 'review.approved', verified: true, at: ago(60 * 24 * 4), ai: 'سالم', media: [{ id: 'm6', type: 'image', src: './products/p3-500.webp', status: 'approved', flag: '', featured: true }] },
+  ] as { id: string; productId: string; customerId: string; rating: number; text: string; status: string; verified: boolean; at: string; ai: string; media: { id: string; type: string; src: string; status: string; flag: string; featured?: boolean }[] }[]),
   codes: [
     { id: 'WELCOME', type: 'مبلغی', value: '۵۰۰٬۰۰۰ تومان', used: 214, limit: 1000, active: true, cond: 'اولین خرید' },
     { id: 'SORRY-CANCEL', type: 'مبلغی', value: '۵۰۰٬۰۰۰ تومان', used: 31, limit: 0, active: true, cond: 'کد جبرانی لغو' },

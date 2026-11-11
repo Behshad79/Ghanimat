@@ -4,7 +4,7 @@ import { Check, Flame, Link2, ShoppingCart, Sparkles, Star, X, Zap } from 'lucid
 import { AIButton, AITag, Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Progress, Row, Segmented, StatusBadge, Tabs, Textarea, Toggle } from '@/shared/ui/base'
 import { Page, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
-import { Hint, toast } from '@/shared/ui/overlay'
+import { Hint, Modal, toast } from '@/shared/ui/overlay'
 import { fakeCall, mutate, snapshot } from '@/shared/lib/store'
 import { compactToman, fa, num, pct, rel, toman, g } from '@/shared/lib/fa'
 import { CONDITION, SOURCE, WAREHOUSE } from '@/shared/data/statuses'
@@ -18,11 +18,12 @@ export { ProductCard } from '../catalog/ProductCard'
 import { ProductCard } from '../catalog/ProductCard'
 
 export function CardRules() {
+  const [nb, setNb] = useState<{ label: string; rule: string; rotate: boolean } | null>(null)
   const { d, defaultBnpl } = useLookup(); const [ctx, setCtx] = useState<'desktop' | 'hover' | 'mobile' | 'out'>('desktop')
   const p = d.products.find((x) => x.id === 'p2') ?? d.products[0]; const u = d.units.find((x) => x.productId === p.id && x.status === 'unit.published')
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-      <Card title="بج‌ها و قانون نمایش" actions={<Button size="sm" onClick={() => toast('فرم تعریف بج جدید: متن، آیکون، رنگ، شرط، اولویت و محل.')}>تعریف بج جدید</Button>} pad={false}>
+      <Card title="بج‌ها و قانون نمایش" actions={<Button size="sm" onClick={() => setNb({ label: '', rule: '', rotate: false })}>تعریف بج جدید</Button>} pad={false}>
         <ul className="divide-y divide-line">{d.cardBadges.map((b) => (
           <li key={b.id} className="flex items-center gap-3 px-4 py-3"><Toggle on={b.on} label={b.label} onChange={(v) => mutate((x) => { x.cardBadges.find((y) => y.id === b.id)!.on = v }, { action: v ? 'روشن‌کردن بج' : 'خاموش‌کردن بج', target: b.label })} />
             <div className="min-w-0 flex-1"><p className="text-13 font-medium">{b.label}{b.rotate && <Badge dot={false}>چرخشی</Badge>}</p><p className="text-11 text-t3">شرط نمایش: {b.rule}</p></div></li>))}</ul>
@@ -31,6 +32,9 @@ export function CardRules() {
       <Card title="پیش‌نمایش زندهٔ کارت" className="self-start">
         <Segmented size="sm" value={ctx} onChange={setCtx} options={[['desktop', 'عادی'], ['hover', 'هاور'], ['mobile', 'موبایل فشرده'], ['out', 'ناموجود']]} />
         <div className="mt-3 flex justify-center"><ProductCard p={p} u={u} hover={ctx === 'hover'} mini={ctx === 'mobile'} out={ctx === 'out'} /></div>
+        <Modal open={!!nb} onClose={() => setNb(null)} title="تعریف بج جدید" footer={<Button variant="primary" onClick={() => { if (!nb?.label.trim() || !nb.rule.trim()) return toast('متن و شرط نمایش بج را بنویسید.', { tone: 'err' }); mutate((x) => { x.cardBadges.push({ id: `b-${Date.now().toString(36)}`, label: nb.label, rule: nb.rule, on: true, rotate: nb.rotate }) }, { action: 'تعریف بج کارت محصول', target: nb.label }); toast(`بج «${nb.label}» اضافه شد.`); setNb(null) }}>افزودن بج</Button>}>
+          {nb && <div className="space-y-3"><Field label="متن بج"><Input value={nb.label} onChange={(e) => setNb({ ...nb, label: e.target.value })} placeholder="مثلاً ارسال رایگان" /></Field><Field label="شرط نمایش"><Input value={nb.rule} onChange={(e) => setNb({ ...nb, rule: e.target.value })} placeholder="مثلاً قیمت ≥ آستانهٔ ارسال رایگان" /></Field><label className="flex items-center gap-2 text-13"><Toggle on={nb.rotate} label="چرخشی" onChange={(v) => setNb({ ...nb, rotate: v })} />در خط چرخشی کارت نمایش داده شود</label></div>}
+        </Modal>
         <p className="mt-3 text-11 leading-5 text-t3">چرا «تحویل سریع» نمایش داده می‌شود؟ واحد در انبار تهران است، کلاس کالا عادی است و ساعت قطع سفارش نگذشته است.</p>
       </Card>
     </div>

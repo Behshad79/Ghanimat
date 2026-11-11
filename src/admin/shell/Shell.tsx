@@ -81,7 +81,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
   return (
     <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-3">
       <button aria-label="منو" onClick={onMenu} className="grid size-9 place-items-center rounded-md text-t2 hover:bg-neutral-bg lg:hidden"><Menu size={18} /></button>
-      <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-sm"><Search size={15} /><span className="truncate">جست‌وجو یا اجرای دستور</span><span className="mr-auto hidden md:block"><Kbd>Ctrl K</Kbd></span></button>
+      <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-sm"><Search size={15} /><span className="truncate">جست‌وجو یا اجرای دستور</span><span className="mr-auto hidden whitespace-nowrap 2xl:block"><Kbd>Ctrl K</Kbd></span></button>
       {['super', 'ops'].includes(me.role) && !s.viewAs && <Button variant="ghost" icon={<Zap size={15} />} onClick={() => nav('/simple')} className="max-sm:!hidden">حالت سریع</Button>}
       <div className="relative hidden md:block">
         <Button icon={<Plus size={15} />} onClick={() => setPanel(panel === 'quick' ? null : 'quick')}>ایجاد سریع</Button>

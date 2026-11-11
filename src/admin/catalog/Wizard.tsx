@@ -151,7 +151,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
             <Button variant="ghost" aria-label="حذف واحد" icon={<Trash2 size={14} />} onClick={() => set({ units: f.units.filter((_, j) => j !== i) })} />
           </div>)}
           <Button icon={<Plus size={14} />} onClick={() => set({ units: [...f.units, { serial: '', color: f.units.at(-1)?.color ?? '', warehouse: 'tehran', shelf: '', grade: f.grade }] })}>افزودن واحد</Button></div>}</div>,
-    6: <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+    6: <div className="grid gap-5 xl:grid-cols-[1fr_300px]">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="قیمت خرید"><MoneyIn value={f.costFx} onChange={(n) => set({ costFx: n })} placeholder="مثلاً 12,000,000" /></Field>
         <Field label="ارز خرید"><Select value={f.currency} onChange={(v) => set({ currency: v, rate: RATES[v] })} options={Object.keys(RATES)} /></Field>
@@ -163,7 +163,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
         <Field label="تخفیف (درصد)"><Input type="number" min={0} max={90} className="ltr text-left font-mono" value={f.discount} onChange={(e) => set({ discount: Math.min(90, Math.max(0, +e.target.value)) })} /></Field>
         <Field label="قیمت مرجع کالای نو" help="ردیف «قیمت نو» و درصد ارزان‌تر روی کارت."><MoneyIn value={f.priceNew} onChange={(n) => set({ priceNew: n })} /></Field>
       </div>
-      <Card className="self-start bg-surface-2" title={<>سود هر واحد<Hint k="margin" /></>}>
+      <Card className="self-start bg-surface-2 xl:sticky xl:top-20" title={<>سود هر واحد<Hint k="margin" /></>}>
         {[['قیمت خرید', f.costFx * (f.currency === 'تومان' ? 1 : f.rate)], ['هزینه‌های جانبی', f.freight + f.customs + f.other]].map(([l, v]) => <div key={l as string} className="flex justify-between py-1 text-13"><span className="text-t2">{l}</span><span className="tnum">{toman(v as number)}</span></div>)}
         <div className="flex justify-between border-t border-line py-1.5 text-13 font-semibold"><span>قیمت تمام‌شده</span><span className="tnum">{toman(landed)}</span></div>
         <div className="flex justify-between py-1 text-13"><span className="text-t2">قیمت نهایی فروش</span><span className="tnum">{toman(finalPrice)}</span></div>
@@ -194,7 +194,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
         {f.code && <div className="flex items-center gap-3"><QR value={`https://ghanimat.example/p/${f.code}`} size={88} /><p className="text-12 text-t2">QR به صفحهٔ کالا در پنل و سایت می‌رود. اسکن هر کد در جست‌وجو، دریافت، جمع‌آوری، بسته‌بندی و مرجوعی همین کالا را باز می‌کند.</p></div>}
         {!f.code && <Button icon={<RefreshCw size={14} />} onClick={() => set({ code: takeCode('product') })}>ساخت کد داخلی الان</Button>}</div>
       <div><p className="mb-2 text-13 font-medium">پیش‌نمایش برچسب کالا (۵۰×۳۰)</p><div className="inline-block rounded-lg bg-neutral-bg p-4"><ProductLabel p={{ ...blank(), id: 'x', image: '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: '', mode: f.mode, priceNew: 0, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, seller: '', code: f.code || 'GH-P-000000', model: f.model } as unknown as Product} qty={f.mode === 'qty' ? f.qtyTehran + f.qtyMahabad : undefined} /></div><p className="mt-2 text-11 text-t2">برچسب واحدها پس از ثبت از فهرست واحدها یا صفحهٔ هر واحد چاپ می‌شود (تکی یا گروهی).</p></div></div>,
-    11: <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
+    11: <div className="grid gap-5 xl:grid-cols-[1fr_auto]">
       <div className="space-y-4">
         <Card title="چک‌لیست انتشار">{missing.length === 0 ? <p className="flex items-center gap-2 text-13 text-success"><Check size={16} />همه‌چیز برای انتشار آماده است.</p> : <ul className="space-y-1.5">{missing.map(([, l, s]) => <li key={l}><button onClick={() => setStep(s)} className="flex items-center gap-2 text-13 text-danger hover:underline"><CircleAlert size={14} />{l}<span className="text-11 text-t2">(رفتن به گام {fa(order.indexOf(s) + 1)})</span></button></li>)}</ul>}</Card>
         <Card title="خلاصه"><dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-13">{[['دسته', f.category], ['وضعیت', f.condition === 'sealed' ? 'اکبند' : f.condition === 'openbox' ? 'جعبه‌باز' : 'استوک'], ['موجودی', f.mode === 'qty' ? `${fa(f.qtyTehran + f.qtyMahabad)} عدد` : `${fa(f.units.length)} واحد`], ['قیمت نهایی', toman(finalPrice)], ['سود هر واحد', landed ? `${toman(profit)} (${pct(marginPct, 1)})` : 'نامعلوم'], ['گارانتی', `${f.warrantyType} · ${fa(f.warrantyMonths)} ماه`]].map(([k, v]) => <div key={k}><dt className="text-11 text-t2">{k}</dt><dd className="font-medium">{v}</dd></div>)}</dl></Card>

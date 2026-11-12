@@ -5,7 +5,7 @@ import { CountUp } from './motion'
 import { Button, Card, cx, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
 import { askCopilot, Hint } from './overlay'
 import { Spark } from './charts'
-import { isZero, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
+import { isZero, kpiAnim, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
 import { can, useSession } from '../lib/store'
 import { rel, signedPct } from '../lib/fa'
 
@@ -54,9 +54,10 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
     <div role={to ? 'link' : undefined} tabIndex={to ? 0 : undefined} onClick={() => to && nav(to)} onKeyDown={(e) => e.key === 'Enter' && to && nav(to)}
       className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', to && 'lift cursor-pointer', to && !featured && 'hover:border-brand/40')}>
       {featured && <span className="pointer-events-none absolute -top-12 -left-12 size-36 rounded-full bg-white/10" />}
+      <span aria-hidden className={cx('kpi-mark pointer-events-none absolute -bottom-5 -left-4 opacity-[0.07] transition-transform duration-700 group-hover:-translate-y-1 group-hover:rotate-[-8deg]', featured ? 'text-white opacity-[0.12]' : T.text)}>{kpiIcon(label, 96)}</span>
       {urgent && <span aria-hidden className={cx('absolute inset-y-3 right-0 w-1 rounded-l-full', t === 'danger' ? 'bg-danger' : 'bg-warning')} />}
       <div className="relative flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2"><span className={cx('grid size-9 shrink-0 place-items-center rounded-xl', featured ? 'bg-white/15 text-white' : T.bubble)}>{icon ?? kpiIcon(label)}</span><span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : urgent ? 'text-t1' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
+        <span className="flex min-w-0 items-center gap-2"><span className={cx('kpi-ico grid size-9 shrink-0 place-items-center rounded-xl', kpiAnim(label), featured ? 'bg-white/15 text-white' : T.bubble)}>{icon ?? kpiIcon(label)}</span><span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : urgent ? 'text-t1' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
         <span className="flex items-center gap-1">
           <button title="چرا تغییر کرد؟" onClick={(e) => { e.stopPropagation(); askCopilot(`چرا «${label}» تغییر کرد؟`) }} className={cx('hidden opacity-0 sm:inline transition-opacity group-hover:opacity-100', featured ? 'text-white/80' : 'text-t3 hover:text-brand')}><Sparkles size={13} /></button>
           {to && <span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}

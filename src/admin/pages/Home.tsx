@@ -1,5 +1,7 @@
+import type { Order, Shipment } from '@/shared/data/seed'
+import { cx } from '@/shared/ui/base'
 import { useNavigate } from 'react-router-dom'
-import { Maximize2, Plus } from 'lucide-react'
+import { Hourglass, Mail, Maximize2, PackageCheck, PackageOpen, Plus, Zap } from 'lucide-react'
 import { Badge, Button, Card, Light, Progress, StatusBadge } from '@/shared/ui/base'
 import { ActionChips, AISummary, KPI, Page } from '@/shared/ui/page'
 import { Bars, Columns, Donut, Funnel, Gauge, IranTiles, LineChart } from '@/shared/ui/charts'
@@ -117,28 +119,12 @@ export function Live() {
       primary={<Button variant="primary" onClick={() => { mutate((x) => { x.entities.incidents.unshift({ id: `in-${Date.now().toString(36)}`, title: 'رخداد تازه از مرکز عملیات', owner: 'مسئول فنی', severity: 'متوسط', status: 'باز', at: new Date().toISOString().slice(0, 16) }) }, { action: 'باز کردن رخداد', target: 'مرکز عملیات' }); notify('رخداد تازه باز شد', 'از مرکز عملیات زنده؛ به مسئول فنی اطلاع داده شد.', '/admin/infra', 'سیستم', 'warning'); toast('رخداد باز شد و به مسئول فنی اطلاع داده شد.'); nav('/admin/infra') }}>باز کردن رخداد</Button>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KPI label="کاربر آنلاین" value={fa(138)} spark={[4, 6, 7, 6, 8, 9, 8]} />
-          <KPI label="سبد فعال" value={fa(27)} note="ارزش: ۹۱۲ میلیون تومان" to="/admin/orders?tab=carts" />
-          <KPI label="پرداخت در جریان" value={fa(3)} to="/admin/finance?tab=txns" />
-          <KPI label="ظرفیت بازه‌های امروز" value={pct(72)} note="بازهٔ ۱۸ تا ۲۱ تکمیل است" to="/admin/shipping" />
+          <KPI featured label="کاربر آنلاین" value={fa(138)} spark={[4, 6, 7, 6, 8, 9, 8]} note="۲۳ نفر در صفحهٔ پرداخت" />
+          <KPI label="سبد فعال" tone="info" value={fa(27)} note="ارزش: ۹۱۲ میلیون تومان" to="/admin/orders?tab=carts" />
+          <KPI label="پرداخت در جریان" tone="warning" priority={false} value={fa(3)} note="میانگین ۴۰ ثانیه در درگاه" to="/admin/finance?tab=txns" />
+          <KPI label="ظرفیت بازه‌های امروز" tone="success" value={pct(72)} note="بازهٔ ۱۸ تا ۲۱ تکمیل است" to="/admin/shipping?tab=slots" />
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {cols.map(([title, sts]) => { const list = ships.filter((s) => sts.includes(s.status)); return (
-            <Card key={title} title={<>{title}<span className="tnum mr-1 rounded-full bg-neutral-bg px-1.5 text-11">{fa(list.length)}</span></>} pad={false}>
-              <ul className="max-h-80 space-y-2 overflow-y-auto p-2">
-                {list.length === 0 && <li className="px-2 py-6 text-center text-12 text-t3">موردی در این مرحله نیست.</li>}
-                {list.sort((a, b) => minsLeft(a.sla) - minsLeft(b.sla)).map((s) => (
-                  <li key={s.id}><button onClick={() => nav(`/admin/orders/${s.order.id}`)} className="block w-full rounded-md border border-line p-2 text-right hover:border-brand">
-                    <div className="flex items-center justify-between"><span className="ltr font-mono text-12 font-semibold">{s.id}</span><SlaChip at={s.sla} done={s.status === 'ship.delivered'} /></div>
-                    <p className="mt-1 truncate text-12">{s.items.map((i) => product(i.productId).en).join('، ')}</p>
-                    <p className="mt-1 flex items-center justify-between text-11 text-t3"><span>{customer(s.order.customerId).name} · {s.method}</span><span>{WAREHOUSE[s.warehouse]}</span></p>
-                    <div className="mt-1"><StatusBadge s={s.status} /></div>
-                  </button></li>
-                ))}
-              </ul>
-            </Card>
-          ) })}
-        </div>
+        <Pipeline ships={ships} />
         <Card title={<>برج پایش<Hint k="sla" /></>}>
           <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-4">
             {TOWER.map(([g, lights]) => (
@@ -153,5 +139,40 @@ export function Live() {
         </Card>
       </div>
     </Page>
+  )
+}
+
+/** بُرد زندهٔ مرسوله‌ها: چهار مرحله با رنگ و آیکون خودش، نوار سهم و کارت‌های یک‌شکل */
+const STAGES: { key: string; title: string; sts: string[]; color: string; icon: typeof Truck; anim: string }[] = [
+  { key: 'wait', title: 'در انتظار', sts: ['ship.pending', 'ship.partner_confirm'], color: '#b45309', icon: Hourglass, anim: 'kpi-float' },
+  { key: 'pick', title: 'جمع‌آوری و بسته‌بندی', sts: ['ship.picking', 'ship.packed', 'ship.pickup_ready'], color: '#0e7490', icon: PackageOpen, anim: 'kpi-bounce' },
+  { key: 'road', title: 'در مسیر', sts: ['ship.handed', 'ship.in_transit'], color: '#0000ff', icon: Truck, anim: 'kpi-drive' },
+  { key: 'done', title: 'تحویل‌شدهٔ امروز', sts: ['ship.delivered'], color: '#12733f', icon: PackageCheck, anim: 'kpi-beat' },
+]
+function Pipeline({ ships }: { ships: (Shipment & { order: Order })[] }) {
+  const { product, customer } = useLookup(); const nav = useNavigate()
+  const active = ships.filter((s) => STAGES.some((st) => st.sts.includes(s.status)))
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {STAGES.map((st) => { const list = active.filter((s) => st.sts.includes(s.status)).sort((a, b) => minsLeft(a.sla) - minsLeft(b.sla)); const late = list.filter((s) => st.key !== 'done' && minsLeft(s.sla) < 60).length; const I = st.icon; return (
+        <section key={st.key} className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface" style={{ backgroundImage: `linear-gradient(180deg, ${st.color}12, transparent 120px)` }}>
+          <header className="flex items-center gap-2.5 px-3 pt-3">
+            <span className={cx('kpi-ico grid size-9 place-items-center rounded-xl text-white', st.anim)} style={{ background: st.color }}><I size={17} /></span>
+            <span className="min-w-0 flex-1"><b className="block text-13">{st.title}</b><span className="text-11 text-t2">{late > 0 ? <span className="font-semibold text-danger">{fa(late)} مورد زیر یک ساعت</span> : st.key === 'done' ? 'تحویل‌های امروز' : 'همه در مهلت'}</span></span>
+            <span className="tnum text-22 font-bold" style={{ color: st.color }}>{fa(list.length)}</span>
+          </header>
+          <div className="mx-3 mt-2 h-1 overflow-hidden rounded-full bg-neutral-bg"><span className="block h-full rounded-full" style={{ width: `${(list.length / Math.max(1, active.length)) * 100}%`, background: st.color }} /></div>
+          <ul className="max-h-96 flex-1 space-y-2 overflow-y-auto p-3">
+            {list.length === 0 && <li className="grid place-items-center gap-1 py-8 text-center text-12 text-t3"><I size={22} className="opacity-40" />موردی در این مرحله نیست.</li>}
+            {list.map((s) => { const fast = /سریع|پیک|اسنپ/.test(s.method); return (
+              <li key={s.id}><button type="button" onClick={() => nav(`/admin/orders/${s.order.id}`)} className={cx('lift relative block w-full overflow-hidden rounded-xl border border-line bg-surface p-2.5 pr-3.5 text-right', st.key === 'done' && 'opacity-80')}>
+                <span className="absolute inset-y-0 right-0 w-1" style={{ background: st.color }} />
+                <span className="flex items-center justify-between gap-2"><span className="ltr font-mono text-12 font-semibold">{s.id}</span><SlaChip at={s.sla} done={s.status === 'ship.delivered'} /></span>
+                <span className="mt-2 flex items-center gap-2"><ProductImg pid={s.items[0]?.productId ?? ''} size={34} /><span className="min-w-0 flex-1"><span className="block truncate text-12 font-medium">{s.items.map((i) => product(i.productId).en).join('، ')}</span><span className="block truncate text-11 text-t2">{customer(s.order.customerId).name}</span></span></span>
+                <span className="mt-2 flex items-center justify-between gap-2 text-11"><span className="flex min-w-0 items-center gap-1 text-t2">{fast ? <Zap size={12} className="shrink-0 text-brand" /> : <Mail size={12} className="shrink-0" />}<span className="truncate">{s.method}</span></span><span className="shrink-0 rounded-full bg-neutral-bg px-2 py-0.5 text-t2">{WAREHOUSE[s.warehouse]}</span></span>
+              </button></li>) })}
+          </ul>
+        </section>) })}
+    </div>
   )
 }

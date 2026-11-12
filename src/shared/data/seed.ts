@@ -21,6 +21,7 @@ import { makePeople, makePeopleConfig } from './people'
 import { makeVault } from './vault'
 import { makeAxes, makeOptions } from './options'
 import { makeOrderEvents } from './orderEvents'
+import { makeContentQueue } from './contentQueue'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -195,7 +196,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
@@ -323,6 +324,10 @@ export const makeSeed = () => {
   { const o = structuredClone(base); Object.assign(o, { id: 'GH-10497', customerId: 'c2', channel: 'سایت', pay: 'زرین‌پال', total: 32900000, discount: 0, status: 'order.pickup_ready', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - 7 * 36e5).toISOString(), tags: ['دریافت حضوری'] })
     o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10497-1', warehouse: 'tehran', method: 'دریافت حضوری از شعبه', status: 'ship.pickup_ready', sla: new Date(Date.now() + 70 * 36e5).toISOString(), packPhotos: [{ src: './products/p6-500.webp', at: new Date(Date.now() - 3 * 36e5).toISOString(), by: 'آرش' }], courier: null, tracking: '', allocReason: 'مشتری دریافت حضوری از شعبهٔ ونک را انتخاب کرد.', items: [{ productId: 'p6', unitId: '', qty: 1, price: 32900000 }] }]
     s.orders.unshift(o); s.txns.unshift({ ...s.txns[0], id: 'TX-S97', orderId: 'GH-10497', amount: 32900000, gateway: 'زرین‌پال', ref: '48120117745', status: 'pay.success', at: o.createdAt }) }
+  // محتوای نمونهٔ صفحهٔ کالا (برای سنجش آمادگی محتوا): برخی کامل، برخی ناقص
+  const C: Record<string, [string, string, string, string]> = { p1: ['آیفون ۱۶ پرو اصل با گارانتی غنیمت، آنلاک و تست‌شده.', 'بدنهٔ تیتانیومی، تراشهٔ A18 Pro و دوربین ۴۸ مگاپیکسلی؛ هر واحد پیش از ارسال دو مرحله کنترل کیفیت می‌شود.', 'تیتانیوم · A18 Pro · ۴۸MP', 'گوشی، کابل USB-C، دفترچه'], p2: ['هدست AirPods Max ۲۰۲۴ با حذف نویز فعال.', 'نسخهٔ USB-C با صدای فضایی و ۲۰ ساعت باتری.', 'حذف نویز · صدای فضایی · USB-C', 'هدست، کیف هوشمند، کابل'], p4: ['ساعت Apple Watch سری ۱۰ با صفحهٔ بزرگ‌تر.', '', 'صفحهٔ ۴۶ میلی‌متری · سنسور دما', ''], p5: ['هدفون سونی WH-1000XM5 با بهترین حذف نویز.', 'هشت میکروفون و پردازندهٔ V1؛ ۳۰ ساعت باتری و شارژ سریع.', 'حذف نویز · ۳۰ ساعت · LDAC', 'هدفون، کیف، کابل'], p7: ['گلکسی S24 Ultra با قلم S Pen.', '', '', ''] }
+  Object.entries(C).forEach(([id, [sh, lo, kf, bx]]) => { const p = s.products.find((x) => x.id === id); if (p) Object.assign(p, { short: sh, long: lo, keyFeatures: kf, box: bx, specs: lo ? { 'گارانتی': 'غنیمت', 'وضعیت': 'تست‌شده' } : undefined }) })
+  const p1 = s.products.find((x) => x.id === 'p1'); if (p1?.pdp) p1.pdp.videos = [{ kind: 'ویدیوی بررسی', url: 'https://www.aparat.com/v/sample' }]
   // تنوع‌های نمونه: هر تنوع یک کالای جدا (SKU) در یک گروه است و واحدهایش بارکد خودشان را دارند
   const V: [string, string, string, Record<string, string>][] = [['p1', 'iphone-16-pro', 'تیتانیوم طبیعی · ۲۵۶ گیگابایت', { color: 'titanium', storage: '256' }], ['p5', 'sony-wh1000xm5', 'مشکی', { color: 'black' }], ['p4', 'apple-watch-s10', 'نقره‌ای · ۴۶ میلی‌متر · آلومینیوم', { color: 'silver', size: '46', material: 'alu' }], ['p7', 's24-ultra', 'خاکستری · ۵۱۲ گیگابایت', { color: 'gray', storage: '512' }]]
   V.forEach(([id, g, l, v]) => { const p = s.products.find((x) => x.id === id); if (p) p.pdp = { videos: [], flaws: [], importRoute: 'آمازون خاورمیانه', covered: '', notCovered: '', ...(p.pdp ?? {}), variantGroup: g, variantLabel: l, variant: v } })

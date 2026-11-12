@@ -37,3 +37,7 @@ export const TONE_CLS: Record<KpiTone, { bubble: string; ring: string; wash: str
   info: { bubble: 'bg-info-bg text-info', ring: 'border-info/30', wash: 'from-info-bg', text: 'text-info' },
   neutral: { bubble: 'bg-neutral-bg text-t2', ring: 'border-line', wash: 'from-neutral-bg', text: 'text-t2' },
 }
+
+// انیمیشن متناسب با موضوع هر شاخص: پیک حرکت می‌کند، زنگ می‌لرزد، سکه می‌چرخد، سبد می‌پرد، قلب می‌تپد…
+const ANIMS: [RegExp, string][] = [[/پیک|ارسال|مرسوله|محموله|رهگیری|تحویل/, 'kpi-drive'], [/هشدار|اعلان|مشکوک|دیرکرد|نقض|فوری|ریسک/, 'kpi-ring'], [/فروش|درآمد|مبلغ|سود|هزینه|پرداخت|تسویه|کیف|کارمزد|حقوق|قیمت|وام/, 'kpi-flip'], [/سفارش|سبد|خرید/, 'kpi-bounce'], [/دیدگاه|امتیاز|رضایت|مشتری|عضو|مشترک/, 'kpi-beat'], [/همگام|رویداد|بازسازی|اتصال|API/, 'kpi-spin'], [/پیام|گفتگو|تیکت|پشتیبانی|درخواست|پیامک/, 'kpi-chat']]
+export const kpiAnim = (label: string) => ANIMS.find(([r]) => r.test(label))?.[1] ?? 'kpi-float'

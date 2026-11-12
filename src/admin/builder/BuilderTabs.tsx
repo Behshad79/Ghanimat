@@ -1,8 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ExternalLink, Heading2, ImagePlus, Link2, Package, Pilcrow, Plus, Quote, Send, Trash2, Video } from 'lucide-react'
+import { Image as ImageIcon, LayoutGrid, MousePointerClick, MousePointer2, Percent, Tags, TrendingUp, ArrowDown, ArrowUp, ExternalLink, Heading2, ImagePlus, Link2, Package, Pilcrow, Plus, Quote, Send, Trash2, Video } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Select, Textarea, Toggle } from '@/shared/ui/base'
 import { KPI } from '@/shared/ui/page'
-import { Bars } from '@/shared/ui/charts'
+import { Bars, Donut } from '@/shared/ui/charts'
 import { DataTable } from '@/shared/ui/table'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { IconPicker } from '@/shared/ui/IconPicker'
@@ -42,7 +42,7 @@ export function ClicksTab({ onOpen }: { onOpen: Open }) {
   const byPage = d.pages.map((p) => ({ label: p.title, value: p.sections.flatMap((s) => s.els).reduce((a, e) => a + e.clicks, 0) })).sort((a, b) => b.value - a.value).slice(0, 8)
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2"><Card title="کلیک به تفکیک صفحه"><Bars data={byPage} /></Card><Card title="پرکلیک‌ترین المان‌ها">{[...rows].sort((a, b) => b.e.clicks - a.e.clicks).slice(0, 8).map((r) => <button key={r.id} onClick={() => onOpen(r.p.id, r.s.id, r.e.id)} className="flex w-full justify-between py-1 text-right text-13 hover:text-brand"><span>{r.p.title} › {r.e.label}</span><b className="tnum">{fa(r.e.clicks)}</b></button>)}</Card></div>
+      <ClickStats rows={rows} byPage={byPage} onOpen={onOpen} />
       <DataTable name="کلیک المان‌ها" rows={rows} rowKey={(r) => r.id} onRow={(r) => onOpen(r.p.id, r.s.id, r.e.id)} empty={{ title: 'کلیکی ثبت نشده است.' }} search={(r) => `${r.p.title} ${r.s.name} ${r.e.label}`}
         filters={<><Select className="w-48" value={pg} onChange={setPg} options={[['all', 'همهٔ صفحه‌ها'], ...d.pages.map((p) => [p.id, p.title] as [string, string])]} /><Select className="w-36" value={kind} onChange={setKind} options={[['all', 'همهٔ انواع'], ['banner', 'بنر'], ['button', 'دکمه'], ['link', 'لینک'], ['products', 'کالاها'], ['chips', 'چیپ'], ['icon', 'آیکون'], ['image', 'تصویر']]} /></>}
         cols={[{ key: 'l', title: 'المان', render: (r) => r.e.label, text: (r) => r.e.label }, { key: 'p', title: 'صفحه › بخش', render: (r) => <span className="text-12">{r.p.title} › {r.s.name}</span> }, { key: 'v', title: 'نمایش', align: 'left', render: (r) => fa(r.e.views), sort: (r) => r.e.views }, { key: 'c', title: 'کلیک', align: 'left', render: (r) => fa(r.e.clicks), sort: (r) => r.e.clicks }, { key: 'ctr', title: 'CTR', align: 'left', render: (r) => `${fa(((r.e.clicks / Math.max(1, r.e.views)) * 100).toFixed(2))}٪`, sort: (r) => r.e.clicks / Math.max(1, r.e.views) }]} />
@@ -150,6 +150,45 @@ export function NewsletterTab() {
         cols={[{ key: 'c', title: 'تماس', render: (n) => <span className="ltr">{n.contact}</span> }, { key: 'ch', title: 'کانال', render: (n) => n.channel }, { key: 'i', title: 'علاقه‌مندی‌ها', wrap: true, render: (n) => <span className="flex flex-wrap gap-1">{n.interests.map((x) => <Badge key={x} dot={false}>{x}</Badge>)}</span> }, { key: 's', title: 'محل عضویت', render: (n) => n.source }, { key: 'at', title: 'عضویت', render: (n) => <span className="text-12 text-t2">{rel(n.at)}</span>, sort: (n) => n.at }, { key: 'a', title: 'وضعیت', render: (n) => (n.active ? <Badge tone="success">فعال</Badge> : <Badge>لغو شده</Badge>) }]}
         actions={(n) => [{ label: n.active ? 'لغو اشتراک' : 'فعال‌سازی دوباره', onClick: () => mutate((x) => { const y = x.newsletter.find((z) => z.id === n.id)!; y.active = !y.active }, { action: 'تغییر اشتراک خبرنامه', target: n.contact }) }]} />
       <Modal open={msg} onClose={() => setMsg(false)} title={`ارسال به ${fa(target.length)} مشترک`} footer={<Button variant="primary" onClick={() => { target.filter((t) => t.channel === 'پیامک').forEach((t) => sendSms(t.contact, text, 'خبرنامه')); setMsg(false); toast(`برای ${fa(target.length)} مشترک ارسال شد.`) }}>ارسال</Button>}><Textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} /><p className="mt-2 text-11 text-t2">سقف هفتگی پیامک خبرنامه: {fa(d.cx.notifications.smsWeeklyCap)} پیام.</p></Modal>
+    </div>
+  )
+}
+
+const KIND_ICON: Record<string, typeof Package> = { banner: ImageIcon, button: MousePointerClick, link: Link2, products: Package, chips: Tags, image: ImageIcon, icon: LayoutGrid }
+const KIND_LABEL: Record<string, string> = { banner: 'بنر', button: 'دکمه', link: 'لینک', products: 'کالاها', chips: 'چیپ', image: 'تصویر', icon: 'آیکون' }
+const KIND_COLOR: Record<string, string> = { banner: '#0000ff', button: '#12a150', link: '#0ea5e9', products: '#f97316', chips: '#7c3aed', image: '#ffc24b', icon: '#c42f2f' }
+type CRow = { p: { id: string; title: string }; s: { id: string; name: string }; e: { id: string; kind: string; label: string; clicks: number; views: number }; id: string }
+/** آمار کلیک‌ها: سهم هر المان، نرخ کلیک، روند، تفکیک نوع و المان‌های بی‌کلیک */
+function ClickStats({ rows, byPage, onOpen }: { rows: CRow[]; byPage: { label: string; value: number }[]; onOpen: Open }) {
+  const total = rows.reduce((a, r) => a + r.e.clicks, 0); const views = rows.reduce((a, r) => a + r.e.views, 0)
+  const top = [...rows].sort((a, b) => b.e.clicks - a.e.clicks).slice(0, 8)
+  const kinds = Object.entries(rows.reduce<Record<string, number>>((a, r) => { a[r.e.kind] = (a[r.e.kind] ?? 0) + r.e.clicks; return a }, {})).sort((a, b) => b[1] - a[1])
+  const low = rows.filter((r) => r.e.views > 500 && r.e.clicks / Math.max(1, r.e.views) < 0.01)
+  const trend = (id: string) => Array.from({ length: 7 }, (_, i) => 30 + ((id.charCodeAt(i % id.length) * (i + 3)) % 60))
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KPI featured icon={<MousePointer2 size={17} />} label="کل کلیک‌ها" value={fa(total)} note={`از ${fa(views)} نمایش`} />
+        <KPI icon={<Percent size={17} />} label="نرخ کلیک میانگین (CTR)" value={`${fa(Math.round((total / Math.max(1, views)) * 1000) / 10)}٪`} delta={0.6} />
+        <KPI icon={<TrendingUp size={17} />} label="سهم پرکلیک‌ترین المان" value={`${fa(Math.round(((top[0]?.e.clicks ?? 0) / Math.max(1, total)) * 100))}٪`} note={top[0]?.e.label} />
+        <KPI icon={<MousePointerClick size={17} />} label="المان پربازدید ولی کم‌کلیک" tone="warning" value={fa(low.length)} note="CTR زیر ۱٪ با بیش از ۵۰۰ نمایش" />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <Card title="پرکلیک‌ترین المان‌ها" pad={false}><ol className="divide-y divide-line">{top.map((r, i) => { const I = KIND_ICON[r.e.kind] ?? LayoutGrid; const share = (r.e.clicks / Math.max(1, total)) * 100; const ctr = (r.e.clicks / Math.max(1, r.e.views)) * 100; const t = trend(r.id); return (
+          <li key={r.id}><button type="button" onClick={() => onOpen(r.p.id, r.s.id, r.e.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-right hover:bg-surface-2">
+            <span className={cx('grid size-6 shrink-0 place-items-center rounded-full text-11 font-bold', i < 3 ? 'bg-brand-solid text-white' : 'bg-neutral-bg text-t2')}>{fa(i + 1)}</span>
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: `${KIND_COLOR[r.e.kind] ?? '#5a5e78'}1a`, color: KIND_COLOR[r.e.kind] ?? '#5a5e78' }}><I size={16} /></span>
+            <span className="min-w-0 flex-1"><b className="block truncate text-13">{r.e.label}</b><span className="block truncate text-11 text-t2">{r.p.title} › {r.s.name} · {KIND_LABEL[r.e.kind] ?? r.e.kind}</span>
+              <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-neutral-bg"><span className="block h-full rounded-full" style={{ width: `${share}%`, background: KIND_COLOR[r.e.kind] ?? 'var(--brand)' }} /></span></span>
+            <svg viewBox="0 0 60 20" className="h-5 w-14 shrink-0" aria-hidden><polyline fill="none" stroke={t[6] >= t[0] ? 'var(--success)' : 'var(--danger)'} strokeWidth="1.6" points={t.map((v, k) => `${k * 10},${20 - v / 5}`).join(' ')} /></svg>
+            <span className="w-28 shrink-0 text-left"><b className="tnum block text-13">{fa(r.e.clicks)}</b><span className="tnum text-11 text-t2">{fa(Math.round(share * 10) / 10)}٪ · CTR {fa(Math.round(ctr * 10) / 10)}٪</span></span>
+          </button></li>) })}</ol></Card>
+        <div className="space-y-4">
+          <Card title="کلیک به تفکیک نوع المان"><Donut data={kinds.map(([k, v]) => ({ label: KIND_LABEL[k] ?? k, value: v, color: KIND_COLOR[k] ?? '#5a5e78' }))} center={<span className="text-center"><b className="block text-18">{fa(total)}</b><span className="text-11 text-t2">کلیک</span></span>} /></Card>
+          <Card title="کلیک به تفکیک صفحه"><Bars data={byPage} /></Card>
+        </div>
+      </div>
+      {low.length > 0 && <Card title="پیشنهاد بهبود"><ul className="space-y-1.5 text-13">{low.slice(0, 5).map((r) => <li key={r.id} className="flex flex-wrap items-center gap-2"><Badge tone="warning">CTR {fa(Math.round((r.e.clicks / r.e.views) * 1000) / 10)}٪</Badge><b>{r.e.label}</b><span className="text-t2">در {r.p.title}: {fa(r.e.views)} بار دیده شده ولی کم کلیک می‌خورد. متن، رنگ یا جایش را عوض کنید.</span><Button size="sm" variant="ghost" onClick={() => onOpen(r.p.id, r.s.id, r.e.id)}>ویرایش</Button></li>)}</ul></Card>}
     </div>
   )
 }

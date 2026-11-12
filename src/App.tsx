@@ -1,3 +1,4 @@
+import { Readiness } from './admin/catalog/Readiness'
 import { People, PersonFile } from './admin/people/People'
 import { Vault } from './admin/people/Vault'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -46,6 +47,7 @@ export function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="orders/:id" element={<OrderDetail />} />
               <Route path="catalog" element={<Catalog />} />
+              <Route path="readiness" element={<Readiness />} />
               <Route path="catalog/import" element={<ImportLink />} />
               <Route path="catalog/new" element={<ProductWizard />} />
               <Route path="catalog/:id/edit" element={<ProductWizard />} />

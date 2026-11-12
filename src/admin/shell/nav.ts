@@ -1,4 +1,4 @@
-import { Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -10,6 +10,7 @@ export const NAV: NavItem[] = [
   { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'فروش و عملیات', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
   { id: 'social', label: 'فروش اجتماعی و کارت به کارت', icon: SocialIcon, path: '/admin/social', group: 'فروش و عملیات', count: (d) => d.bank.receipts.filter((r) => r.status !== 'تطبیق شد').length },
   { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'فروش و عملیات', count: (d) => d.partnerQueue.length },
+  { id: 'readiness', label: 'آمادگی کالا و محتوا', icon: ListChecks, path: '/admin/readiness', group: 'فروش و عملیات', count: (d) => d.contentQueue.filter((c) => c.status === 'آماده انتشار').length },
   { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'فروش و عملیات' },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'فروش و عملیات', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
   { id: 'shipping', label: 'ارسال و لجستیک', icon: Truck, path: '/admin/shipping', group: 'فروش و عملیات' },

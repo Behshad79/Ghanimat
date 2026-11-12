@@ -22,9 +22,9 @@ export function PickupDesk() {
   const [hand, setHand] = useState<Pickup | null>(null); const [f, setF] = useState({ code: '', receiver: '', receiverId: '', relation: 'خود مشتری', receipt: '' }); const [view, setView] = useState<string | null>(null)
   const name = (id: string) => d.customers.find((c) => c.id === id)?.name ?? id
   const set = (id: string, patch: Partial<Pickup>, action: string) => mutate((x) => { Object.assign(x.pickups.find((p) => p.id === id)!, patch) }, { action, target: id })
-  const ready = (p: Pickup) => { set(p.id, { status: 'ready', readyAt: new Date().toISOString() }, 'آماده شدن سفارش حضوری'); const c = d.customers.find((x) => x.id === p.customerId); if (c) sendSms(c.mobile, d.delivery.templates.pickupReady.replace('{سفارش}', p.orderId).replace('{شعبه}', p.branch).replace('{زمان}', p.window).replace('{کد}', p.code), 'دریافت حضوری', p.orderId, c.id); toast('سفارش آمادهٔ تحویل شد و پیامک با کد تحویل ارسال شد.') }
+  const ready = (p: Pickup) => { mutate((x) => { const o = x.orders.find((y) => y.id === p.orderId); if (o) { o.status = 'order.pickup_ready'; o.shipments.forEach((sh) => { if (/حضوری/.test(sh.method)) sh.status = 'ship.pickup_ready' }) } }); set(p.id, { status: 'ready', readyAt: new Date().toISOString() }, 'آماده شدن سفارش حضوری'); const c = d.customers.find((x) => x.id === p.customerId); if (c) sendSms(c.mobile, d.delivery.templates.pickupReady.replace('{سفارش}', p.orderId).replace('{شعبه}', p.branch).replace('{زمان}', p.window).replace('{کد}', p.code), 'دریافت حضوری', p.orderId, c.id); toast('سفارش آمادهٔ تحویل شد و پیامک با کد تحویل ارسال شد.') }
   const done = () => { if (!hand) return; if (f.code !== hand.code) return toast('کد تحویل درست نیست. کد را از پیامک مشتری بخواهید.', { tone: 'err' }); if (!f.receiver.trim()) return toast('نام تحویل‌گیرنده را بنویسید.', { tone: 'err' }); if (!f.receipt) return toast('عکس رسید امضاشده را بگیرید تا بایگانی شود.', { tone: 'err' })
-    set(hand.id, { status: 'handed', receiver: f.receiver, receiverId: f.receiverId, relation: f.relation, receipt: f.receipt, handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما' }, 'تحویل حضوری با رسید'); mutate((x) => { const o = x.orders.find((y) => y.id === hand.orderId); if (o) o.status = 'order.delivered' }); setHand(null); toast('تحویل ثبت شد؛ رسید امضاشده بایگانی شد و سفارش «تحویل‌شده» شد.') }
+    set(hand.id, { status: 'handed', receiver: f.receiver, receiverId: f.receiverId, relation: f.relation, receipt: f.receipt, handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما' }, 'تحویل حضوری با رسید'); mutate((x) => { const o = x.orders.find((y) => y.id === hand.orderId); if (o) { o.status = 'order.delivered'; o.deliveredAt = new Date().toISOString(); o.shipments.forEach((sh) => { if (/حضوری/.test(sh.method)) sh.status = 'ship.delivered' }) } }); setHand(null); toast('تحویل ثبت شد؛ رسید امضاشده بایگانی شد و سفارش «تحویل‌شده» شد.') }
   const viewP = P.find((p) => p.id === view)
   return (
     <div className="space-y-4">
@@ -84,7 +84,7 @@ export function PickupReceipt({ orderId, customerId, items }: { orderId: string;
   const picker = (label: string, primary?: boolean) => <label className={cx('inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-12 font-medium', primary ? 'bg-brand-solid text-white' : 'border border-line bg-surface text-t1 hover:bg-neutral-bg')}><Camera size={13} />{label}<input type="file" accept="image/*" capture="environment" className="sr-only" aria-label={label} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = '' }} /></label>
   return (
     <div className="mb-3 rounded-lg border border-line p-3">
-      <p className="mb-2 flex flex-wrap items-center justify-between gap-2 text-12 font-semibold"><span className="flex items-center gap-1.5"><FileSignature size={14} />رسید تحویل حضوری (امضای مشتری)</span>{p?.receipt ? <Badge tone="success">عکس رسید امضاشده بایگانی شد</Badge> : p?.status === 'handed' ? <Badge tone="warning">رسید کاغذی، عکس بارگذاری نشده</Badge> : <Badge>هنوز تحویل نشده</Badge>}</p>
+      <p className="mb-2 flex flex-wrap items-center justify-between gap-2 text-12 font-semibold"><span className="flex items-center gap-1.5"><FileSignature size={14} />رسید تحویل حضوری (امضای مشتری)</span>{p?.receipt ? <Badge tone="success">عکس رسید امضاشده بایگانی شد</Badge> : p?.status === 'handed' ? <Badge tone="warning">رسید کاغذی، عکس بارگذاری نشده</Badge> : <Badge tone="warning">هنوز تحویل نشده</Badge>}</p>
       {p?.status === 'handed' ? (
         <div className="flex flex-wrap gap-3">
           {p.receipt ? <button type="button" onClick={() => setBig(true)} aria-label="نمایش بزرگ رسید امضاشده" className="lift w-28 shrink-0 overflow-hidden rounded-lg border border-line"><img src={p.receipt} alt={`رسید امضاشدهٔ سفارش ${orderId}`} className="aspect-[3/4] w-full object-cover" /></button> : <div className="grid w-28 shrink-0 place-items-center rounded-lg border border-dashed border-line bg-neutral-bg px-2 text-center text-11 text-t2">بدون عکس</div>}
@@ -96,14 +96,37 @@ export function PickupReceipt({ orderId, customerId, items }: { orderId: string;
             <dt className="text-t2">کد تحویل</dt><dd className="ltr text-right font-mono">{p.code}</dd>
           </dl>
         </div>
-      ) : <p className="text-12 text-t2">{p ? `وضعیت در میز دریافت حضوری: ${COL.find((c) => c[0] === p.status)?.[1]}. تحویل از تب «دریافت حضوری» با تطبیق کد ثبت می‌شود.` : 'برای این سفارش هنوز رکورد دریافت حضوری ساخته نشده. اگر تحویل داده‌اید، عکس رسید امضاشده را بارگذاری کنید.'}</p>}
+      ) : p && (p.status === 'ready' || p.status === 'preparing') ? <PickupWaiting p={p} /> : <p className="text-12 text-t2">{p ? `وضعیت در میز دریافت حضوری: ${COL.find((c) => c[0] === p.status)?.[1]}.` : 'برای این سفارش هنوز رکورد دریافت حضوری ساخته نشده. اگر تحویل داده‌اید، عکس رسید امضاشده را بارگذاری کنید.'}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {p?.status === 'handed' && p.receipt && <Button size="sm" variant="ghost" onClick={() => setBig(true)}>نمایش بزرگ</Button>}
         {p?.status === 'handed' ? picker(p.receipt ? 'جایگزینی عکس رسید' : 'بارگذاری عکس رسید', !p.receipt) : !p && picker('بارگذاری عکس رسید', true)}
-        {p && p.status !== 'handed' && <Button size="sm" variant="primary" onClick={() => nav('/admin/orders?tab=pickup')}>رفتن به میز دریافت حضوری</Button>}
+        {p && p.status === 'expired' && <Button size="sm" onClick={() => nav('/admin/orders?tab=pickup')}>رفتن به میز دریافت حضوری</Button>}
         <Button size="sm" icon={<Printer size={13} />} onClick={() => nav(`/admin/print?doc=pickup&orders=${orderId}`)}>چاپ رسید برای امضا</Button>
       </div>
       <Modal open={big} onClose={() => setBig(false)} title={<span className="flex items-center gap-2">رسید امضاشدهٔ سفارش <span className="ltr font-mono">{orderId}</span></span>}>{p?.receipt && <img src={p.receipt} alt="رسید امضاشده" className="w-full rounded-xl" />}</Modal>
+    </div>
+  )
+}
+
+/** سفارش حضوری که هنوز تحویل نشده: آماده‌سازی یا آماده و منتظر مراجعه، با مهلت، کد، پیامک و اقدام‌ها */
+function PickupWaiting({ p }: { p: Pickup }) {
+  const d = useDB(); const nav = useNavigate(); const c = d.customers.find((x) => x.id === p.customerId)
+  const left = Math.round((new Date(p.deadline).getTime() - Date.now()) / 36e5)
+  const sms = d.smsLog.find((m) => m.ref === p.orderId && m.kind === 'دریافت حضوری')
+  const ready = p.status === 'ready'
+  return (
+    <div className={cx('rounded-xl border p-3', ready ? 'border-warning/40 bg-warning-bg/40' : 'border-info/30 bg-info-bg/40')}>
+      <p className="mb-2 flex flex-wrap items-center gap-2 text-13 font-semibold"><Store size={15} />{ready ? 'آماده در شعبه؛ مشتری هنوز مراجعه نکرده' : 'در حال آماده‌سازی برای تحویل در شعبه'}<Badge tone={ready ? 'warning' : 'info'}>{ready ? `${fa(Math.max(0, left))} ساعت تا پایان مهلت` : 'هنوز پیامک آماده‌شدن نرفته'}</Badge></p>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-12 sm:grid-cols-4">
+        <div><dt className="text-t2">شعبه</dt><dd className="font-medium">{p.branch}</dd></div>
+        <div><dt className="text-t2">زمان مراجعه</dt><dd className="font-medium">{p.window}</dd></div>
+        <div><dt className="text-t2">کد تحویل (پیامک‌شده به مشتری)</dt><dd className="ltr text-right font-mono font-bold">{p.code}</dd></div>
+        <div><dt className="text-t2">پیامک آماده‌شدن</dt><dd className="font-medium">{ready ? (sms ? rel(sms.at) : p.readyAt ? rel(p.readyAt) : 'ارسال شد') : '—'}</dd></div>
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {ready ? <Button size="sm" variant="primary" icon={<KeyRound size={13} />} onClick={() => nav('/admin/orders?tab=pickup')}>مشتری آمد: تحویل با کد</Button> : <Button size="sm" variant="primary" onClick={() => nav('/admin/orders?tab=pickup')}>آماده شد؟ از میز تحویل پیامک بدهید</Button>}
+        {ready && c && <Button size="sm" icon={<MessageSquareText size={13} />} onClick={() => { sendSms(c.mobile, d.delivery.templates.pickupReminder.replace('{سفارش}', p.orderId).replace('{مهلت}', new Date(p.deadline).toLocaleDateString('fa-IR', { weekday: 'long', day: 'numeric', month: 'long' })).replace('{شعبه}', p.branch), 'یادآوری دریافت حضوری', p.orderId, c.id); toast('پیامک یادآوری برای مشتری ارسال شد.') }}>یادآوری پیامکی</Button>}
+      </div>
     </div>
   )
 }

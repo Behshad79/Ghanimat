@@ -13,6 +13,7 @@ import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
 import { VariantChips } from '../catalog/Choices'
 import { ShipChips, SplitBanner } from '../orders/Split'
+import { OrderAlerts, openEvents } from '../orders/OrderEvents'
 import { PackPhotos } from '../shared/PackPhotos'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -21,9 +22,11 @@ import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
 import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
 
+// سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
+const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
 const TABS: [string, string, (o: Order) => boolean][] = [
   ['all', 'همه', () => true],
-  ['action', 'نیازمند اقدام', (o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status)],
+  ['action', 'نیازمند اقدام', (o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || evOpen.has(o.id)],
   ['decision', 'نیازمند تصمیم مشتری', (o) => o.status === 'order.needs_decision'],
   ['preparing', 'آماده‌سازی', (o) => ['order.paid', 'order.preparing'].includes(o.status)],
   ['shipped', 'ارسال‌شده', (o) => o.status === 'order.shipped'],
@@ -38,7 +41,7 @@ export function Orders() {
   const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr))
   const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
   const cols: Col<Order>[] = [
-    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}</span>, sort: (o) => o.id, text: (o) => o.id },
+    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={customer(o.customerId).name} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
     { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
@@ -58,7 +61,7 @@ export function Orders() {
       {tab === 'all' && <OrdersOverview />}
       {tab === 'pickup' && <PickupDesk />}
       {tab !== 'pickup' && <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>}
-      {tab !== 'pickup' && view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['تحویل به پیک/پست', ['order.shipped']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
+      {tab !== 'pickup' && view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['ارسال یا آماده در شعبه', ['order.shipped', 'order.pickup_ready']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
       {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" noDate rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
         search={(o) => `${o.id} ${customer(o.customerId).name} ${customer(o.customerId).mobile} ${o.pay}`}
         filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
@@ -140,7 +143,7 @@ export function OrderDetail() {
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
   const c = customer(o.customerId)
-  const step = ({ 'order.awaiting_payment': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
+  const step = ({ 'order.awaiting_payment': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
   const advance = (sid: string, to: string, label: string) => { const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const cancelShip = async (sid: string, total: number) => {
@@ -167,9 +170,10 @@ export function OrderDetail() {
         <Button onClick={() => { setAmount(''); setRefund(true) }}>بازگشت وجه</Button>
       </>}>
       {o.lockedBy && <div className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><Avatar name={o.lockedBy} size={20} />{o.lockedBy} همین سفارش را باز کرده است. ویرایش هم‌زمان ممکن است تعارض بسازد؛ تغییر او اول ذخیره می‌شود.</div>}
-      <Card className="mb-4"><Stepper current={step} steps={['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} /></Card>
+      <Card className="mb-4"><Stepper current={step} steps={o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} /></Card>
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="space-y-4">
+          <OrderAlerts key={o.id} o={o} />
           {o.status === 'order.needs_decision' && (
             <Card className="border-warning/50" title="کمبود تأمین: نیازمند تصمیم مشتری" actions={<SlaChip at={o.shipments[0].sla} />}>
               <p className="mb-3 text-13 text-t2">شریک انبار اعلام «ندارم» کرده است. سه گزینه برای مشتری ارسال شده و اگر تا پایان مهلت {fa(rule('decision_hours'))} ساعته پاسخ ندهد، قلم خودکار لغو و وجه بازگردانده می‌شود.</p>

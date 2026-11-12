@@ -4,12 +4,12 @@ const ago = (min: number) => new Date(now - min * 60000).toISOString()
 const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number; company?: string }
-export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; allocReason: string }
+export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; trackingUrl?: string; trackingCarrier?: string; allocReason: string }
 export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string }
 export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
-export type Order = { id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
+export type Order = { shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
@@ -20,6 +20,7 @@ import { BASE_ROLES } from './roles'
 import { makePeople, makePeopleConfig } from './people'
 import { makeVault } from './vault'
 import { makeAxes, makeOptions } from './options'
+import { makeOrderEvents } from './orderEvents'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -191,7 +192,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
@@ -301,7 +302,7 @@ export const makeSeed = () => {
     ['GH-10490', 'c2', 'اینستاگرام دایرکت', '@negar.amini', 'کارت به کارت', 'p2', 15000000, 'order.paid'],
     ['GH-10491', 'c3', 'واتساپ', '0912-000-0003', 'لینک پرداخت', 'p9', 1500000, 'order.awaiting_payment'],
     ['GH-10492', 'c5', 'تلگرام', '@mahsa_t', 'کارت به کارت', 'p4', 38900000, 'order.awaiting_payment'],
-    ['GH-10493', 'c6', 'بله', '0935-000-0006', 'پرداخت در محل', 'p5', 21900000, 'order.preparing'],
+    ['GH-10493', 'c6', 'بله', '0935-000-0006', 'لینک پرداخت', 'p5', 21900000, 'order.preparing'],
     ['GH-10494', 'c7', 'تلفنی', '021-تماس ورودی', 'لینک پرداخت', 'p8', 8200000, 'order.shipped'],
     ['GH-10495', 'c1', 'حضوری در شعبه', 'شعبهٔ ونک', 'پرداخت حضوری (کارت‌خوان)', 'p9', 3000000, 'order.delivered'],
   ]
@@ -313,6 +314,10 @@ export const makeSeed = () => {
     s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
   })
   const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
+  // سفارش سایتی با دریافت حضوری که آماده شده و مشتری هنوز نیامده است
+  { const o = structuredClone(base); Object.assign(o, { id: 'GH-10497', customerId: 'c2', channel: 'سایت', pay: 'زرین‌پال', total: 32900000, discount: 0, status: 'order.pickup_ready', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - 7 * 36e5).toISOString(), tags: ['دریافت حضوری'] })
+    o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10497-1', warehouse: 'tehran', method: 'دریافت حضوری از شعبه', status: 'ship.pickup_ready', sla: new Date(Date.now() + 70 * 36e5).toISOString(), packPhotos: [{ src: './products/p6-500.webp', at: new Date(Date.now() - 3 * 36e5).toISOString(), by: 'آرش' }], courier: null, tracking: '', allocReason: 'مشتری دریافت حضوری از شعبهٔ ونک را انتخاب کرد.', items: [{ productId: 'p6', unitId: '', qty: 1, price: 32900000 }] }]
+    s.orders.unshift(o); s.txns.unshift({ ...s.txns[0], id: 'TX-S97', orderId: 'GH-10497', amount: 32900000, gateway: 'زرین‌پال', ref: '48120117745', status: 'pay.success', at: o.createdAt }) }
   // تنوع‌های نمونه: هر تنوع یک کالای جدا (SKU) در یک گروه است و واحدهایش بارکد خودشان را دارند
   const V: [string, string, string, Record<string, string>][] = [['p1', 'iphone-16-pro', 'تیتانیوم طبیعی · ۲۵۶ گیگابایت', { color: 'titanium', storage: '256' }], ['p5', 'sony-wh1000xm5', 'مشکی', { color: 'black' }], ['p4', 'apple-watch-s10', 'نقره‌ای · ۴۶ میلی‌متر · آلومینیوم', { color: 'silver', size: '46', material: 'alu' }], ['p7', 's24-ultra', 'خاکستری · ۵۱۲ گیگابایت', { color: 'gray', storage: '512' }]]
   V.forEach(([id, g, l, v]) => { const p = s.products.find((x) => x.id === id); if (p) p.pdp = { videos: [], flaws: [], importRoute: 'آمازون خاورمیانه', covered: '', notCovered: '', ...(p.pdp ?? {}), variantGroup: g, variantLabel: l, variant: v } })

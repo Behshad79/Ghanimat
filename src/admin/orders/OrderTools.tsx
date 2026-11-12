@@ -13,7 +13,7 @@ type Line = { pid: string; uid: string; qty: number; price: number }
 const available = () => { const d = getDB(); return d.products.filter((p) => p.status === 'product.published').flatMap((p) => p.mode === 'qty' ? [{ pid: p.id, uid: '', label: p.title, price: p.price ?? 0, wh: (p.qty?.tehran ?? 0) > 0 ? 'tehran' : 'mahabad' }] : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').map((u) => ({ pid: p.id, uid: u.id, label: `${p.title} · ${u.color} · ${u.condition === 'sealed' ? 'اکبند' : u.condition === 'openbox' ? 'جعبه‌باز' : 'استوک'}`, price: u.price, wh: u.warehouse }))) }
 
 /** ثبت سفارش دستی (تلفنی یا حضوری): مشتری موجود یا تازه، کالاها، نشانی، روش ارسال، روش پرداخت */
-export const PAYS: Record<string, string> = { link: 'لینک پرداخت', pos: 'پرداخت حضوری (کارت‌خوان)', wallet: 'کیف پول', c2c: 'کارت به کارت', cod: 'پرداخت در محل' }
+export const PAYS: Record<string, string> = { link: 'لینک پرداخت', pos: 'پرداخت حضوری (کارت‌خوان)', wallet: 'کیف پول', c2c: 'کارت به کارت' }
 export const CHANNELS = ['سفارش دستی', 'اینستاگرام دایرکت', 'واتساپ', 'تلگرام', 'بله', 'تلفنی', 'حضوری در شعبه']
 export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی' }: { open: boolean; onClose: () => void; channel?: string }) {
   const d = useDB(); const nav = useNavigate(); const qc = useQuickChips()

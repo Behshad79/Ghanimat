@@ -8,7 +8,7 @@ export const BASE_ROLES: Record<string, RoleDef> = {
   partner: { label: 'شریک انبار مهاباد', face: 'partner', modules: [], home: '/partner', opens: 'پرتال شریک' },
   support: { label: 'کارشناس پشتیبانی', face: 'full', modules: ['home', 'support', 'customers', 'orders', 'reviews', 'returns'], home: '/admin/support', opens: 'صندوق ورودی' },
   finance: { label: 'کارشناس مالی', face: 'full', modules: ['home', 'finance', 'people', 'orders', 'pricing', 'returns', 'analytics'], home: '/admin/finance', opens: 'مالی و تسویه' },
-  growth: { label: 'مارکتینگ، سئو و رشد', face: 'full', modules: ['home', 'readiness', 'marketing', 'seo', 'growth', 'analytics', 'content', 'channels', 'pricing', 'reviews'], home: '/admin/marketing', opens: 'مارکتینگ، سئو، رشد، تحلیل' },
+  growth: { label: 'مارکتینگ، سئو و رشد', face: 'full', modules: ['home', 'readiness', 'blog', 'marketing', 'seo', 'growth', 'analytics', 'content', 'channels', 'pricing', 'reviews'], home: '/admin/marketing', opens: 'مارکتینگ، سئو، رشد، تحلیل' },
   qc: { label: 'کارشناس کنترل کیفیت و انبار', face: 'full', modules: ['home', 'warehouse', 'catalog', 'print'], home: '/admin/warehouse', opens: 'صف‌های انبار (نسخهٔ iPad)' },
 }
 

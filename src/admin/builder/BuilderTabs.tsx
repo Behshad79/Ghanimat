@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Image as ImageIcon, LayoutGrid, MousePointerClick, MousePointer2, Percent, Tags, TrendingUp, ArrowDown, ArrowUp, ExternalLink, Heading2, ImagePlus, Link2, Package, Pilcrow, Plus, Quote, Send, Trash2, Video } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Select, Textarea, Toggle } from '@/shared/ui/base'
 import { KPI } from '@/shared/ui/page'
@@ -110,6 +111,10 @@ type Blk = { id: string; t: string; v: string; href?: string; w?: number; h?: nu
 const BLK: [string, string, ReactNode][] = [['h', 'عنوان', <Heading2 key="h" size={14} />], ['p', 'پاراگراف', <Pilcrow key="p" size={14} />], ['img', 'تصویر', <ImagePlus key="i" size={14} />], ['banner', 'بنر لینک‌دار', <ImagePlus key="b" size={14} />], ['product', 'کارت کالای غنیمت', <Package key="pr" size={14} />], ['ext', 'لینک بیرونی', <ExternalLink key="e" size={14} />], ['video', 'ویدیو', <Video key="v" size={14} />], ['quote', 'نقل‌قول', <Quote key="q" size={14} />]]
 /** نویسندهٔ وبلاگ بلوکی: متن، تصویر، بنر میان مقاله، کارت کالا، لینک بیرونی و ویدیو */
 export function BlogTab() {
+  const nav = useNavigate()
+  return <Card><div className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="text-15 font-semibold">ویرایشگر وبلاگ به بخش اختصاصی منتقل شد</p><p className="mt-1 text-13 text-t2">مقاله‌ها، ویدیوها، چیدمان صفحهٔ وبلاگ و دیدگاه‌ها حالا در «وبلاگ و ویدیوها» هستند.</p></div><Button variant="primary" onClick={() => nav('/admin/blog')}>رفتن به وبلاگ و ویدیوها</Button></div></Card>
+}
+export function _OldBlogTab() {
   const d = useDB(); const arts = d.entities.articles ?? []; const [aid, setAid] = useState(arts[0]?.id ?? ''); const a = arts.find((x) => x.id === aid)
   const blocks: Blk[] = d.articleBlocks[aid] ?? [{ id: 'b1', t: 'h', v: a?.title ?? '' }, { id: 'b2', t: 'p', v: 'مقدمهٔ مقاله را اینجا بنویسید.' }]
   const save = (next: Blk[], log?: string) => mutate((x) => { x.articleBlocks[aid] = next }, log ? { action: log, target: a?.title ?? aid } : undefined)

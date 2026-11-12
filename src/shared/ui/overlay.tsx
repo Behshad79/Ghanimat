@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { CircleHelp, Search, Sparkles, X, BookOpen } from 'lucide-react'
 import { Button, cx, Input } from './base'
 import { SuccessCheck } from './motion'
@@ -9,7 +10,8 @@ import { useSession } from '../lib/store'
 export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
   useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [open, onClose])
   if (!open) return null
-  return (
+  // پورتال روی body: پنجره همیشه وسط صفحه است، حتی اگر والدش transform داشته باشد
+  return createPortal(
     <div className="anim-fade fixed inset-0 z-50 grid place-items-end bg-[#10123d]/40 sm:place-items-center sm:p-4" onMouseDown={onClose}>
       <div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()} className={cx('anim-pop flex max-h-[90vh] w-full flex-col rounded-t-lg bg-surface shadow-float sm:rounded-lg', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}>
         <header className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-14 font-semibold">{title}</h2><button aria-label="بستن" onClick={onClose} className="text-t3 hover:text-t1"><X size={18} /></button></header>
@@ -17,13 +19,13 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
         {footer && <footer className="flex justify-start gap-2 border-t border-line px-4 py-3">{footer}</footer>}
       </div>
     </div>
-  )
+  , document.body)
 }
 // ───── Side Panel (کشوی جانبی) ─────
 export function Drawer({ open, onClose, title, children, footer, width = 480 }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number }) {
   useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [open, onClose])
   if (!open) return null
-  return (
+  return createPortal(
     <div className="anim-fade fixed inset-0 z-40 bg-[#10123d]/30" onMouseDown={onClose}>
       <aside onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: width }} className="anim-slide absolute inset-y-0 left-0 flex w-full flex-col bg-surface shadow-float">
         <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3"><div className="min-w-0 text-14 font-semibold">{title}</div><button aria-label="بستن" onClick={onClose} className="text-t3 hover:text-t1"><X size={18} /></button></header>
@@ -31,7 +33,7 @@ export function Drawer({ open, onClose, title, children, footer, width = 480 }: 
         {footer && <footer className="flex gap-2 border-t border-line px-4 py-3">{footer}</footer>}
       </aside>
     </div>
-  )
+  , document.body)
 }
 
 // ───── Toast با «بازگردانی» (بخش ۳ قاعدهٔ ۹) ─────

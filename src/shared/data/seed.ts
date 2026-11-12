@@ -22,6 +22,7 @@ import { makeVault } from './vault'
 import { makeAxes, makeOptions } from './options'
 import { makeOrderEvents } from './orderEvents'
 import { makeContentQueue } from './contentQueue'
+import { makeBlog } from './blog'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -196,7 +197,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

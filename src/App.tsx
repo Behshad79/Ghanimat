@@ -1,3 +1,5 @@
+import { Blog } from './admin/blog/Blog'
+import { ArticleEditor } from './admin/blog/ArticleEditor'
 import { Readiness } from './admin/catalog/Readiness'
 import { People, PersonFile } from './admin/people/People'
 import { Vault } from './admin/people/Vault'
@@ -47,6 +49,8 @@ export function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="orders/:id" element={<OrderDetail />} />
               <Route path="catalog" element={<Catalog />} />
+              <Route path="blog" element={<Blog />} />
+              <Route path="blog/:id" element={<ArticleEditor />} />
               <Route path="readiness" element={<Readiness />} />
               <Route path="catalog/import" element={<ImportLink />} />
               <Route path="catalog/new" element={<ProductWizard />} />

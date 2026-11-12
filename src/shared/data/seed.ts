@@ -26,6 +26,9 @@ import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
 import { makePromos } from './promos'
 import { makePickups } from './pickups'
+export type Att = { kind: 'image' | 'file' | 'voice' | 'video'; src: string; name?: string; size?: number; dur?: number }
+export type Msg = { from: string; text: string; at: string; atts?: Att[] }
+export type Ticket = { id: string; customerId: string; orderId: string; subject: string; channel: string; status: string; priority: string; sla: string; assignee: string; sentiment: string; messages: Msg[] }
 export type Ret = { id: string; orderId: string; customerId: string; unitId: string; reason: string; note: string; status: string; amount: number; dest: string; createdAt: string; deadline: string; channel?: string; photos?: string[]; by?: string; productId?: string }
 export type War = { id: string; code: string; customerId: string; unitId: string; type: string; months: number; status: string; issue: string; owner: string; deadline: string; orderId?: string; channel?: string; photos?: string[]; by?: string; productId?: string }
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
@@ -107,7 +110,7 @@ const makeSeedBase = () => ({
     { id: 'TK-482071', customerId: 'c3', orderId: 'GH-10451', subject: 'وضعیت بازگشت وجه مرجوعی', channel: 'تیکت پنل', status: 'ticket.needs_info', priority: 'عادی', sla: inMin(60 * 3), assignee: 'سارا', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'کالا را سه روز پیش پس فرستادم. پول کی واریز می‌شود؟', at: ago(60 * 4) }, { from: 'agent', text: 'سلام. بسته به انبار رسیده و در حال بررسی است. شمارهٔ شبا را برای واریز تأیید می‌کنید؟', at: ago(60 * 3) }] },
     { id: 'TK-482044', customerId: 'c7', orderId: 'GH-10479', subject: 'چرا سفارش من دو بسته شده است؟', channel: 'بله', status: 'ticket.answered', priority: 'کم', sla: inMin(60 * 8), assignee: 'نیما', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'در پنل نوشته دو مرسوله. یعنی چه؟', at: ago(60 * 2) }, { from: 'agent', text: 'یکی از کالاها از انبار تهران و دیگری از انبار مهاباد ارسال می‌شود. هر دو با پست پیشتاز می‌رسند و هزینهٔ اضافه‌ای ندارد.', at: ago(60) }] },
     { id: 'TK-481980', customerId: 'c5', orderId: 'GH-10449', subject: 'اعتبار اقساطی رد شد', channel: 'تماس تلفنی', status: 'ticket.closed', priority: 'عادی', sla: ago(60 * 24), assignee: 'سارا', sentiment: 'ناراضی', messages: [{ from: 'customer', text: 'اعتبار تارا رد شد و سفارش لغو شد.', at: ago(60 * 24 * 6) }] },
-  ],
+  ] as Ticket[],
   returns: [
     { id: 'RT-840552', orderId: 'GH-10451', customerId: 'c3', unitId: 'GU-20442', reason: 'مغایرت با صفحهٔ کالا', note: 'رنگ هدفون با عکس فرق دارد.', status: 'return.inspecting', amount: 21900000, dest: 'کارت بانکی', createdAt: ago(60 * 24 * 3), deadline: inMin(60 * 20) },
     { id: 'RT-839910', orderId: 'GH-10412', customerId: 'c1', unitId: 'GU-20432', reason: 'انصراف از خرید', note: 'بند ساعت کوچک بود.', status: 'return.refunded', amount: 29335000, dest: 'کیف پول', createdAt: ago(60 * 24 * 26), deadline: ago(60 * 24 * 24) },
@@ -314,6 +317,8 @@ export const makeSeed = () => {
     s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
   })
   const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
+  // پیوست نمونه در تیکت: عکس جعبهٔ مشتری و پیام صوتی
+  { const t = s.tickets.find((x) => x.id === 'TK-482106'); if (t) { t.messages[0].atts = [{ kind: 'image', src: './products/p2-500.webp', name: 'جعبه-باز-شده.jpg', size: 412000 }, { kind: 'voice', src: '', name: 'پیام صوتی', dur: 14 }] } }
   // سفارش سایتی با دریافت حضوری که آماده شده و مشتری هنوز نیامده است
   { const o = structuredClone(base); Object.assign(o, { id: 'GH-10497', customerId: 'c2', channel: 'سایت', pay: 'زرین‌پال', total: 32900000, discount: 0, status: 'order.pickup_ready', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - 7 * 36e5).toISOString(), tags: ['دریافت حضوری'] })
     o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10497-1', warehouse: 'tehran', method: 'دریافت حضوری از شعبه', status: 'ship.pickup_ready', sla: new Date(Date.now() + 70 * 36e5).toISOString(), packPhotos: [{ src: './products/p6-500.webp', at: new Date(Date.now() - 3 * 36e5).toISOString(), by: 'آرش' }], courier: null, tracking: '', allocReason: 'مشتری دریافت حضوری از شعبهٔ ونک را انتخاب کرد.', items: [{ productId: 'p6', unitId: '', qty: 1, price: 32900000 }] }]

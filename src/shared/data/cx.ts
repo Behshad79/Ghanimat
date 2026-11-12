@@ -9,7 +9,7 @@ const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(
 export const makeCxEntities = (): Record<string, Rec[]> => ({
   // سایت › تماس با ما
   contactMessages: [
-    { id: 'cm1', name: 'مهسا کریمی', mobile: '09121112233', email: 'mahsa@example.com', subject: 'پیگیری سفارش', text: 'سفارش GH-10479 هنوز ارسال نشده، زمان دقیق را می‌خواهم.', status: 'جدید', at: ago(35) },
+    { id: 'cm1', name: 'مهسا کریمی', mobile: '09121112233', email: 'mahsa@example.com', subject: 'پیگیری سفارش', text: 'سفارش GH-10479 هنوز ارسال نشده، زمان دقیق را می‌خواهم. عکس صفحهٔ پیگیری را هم فرستادم.', status: 'جدید', at: ago(35), files: [{ kind: 'image', src: './products/p1-500.webp', name: 'اسکرین-پیگیری.jpg', size: 286000 }] },
     { id: 'cm2', name: 'علی نوری', mobile: '09351234567', email: '', subject: 'همکاری و فروش', text: 'برای فروش عمده هدفون شرایط همکاری را می‌خواهم.', status: 'پاسخ داده‌شده', at: ago(60 * 26) },
     { id: 'cm3', name: 'شرکت آرین', mobile: '02100000000', email: 'info@arian.example', subject: 'فاکتور رسمی', text: 'فاکتور رسمی سفارش GH-10458 با کد اقتصادی شرکت لازم است.', status: 'در حال بررسی', at: ago(60 * 5) },
   ],

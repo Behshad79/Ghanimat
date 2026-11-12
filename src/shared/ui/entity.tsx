@@ -1,3 +1,6 @@
+import { Attachments } from './chat'
+import { fileToImage } from '../lib/image'
+import type { Att } from '../data/seed'
 import { useState, type ReactNode } from 'react'
 import { Archive, ArchiveRestore, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge, Button, Field, Input, Select, Textarea, Toggle } from './base'
@@ -9,13 +12,14 @@ import { fa, num, toman } from '../lib/fa'
 import type { MenuItem } from './menu'
 
 export type EField = {
-  k: string; label: string; type?: 'text' | 'textarea' | 'number' | 'money' | 'select' | 'toggle' | 'date'
+  k: string; label: string; type?: 'text' | 'textarea' | 'number' | 'money' | 'select' | 'toggle' | 'date' | 'files'
   options?: (string | [string, string])[]; required?: boolean; ltr?: boolean; help?: string; table?: boolean; def?: any
   render?: (r: Rec) => ReactNode
   form?: false
 }
 const showVal = (f: EField, v: any): ReactNode => {
   if (f.render) return null
+  if (f.type === 'files') return Array.isArray(v) && v.length ? <Badge dot={false}>{`${v.length.toLocaleString('fa-IR')} پیوست`}</Badge> : '—'
   if (f.type === 'toggle') return <Badge tone={v ? 'success' : 'neutral'}>{v ? 'فعال' : 'غیرفعال'}</Badge>
   if (f.type === 'money') return <span className="tnum">{toman(Number(v) || 0)}</span>
   if (f.type === 'number') return <span className="tnum">{fa(v ?? 0)}</span>
@@ -84,7 +88,8 @@ export function EntityManager({ ek, kind, fields, titleKey = 'name', blockDelete
         {edit && <div className="space-y-4">
           {fields.filter((f) => f.form !== false).map((f) => (
             <Field key={f.k} label={f.label + (f.required ? ' *' : '')} help={f.help} error={err[f.k]}>
-              {f.type === 'textarea' ? <Textarea rows={4} value={edit[f.k] ?? ''} onChange={(e) => setEdit({ ...edit, [f.k]: e.target.value })} />
+              {f.type === 'files' ? <FilesField value={(edit[f.k] as Att[] | undefined) ?? []} onChange={(v) => setEdit({ ...edit, [f.k]: v })} />
+                : f.type === 'textarea' ? <Textarea rows={4} value={edit[f.k] ?? ''} onChange={(e) => setEdit({ ...edit, [f.k]: e.target.value })} />
                 : f.type === 'select' ? <Select value={String(edit[f.k] ?? '')} onChange={(v) => setEdit({ ...edit, [f.k]: v })} options={f.options ?? []} />
                 : f.type === 'toggle' ? <div className="flex h-9 items-center gap-2"><Toggle on={!!edit[f.k]} label={f.label} onChange={(v) => setEdit({ ...edit, [f.k]: v })} /><span className="text-12 text-t2">{edit[f.k] ? 'روشن' : 'خاموش'}</span></div>
                 : f.type === 'money' ? <Input className="ltr text-left font-mono" inputMode="numeric" value={num(Number(edit[f.k]) || 0).replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/٬/g, ',')} onChange={(e) => setEdit({ ...edit, [f.k]: Number(e.target.value.replace(/\D/g, '')) })} />
@@ -94,5 +99,16 @@ export function EntityManager({ ek, kind, fields, titleKey = 'name', blockDelete
         </div>}
       </Drawer>
     </>
+  )
+}
+
+/** فیلد پیوست در فرم‌ها: نمایش عکس و فایل‌های موجود (مثلا فرستادهٔ مشتری) و افزودن پیوست تازه برای پاسخ */
+function FilesField({ value, onChange }: { value: Att[]; onChange: (v: Att[]) => void }) {
+  const add = async (fs: FileList) => { const out: Att[] = []; for (const f of [...fs]) { const img = f.type.startsWith('image/'); const src = img ? await fileToImage(f, 1600, 0.85) : await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(f) }); out.push({ kind: img ? 'image' : 'file', src, name: f.name, size: f.size }) } onChange([...value, ...out]) }
+  return (
+    <div className="rounded-xl border border-dashed border-line p-2.5">
+      {value.length ? <Attachments list={value} /> : <p className="text-12 text-t2">پیوستی نیست.</p>}
+      <label className="mt-2 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-12 hover:border-brand/50">افزودن عکس یا فایل<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" className="sr-only" onChange={(e) => { if (e.target.files) void add(e.target.files); e.target.value = '' }} /></label>
+    </div>
   )
 }

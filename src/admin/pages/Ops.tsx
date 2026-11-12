@@ -16,11 +16,13 @@ import { PackPhotos } from '../shared/PackPhotos'
 import { WarehouseMap } from '../warehouse/WarehouseMap'
 import { PickupRules, SlotsEngine, SmsLog } from '../logistics/Slots'
 import { FastCourier } from '../logistics/FastCourier'
+import { ManualReturn, OriginalOrder } from '../orders/ReturnTools'
+import { SplitRules } from '../orders/Split'
 
 // ───────── انبار و موجودی ─────────
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
 export function Warehouse() {
-  const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('qc')
+  const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('stock')
   const [scan, setScan] = useState<string | null>(null)
   const [focus, setFocus] = useState<string | null>(null); const [checks, setChecks] = useState<Record<string, boolean>>({}); const [grade, setGrade] = useState('A')
   const inScope = (w: string) => s.scope === 'all' || s.scope === w
@@ -46,7 +48,7 @@ export function Warehouse() {
       empty={{ title: 'انبار خالی است.', desc: 'با دریافت اولین محموله، واحدها ساخته می‌شوند و به صف QC می‌آیند.', action: <Button variant="primary" onClick={() => nav('/admin/supply')}>ثبت محمولهٔ ورودی</Button> }}
       actions={<Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button>}
       primary={qc.length > 0 ? <Button variant="primary" onClick={() => { setTab('qc'); setFocus(qc[0].id) }}>شروع QC ({fa(qc.length)} واحد)</Button> : undefined}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'map', label: 'نقشهٔ قفسه‌ها' }, { id: 'stock', label: 'نمای موجودی' }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'نمای موجودی' }, { id: 'map', label: 'نقشهٔ قفسه‌ها' }, { id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
       {tab === 'qc' && <QueueCard list={qc} label="بازرسی این واحد" action={setFocus} emptyT="صف QC خالی است." emptyD="واحدهای دریافت‌شده بعد از ثبت ورود، اینجا می‌آیند." />}
       {tab === 'photo' && <QueueCard list={photo} label="ثبت عکس‌ها و ارسال به انتشار" action={(id) => move([id], 'unit.ready', 'عکاسی کامل شد')} emptyT="صف عکاسی خالی است." emptyD="واحدهایی که QC را گذرانده‌اند برای عکاسی اینجا می‌آیند." />}
       {tab === 'publish' && <DataTable name="صف انتشار" rows={ready} rowKey={(u) => u.id} onRow={(u) => nav(`/admin/catalog/unit/${u.id}`)} empty={{ title: 'واحدی آمادهٔ انتشار نیست.', desc: 'واحدها بعد از QC، عکاسی و قیمت‌گذاری اینجا می‌آیند.' }}
@@ -93,7 +95,7 @@ export function Shipping() {
   const { d, rule } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('methods'); const [file, setFile] = useState(false)
   const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, orderId: o.id })))
   const carriers = d.providers.filter((p) => p.family === 'carrier')
-  const methods = [[`تحویل ${fa(rule('fast_delivery_hours'))} ساعته`, 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', 185000], ['پیک غنیمت با انتخاب بازه', 'انبار تهران · تهران و کرج', 95000], ['پست پیشتاز', 'هر دو انبار · سراسر کشور', 95000], ['تیپاکس', 'هر دو انبار · مراکز استان', 140000], ['باربری کالای سنگین', 'انبار تهران · کلاس سنگین', 450000], ['دریافت حضوری از شعبه', 'شعبهٔ مرکزی', 0]] as const
+  const methods = [[`تحویل ${fa(rule('fast_delivery_hours'))} ساعته`, 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', 185000], ['تحویل سریع در بازهٔ انتخابی', 'انبار تهران · تهران و کرج · برای فردا یا روزهای بعد', 185000], ['پست پیشتاز', 'هر دو انبار · سراسر کشور', 95000], ['تیپاکس', 'هر دو انبار · مراکز استان', 140000], ['باربری کالای سنگین', 'انبار تهران · کلاس سنگین', 450000], ['دریافت حضوری از شعبه', 'شعبهٔ مرکزی', 0]] as const
   return (
     <Page title="ارسال و لجستیک" module="shipping" sub={`ارسال رایگان برای سبدهای بالای ${compactToman(rule('free_shipping_threshold'))} (از قوانین کسب‌وکار)`}
       empty={{ title: 'هنوز روش ارسالی تعریف نشده است.', desc: 'دست‌کم یک روش ارسال تعریف کنید تا مشتری بتواند سفارش ثبت کند.' }}
@@ -101,7 +103,7 @@ export function Shipping() {
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'methods', label: 'روش‌ها و ظرفیت' }, { id: 'fast', label: 'پیک و قیمت تحویل سریع' }, { id: 'trips', label: 'سفرهای پیک', count: ships.filter((s) => s.courier).length }, { id: 'track', label: 'پست و الحاق رهگیری' }, { id: 'photos', label: 'بایگانی عکس ارسال', count: ships.filter((x) => x.packPhotos?.length).length }, { id: 'slots', label: 'زمان ارسال و ظرفیت' }, { id: 'pickup', label: 'دریافت حضوری' }, { id: 'sms', label: 'گزارش پیامک‌ها', count: d.smsLog.filter((m) => m.status !== 'تحویل شد').length }, { id: 'zones', label: 'مناطق' }, { id: 'carriers', label: 'شرکت‌های حمل' }]} />}>
       {tab === 'methods' && <div className="space-y-6"><div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div><EntityManager ek="shipMethods" kind="روش ارسال" fields={[{ k: 'name', label: 'نام روش', required: true, help: 'متغیر {مدت_تحویل_سریع} از قوانین کسب‌وکار خوانده می‌شود.', render: (r) => String(r.name).replace('{مدت_تحویل_سریع}', fa(rule('fast_delivery_hours'))) }, { k: 'scope', label: 'انبار، شهر و شرایط', type: 'textarea' }, { k: 'price', label: 'هزینه', type: 'money' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /><p className="mt-2 text-11 text-t2">مدت وعدهٔ تحویل سریع از «قوانین کسب‌وکار» خوانده می‌شود. <button className="text-brand" onClick={() => nav('/admin/rules')}>تغییر مدت تحویل سریع</button></p></div>
-        <Card title="ظرفیت بازه‌های امروز">{[['۹ تا ۱۲', 100], ['۱۲ تا ۱۵', 80], ['۱۵ تا ۱۸', 55], ['۱۸ تا ۲۱', 100]].map(([l, v]) => <div key={l} className="mb-3"><div className="mb-1 flex justify-between text-12"><span>{l}</span><span className={v === 100 ? 'text-danger' : 'text-t2'}>{v === 100 ? 'تکمیل ظرفیت' : pct(v as number)}</span></div><Progress value={v as number} tone={v === 100 ? 'danger' : 'brand'} /></div>)}<KPI label="تحویل به‌موقع این هفته" hint="sla" value={pct(94)} delta={1.2} /></Card></div><Card><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-14 font-semibold">پیک و قیمت ساعتی تحویل سریع</p><p className="mt-1 text-12 text-t2">پیک اصلی و جایگزین‌ها، افزایش خودکار در ساعت‌های پرترافیک، تغییر دستی هر ساعت، حالت باران و افزایش موقت.</p></div><Button variant="primary" onClick={() => setTab('fast')}>تنظیم پیک و قیمت تحویل سریع</Button></div></Card></div>}
+        <Card title="ظرفیت بازه‌های امروز">{[['۹ تا ۱۲', 100], ['۱۲ تا ۱۵', 80], ['۱۵ تا ۱۸', 55], ['۱۸ تا ۲۱', 100]].map(([l, v]) => <div key={l} className="mb-3"><div className="mb-1 flex justify-between text-12"><span>{l}</span><span className={v === 100 ? 'text-danger' : 'text-t2'}>{v === 100 ? 'تکمیل ظرفیت' : pct(v as number)}</span></div><Progress value={v as number} tone={v === 100 ? 'danger' : 'brand'} /></div>)}<KPI label="تحویل به‌موقع این هفته" hint="sla" value={pct(94)} delta={1.2} /></Card></div><Card><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-14 font-semibold">پیک و قیمت ساعتی تحویل سریع</p><p className="mt-1 text-12 text-t2">پیک اصلی و جایگزین‌ها، افزایش خودکار در ساعت‌های پرترافیک، تغییر دستی هر ساعت، حالت باران و افزایش موقت.</p></div><Button variant="primary" onClick={() => setTab('fast')}>تنظیم پیک و قیمت تحویل سریع</Button></div></Card><SplitRules /></div>}
       {tab === 'trips' && <DataTable name="سفرهای پیک" rows={ships.filter((s) => s.courier)} rowKey={(s) => s.id} onRow={(s) => nav(`/admin/orders/${s.orderId}`)} empty={{ title: 'هنوز سفری ثبت نشده است.', desc: 'با چسباندن لینک سفر در کارت مرسوله، سفر اینجا ثبت می‌شود.' }}
         cols={[{ key: 'c', title: 'کد سفر', render: (s) => <CopyId v={s.courier!.code} /> }, { key: 'n', title: 'پیک', render: (s) => <Cell a={s.courier!.name} b={`${s.courier!.vehicle} · ${s.courier!.plate}`} /> }, { key: 'o', title: 'مرسوله', render: (s) => <CopyId v={s.id} /> }, { key: 'cost', title: 'هزینه', align: 'left', render: (s) => <Money v={s.courier!.cost} />, sort: (s) => s.courier!.cost, text: (s) => s.courier!.cost }, { key: 's', title: 'وضعیت', render: (s) => <StatusBadge s={s.status} /> }]} />}
       {tab === 'track' && <div className="space-y-4">
@@ -167,6 +169,7 @@ export function Providers({ family, title, list }: { family: string; title: stri
 export function Returns() {
   const { d, customer, product, unit, rule } = useLookup(); const [tab, setTab] = useTab('returns'); const [open, setOpen] = useState<string | null>(null); const [fate, setFate] = useState('بازگشت به فروش با گرید جدید')
   const r = d.returns.find((x) => x.id === open); const u = r ? unit(r.unitId) : undefined
+  const [manual, setManual] = useState<null | 'return' | 'warranty'>(null)
   const [wOpen, setWOpen] = useState<string | null>(null); const w = d.warranties.find((x) => x.id === wOpen)
   const setW = async (id: string, status: string, label: string, needReason = false) => { if (needReason && !(await askReason({ kind: 'warranty', ref: id, status: label, title: `دلیل «${label}» برای ${id}` }))) return; mutate((db) => { db.warranties.find((y) => y.id === id)!.status = status }, { action: `گارانتی: ${label}`, target: id }); toast(`وضعیت ${id}: ${label}. مشتری با پیامک و اعلان خبردار شد.`) }
   const partial = async (deduct: boolean) => { if (!r) return; const why = await askReason({ kind: 'return', ref: r.id, status: deduct ? 'تأیید با کسر هزینهٔ ارسال' : 'تأیید بخشی', title: deduct ? 'توضیح کسر هزینهٔ ارسال' : 'توضیح تأیید بخشی' }); if (!why) return; mutate((x) => { x.returns.find((z) => z.id === r.id)!.status = deduct ? 'return.approved_deducted' : 'return.partial' }, { action: deduct ? 'تأیید مرجوعی با کسر هزینهٔ ارسال' : 'تأیید بخشی مرجوعی', target: r.id, after: why }); setOpen(null); toast('ثبت شد و دلیل برای مشتری نمایش داده می‌شود.') }
@@ -175,6 +178,7 @@ export function Returns() {
     setOpen(null); toast(!ok ? 'مرجوعی رد شد و کالا دوباره برای مشتری ارسال می‌شود.' : needs ? 'مرجوعی تأیید شد. بازگشت وجه به تأیید نفر دوم رفت.' : `مرجوعی تأیید شد. ${toman(r.amount)} در حال واریز به ${r.dest} است.`) }
   return (
     <Page title="مرجوعی و گارانتی" module="returns" sub={`مهلت مرجوعی ${fa(rule('return_days'))} روز · مهلت بازرسی ${fa(rule('inspection_hours'))} ساعت`}
+      primary={<Button variant="primary" onClick={() => setManual(tab === 'warranty' ? 'warranty' : 'return')}>{tab === 'warranty' ? 'ثبت دستی گارانتی' : 'ثبت دستی مرجوعی'}</Button>}
       empty={{ title: 'هنوز مرجوعی‌ای ثبت نشده است.', desc: 'درخواست‌های مرجوعی مشتریان اینجا نمایش داده می‌شود.', action: <Button>مشاهدهٔ قوانین مرجوعی</Button> }}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'returns', label: 'مرجوعی‌ها', count: d.returns.length }, { id: 'warranty', label: 'گارانتی', count: d.warranties.length }, { id: 'stats', label: 'تحلیل' }]} />}>
       {tab === 'returns' && <DataTable name="مرجوعی‌ها" rows={d.returns} rowKey={(x) => x.id} onRow={(x) => setOpen(x.id)} search={(x) => `${x.id} ${x.orderId} ${customer(x.customerId).name}`} empty={{ title: 'هنوز مرجوعی‌ای ثبت نشده است.' }}
@@ -200,6 +204,9 @@ export function Returns() {
         footer={r && r.status === 'return.inspecting' ? <><Button variant="primary" onClick={() => decide(true)}>تأیید و واریز {compactToman(r.amount)}</Button><Button onClick={() => partial(false)}>تأیید بخشی</Button><Button onClick={() => partial(true)}>تأیید با کسر هزینهٔ ارسال</Button><Button variant="danger" onClick={() => decide(false)}>رد مرجوعی</Button></> : <Button onClick={() => setOpen(null)}>بستن</Button>}>
         {r && <div className="space-y-4">
           <p className="text-13"><b>{customer(r.customerId).name}</b> · دلیل: {r.reason}{r.note && ` · «${r.note}»`}</p>
+          {(r.channel || r.by) && <p className="flex flex-wrap gap-1.5 text-12">{r.channel && <Badge tone="info" dot={false}>ثبت دستی · {r.channel}</Badge>}{r.by && <Badge dot={false}>ثبت‌کننده: {r.by}</Badge>}</p>}
+          {r.photos && r.photos.length > 0 && <div className="flex flex-wrap gap-2">{r.photos.map((ph, i) => <img key={i} src={ph} alt="عکس مشتری" className="size-20 rounded-lg object-cover" />)}</div>}
+          <OriginalOrder orderId={r.orderId} highlight={r.unitId} />
           {(() => { const ro = d.orders.find((x) => x.id === r.orderId); const rs = ro?.shipments.find((x) => x.items.some((i) => i.unitId === r.unitId)) ?? ro?.shipments[0]; return <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-md border border-line p-3"><p className="mb-2 text-12 font-semibold">عکس‌های پیش از ارسال (بایگانی)</p>{ro && rs ? <PackPhotos orderId={ro.id} shipId={rs.id} readOnly big /> : <p className="text-12 text-t2">مرسوله پیدا نشد.</p>}<p className="mt-2 text-12 text-t2">{u ? `گرید ${g(u.grade)} · سریال ${u.serial}` : 'موجودی تعدادی'}</p></div>
             <div className="rounded-md border border-purple/40 p-3"><p className="mb-2 text-12 font-semibold">کالای برگشتی</p>{u ? <ProductImg pid={u.productId} size={300} rounded="rounded-sm" className="!h-auto aspect-video !w-full border-0" /> : <div className="grid aspect-video place-items-center rounded-sm bg-purple-bg text-11 text-purple">عکس دریافت در انبار</div>}<p className="mt-2 text-12 text-t2">سریال دریافتی را با سریال و عکس‌های ارسال مقایسه کنید.</p></div></div> })()}
           {r.status === 'return.inspecting' ? <><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{['پلمپ', 'ظاهر', 'کارکرد', 'متعلقات'].map((c) => <label key={c} className="flex min-h-11 items-center gap-2 rounded-md border border-line px-3 text-13"><input type="checkbox" defaultChecked />{c}</label>)}</div>
@@ -208,9 +215,11 @@ export function Returns() {
           <ReasonLog kind="return" refId={r.id} />
         </div>}
       </Modal>
+      <ManualReturn open={!!manual} defaultKind={manual ?? 'return'} key={manual ?? 'x'} onClose={() => setManual(null)} />
       <Drawer open={!!w} onClose={() => setWOpen(null)} width={520} title={w ? <span className="flex items-center gap-2">گارانتی<CopyId v={w.code} /><StatusBadge s={w.status} /></span> : ''}>
         {w && <div className="space-y-4">
-          <Row k="مشتری">{customer(w.customerId).name}</Row><Row k="کالا">{product(unit(w.unitId)?.productId ?? '')?.title ?? w.unitId}</Row><Row k="شرح مشکل">{w.issue}</Row><Row k="نوع">{w.type} · {fa(w.months)} ماه</Row><Row k="مسئول هزینه">{w.owner}</Row>
+{(() => { const oid = w.orderId ?? d.orders.find((o) => o.shipments.some((sh) => sh.items.some((i) => i.unitId === w.unitId)))?.id; return oid ? <OriginalOrder orderId={oid} highlight={w.unitId} /> : null })()}
+                    <Row k="مشتری">{customer(w.customerId).name}</Row><Row k="کالا">{product(unit(w.unitId)?.productId ?? '')?.title ?? w.unitId}</Row><Row k="شرح مشکل">{w.issue}</Row><Row k="نوع">{w.type} · {fa(w.months)} ماه</Row><Row k="مسئول هزینه">{w.owner}</Row>
           <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setW(w.id, 'warranty.approved', 'تأیید شد، منتظر ارسال کالا')}>تأیید</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.repairing', 'در حال تعمیر')}>در حال تعمیر</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.replaced', 'کالا تعویض شد')}>تعویض</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.pending', 'نیازمند اصلاح یا مدارک', true)}>درخواست اصلاح</Button><Button size="sm" variant="danger" onClick={() => setW(w.id, 'warranty.rejected', 'رد درخواست', true)}>رد با دلیل</Button></div>
           <ReasonLog kind="warranty" refId={w.id} />
         </div>}

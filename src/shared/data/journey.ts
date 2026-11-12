@@ -22,7 +22,7 @@ export const makeJourney = () => {
   return {
     events,
     carts: [
-      { customerId: 'c1', step: 'پرداخت', error: 'پایان زمان پرداخت در درگاه', updatedAt: ago(14), items: [{ productId: 'p2', qty: 1, price: 15000000 }, { productId: 'p9', qty: 2, price: 1500000 }], address: 'تهران، ونک، ملاصدرا، پلاک ۴۵', slot: 'فردا ۸ تا ۱۰', method: 'پیک غنیمت' },
+      { customerId: 'c1', step: 'پرداخت', error: 'پایان زمان پرداخت در درگاه', updatedAt: ago(14), items: [{ productId: 'p2', qty: 1, price: 15000000 }, { productId: 'p9', qty: 2, price: 1500000 }], address: 'تهران، ونک، ملاصدرا، پلاک ۴۵', slot: 'فردا ۸ تا ۱۰', method: 'تحویل سریع (اسنپ‌باکس)' },
       { customerId: 'c3', step: 'آدرس و زمان ارسال', error: 'ظرفیت تحویل ۲ ساعتهٔ امروز تمام شده است', updatedAt: ago(42), items: [{ productId: 'p5', qty: 1, price: 21900000 }], address: 'کرج، گوهردشت', slot: '', method: '' },
       { customerId: 'c5', step: 'سبد خرید', error: '', updatedAt: ago(60 * 5), items: [{ productId: 'p4', qty: 1, price: 38900000 }], address: '', slot: '', method: '' },
     ],
@@ -51,7 +51,7 @@ export const makeJourney = () => {
     aiChats: [
       { id: 'AI-3301', customerId: 'c2', at: ago(95), intent: 'پیشنهاد کالا', resolved: true, handoff: false, feedback: 'مثبت', converted: true, messages: [{ role: 'user', text: 'یه هدفون نویزکنسلینگ خوب برای سفر تا ۲۵ میلیون می‌خوام' }, { role: 'ai', text: 'سه گزینهٔ اصل پیدا کردم؛ Sony WH-1000XM5 جعبه‌باز با ۱۲ ماه گارانتی بهترین قیمت را دارد.', products: ['p5', 'p2'] }, { role: 'user', text: 'فرق جعبه‌باز با اکبند چیه؟' }, { role: 'ai', text: 'هر دو نو هستند؛ جعبه‌باز بدون پلمپ است و عملکرد پایه‌اش در غنیمت تست شده.' }] },
       { id: 'AI-3298', customerId: 'c5', at: ago(60 * 7), intent: 'مقایسه', resolved: false, handoff: true, feedback: 'منفی', converted: false, messages: [{ role: 'user', text: 'لپ‌تاپ برای برنامه‌نویسی تا ۷۰ میلیون' }, { role: 'ai', text: 'MacBook Air M3 با ۱۶ گیگ رم گزینهٔ مناسبی است.', products: ['p3'] }, { role: 'user', text: 'گرون‌تر از بودجه‌ست. با یه آدم حرف بزنم.' }, { role: 'ai', text: 'شما را به کارشناس پشتیبانی وصل کردم.' }] },
-      { id: 'AI-3290', customerId: 'c1', at: ago(60 * 30), intent: 'پیگیری سفارش', resolved: true, handoff: false, feedback: '', converted: false, messages: [{ role: 'user', text: 'سفارش GH-10458 کی می‌رسه؟' }, { role: 'ai', text: 'مرسولهٔ ۱ امروز ساعت ۱۶ تا ۱۸ با پیک غنیمت تحویل می‌شود.' }] },
+      { id: 'AI-3290', customerId: 'c1', at: ago(60 * 30), intent: 'پیگیری سفارش', resolved: true, handoff: false, feedback: '', converted: false, messages: [{ role: 'user', text: 'سفارش GH-10458 کی می‌رسه؟' }, { role: 'ai', text: 'مرسولهٔ ۱ امروز ساعت ۱۶ تا ۱۸ با تحویل سریع غنیمت تحویل می‌شود.' }] },
       { id: 'AI-3281', customerId: 'c7', at: ago(60 * 52), intent: 'جست‌وجو با عکس', resolved: true, handoff: false, feedback: 'مثبت', converted: true, messages: [{ role: 'user', text: '[عکس جعبهٔ ساعت]' }, { role: 'ai', text: 'این Apple Watch Series 10 است؛ ۱ عدد اکبند موجود داریم.', products: ['p4'] }] },
     ],
     widgetChats: [

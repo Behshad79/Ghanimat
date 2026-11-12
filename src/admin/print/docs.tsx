@@ -156,16 +156,16 @@ export function PostLabel({ o, s, opts, paper }: { o: Order; s: Shipment; opts: 
 
 /** ۳) برچسب مرسولهٔ پیک */
 export function CourierLabel({ o, s, opts }: { o: Order; s: Shipment; opts: DocOpts }) {
-  const { c } = useParties(o); const code = String(1000 + (parseInt(s.id.replace(/\D/g, '').slice(-4)) % 9000))
-  // قانون اسنپ‌باکس: مأمور اسنپ‌باکس به کد تحویل روی کاغذ نیاز ندارد
-  const snapp = /اسنپ/.test(s.method) || s.courier?.company === 'اسنپ‌باکس' || opts.carrier === 'snappbox'
+  const { c } = useParties(o)
+  // کد تأیید تحویل هرگز روی برچسب چاپ نمی‌شود: فقط با پیامک به مشتری می‌رسد و مأمور هنگام تحویل از مشتری می‌پرسد
   return (
     <Sheet w="100mm" h="100mm" o={{ ...opts, margin: 4 }}>
       <div className="flex items-center justify-between border-b-2 border-black pb-2"><Logo h={24} /><b className="text-[11pt]">{s.method}</b></div>
       <p className="mt-2 text-[13pt] font-black">{c.name}</p><p className="text-[9pt]">موبایل: <b className="ltr">{fa(c.mobile)}</b></p>
       <p className="mt-1 text-[9pt] leading-6">{addrLine(c.addr)}</p>
-      <div className="mt-2 flex items-end justify-between"><div className="text-[8.5pt]"><p>سفارش <b className="ltr font-mono">{o.id}</b></p><p>بازهٔ تحویل: <b>امروز تا {new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</b></p>{!snapp && <p className="mt-1">کد تأیید تحویل: <b className="text-[14pt] tracking-widest">{fa(code)}</b></p>}{snapp && <p className="mt-1 text-[7.5pt]">اسنپ‌باکس: کد تحویل روی برگه چاپ نمی‌شود (در اپ مأمور ثبت است).</p>}</div><QR value={snapp ? `https://ghanimat.example/t/${s.id}` : `https://ghanimat.example/deliver/${s.id}/${code}`} size={84} /></div>
+      <div className="mt-2 flex items-end justify-between"><div className="text-[8.5pt]"><p>سفارش <b className="ltr font-mono">{o.id}</b> · مرسوله <b className="ltr font-mono">{s.id}</b></p><p>بازهٔ تحویل: <b>امروز تا {new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</b></p><p className="mt-1 text-[7.5pt]">تحویل فقط با کد تأییدی که برای گیرنده پیامک شده است.</p></div><div className="text-center"><QR value={`https://ghanimat.example/t/${s.id}`} size={76} /><p className="text-[6.5pt]">رهگیری مرسوله</p></div></div>
       <Barcode value={s.id} height={26} module={1.4} className="mt-2 h-[10mm] w-full" />
+      <p className="text-center text-[6.5pt]">شناسهٔ مرسوله برای اسکن در بسته‌بندی، تحویل به پیک و مرجوعی</p>
     </Sheet>
   )
 }

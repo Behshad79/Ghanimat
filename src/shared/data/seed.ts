@@ -5,7 +5,7 @@ const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number; company?: string }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; allocReason: string }
-export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; covered: string; notCovered: string }
+export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string }
 export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
@@ -19,11 +19,14 @@ import { makeDelivery } from './delivery'
 import { BASE_ROLES } from './roles'
 import { makePeople, makePeopleConfig } from './people'
 import { makeVault } from './vault'
+import { makeAxes, makeOptions } from './options'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
 import { makePromos } from './promos'
 import { makePickups } from './pickups'
+export type Ret = { id: string; orderId: string; customerId: string; unitId: string; reason: string; note: string; status: string; amount: number; dest: string; createdAt: string; deadline: string; channel?: string; photos?: string[]; by?: string; productId?: string }
+export type War = { id: string; code: string; customerId: string; unitId: string; type: string; months: number; status: string; issue: string; owner: string; deadline: string; orderId?: string; channel?: string; photos?: string[]; by?: string; productId?: string }
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 const makeSeedBase = () => ({
@@ -72,7 +75,7 @@ const makeSeedBase = () => ({
     { id: 'GH-10481', customerId: 'c1', createdAt: ago(18), status: 'order.paid', pay: 'زرین‌پال', total: 147400000, discount: 0, shippingFee: 0, fee: 1474000, margin: 14.2, risk: 12, channel: 'سایت', tags: ['تحویل سریع'], lockedBy: null,
       shipments: [{ id: 'GH-10481-1', warehouse: 'tehran', method: 'تحویل سریع (پیک)', status: 'ship.pending', sla: inMin(102), items: [{ productId: 'p1', unitId: 'GU-20412', qty: 1, price: 124500000 }, { productId: 'p5', unitId: 'GU-20440', qty: 1, price: 22900000 }], courier: null, tracking: '', allocReason: 'هر دو کالا در انبار تهران موجود بود.' }] },
     { id: 'GH-10480', customerId: 'c6', createdAt: ago(42), status: 'order.paid', pay: 'اسنپ‌پی', total: 15000000, discount: 0, shippingFee: 0, fee: 900000, margin: 14.7, risk: 34, channel: 'ترب', tags: ['اقساطی'], lockedBy: null,
-      shipments: [{ id: 'GH-10480-1', warehouse: 'tehran', method: 'پیک غنیمت', status: 'ship.pending', sla: inMin(60 * 20), items: [{ productId: 'p2', unitId: 'GU-20471', qty: 1, price: 15000000 }], courier: null, tracking: '', allocReason: 'موجودی تهران کافی بود.' }] },
+      shipments: [{ id: 'GH-10480-1', warehouse: 'tehran', method: 'تحویل سریع (اسنپ‌باکس)', status: 'ship.pending', sla: inMin(60 * 20), items: [{ productId: 'p2', unitId: 'GU-20471', qty: 1, price: 15000000 }], courier: null, tracking: '', allocReason: 'موجودی تهران کافی بود.' }] },
     { id: 'GH-10479', customerId: 'c7', createdAt: ago(60 * 2), status: 'order.preparing', pay: 'درگاه ملت', total: 104400000, discount: 2000000, shippingFee: 95000, fee: 0, margin: 16.8, risk: 8, channel: 'سایت', tags: ['دو مرسوله'], lockedBy: null,
       shipments: [
         { id: 'GH-10479-1', warehouse: 'tehran', method: 'پست پیشتاز', status: 'ship.packed', sla: inMin(60 * 5), items: [{ productId: 'p3', unitId: 'GU-20421', qty: 1, price: 79900000 }], courier: null, tracking: '', allocReason: 'موجودی تهران کافی بود.' },
@@ -90,7 +93,7 @@ const makeSeedBase = () => ({
         { id: 'GH-10458-2', warehouse: 'mahabad', method: 'پست پیشتاز', shipFee: 90000, status: 'ship.delivered', sla: '2026-10-28T18:00:00+03:30', items: [{ productId: 'p2', unitId: 'GU-20473', qty: 1, price: 15000000 }], courier: null, tracking: '120459870001245789630412', allocReason: 'رنگ استارلایت فقط در انبار مهاباد موجود بود.' },
       ] },
     { id: 'GH-10412', customerId: 'c1', createdAt: ago(60 * 24 * 29), status: 'order.delivered', pay: 'زرین‌پال', total: 29500000, discount: 0, shippingFee: 0, fee: 295000, margin: 15.6, risk: 4, channel: 'سایت', tags: [], lockedBy: null,
-      shipments: [{ id: 'GH-10412-1', warehouse: 'tehran', method: 'پیک غنیمت', status: 'ship.delivered', sla: ago(60 * 24 * 28), items: [{ productId: 'p4', unitId: 'GU-20432', qty: 1, price: 29500000 }], courier: { name: 'رضا احمدی', phone: '09120000000', plate: '۱۲۳ ایران ۴۵', vehicle: 'موتور', eta: 0, code: 'SB-81944', cost: 165000 }, tracking: '', allocReason: 'موجودی تهران کافی بود.' }] },
+      shipments: [{ id: 'GH-10412-1', warehouse: 'tehran', method: 'تحویل سریع (اسنپ‌باکس)', status: 'ship.delivered', sla: ago(60 * 24 * 28), items: [{ productId: 'p4', unitId: 'GU-20432', qty: 1, price: 29500000 }], courier: { name: 'رضا احمدی', phone: '09120000000', plate: '۱۲۳ ایران ۴۵', vehicle: 'موتور', eta: 0, code: 'SB-81944', cost: 165000 }, tracking: '', allocReason: 'موجودی تهران کافی بود.' }] },
     { id: 'GH-10451', customerId: 'c3', createdAt: ago(60 * 24 * 5), status: 'order.returned', pay: 'زرین‌پال', total: 21900000, discount: 0, shippingFee: 95000, fee: 219000, margin: 9.2, risk: 18, channel: 'ترب', tags: [], lockedBy: null,
       shipments: [{ id: 'GH-10451-1', warehouse: 'tehran', method: 'پست پیشتاز', status: 'ship.delivered', sla: ago(60 * 24 * 3), items: [{ productId: 'p5', unitId: 'GU-20442', qty: 1, price: 21900000 }], courier: null, tracking: '120459870001245789632145', allocReason: 'موجودی تهران کافی بود.' }] },
     { id: 'GH-10449', customerId: 'c5', createdAt: ago(60 * 24 * 6), status: 'order.cancelled', pay: 'تارا', total: 22900000, discount: 0, shippingFee: 0, fee: 0, margin: 0, risk: 22, channel: 'اینستاگرام', tags: ['اعتبار ردشده'], lockedBy: null, shipments: [] },
@@ -109,12 +112,12 @@ const makeSeedBase = () => ({
     { id: 'RT-839910', orderId: 'GH-10412', customerId: 'c1', unitId: 'GU-20432', reason: 'انصراف از خرید', note: 'بند ساعت کوچک بود.', status: 'return.refunded', amount: 29335000, dest: 'کیف پول', createdAt: ago(60 * 24 * 26), deadline: ago(60 * 24 * 24) },
     { id: 'RT-838745', orderId: 'GH-10470', customerId: 'c4', unitId: '', reason: 'خرابی کالا', note: 'یکی از سه شارژر گرم می‌شود و شارژ نمی‌کند.', status: 'return.refunding', amount: 1500000, dest: 'کارت بانکی', createdAt: ago(60 * 24 * 2), deadline: inMin(60 * 4) },
     { id: 'RT-841203', orderId: 'GH-10444', customerId: 'c6', unitId: 'GU-20414', reason: 'انصراف از خرید', note: '', status: 'return.rejected', amount: 0, dest: '-', createdAt: ago(60 * 24 * 9), deadline: ago(60 * 24 * 5) },
-  ],
+  ] as Ret[],
   warranties: [
     { id: 'GR-1840', code: 'GW-884120', customerId: 'c1', unitId: 'GU-20470', type: 'گارانتی اختصاصی غنیمت', months: 6, status: 'warranty.pending', issue: 'صدای گوشی چپ گاهی قطع و وصل می‌شود.', owner: 'غنیمت', deadline: inMin(60 * 22) },
     { id: 'GR-1838', code: 'GW-880034', customerId: 'c3', unitId: 'GU-20442', type: 'گارانتی اختصاصی غنیمت', months: 6, status: 'warranty.repairing', issue: 'قطع و وصل شدن بلوتوث.', owner: 'غنیمت', deadline: inMin(60 * 70) },
     { id: 'GR-1825', code: 'GW-871200', customerId: 'c4', unitId: 'GU-20441', type: 'گارانتی شرکتی', months: 12, status: 'warranty.done', issue: 'خرابی دکمهٔ پاور.', owner: 'شریک مهاباد', deadline: ago(60 * 48) },
-  ],
+  ] as War[],
   txns: [
     { id: 'TX-90811', orderId: 'GH-10481', amount: 147400000, gateway: 'زرین‌پال', ref: '48120099731', status: 'pay.success', at: ago(18) },
     { id: 'TX-90810', orderId: 'GH-10480', amount: 38500000, gateway: 'اسنپ‌پی', ref: 'SP-7781200', status: 'pay.unknown', at: ago(42) },
@@ -152,7 +155,7 @@ const makeSeedBase = () => ({
     { id: 'mellat', family: 'gateway', name: 'درگاه ملت', status: 'prov.active', share: 11, fee: 0.5, settleDays: 1, pending: 0, isDefault: false, health: 98.9 },
     { id: 'saman', family: 'gateway', name: 'درگاه سامان', status: 'prov.paused', share: 0, fee: 0, isDefault: false, health: 100 },
     { id: 'snappbox', family: 'carrier', name: 'اسنپ‌باکس', status: 'prov.active', share: 38, health: 97.2, isDefault: true },
-    { id: 'ghcourier', family: 'carrier', name: 'پیک غنیمت', status: 'prov.active', share: 17, health: 100, isDefault: false },
+    { id: 'alopeyk', family: 'carrier', name: 'الوپیک', status: 'prov.active', share: 17, health: 100, isDefault: false },
     { id: 'post', family: 'carrier', name: 'پست پیشتاز', status: 'prov.active', share: 31, health: 96.0, isDefault: false },
     { id: 'tipax', family: 'carrier', name: 'تیپاکس', status: 'prov.active', share: 11, health: 98.1, isDefault: false },
     { id: 'freight', family: 'carrier', name: 'باربری', status: 'prov.active', share: 3, health: 100, isDefault: false },
@@ -188,7 +191,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
@@ -310,6 +313,10 @@ export const makeSeed = () => {
     s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
   })
   const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
+  // تنوع‌های نمونه: هر تنوع یک کالای جدا (SKU) در یک گروه است و واحدهایش بارکد خودشان را دارند
+  const V: [string, string, string, Record<string, string>][] = [['p1', 'iphone-16-pro', 'تیتانیوم طبیعی · ۲۵۶ گیگابایت', { color: 'titanium', storage: '256' }], ['p5', 'sony-wh1000xm5', 'مشکی', { color: 'black' }], ['p4', 'apple-watch-s10', 'نقره‌ای · ۴۶ میلی‌متر · آلومینیوم', { color: 'silver', size: '46', material: 'alu' }], ['p7', 's24-ultra', 'خاکستری · ۵۱۲ گیگابایت', { color: 'gray', storage: '512' }]]
+  V.forEach(([id, g, l, v]) => { const p = s.products.find((x) => x.id === id); if (p) p.pdp = { videos: [], flaws: [], importRoute: 'آمازون خاورمیانه', covered: '', notCovered: '', ...(p.pdp ?? {}), variantGroup: g, variantLabel: l, variant: v } })
+  const p5 = s.products.find((x) => x.id === 'p5'); if (p5) s.products.splice(s.products.indexOf(p5) + 1, 0, { ...structuredClone(p5), id: 'p5w', title: 'هدفون سونی WH-1000XM5 سفید', code: 'GH-P-0051', mode: 'qty', qty: { tehran: 0, mahabad: 0 }, pdp: { ...structuredClone(p5.pdp!), variantLabel: 'سفید', variant: { color: 'white' } } })
   s.bank.receipts.unshift(
     { id: 'RC-310', orderId: 'GH-10490', customer: 'نگار امینی', amount: 15000000, last4: '4410', ref: '784512', time: '14:20', channel: 'اینستاگرام دایرکت', status: 'تطبیق شد', note: 'CR-1', at: s.orders[5].createdAt },
     { id: 'RC-311', orderId: 'GH-10492', customer: 'مهسا توکلی', amount: 38900000, last4: '2290', ref: '553311', time: '16:45', channel: 'تلگرام', status: 'در انتظار تطبیق', note: '', at: s.orders[3].createdAt },

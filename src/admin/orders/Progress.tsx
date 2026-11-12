@@ -16,13 +16,13 @@ export function Plate({ v }: { v: string }) {
   if (!m) return <span className="rounded-md border border-line px-2 py-0.5 text-12">{v || 'پلاک ثبت نشده'}</span>
   return <span dir="ltr" className="inline-flex items-stretch overflow-hidden rounded-md border-2 border-[#10123d] bg-white text-13 font-bold text-[#10123d]"><span className="bg-[#0b3fbd] px-1 text-[8px] leading-6 text-white">IR</span><span className="px-1.5 leading-6">{m[1]}</span><span className="px-1 leading-6">{m[2]}</span><span className="px-1.5 leading-6">{m[3]}</span><span className="flex flex-col border-l-2 border-[#10123d] px-1 text-center text-[8px] leading-3"><span>ایران</span><b className="text-11">{m[4]}</b></span></span>
 }
-const COMPANIES = ['پیک غنیمت', 'اسنپ‌باکس', 'الوپیک', 'تیپاکس', 'پست پیشتاز']
+const COMPANIES = ['اسنپ‌باکس', 'الوپیک', 'تیپاکس', 'پست پیشتاز']
 const LETTERS = ['الف', 'ب', 'پ', 'ت', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی', 'ژ']
 
 /** نمای همان چیزی که مشتری در «سفارش‌های جاری» می‌بیند + ثبت مأمور ارسال و پلاک */
 export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
   const d = useDB(); const c = d.customers.find((x) => x.id === o.customerId); const step = stepOf(s)
-  const [edit, setEdit] = useState(false); const [f, setF] = useState({ company: s.courier?.company ?? (/اسنپ/.test(s.method) ? 'اسنپ‌باکس' : 'پیک غنیمت'), name: s.courier?.name ?? '', phone: s.courier?.phone ?? '', p1: '', l: 'ب', p2: '', r: '' })
+  const [edit, setEdit] = useState(false); const [f, setF] = useState({ company: s.courier?.company ?? (/اسنپ/.test(s.method) ? 'اسنپ‌باکس' : 'الوپیک'), name: s.courier?.name ?? '', phone: s.courier?.phone ?? '', p1: '', l: 'ب', p2: '', r: '' })
   const slot = (s as Shipment & { slot?: string }).slot
   const save = () => {
     const rc = d.bank.receipts.find((r) => r.orderId === o.id)

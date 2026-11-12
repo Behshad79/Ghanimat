@@ -8,7 +8,7 @@ import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
 import { ProductImg, useQuickChips } from '../pages/_shared'
 
-const METHODS = [['تحویل سریع (پیک)', 150000], ['پیک غنیمت', 95000], ['پست پیشتاز', 90000], ['تیپاکس', 140000], ['باربری', 450000], ['دریافت حضوری از شعبه', 0]] as const
+const METHODS = [['تحویل سریع (پیک)', 150000], ['پست پیشتاز', 90000], ['تیپاکس', 140000], ['باربری', 450000], ['دریافت حضوری از شعبه', 0]] as const
 type Line = { pid: string; uid: string; qty: number; price: number }
 const available = () => { const d = getDB(); return d.products.filter((p) => p.status === 'product.published').flatMap((p) => p.mode === 'qty' ? [{ pid: p.id, uid: '', label: p.title, price: p.price ?? 0, wh: (p.qty?.tehran ?? 0) > 0 ? 'tehran' : 'mahabad' }] : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').map((u) => ({ pid: p.id, uid: u.id, label: `${p.title} · ${u.color} · ${u.condition === 'sealed' ? 'اکبند' : u.condition === 'openbox' ? 'جعبه‌باز' : 'استوک'}`, price: u.price, wh: u.warehouse }))) }
 

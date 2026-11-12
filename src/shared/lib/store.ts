@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
 import { BASE_ROLES, type RoleDef } from '../data/roles'
+import { CONDITION, SOURCE } from '../data/statuses'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v19'
+const DB_KEY = 'ghanimat-demo-db-v22'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -31,7 +32,11 @@ export function resetDB() { db = makeSeed(); syncRoles(); write(DB_KEY, db); dbS
 export type { Face } from '../data/roles'
 /** نقش‌ها از پایگاه‌داده خوانده می‌شوند تا مدیر کل بتواند نقش تازه بسازد و دسترسی هر نقش را تغییر دهد */
 export const ROLES: Record<string, RoleDef> = {}
-function syncRoles() { for (const k of Object.keys(ROLES)) delete ROLES[k]; Object.assign(ROLES, db.roleDefs ?? BASE_ROLES) }
+function syncRoles() {
+  for (const k of Object.keys(ROLES)) delete ROLES[k]; Object.assign(ROLES, db.roleDefs ?? BASE_ROLES)
+  // برچسب‌های منبع تأمین و وضعیت کالا از فهرست قابل ویرایش خوانده می‌شوند
+  db.opts?.source.forEach((o) => { SOURCE[o.v] = o.l }); db.opts?.condition.forEach((o) => { CONDITION[o.v] = o.l })
+}
 syncRoles()
 
 export type ViewState = 'normal' | 'empty' | 'loading' | 'error' | 'noaccess' | 'offline'

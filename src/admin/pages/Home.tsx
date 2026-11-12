@@ -47,7 +47,7 @@ export function Home() {
       <div className="space-y-4">
         <ActionChips items={[
           { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', tone: 'danger' },
-          { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse' },
+          { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc' },
           { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns' },
           { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns', tone: 'danger' },
           { label: 'تیکت باز', count: cnt('support'), to: '/admin/support' },
@@ -99,7 +99,7 @@ export function Home() {
 
 const TOWER: [string, [string, 'ok' | 'warn' | 'crit', string, string][]][] = [
   ['کسب‌وکار', [['فروش لحظه‌ای در برابر پیش‌بینی', 'ok', '۱۰۸٪ پیش‌بینی', '/admin'], ['نرخ تبدیل زنده', 'warn', '۲٫۱٪ (معمول ۲٫۴٪)', '/admin/growth']]],
-  ['عملیات', [['صف‌های QC، عکاسی و انتشار', 'ok', 'در مهلت', '/admin/warehouse'], ['سفارش‌های در خطر مهلت', 'warn', '۲ مرسوله', '/admin/orders'], ['مرسوله‌های بی‌حرکت', 'ok', 'صفر', '/admin/shipping']]],
+  ['عملیات', [['صف‌های QC، عکاسی و انتشار', 'ok', 'در مهلت', '/admin/warehouse?tab=qc'], ['سفارش‌های در خطر مهلت', 'warn', '۲ مرسوله', '/admin/orders'], ['مرسوله‌های بی‌حرکت', 'ok', 'صفر', '/admin/shipping']]],
   ['پرداخت', [['درگاه‌های نقدی', 'ok', 'موفقیت ۹۹٪', '/admin/finance'], ['سرویس‌های اقساطی', 'crit', 'یک سرویس قطع', '/admin/finance?tab=gateways'], ['تراکنش‌های نامشخص', 'warn', '۲ مورد', '/admin/finance?tab=txns']]],
   ['ارتباطات', [['تحویل پیامک کد ورود', 'ok', '۴ ثانیه', '/admin/infra'], ['اعتبار پنل پیامک', 'warn', '۹ روز مانده', '/admin/infra']]],
   ['کانال‌ها', [['فید کانال‌های فروش', 'ok', '۳ دقیقه پیش', '/admin/channels'], ['ناهماهنگی موجودی شریک', 'warn', '۲ کالا', '/admin/warehouse?tab=sync']]],

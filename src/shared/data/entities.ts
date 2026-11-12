@@ -48,8 +48,8 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'SH-116', po: 'PO-2040', units: 3, stage: 'دریافت در تهران', freight: 7600000, customs: 4100000, eta: d(-6), late: false },
   ],
   zones: [
-    { id: 'z1', name: 'تهران (محدودهٔ تحویل سریع)', cities: 'تهران، مناطق ۱ تا ۲۲', methods: 'تحویل سریع، پیک غنیمت، پست', active: true },
-    { id: 'z2', name: 'کرج', cities: 'کرج، فردیس', methods: 'پیک غنیمت، پست', active: true },
+    { id: 'z1', name: 'تهران (محدودهٔ تحویل سریع)', cities: 'تهران، مناطق ۱ تا ۲۲', methods: 'تحویل سریع، پست، تیپاکس', active: true },
+    { id: 'z2', name: 'کرج', cities: 'کرج، فردیس', methods: 'تحویل سریع، پست', active: true },
     { id: 'z3', name: 'سایر شهرها', cities: 'سراسر کشور', methods: 'پست پیشتاز، تیپاکس', active: true },
   ],
   slots: [
@@ -144,7 +144,7 @@ export const makeEntities = (): Record<string, Rec[]> => ({
   ],
   shipMethods: [
     { id: 'sm1', name: 'تحویل {مدت_تحویل_سریع} ساعته', scope: 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', price: 150000, active: true },
-    { id: 'sm2', name: 'پیک غنیمت با انتخاب بازه', scope: 'انبار تهران · تهران و کرج', price: 95000, active: true },
+    { id: 'sm2', name: 'تحویل سریع در بازهٔ انتخابی (برای بعد)', scope: 'انبار تهران · تهران و کرج', price: 95000, active: true },
     { id: 'sm3', name: 'پست پیشتاز', scope: 'هر دو انبار · سراسر کشور', price: 90000, active: true },
     { id: 'sm4', name: 'تیپاکس', scope: 'هر دو انبار · مراکز استان', price: 140000, active: true },
     { id: 'sm5', name: 'باربری کالای سنگین', scope: 'انبار تهران · کلاس سنگین', price: 450000, active: true },

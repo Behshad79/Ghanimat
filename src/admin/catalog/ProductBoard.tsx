@@ -1,3 +1,4 @@
+import type { DB } from '@/shared/data/seed'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Heart, LayoutGrid, List, MoreHorizontal, Pencil, RotateCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2 } from 'lucide-react'
@@ -110,7 +111,7 @@ export function ProductBoard({ items, onAdd }: { items: (p: Product) => MenuItem
                   <span className="flex items-center gap-1.5 rounded-full bg-white/90 py-1 pr-1 pl-2.5 text-11 font-medium text-[#10123d] shadow-sm backdrop-blur"><Toggle on={on} onChange={() => toggle(p)} label={on ? 'غیرفعال کردن' : 'فعال کردن'} disabled={p.status === 'product.pending'} />{on ? 'فعال' : p.status === 'product.pending' ? 'منتظر تأیید' : 'غیرفعال'}</span>
                   <button aria-label={p.featured ? 'برداشتن از ویژه' : 'ویژه کردن'} title={p.featured ? 'برداشتن از ویژه' : 'ویژه کردن (نمایش در صفحهٔ خانه)'} onClick={() => fav(p)} className="grid size-8 place-items-center rounded-full bg-white/90 shadow-sm"><Heart size={15} className={p.featured ? 'fill-[#c42f2f] text-[#c42f2f]' : 'text-[#5a5e78]'} /></button>
                 </div>
-                {n === 0 && <span className="absolute bottom-2 right-2 rounded-md bg-[#10123d] px-2 py-0.5 text-11 text-white">ناموجود</span>}
+                {n === 0 && <span title={outWhy(d, p)} className="absolute bottom-2 right-2 rounded-md bg-[#10123d] px-2 py-0.5 text-11 text-white">ناموجود · {outWhy(d, p, true)}</span>}
                 {n > 0 && n <= 2 && <span className="absolute bottom-2 right-2 rounded-md bg-warning-bg px-2 py-0.5 text-11 font-medium text-warning">{fa(n)} عدد مانده</span>}
               </div>
               <div className="flex flex-1 flex-col gap-1.5 p-3">
@@ -140,4 +141,13 @@ export function ProductBoard({ items, onAdd }: { items: (p: Product) => MenuItem
       <Drawer open={mobF} onClose={() => setMobF(false)} title="فیلترها" width={340} footer={<Button variant="primary" className="w-full" onClick={() => setMobF(false)}>نمایش {fa(rows.length)} کالا</Button>}>{filters}</Drawer>
     </div>
   )
+}
+
+/** چرا «ناموجود»؟ خودکار: موجودی قابل فروش صفر است؛ کالای سریالی یعنی هیچ واحد «منتشرشده» ندارد، کالای تعدادی یعنی جمع موجودی دو انبار صفر است */
+function outWhy(d: DB, p: Product, short = false) {
+  if (p.mode === 'qty') return short ? 'موجودی صفر' : 'کالای تعدادی: موجودی انبار تهران و مهاباد هر دو صفر است. با ثبت ورود کالا یا شمارش انبار، خودکار موجود می‌شود.'
+  const u = d.units.filter((x) => x.productId === p.id)
+  const wait = u.filter((x) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(x.status)).length; const res = u.filter((x) => x.status === 'unit.reserved').length
+  if (short) return wait ? `${wait.toLocaleString('fa-IR')} در صف` : res ? 'همه رزرو' : 'واحدی نیست'
+  return `کالای سریالی: هیچ واحد منتشرشده‌ای ندارد. ${u.length.toLocaleString('fa-IR')} واحد ثبت شده؛ ${wait.toLocaleString('fa-IR')} در صف QC، عکاسی یا انتشار و ${res.toLocaleString('fa-IR')} رزرو سفارش. با انتشار اولین واحد، خودکار موجود می‌شود.`
 }

@@ -60,7 +60,7 @@ export function PickupRules() {
   const d = useDB(); const P = d.delivery.pickup; const T = d.delivery.templates
   const set = (fn: (x: Delivery) => void, action?: string) => mutate((x) => fn(x.delivery), action ? { action, target: 'دریافت حضوری' } : undefined)
   const [test, setTest] = useState('')
-  const preview = (tpl: string) => tpl.replace('{سفارش}', 'GH-10480').replace('{شعبه}', 'شعبهٔ ونک').replace('{زمان}', P.mode === 'window' ? `فردا ساعت ${fa(P.windowFrom)} تا ${fa(P.windowTo)}` : 'پس از همین پیامک').replace('{کد}', '۴۸۲۱').replace('{مهلت}', `${fa(P.holdDays)} روز`).replace('{مقصد}', 'کیف پول').replace('{تلفن}', '۰۲۱-۶۱۸۸۷۷۰۰').replace('{روش}', 'پیک غنیمت')
+  const preview = (tpl: string) => tpl.replace('{سفارش}', 'GH-10480').replace('{شعبه}', 'شعبهٔ ونک').replace('{زمان}', P.mode === 'window' ? `فردا ساعت ${fa(P.windowFrom)} تا ${fa(P.windowTo)}` : 'پس از همین پیامک').replace('{کد}', '۴۸۲۱').replace('{مهلت}', `${fa(P.holdDays)} روز`).replace('{مقصد}', 'کیف پول').replace('{تلفن}', '۰۲۱-۶۱۸۸۷۷۰۰').replace('{روش}', 'تحویل سریع')
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card title={<span className="flex items-center gap-2"><Store size={15} />قانون دریافت حضوری</span>}>

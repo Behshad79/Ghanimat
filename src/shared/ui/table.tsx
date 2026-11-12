@@ -59,7 +59,8 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   const cellText = useMemo(() => { const m = new Map<R, Record<string, string>>(); rows.forEach((r) => { const o: Record<string, string> = {}; cols.forEach((c) => { const t = c.text ? c.text(r) : undefined; o[c.key] = (t !== undefined ? String(t) : nodeText(c.render(r))).replace(/\s+/g, ' ').trim() }); m.set(r, o) }); return m }, [rows, cols])
   const dateKey = useMemo(() => (noDate ? null : DATE_KEYS.find((k) => rows.some((r) => isIso((r as Record<string, unknown>)[k])))) ?? null, [rows, noDate])
   // ستون‌هایی که مقدارهای محدود دارند (وضعیت، کانال، انبار…) فیلتر انتخابی می‌گیرند؛ ستون‌های عددی بازهٔ حداقل و حداکثر
-  const facets = useMemo(() => cols.map((c) => { const all = rows.map((r) => cellText.get(r)![c.key]).filter(Boolean); const uniq = [...new Set(all)]; const numeric = all.length > 0 && all.every((x) => asNum(x) !== null) || !!(c.sort && rows.length && typeof c.sort(rows[0]) === 'number'); return { c, uniq: uniq.length >= 2 && uniq.length <= 14 && uniq.length < rows.length ? uniq.sort((a, b) => a.localeCompare(b, 'fa')) : [], numeric: numeric && uniq.length > 3 } }).filter((f) => f.uniq.length || f.numeric), [rows, cols, cellText])
+  // هر ستونِ تکرارشونده (وضعیت، مشتری، کانال، انبار…) فیلتر کشویی با جست‌وجو و شمارش می‌گیرد؛ ستون‌های عددی بازهٔ حداقل و حداکثر. مقدارهای یکتا (کد، شماره) با جست‌وجوی بالای جدول پیدا می‌شوند
+  const facets = useMemo(() => cols.map((c) => { const all = rows.map((r) => cellText.get(r)![c.key]).filter(Boolean); const cnt = new Map<string, number>(); all.forEach((x) => cnt.set(x, (cnt.get(x) ?? 0) + 1)); const uniq = [...cnt.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fa')); const numeric = (all.length > 0 && all.every((x) => asNum(x) !== null)) || !!(c.sort && rows.length && typeof c.sort(rows[0]) === 'number'); const categorical = uniq.length >= 2 && uniq.length < all.length && !numeric && all.every((x) => x.length <= 60); return { c, uniq: categorical ? uniq : [], numeric: numeric && uniq.length > 3 } }).filter((f) => f.uniq.length || f.numeric), [rows, cols, cellText])
   const numOf = (c: Col<R>, r: R) => { const v = c.sort?.(r); return typeof v === 'number' ? v : asNum(cellText.get(r)![c.key]) }
   const active = (dateKey && rangeActive(dr) ? 1 : 0) + Object.values(vals).filter((v) => v.length).length + Object.values(nums).filter(([a, b]) => a || b).length
   const clearAll = () => { setQ(''); setDr(R0); setVals({}); setNums({}); setPage(0) }
@@ -120,19 +121,14 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
       {fOpen && (
         <div className="no-print space-y-3 border-b border-line bg-surface-2/60 p-3">
           {dateKey && <DateFilter r={dr} set={(p) => { setDr({ ...dr, ...p }); setPage(0) }} count={view.length} total={rows.length} noun="مورد" />}
-          {facets.length > 0 && <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{facets.map(({ c, uniq, numeric }) => (
-            <div key={c.key} className="rounded-xl border border-line bg-surface p-2.5">
-              <p className="mb-1.5 text-12 font-semibold">{c.title}</p>
-              {uniq.length > 0 && <div className="flex flex-wrap gap-1">{uniq.map((u) => { const on = (vals[c.key] ?? []).includes(u); return <button key={u} type="button" aria-pressed={on} onClick={() => { setVals({ ...vals, [c.key]: on ? vals[c.key].filter((x) => x !== u) : [...(vals[c.key] ?? []), u] }); setPage(0) }} className={cx('max-w-full truncate rounded-full border px-2.5 py-1 text-11', on ? 'border-brand bg-brand-solid text-white' : 'border-line hover:border-brand/50')}>{u}</button> })}</div>}
-              {numeric && uniq.length === 0 && <div className="flex items-center gap-1.5 text-12">از <Input className="h-8" inputMode="numeric" value={nums[c.key]?.[0] ?? ''} onChange={(e) => { setNums({ ...nums, [c.key]: [e.target.value, nums[c.key]?.[1] ?? ''] }); setPage(0) }} aria-label={`حداقل ${c.key}`} /> تا <Input className="h-8" inputMode="numeric" value={nums[c.key]?.[1] ?? ''} onChange={(e) => { setNums({ ...nums, [c.key]: [nums[c.key]?.[0] ?? '', e.target.value] }); setPage(0) }} aria-label={`حداکثر ${c.key}`} /></div>}
-            </div>))}</div>}
+          {facets.length > 0 && <div className="flex flex-wrap items-center gap-2"><span className="text-12 font-semibold text-t2">فیلتر ستون‌ها:</span>{facets.map(({ c, uniq, numeric }) => uniq.length ? <FacetPick key={c.key} title={c.title} values={uniq} sel={vals[c.key] ?? []} onChange={(v) => { setVals({ ...vals, [c.key]: v }); setPage(0) }} /> : numeric ? <RangePick key={c.key} title={c.title} v={nums[c.key] ?? ['', '']} onChange={(v) => { setNums({ ...nums, [c.key]: v }); setPage(0) }} /> : null)}</div>}
         </div>
       )}
       {(active > 0 || q) && <div className="no-print flex flex-wrap items-center gap-1.5 border-b border-line px-3 py-2 text-11">
         <span className="text-t2">{fa(view.length)} از {fa(rows.length)}:</span>
         {q && <Badge dot={false}>متن: {q}</Badge>}
         {dateKey && rangeActive(dr) && <Badge tone="brand" dot={false}>{rangeLabel(dr)}</Badge>}
-        {Object.entries(vals).filter(([, v]) => v.length).map(([k, v]) => <Badge key={k} tone="brand" dot={false}>{v.join('، ')}</Badge>)}
+        {Object.entries(vals).filter(([, v]) => v.length).map(([k, v]) => <Badge key={k} tone="brand" dot={false}>{v.length > 2 ? `${v.slice(0, 2).join('، ')} و ${fa(v.length - 2)} مورد دیگر` : v.join('، ')}</Badge>)}
         {Object.entries(nums).filter(([, [a, b]]) => a || b).map(([k, [a, b]]) => <Badge key={k} tone="brand" dot={false}>{a || '…'} تا {b || '…'}</Badge>)}
         <button type="button" onClick={clearAll} className="flex items-center gap-0.5 text-danger hover:underline"><X size={11} />پاک کردن همه</button>
       </div>}
@@ -208,3 +204,41 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
 
 /** قانون «همه‌چیز قابل کلیک»: متن سادهٔ هر سلول اگر سفارش، مشتری، کالا، واحد یا همکار باشد، نمای سریع باز می‌کند */
 function linky(x: ReactNode): ReactNode { return typeof x === 'string' || typeof x === 'number' ? <QuickText v={String(x)}>{x}</QuickText> : x }
+
+/** فیلتر کشویی یک ستون: جست‌وجو، شمارش هر مقدار، مرتب بر اساس تکرار؛ با هزاران مقدار هم فقط ۴۰ مورد اول نمایش داده می‌شود */
+function FacetPick({ title, values, sel, onChange }: { title: ReactNode; values: [string, number][]; sel: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false); const [q, setQ] = useState('')
+  const hit = q ? values.filter(([v]) => latin(v.toLowerCase()).includes(latin(q.toLowerCase()))) : values
+  const shown = hit.slice(0, 40)
+  return (
+    <div className="relative">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className={cx('flex h-8 items-center gap-1.5 rounded-full border px-3 text-12', sel.length ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-surface hover:border-brand/50')}>{title}{sel.length > 0 && <span className="rounded-full bg-brand-solid px-1.5 text-[10px] text-white">{fa(sel.length)}</span>}<ArrowDown size={11} /></button>
+      {open && <>
+        <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+        <div className="anim-pop absolute top-9 right-0 z-40 w-72 rounded-xl border border-line bg-surface p-2 shadow-float">
+          <div className="relative mb-2"><Search size={13} className="absolute top-2.5 right-2.5 text-t3" /><Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={`جست‌وجو در ${fa(values.length)} مقدار`} className="h-9 pr-8 text-12" /></div>
+          <ul className="max-h-64 overflow-y-auto">{shown.map(([v, n]) => { const on = sel.includes(v); return <li key={v}><label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-12 hover:bg-neutral-bg"><input type="checkbox" className="accent-[#0000ff]" checked={on} onChange={() => onChange(on ? sel.filter((x) => x !== v) : [...sel, v])} /><span className="min-w-0 flex-1 truncate">{v}</span><span className="tnum text-11 text-t3">{fa(n)}</span></label></li> })}{hit.length === 0 && <li className="px-2 py-3 text-center text-12 text-t2">موردی پیدا نشد.</li>}</ul>
+          {hit.length > shown.length && <p className="px-2 pt-1 text-11 text-t2">{fa(hit.length - shown.length)} مقدار دیگر؛ برای پیدا کردن جست‌وجو کنید.</p>}
+          <div className="mt-2 flex justify-between border-t border-line pt-2 text-12"><button type="button" className="text-brand hover:underline" onClick={() => onChange([...new Set([...sel, ...hit.map(([v]) => v)])])}>انتخاب {q ? 'نتایج' : 'همه'}</button><button type="button" className="text-t2 hover:text-danger" onClick={() => onChange([])}>پاک کردن</button></div>
+        </div>
+      </>}
+    </div>
+  )
+}
+
+/** فیلتر بازهٔ عددی (مبلغ، تعداد، درصد) در یک کشو */
+function RangePick({ title, v, onChange }: { title: ReactNode; v: [string, string]; onChange: (v: [string, string]) => void }) {
+  const [open, setOpen] = useState(false); const on = !!(v[0] || v[1])
+  return (
+    <div className="relative">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className={cx('flex h-8 items-center gap-1.5 rounded-full border px-3 text-12', on ? 'border-brand bg-brand-tint text-brand' : 'border-line bg-surface hover:border-brand/50')}>{title}{on && <span className="text-[10px]">{v[0] || '…'} تا {v[1] || '…'}</span>}<ArrowDown size={11} /></button>
+      {open && <>
+        <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+        <div className="anim-pop absolute top-9 right-0 z-40 w-64 rounded-xl border border-line bg-surface p-3 shadow-float">
+          <div className="flex items-center gap-1.5 text-12">از <Input autoFocus className="h-8" inputMode="numeric" value={v[0]} onChange={(e) => onChange([e.target.value, v[1]])} aria-label="حداقل" /> تا <Input className="h-8" inputMode="numeric" value={v[1]} onChange={(e) => onChange([v[0], e.target.value])} aria-label="حداکثر" /></div>
+          <button type="button" className="mt-2 text-12 text-t2 hover:text-danger" onClick={() => onChange(['', ''])}>پاک کردن</button>
+        </div>
+      </>}
+    </div>
+  )
+}

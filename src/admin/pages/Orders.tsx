@@ -11,6 +11,8 @@ import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
+import { VariantChips } from '../catalog/Choices'
+import { ShipChips, SplitBanner } from '../orders/Split'
 import { PackPhotos } from '../shared/PackPhotos'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -41,8 +43,7 @@ export function Orders() {
     { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
     { key: 'pay', title: 'روش پرداخت', hideMobile: true, render: (o) => o.pay, text: (o) => o.pay },
-    { key: 'wh', title: 'انبار مبدأ', hideMobile: true, render: (o) => <span className="text-12">{[...new Set(o.shipments.map((s) => WAREHOUSE[s.warehouse]))].join(' + ') || '—'}</span> },
-    { key: 'ships', title: 'مرسوله', optional: true, render: (o) => fa(o.shipments.length) },
+    { key: 'ships', title: 'ارسال و مرسوله‌ها', render: (o) => <ShipChips o={o} />, text: (o) => o.shipments.map((s) => `${WAREHOUSE[s.warehouse]} ${s.method}`).join(' + ') + (o.shipments.length > 1 ? ' چندمرسوله‌ای' : '') },
     { key: 'channel', title: 'کانال', optional: true, render: (o) => o.channel, text: (o) => o.channel },
     { key: 'seller', title: 'فروشنده', optional: true, render: () => 'غنیمت' },
     { key: 'status', title: 'وضعیت', render: (o) => <StatusBadge s={o.status} />, sort: (o) => o.status, text: (o) => o.status },
@@ -184,6 +185,7 @@ export function OrderDetail() {
               <div className="mt-3 flex gap-2"><Button variant="primary" onClick={() => { mutate((db) => { db.orders.find((x) => x.id === o.id)!.status = 'order.paid' }, { action: 'تأیید سفارش مشکوک', target: o.id }); toast('سفارش تأیید شد و به صف آماده‌سازی رفت.') }}>تأیید و ادامهٔ سفارش</Button><Button variant="danger" onClick={() => cancelShip(o.shipments[0].id, o.total)}>رد و بازگشت وجه</Button></div>
             </Card>
           )}
+          {o.shipments.length > 1 && <SplitBanner o={o} />}
           {o.shipments.length === 0 && <Card><p className="py-6 text-center text-13 text-t2">این سفارش مرسوله‌ای ندارد؛ پیش از تخصیص انبار لغو شده است.</p></Card>}
           {o.shipments.map((s, i) => { const total = s.items.reduce((a, x) => a + x.price * x.qty, 0); const dead = ['ship.cancelled', 'ship.delivered'].includes(s.status); const post = /پست|تیپاکس|باربری/.test(s.method); return (
             <Card key={s.id} title={<span className="flex flex-wrap items-center gap-2">مرسولهٔ {fa(i + 1)}<CopyId v={s.id} /><StatusBadge s={s.status} /></span>} actions={<SlaChip at={s.sla} done={dead} />}>
@@ -191,7 +193,7 @@ export function OrderDetail() {
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
                   <li key={k} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                    <Cell pid={it.productId} size={48} a={product(it.productId).title} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
+                    <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5">{product(it.productId).title}<VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
                     <Money v={it.price * it.qty} />
                   </li>) })}
               </ul>

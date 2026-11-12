@@ -6,7 +6,7 @@ import { fa } from '@/shared/lib/fa'
 import type { Order, Shipment } from '@/shared/data/seed'
 import { Plate } from './Progress'
 
-// مسیر نمونه روی نقشهٔ شهری (مختصات viewBox 400×260)؛ در نسخهٔ واقعی از موقعیت زندهٔ پیک (API اسنپ‌باکس/پیک غنیمت) خوانده می‌شود
+// مسیر نمونه روی نقشهٔ شهری (مختصات viewBox 400×260)؛ در نسخهٔ واقعی از موقعیت زندهٔ پیک (API اسنپ‌باکس و الوپیک) خوانده می‌شود
 const ROUTE = 'M352 214 L352 176 L300 176 L300 128 L232 128 L232 92 L150 92 L150 58 L64 58'
 const prog0 = (s: Shipment) => (s.status === 'ship.delivered' ? 1 : s.status === 'ship.in_transit' ? 0.55 : s.status === 'ship.handed' ? 0.18 : 0)
 

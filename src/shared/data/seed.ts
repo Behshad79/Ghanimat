@@ -17,6 +17,7 @@ import { makeCxEntities, makeCxSettings } from './cx'
 import { makeJourney } from './journey'
 import { makeDelivery } from './delivery'
 import { makeBank } from './bank'
+import { makeNewsletter, makePages, makeTheme } from './pages'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -245,6 +246,11 @@ export const makeSeed = () => ({
   journey: makeJourney(),
   delivery: makeDelivery(),
   bank: makeBank(),
+  pages: makePages(),
+  pagesPublished: [] as ReturnType<typeof makePages>,
+  theme: makeTheme(),
+  newsletter: makeNewsletter(),
+  articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [
     { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.example/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
     { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹. کد تحویل: 4821', status: 'تحویل شد', at: ago(60 * 5) },

@@ -16,7 +16,7 @@ export const makeJourney = () => {
       if (s === 0 && ci % 2 === 0) steps.push(['payment_fail', 'پرداخت', ['پایان زمان پرداخت', 'خطای درگاه زرین‌پال', 'انصراف کاربر'][ci % 3]])
       else if (s === 1) steps.push(['payment_ok', 'پرداخت', 'درگاه ملت'])
       if (ci % 3 === 1) steps.push(['chat', 'دستیار خرید', 'گفتگو با دستیار AI'])
-      steps.forEach(([type, page, target], i) => events.push({ id: `ev${++n}`, customerId: c, session, at: ago(base - i * 2), type, page, target, utm }))
+      steps.forEach(([type, page, target], i) => events.push({ id: `ev${++n}`, customerId: c, session, at: ago(base + 40 - i * 2), type, page, target, utm }))
     }
   })
   return {

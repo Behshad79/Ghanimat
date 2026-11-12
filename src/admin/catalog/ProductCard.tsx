@@ -5,6 +5,7 @@ import { useDB } from '@/shared/lib/store'
 import { fa, num } from '@/shared/lib/fa'
 import type { Product, Unit } from '@/shared/data/seed'
 import type { Site } from '@/shared/data/site'
+import { MagicIcon } from '@/shared/ui/MagicIcon'
 
 const pad = (n: number) => fa(String(Math.max(0, n)).padStart(2, '0'))
 function useCountdown(end?: string) {
@@ -55,6 +56,7 @@ export function ProductCard({ p, u, mini, hover, out, skeleton, cfg: cfgIn, flui
           {show('showRating') && p.reviews >= 5 && <span className="tnum flex items-center gap-0.5 font-medium"><Star size={13} className="fill-[#ffc24b] text-[#ffc24b]" />{fa(p.rating)}</span>}
         </div>
         <p className={cx('line-clamp-2 font-bold', mini ? 'min-h-10 text-13 leading-5' : 'min-h-12 text-14 leading-6')}>{p.title}</p>
+        {(d.cardBadges as { id: string; label: string; on: boolean; manual?: boolean; products?: string[]; bg?: string; color?: string; icon?: string }[]).filter((b) => b.manual && b.on && b.products?.includes(p.id)).map((b) => <span key={b.id} className="me-1 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-11 font-bold" style={{ background: b.bg, color: b.color }}>{b.icon && <MagicIcon name={b.icon} size={12} />}{b.label}</span>)}
         {show('showFast') && fast && <span className="inline-flex items-center gap-1 rounded-lg bg-[#eef0ff] px-2.5 py-1 text-12 font-bold text-[#0000ff]"><Zap size={13} />تحویل {fa(rule('fast_delivery_hours'))} ساعته</span>}
         {!mini && <div className="relative h-6 overflow-hidden" aria-live="off">{r && <p key={i} className="rot-in absolute inset-0 flex items-center gap-1.5 text-13 text-[#10123d]">{r.icon}{r.text}</p>}</div>}
         {isOut ? (

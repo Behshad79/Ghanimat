@@ -145,8 +145,8 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
       <button aria-label="دستیار غنیمت" onClick={onAI} className="no-print fixed bottom-20 left-4 z-30 grid size-12 place-items-center rounded-full bg-brand-solid text-white shadow-float lg:hidden"><Sparkles size={20} /></button>
       <nav className="no-print flex h-16 shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="ناوبری موبایل">
         <Item to="/admin" icon={<HomeIcon size={20} />} label="خانه" />
-        <Item to="/admin/orders" icon={<ShoppingBag size={20} />} label="سفارش‌ها" n={NAV[2].count!(d)} />
-        <Item to="/admin/warehouse" icon={<ListChecks size={20} />} label="کارهای من" n={NAV[5].count!(d)} />
+        <Item to="/admin/orders" icon={<ShoppingBag size={20} />} label="سفارش‌ها" n={NAV.find((x) => x.id === 'orders')!.count!(d)} />
+        <Item to="/admin/warehouse" icon={<ListChecks size={20} />} label="کارهای من" n={NAV.find((x) => x.id === 'warehouse')!.count!(d)} />
         <Item to="/admin/live" icon={<Bell size={20} />} label="هشدارها" n={d.alerts.filter((a) => !a.read).length} />
         <button onClick={onMore} className="flex flex-1 flex-col items-center justify-center gap-0.5 text-11 text-t2"><MoreHorizontal size={20} />بیشتر</button>
       </nav>

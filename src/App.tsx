@@ -13,6 +13,7 @@ import { Channels, Finance, Pricing } from './admin/pages/Revenue'
 import { ReasonHost } from './shared/ui/reason'
 import { QuickHost } from './shared/ui/quickview'
 import { Customer360 } from './admin/customer/Customer360'
+import { Builder } from './admin/builder/Builder'
 import { SiteEditor } from './admin/site/SiteEditor'
 import { CustomerRequests } from './admin/cx/Requests'
 import { Social } from './admin/social/Social'
@@ -62,6 +63,7 @@ export function App() {
               <Route path="finance" element={<Finance />} />
               <Route path="content" element={<Content />} />
               <Route path="site" element={<SiteEditor />} />
+              <Route path="builder" element={<Builder />} />
               <Route path="requests" element={<CustomerRequests />} />
               <Route path="social" element={<Social />} />
               <Route path="conversations" element={<Conversations />} />

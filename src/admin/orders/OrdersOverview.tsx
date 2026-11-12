@@ -7,6 +7,8 @@ import { AreaFunnel } from '@/shared/ui/charts'
 import { compactToman, fa, jday, pct } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import { ProductImg, useLookup } from '../pages/_shared'
+import { LiveMap } from './LiveMap'
+import { UrgentCard } from './Urgent'
 
 const FLOW = ['ship.pending', 'ship.picking', 'ship.packed', 'ship.handed', 'ship.in_transit', 'ship.delivered']
 const FLOW_L = ['ثبت و تأیید سفارش', 'جمع‌آوری از قفسه', 'بسته‌بندی و عکس پیش از ارسال', 'تحویل به حامل', 'در مسیر', 'تحویل به مشتری']
@@ -28,7 +30,7 @@ export function OrdersOverview() {
         <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="کل سفارش‌ها" num={d.orders.length} fmt={(n) => fa(Math.round(n))} delta={6.2} to="/admin/orders?tab=all" />
           <KPI icon={<Banknote size={17} />} label="فروش ناخالص" value={compactToman(gmv)} delta={9.1} to="/admin/finance" />
-          <KPI icon={<Timer size={17} />} label="در انتظار اقدام" value={fa(d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status)).length)} note="پرداخت‌شده، تصمیم و مشکوک" to="/admin/orders?tab=action" />
+          <UrgentCard onOpen={(id) => nav(`/admin/orders/${id}`)} onAll={() => nav('/admin/orders?tab=action')} />
           <KPI icon={<RotateCcw size={17} />} label="مرجوعی" value={fa(d.returns.length)} delta={-1.2} goodDown to="/admin/returns" />
         </div>
     <div className="grid gap-3 xl:grid-cols-[1fr_380px]">
@@ -45,12 +47,7 @@ export function OrdersOverview() {
       <Card title="پیگیری مرسوله" actions={cur && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/orders/${cur.o.id}`)}>سفارش</Button>}>
         <Select value={sel} onChange={setSel} options={ships.map(({ s, o }) => [s.id, `${s.id} · ${customer(o.customerId)?.name ?? ''}`] as [string, string])} />
         {cur && <>
-          <div className="relative mt-3 h-24 overflow-hidden rounded-xl bg-[repeating-linear-gradient(0deg,var(--neutral-bg)_0_1px,transparent_1px_18px),repeating-linear-gradient(90deg,var(--neutral-bg)_0_1px,transparent_1px_18px)]">
-            <svg viewBox="0 0 300 90" className="absolute inset-0 size-full" preserveAspectRatio="none"><path d="M270 60 C 210 10, 150 85, 30 30" fill="none" stroke="var(--border)" strokeWidth="3" strokeDasharray="6 6" /><path d="M270 60 C 210 10, 150 85, 30 30" fill="none" stroke="var(--brand-solid)" strokeWidth="3" pathLength={1} strokeDasharray={`${prog} 1`} /></svg>
-            <span className="absolute top-[52%] right-[6%] flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-11 shadow-sm"><Warehouse size={12} className="text-brand" />{WAREHOUSE[cur.s.warehouse]}</span>
-            <span className="absolute top-[18%] left-[4%] flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-11 shadow-sm"><MapPin size={12} className="text-danger" />{city}</span>
-            <span className="absolute grid size-7 place-items-center rounded-full bg-brand-solid text-white shadow-float transition-all duration-700" style={{ right: `${6 + prog * 80}%`, top: `${50 - Math.sin(prog * Math.PI) * 20}%` }}><Truck size={14} /></span>
-          </div>
+          <div className="mt-3"><LiveMap o={cur.o} s={cur.s} city={city} warehouse={WAREHOUSE[cur.s.warehouse]} onOrder={() => nav(`/admin/orders/${cur.o.id}`)} /></div>
           <div className="mt-3 flex items-center gap-2"><div className="flex -space-x-2 space-x-reverse">{cur.s.items.slice(0, 3).map((i) => <ProductImg key={i.unitId + i.productId} pid={i.productId} size={32} rounded="rounded-full" />)}</div><p className="min-w-0 flex-1 truncate text-12">{cur.s.items.map((i) => product(i.productId)?.en).join('، ')}</p><StatusBadge s={cur.s.status} /></div>
           <p className="mt-1 text-11 text-t2">{cur.s.method}{cur.s.tracking && <> · کد رهگیری <span className="ltr font-mono">{cur.s.tracking}</span></>}</p>
           <ol className="mt-3 space-y-0">{FLOW_L.map((l, i) => { const done = i <= idx; const now = i === idx; return (

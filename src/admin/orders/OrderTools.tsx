@@ -6,7 +6,7 @@ import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
 import { getDB, mutate, snapshot, useDB } from '@/shared/lib/store'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
-import { ProductImg } from '../pages/_shared'
+import { ProductImg, useQuickChips } from '../pages/_shared'
 
 const METHODS = [['تحویل سریع (پیک)', 150000], ['پیک غنیمت', 95000], ['پست پیشتاز', 90000], ['تیپاکس', 140000], ['باربری', 450000], ['دریافت حضوری از شعبه', 0]] as const
 type Line = { pid: string; uid: string; qty: number; price: number }
@@ -14,7 +14,7 @@ const available = () => { const d = getDB(); return d.products.filter((p) => p.s
 
 /** ثبت سفارش دستی (تلفنی یا حضوری): مشتری موجود یا تازه، کالاها، نشانی، روش ارسال، روش پرداخت */
 export function ManualOrder({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const d = useDB(); const nav = useNavigate()
+  const d = useDB(); const nav = useNavigate(); const qc = useQuickChips()
   const [cid, setCid] = useState('c1'); const [isNew, setIsNew] = useState(false); const [nc, setNc] = useState({ name: '', mobile: '', city: 'تهران', street: '', alley: '', plaque: '', postal: '' })
   const [lines, setLines] = useState<Line[]>([]); const [method, setMethod] = useState<string>('پست پیشتاز'); const [pay, setPay] = useState('link'); const [discount, setDiscount] = useState(0); const [note, setNote] = useState('')
   const opts = useMemo(available, [d.units, d.products])
@@ -37,7 +37,7 @@ export function ManualOrder({ open, onClose }: { open: boolean; onClose: () => v
       <div className="space-y-5">
         <section><div className="mb-2 flex items-center justify-between"><p className="text-13 font-semibold">مشتری</p><Button size="sm" variant="ghost" icon={<UserPlus size={13} />} onClick={() => setIsNew(!isNew)}>{isNew ? 'انتخاب از مشتریان' : 'مشتری تازه'}</Button></div>
           {isNew ? <div className="grid gap-3 sm:grid-cols-3"><Field label="نام و نام خانوادگی"><Input value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} /></Field><Field label="موبایل"><Input className="ltr text-left font-mono" inputMode="numeric" value={nc.mobile} onChange={(e) => setNc({ ...nc, mobile: e.target.value.replace(/\D/g, '') })} placeholder="09…" /></Field><Field label="شهر"><Input value={nc.city} onChange={(e) => setNc({ ...nc, city: e.target.value })} /></Field><Field label="خیابان"><Input value={nc.street} onChange={(e) => setNc({ ...nc, street: e.target.value })} /></Field><Field label="کوچه و پلاک"><Input value={nc.alley} onChange={(e) => setNc({ ...nc, alley: e.target.value })} /></Field><Field label="کد پستی"><Input className="ltr text-left font-mono" value={nc.postal} onChange={(e) => setNc({ ...nc, postal: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></Field></div>
-            : <Select value={cid} onChange={setCid} options={d.customers.map((c) => [c.id, `${c.name} · ${c.city}`])} />}
+            : <Select chips={qc.customers} value={cid} onChange={setCid} options={d.customers.map((c) => [c.id, `${c.name} · ${c.city}`])} />}
         </section>
         <section><p className="mb-2 text-13 font-semibold">کالاها</p>
           <Select value="" onChange={(v) => { const o = opts.find((x) => `${x.pid}|${x.uid}` === v); if (!o) return; if (lines.some((l) => l.uid && l.uid === o.uid)) return toast('این واحد قبلاً اضافه شده است.', { tone: 'err' }); setLines([...lines, { pid: o.pid, uid: o.uid, qty: 1, price: o.price }]) }} options={[['', 'افزودن کالا…'], ...opts.map((o) => [`${o.pid}|${o.uid}`, `${o.label} · ${toman(o.price)}`] as [string, string])]} />

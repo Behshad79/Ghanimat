@@ -5,6 +5,7 @@ import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, 
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
+import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { PackPhotos } from '../shared/PackPhotos'
@@ -134,6 +135,7 @@ export function OrderDetail() {
   const advance = (sid: string, to: string, label: string) => { const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const cancelShip = async (sid: string, total: number) => {
     if (!(await confirm({ title: `لغو مرسولهٔ ${sid}؟`, body: <>این مرسوله لغو و {toman(total)} به {dest} مشتری بازگردانده می‌شود. واحدهای آن دوباره قابل فروش می‌شوند. این کار برگشت‌پذیر نیست.</>, confirm: 'لغو مرسوله', danger: true }))) return
+    if (!(await askReason({ kind: 'order', ref: o.id, status: `لغو مرسولهٔ ${sid}`, title: 'دلیل لغو (برای مشتری)' }))) return
     mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = 'ship.cancelled'; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }, { action: 'لغو مرسوله', target: sid, after: toman(total) })
     toast(`مرسولهٔ ${sid} لغو شد.`)
   }
@@ -221,6 +223,7 @@ export function OrderDetail() {
             <div className="mt-2 flex gap-2"><Button size="sm" icon={<Phone size={12} />} onClick={() => callTo(c.mobile, c.name)}>تماس</Button><Button size="sm" onClick={() => { mutate((x) => { x.tickets.unshift({ id: `TK-${482200 + x.tickets.length}`, customerId: c.id, orderId: o.id, subject: `پیگیری سفارش ${o.id}`, channel: 'پنل ادمین', status: 'ticket.open', priority: 'عادی', sla: new Date(Date.now() + 4 * 36e5).toISOString(), assignee: 'من', sentiment: 'خنثی', messages: [{ from: 'agent', text: `تیکت برای پیگیری سفارش ${o.id} ساخته شد.`, at: new Date().toISOString() }] }) }, { action: 'ساخت تیکت', target: o.id }); nav(`/admin/support?t=TK-${482200 + d.tickets.length}`) }}>ساخت تیکت</Button><Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => setMsg(`سلام ${c.name.split(' ')[0]} عزیز. سفارش ${o.id} شما ${o.status === 'order.shipped' ? 'در مسیر است و به‌زودی می‌رسد' : o.status === 'order.delivered' ? 'تحویل شده است؛ از خرید شما سپاسگزاریم' : 'در حال آماده‌سازی است'}. غنیمت`)}>پیش‌نویس پیام</Button></div>
           </Card>
           <OrderProfitCard o={o} />
+          <Card><ReasonLog kind="order" refId={o.id} /></Card>
           <Card title="مالی">
             <Row k="جمع کالاها"><Money v={sub} /></Row><Row k="هزینهٔ ارسال">{o.shippingFee ? <Money v={o.shippingFee} /> : 'رایگان'}</Row>
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}

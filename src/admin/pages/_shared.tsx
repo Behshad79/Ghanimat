@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { BookOpen, Clock, Headphones, Laptop, Package, PlugZap, Smartphone, Tablet, Watch, type LucideIcon } from 'lucide-react'
 import { cx } from '@/shared/ui/base'
+import { QuickText } from '@/shared/ui/quickview'
 import { useDB } from '@/shared/lib/store'
 import { compactToman, left, minsLeft, toman } from '@/shared/lib/fa'
 import { useSearchParams } from 'react-router-dom'
@@ -35,10 +36,38 @@ export function ProductImg({ pid, size = 40, className, rounded = 'rounded-lg' }
   )
 }
 export const Cell = ({ a, b, pid, size }: { a: ReactNode; b?: ReactNode; pid?: string; size?: number }) => (
-  <div className="flex min-w-0 items-center gap-3">{pid && <ProductImg pid={pid} size={size} />}<div className="min-w-0"><div className="truncate font-medium">{a}</div>{b && <div className="line-clamp-2 text-11 text-t3">{b}</div>}</div></div>
+  <div className="flex min-w-0 items-center gap-3">{pid && <ProductImg pid={pid} size={size} />}<div className="min-w-0"><div className="truncate font-medium">{typeof a === 'string' ? <QuickText v={a} /> : a}</div>{b && <div className="line-clamp-2 text-11 text-t3">{b}</div>}</div></div>
 )
 /** تب فعال در URL نگه داشته می‌شود تا لینک عمیق کار کند */
 export function useTab(def: string): [string, (v: string) => void] {
   const [sp, setSp] = useSearchParams()
   return [sp.get('tab') ?? def, (v) => { const n = new URLSearchParams(sp); n.set('tab', v); setSp(n, { replace: true }) }]
+}
+
+/** فیلترهای سریع داخل دراپ‌داون‌های سفارش، مرسوله و مشتری */
+const isToday = (iso?: string) => !!iso && new Date(iso).toDateString() === new Date().toDateString()
+export function useQuickChips() {
+  const d = useDB()
+  const ord = (id: string) => d.orders.find((o) => o.id === id)
+  const ship = (id: string) => d.orders.flatMap((o) => o.shipments.map((s) => ({ s, o }))).find((x) => x.s.id === id)
+  return {
+    orders: [
+      { label: 'سفارش‌های امروز', test: (v: string) => isToday(ord(v)?.createdAt) },
+      { label: 'نیازمند اقدام', test: (v: string) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(ord(v)?.status ?? '') },
+      { label: 'در حال آماده‌سازی', test: (v: string) => (ord(v)?.shipments ?? []).some((s) => ['ship.picking', 'ship.packed', 'ship.pending'].includes(s.status)) },
+      { label: 'ارسال‌شده', test: (v: string) => (ord(v)?.shipments ?? []).some((s) => ['ship.handed', 'ship.in_transit'].includes(s.status)) },
+      { label: 'حقوقی', test: (v: string) => ord(v)?.buyer === 'legal' },
+    ],
+    ships: [
+      { label: 'امروز', test: (v: string) => isToday(ship(v)?.o.createdAt) },
+      { label: 'آمادهٔ چاپ برچسب', test: (v: string) => ['ship.packed', 'ship.picking'].includes(ship(v)?.s.status ?? '') },
+      { label: 'پیک', test: (v: string) => /پیک|اسنپ/.test(ship(v)?.s.method ?? '') },
+      { label: 'پست', test: (v: string) => /پست/.test(ship(v)?.s.method ?? '') },
+    ],
+    customers: [
+      { label: 'حقوقی', test: (v: string) => !!d.customers.find((c) => c.id === v)?.legal },
+      { label: 'سفارش امروز', test: (v: string) => d.orders.some((o) => o.customerId === v && isToday(o.createdAt)) },
+      { label: 'وفادار', test: (v: string) => /وفادار|قهرمان/.test(d.customers.find((c) => c.id === v)?.segment ?? '') },
+    ],
+  }
 }

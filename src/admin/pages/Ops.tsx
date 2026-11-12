@@ -5,7 +5,8 @@ import { AITag, Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Progr
 import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Bars } from '@/shared/ui/charts'
-import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
+import { confirm, Drawer, Hint, Modal, toast } from '@/shared/ui/overlay'
+import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { fakeCall, mutate, snapshot, useSession } from '@/shared/lib/store'
 import { EntityManager } from '@/shared/ui/entity'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
@@ -160,7 +161,10 @@ export function Providers({ family, title, list }: { family: string; title: stri
 export function Returns() {
   const { d, customer, product, unit, rule } = useLookup(); const [tab, setTab] = useTab('returns'); const [open, setOpen] = useState<string | null>(null); const [fate, setFate] = useState('بازگشت به فروش با گرید جدید')
   const r = d.returns.find((x) => x.id === open); const u = r ? unit(r.unitId) : undefined
-  const decide = (ok: boolean) => { if (!r) return; const cap = rule('refund_cap'); const needs = ok && r.amount > cap
+  const [wOpen, setWOpen] = useState<string | null>(null); const w = d.warranties.find((x) => x.id === wOpen)
+  const setW = async (id: string, status: string, label: string, needReason = false) => { if (needReason && !(await askReason({ kind: 'warranty', ref: id, status: label, title: `دلیل «${label}» برای ${id}` }))) return; mutate((db) => { db.warranties.find((y) => y.id === id)!.status = status }, { action: `گارانتی: ${label}`, target: id }); toast(`وضعیت ${id}: ${label}. مشتری با پیامک و اعلان خبردار شد.`) }
+  const partial = async (deduct: boolean) => { if (!r) return; const why = await askReason({ kind: 'return', ref: r.id, status: deduct ? 'تأیید با کسر هزینهٔ ارسال' : 'تأیید بخشی', title: deduct ? 'توضیح کسر هزینهٔ ارسال' : 'توضیح تأیید بخشی' }); if (!why) return; mutate((x) => { x.returns.find((z) => z.id === r.id)!.status = deduct ? 'return.approved_deducted' : 'return.partial' }, { action: deduct ? 'تأیید مرجوعی با کسر هزینهٔ ارسال' : 'تأیید بخشی مرجوعی', target: r.id, after: why }); setOpen(null); toast('ثبت شد و دلیل برای مشتری نمایش داده می‌شود.') }
+  const decide = async (ok: boolean) => { if (!r) return; if (!ok && !(await askReason({ kind: 'return', ref: r.id, status: 'رد مرجوعی', title: `دلیل رد مرجوعی ${r.id}` }))) return; const cap = rule('refund_cap'); const needs = ok && r.amount > cap
     mutate((x) => { const y = x.returns.find((z) => z.id === r.id)!; y.status = ok ? (needs ? 'return.approved' : 'return.refunding') : 'return.rejected'; if (ok && u) x.units.find((z) => z.id === u.id)!.status = fate.startsWith('بازگشت') ? 'unit.qc' : fate === 'تعمیر' ? 'unit.repair' : 'unit.defective'; if (needs) x.approvals.unshift({ id: `AP-${720 + x.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(r.amount)} بابت ${r.id}`, ref: r.id, amount: r.amount, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: ok ? 'تأیید مرجوعی' : 'رد مرجوعی', target: r.id })
     setOpen(null); toast(!ok ? 'مرجوعی رد شد و کالا دوباره برای مشتری ارسال می‌شود.' : needs ? 'مرجوعی تأیید شد. بازگشت وجه به تأیید نفر دوم رفت.' : `مرجوعی تأیید شد. ${toman(r.amount)} در حال واریز به ${r.dest} است.`) }
   return (
@@ -171,20 +175,40 @@ export function Returns() {
         cols={[{ key: 'id', title: 'شماره', render: (x) => <CopyId v={x.id} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={customer(x.customerId).name} b={x.orderId} /> }, { key: 'r', title: 'دلیل', hideMobile: true, render: (x) => x.reason, sort: (x) => x.reason }, { key: 'a', title: 'مبلغ', align: 'left', render: (x) => x.amount ? <Money v={x.amount} /> : '—', sort: (x) => x.amount }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.status} />, sort: (x) => x.status }, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.deadline} done={['return.rejected', 'return.refunded'].includes(x.status)} /> }]} />}
       {tab === 'warranty' && <DataTable name="گارانتی" rows={d.warranties} rowKey={(x) => x.id} search={(x) => `${x.code} ${x.id} ${unit(x.unitId)?.serial}`} empty={{ title: 'درخواست گارانتی‌ای نیست.', desc: 'گارانتی با تحویل سفارش خودکار صادر می‌شود و درخواست‌های خدمات اینجا می‌آیند.' }}
         cols={[{ key: 'code', title: 'کد گارانتی', render: (x) => <CopyId v={x.code} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={customer(x.customerId).name} b={x.issue} /> }, { key: 't', title: 'نوع', hideMobile: true, render: (x) => `${x.type} · ${fa(x.months)} ماه` }, { key: 'o', title: 'مسئول هزینه', hideMobile: true, render: (x) => x.owner }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.status} /> }, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.deadline} done={x.status === 'warranty.done'} /> },
-          { key: 'a', title: '', render: (x) => x.status === 'warranty.pending' ? <Button size="sm" onClick={() => { mutate((db) => { db.warranties.find((y) => y.id === x.id)!.status = 'warranty.repairing' }, { action: 'پذیرش گارانتی', target: x.id }); toast('درخواست پذیرفته شد و برچسب ارسال به مرکز خدمات برای مشتری رفت.') }}>پذیرش و ارسال برچسب</Button> : x.status === 'warranty.repairing' ? <Button size="sm" onClick={() => { mutate((db) => { db.warranties.find((y) => y.id === x.id)!.status = 'warranty.done' }, { action: 'تکمیل تعمیر', target: x.id }); toast('تعمیر تکمیل شد؛ کالا با گارانتی تعمیر برای مشتری ارسال می‌شود.') }}>ثبت تکمیل تعمیر</Button> : null }]} />}
+          { key: 'r', title: 'دلیل/توضیح', hideMobile: true, render: (x) => { const last = d.reasons.find((y) => y.kind === 'warranty' && y.ref === x.id); return last ? <span className="line-clamp-1 max-w-48 text-12 text-t2">{last.reason}</span> : <span className="text-12 text-t3">—</span> } }]}
+        onRow={(x) => setWOpen(x.id)}
+        actions={(x) => [
+          { label: 'پذیرش و ارسال برچسب', onClick: () => setW(x.id, 'warranty.approved', 'تأیید شد، منتظر ارسال کالا'), disabled: x.status !== 'warranty.pending' },
+          { label: 'کالا در راه غنیمت', onClick: () => setW(x.id, 'warranty.in_transit', 'کالا در راه غنیمت') },
+          { label: 'در حال تعمیر', onClick: () => setW(x.id, 'warranty.repairing', 'در حال تعمیر') },
+          { label: 'تعویض شد', onClick: () => setW(x.id, 'warranty.replaced', 'کالا تعویض شد') },
+          { label: 'بازگشت مبلغ', onClick: () => setW(x.id, 'warranty.refunded', 'مبلغ بازگشت داده شد', true) },
+          { label: 'خدمت تکمیل شد', onClick: () => setW(x.id, 'warranty.done', 'خدمت تکمیل شد') },
+          'sep',
+          { label: 'درخواست اصلاح یا مدارک', onClick: () => setW(x.id, 'warranty.pending', 'نیازمند اصلاح یا مدارک', true) },
+          { label: 'رد با ذکر دلیل', danger: true, onClick: () => setW(x.id, 'warranty.rejected', 'رد درخواست', true) },
+        ]} />}
       {tab === 'stats' && <div className="grid gap-4 md:grid-cols-2"><Card title="دلایل مرجوعی"><Bars data={[{ label: 'مغایرت با صفحهٔ کالا', value: 40 }, { label: 'انصراف از خرید', value: 33 }, { label: 'خرابی کالا', value: 19 }, { label: 'سایر', value: 8 }]} fmt={pct} color="var(--purple)" /><div className="mt-3"><AITag confidence="متوسط" /></div><p className="mt-1 text-12 text-t2">۴۰٪ مرجوعی‌های هدفون به‌خاطر مغایرت رنگ در عکس است. پیشنهاد: بازبینی نور عکاسی این دسته.</p></Card>
         <Card title="نرخ خرابی در گارانتی به تفکیک تأمین"><Bars data={[{ label: 'انبارگردانی آمازون', value: 2.1 }, { label: 'خرید مستقیم اقلیم کردستان', value: 3.4 }, { label: 'شریک انبار مهاباد', value: 4.0 }]} fmt={(n) => pct(n, 1)} color="var(--warning)" /></Card></div>}
       <Modal wide open={!!r} onClose={() => setOpen(null)} title={r ? <span className="flex items-center gap-2">بازرسی مرجوعی<CopyId v={r.id} /><StatusBadge s={r.status} /></span> : ''}
-        footer={r && r.status === 'return.inspecting' ? <><Button variant="primary" onClick={() => decide(true)}>تأیید و واریز {compactToman(r.amount)}</Button><Button variant="danger" onClick={() => decide(false)}>رد مرجوعی</Button></> : <Button onClick={() => setOpen(null)}>بستن</Button>}>
+        footer={r && r.status === 'return.inspecting' ? <><Button variant="primary" onClick={() => decide(true)}>تأیید و واریز {compactToman(r.amount)}</Button><Button onClick={() => partial(false)}>تأیید بخشی</Button><Button onClick={() => partial(true)}>تأیید با کسر هزینهٔ ارسال</Button><Button variant="danger" onClick={() => decide(false)}>رد مرجوعی</Button></> : <Button onClick={() => setOpen(null)}>بستن</Button>}>
         {r && <div className="space-y-4">
           <p className="text-13"><b>{customer(r.customerId).name}</b> · دلیل: {r.reason}{r.note && ` · «${r.note}»`}</p>
           {(() => { const ro = d.orders.find((x) => x.id === r.orderId); const rs = ro?.shipments.find((x) => x.items.some((i) => i.unitId === r.unitId)) ?? ro?.shipments[0]; return <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-md border border-line p-3"><p className="mb-2 text-12 font-semibold">عکس‌های پیش از ارسال (بایگانی)</p>{ro && rs ? <PackPhotos orderId={ro.id} shipId={rs.id} readOnly big /> : <p className="text-12 text-t2">مرسوله پیدا نشد.</p>}<p className="mt-2 text-12 text-t2">{u ? `گرید ${g(u.grade)} · سریال ${u.serial}` : 'موجودی تعدادی'}</p></div>
             <div className="rounded-md border border-purple/40 p-3"><p className="mb-2 text-12 font-semibold">کالای برگشتی</p>{u ? <ProductImg pid={u.productId} size={300} rounded="rounded-sm" className="!h-auto aspect-video !w-full border-0" /> : <div className="grid aspect-video place-items-center rounded-sm bg-purple-bg text-11 text-purple">عکس دریافت در انبار</div>}<p className="mt-2 text-12 text-t2">سریال دریافتی را با سریال و عکس‌های ارسال مقایسه کنید.</p></div></div> })()}
           {r.status === 'return.inspecting' ? <><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{['پلمپ', 'ظاهر', 'کارکرد', 'متعلقات'].map((c) => <label key={c} className="flex min-h-11 items-center gap-2 rounded-md border border-line px-3 text-13"><input type="checkbox" defaultChecked />{c}</label>)}</div>
             <div className="grid gap-3 sm:grid-cols-2"><Field label="سرنوشت واحد"><Select value={fate} onChange={setFate} options={['بازگشت به فروش با گرید جدید', 'تعمیر', 'معیوب']} /></Field><Field label="مبلغ بازگشتی" help={r.reason === 'انصراف از خرید' ? 'پس‌کرایه از مبلغ کسر می‌شود.' : 'هزینهٔ ارسال هم بازگردانده می‌شود.'}><Input disabled value={toman(r.amount)} /></Field></div></>
-            : <p className="rounded-md bg-neutral-bg px-3 py-2 text-12 text-t2">{r.status === 'return.awaiting_customer' ? 'منتظر ارسال کالا توسط مشتری هستیم. برچسب مرجوعی برای او ارسال شده است.' : r.status === 'return.rejected' ? 'مهلت مرجوعی تمام شده بود؛ درخواست رد شد.' : 'بازرسی انجام شده است.'}</p>}
+            : <p className="rounded-md bg-neutral-bg px-3 py-2 text-12 text-t2">{r.status === 'return.awaiting_customer' ? 'منتظر ارسال کالا توسط مشتری هستیم. برچسب مرجوعی برای او ارسال شده است.' : 'بازرسی انجام شده است. دلیل‌ها پایین همین پنجره است.'}</p>}
+          <ReasonLog kind="return" refId={r.id} />
         </div>}
       </Modal>
+      <Drawer open={!!w} onClose={() => setWOpen(null)} width={520} title={w ? <span className="flex items-center gap-2">گارانتی<CopyId v={w.code} /><StatusBadge s={w.status} /></span> : ''}>
+        {w && <div className="space-y-4">
+          <Row k="مشتری">{customer(w.customerId).name}</Row><Row k="کالا">{product(unit(w.unitId)?.productId ?? '')?.title ?? w.unitId}</Row><Row k="شرح مشکل">{w.issue}</Row><Row k="نوع">{w.type} · {fa(w.months)} ماه</Row><Row k="مسئول هزینه">{w.owner}</Row>
+          <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setW(w.id, 'warranty.approved', 'تأیید شد، منتظر ارسال کالا')}>تأیید</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.repairing', 'در حال تعمیر')}>در حال تعمیر</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.replaced', 'کالا تعویض شد')}>تعویض</Button><Button size="sm" onClick={() => setW(w.id, 'warranty.pending', 'نیازمند اصلاح یا مدارک', true)}>درخواست اصلاح</Button><Button size="sm" variant="danger" onClick={() => setW(w.id, 'warranty.rejected', 'رد درخواست', true)}>رد با دلیل</Button></div>
+          <ReasonLog kind="warranty" refId={w.id} />
+        </div>}
+      </Drawer>
     </Page>
   )
 }

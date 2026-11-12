@@ -7,6 +7,7 @@ import { Drawer, toast } from '@/shared/ui/overlay'
 import { mutate, useDB, useSession } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
 import { CourierLabel, Invoice, Manifest, PickList, PickupReceipt, PostLabel, QCSheet, ReturnForm, WarrantyCard, type DocOpts } from './docs'
+import { useQuickChips } from '../pages/_shared'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
@@ -25,6 +26,7 @@ const DEF: DocOpts = { font: 1, margin: 10, footer: '', seal: true, hide: [] }
 
 export function PrintCenter() {
   const d = useDB(); const s0 = useSession(); const nav = useNavigate(); const [sp, setSp] = useSearchParams()
+  const qc = useQuickChips()
   const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, order: o })))
   const docId = sp.get('doc') ?? (sp.get('ship') ? 'post' : 'invoice'); const doc = DOCS.find((x) => x.id === docId) ?? DOCS[0]
   const orderId = sp.get('orders')?.split(',')[0] ?? ships.find((s) => s.id === sp.get('ship'))?.order.id ?? 'GH-10458'
@@ -55,8 +57,8 @@ export function PrintCenter() {
         <div className="no-print space-y-4">
           <Card title="سند"><ul className="space-y-0.5">{DOCS.map((x) => <li key={x.id}><button onClick={() => { if (x.id === 'labels') return nav('/admin/labels'); go({ doc: x.id }); setPaper(x.papers[0]) }} className={cx('flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-right text-13 transition-colors', x.id === doc.id ? 'bg-brand-tint font-semibold text-brand' : 'hover:bg-neutral-bg')}><FileText size={14} />{x.label}</button></li>)}</ul></Card>
           <Card title="منبع"><div className="space-y-3">
-            {doc.src === 'order' && <Field label="سفارش"><Select value={order.id} onChange={(v) => go({ orders: v })} options={d.orders.map((o) => [o.id, `${o.id} · ${d.customers.find((c) => c.id === o.customerId)?.name}${o.buyer === 'legal' ? ' (حقوقی)' : ''}`])} /></Field>}
-            {doc.src === 'ship' && <Field label="مرسوله"><Select value={ship.id} onChange={(v) => go({ ship: v })} options={ships.map((s) => [s.id, `${s.id} · ${s.method}`])} /></Field>}
+            {doc.src === 'order' && <Field label="سفارش"><Select chips={qc.orders} value={order.id} onChange={(v) => go({ orders: v })} options={d.orders.map((o) => [o.id, `${o.id} · ${d.customers.find((c) => c.id === o.customerId)?.name}${o.buyer === 'legal' ? ' (حقوقی)' : ''}`])} /></Field>}
+            {doc.src === 'ship' && <Field label="مرسوله"><Select chips={qc.ships} value={ship.id} onChange={(v) => go({ ship: v })} options={ships.map((s) => [s.id, `${s.id} · ${s.method}`])} /></Field>}
             {doc.src === 'unit' && <Field label="واحد"><Select value={unitId} onChange={(v) => go({ unit: v })} options={d.units.map((u) => [u.id, `${u.code} · ${d.products.find((p) => p.id === u.productId)?.en}`])} /></Field>}
             {doc.src === 'ret' && <Field label="مرجوعی"><Select value={retId} onChange={(v) => go({ ret: v })} options={d.returns.map((r) => [r.id, `${r.id} · ${r.reason}`])} /></Field>}
             {doc.src === 'batch' && <p className="text-12 text-t2">{fa(batch.length)} مرسوله {doc.id === 'pick' ? 'منتظر جمع‌آوری در انبار تهران' : 'پستی آمادهٔ تحویل'} در این سند می‌آید.</p>}

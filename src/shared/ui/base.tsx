@@ -1,5 +1,6 @@
-import { useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
-import { Check, Copy, Eye, Inbox, Lock, RotateCcw, Sparkles, TriangleAlert, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import { createPortal } from 'react-dom'
+import { Check, ChevronDown, Copy, Eye, Inbox, Lock, RotateCcw, Search, Sparkles, TriangleAlert, Loader2 } from 'lucide-react'
 import { st, type Tone } from '../data/statuses'
 import { fa, mask } from '../lib/fa'
 import { mutate, setSession, useSession } from '../lib/store'
@@ -73,11 +74,42 @@ const withW = (c?: string) => cx(inputBase, /(^|\s)(w-|min-w-|max-w-|flex-1)/.te
 const inputBase = 'ctl h-9 rounded-md border border-line bg-surface px-3 text-13 text-t1 placeholder:font-sans placeholder:text-t3 focus:border-brand focus:outline-none disabled:opacity-60'
 export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(withW(p.className), p.className)} />
 export const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(withW(p.className), 'h-auto py-2 leading-6', p.className)} />
-export function Select({ value, onChange, options, className }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[]; className?: string }) {
+export type QuickChip = { label: string; test: (value: string, label: string) => boolean }
+/** منوی کشویی با جست‌وجو و فیلتر سریع داخل خود منو (قانون سراسری پنل: هیچ دراپ‌داونی بدون جست‌وجو نیست) */
+export function Select({ value, onChange, options, className, chips, placeholder = 'انتخاب کنید', label }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[]; className?: string; chips?: QuickChip[]; placeholder?: string; label?: string }) {
+  const opts = options.map((o) => (Array.isArray(o) ? o : [o, o]) as [string, string])
+  const [open, setOpen] = useState(false); const [q, setQ] = useState(''); const [chip, setChip] = useState(-1); const [hi, setHi] = useState(0)
+  const btn = useRef<HTMLButtonElement>(null); const [pos, setPos] = useState({ top: 0, left: 0, width: 0, up: false })
+  const cur = opts.find(([v]) => v === value)
+  const norm = (t: string) => t.toLowerCase().replace(/[ي]/g, 'ی').replace(/[ك]/g, 'ک').replace(/\u200c/g, ' ')
+  const list = opts.filter(([v, l]) => (!q || norm(`${l} ${v}`).includes(norm(q))) && (chip < 0 || !chips || chips[chip].test(v, l)))
+  const place = () => { const r = btn.current!.getBoundingClientRect(); const up = window.innerHeight - r.bottom < 300 && r.top > 300; setPos({ top: up ? r.top : r.bottom, left: r.left, width: Math.max(r.width, 220), up }) }
+  useEffect(() => { if (!open) return; const close = () => setOpen(false); window.addEventListener('scroll', close, true); window.addEventListener('resize', close); return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) } }, [open])
+  const pick = (v: string) => { onChange(v); setOpen(false); setQ(''); btn.current?.focus() }
+  const key = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(list.length - 1, h + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(0, h - 1)) }
+    else if (e.key === 'Enter') { e.preventDefault(); if (list[hi]) pick(list[hi][0]) }
+    else if (e.key === 'Escape') { setOpen(false); btn.current?.focus() }
+  }
+  const searchable = opts.length > 5 || !!chips
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={cx(withW(className), 'pe-8', className)}>
-      {options.map((o) => { const [v, l] = Array.isArray(o) ? o : [o, o]; return <option key={v} value={v}>{l}</option> })}
-    </select>
+    <>
+      <button ref={btn} type="button" role="combobox" aria-expanded={open} aria-haspopup="listbox" aria-label={label} title={cur?.[1]}
+        onClick={() => { place(); setOpen((o) => !o); setHi(Math.max(0, list.findIndex(([v]) => v === value))) }}
+        onKeyDown={(e) => { if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); place(); setOpen(true) } else if (open) key(e) }}
+        className={cx(withW(className), 'flex items-center justify-between gap-2 text-right', className)}>
+        <span className={cx('truncate', !cur && 'text-t3')}>{cur?.[1] ?? placeholder}</span><ChevronDown size={14} className={cx('shrink-0 text-t3 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && createPortal(<>
+        <div className="fixed inset-0 z-[80]" onClick={() => setOpen(false)} />
+        <div role="listbox" className="anim-pop fixed z-[81] overflow-hidden rounded-xl border border-line bg-surface shadow-float" style={{ left: pos.left, width: pos.width, ...(pos.up ? { bottom: window.innerHeight - pos.top + 4 } : { top: pos.top + 4 }) }} onKeyDown={key}>
+          {searchable && <div className="border-b border-line p-2"><div className="relative"><Search size={14} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-t3" /><input autoFocus aria-label="جست‌وجو در گزینه‌ها" value={q} onChange={(e) => { setQ(e.target.value); setHi(0) }} placeholder="جست‌وجو…" className="h-9 w-full rounded-lg border border-line bg-surface-2 pr-8 pl-2 text-13 outline-none focus:border-brand" /></div>
+            {chips && <div className="mt-2 flex flex-wrap gap-1">{chips.map((c, i) => <button key={c.label} type="button" onClick={() => { setChip(chip === i ? -1 : i); setHi(0) }} className={cx('rounded-full border px-2 py-0.5 text-11', chip === i ? 'border-transparent bg-brand-solid text-white' : 'border-line text-t2 hover:border-brand')}>{c.label}</button>)}</div>}</div>}
+          <ul className="max-h-64 overflow-y-auto p-1">{list.length === 0 ? <li className="px-3 py-3 text-center text-12 text-t3">موردی پیدا نشد.</li> : list.map(([v, l], i) => <li key={v}><button type="button" role="option" aria-selected={v === value} onMouseEnter={() => setHi(i)} onClick={() => pick(v)} className={cx('flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-right text-13', i === hi && 'bg-neutral-bg', v === value && 'font-semibold text-brand')}><span className="truncate">{l}</span>{v === value && <Check size={14} />}</button></li>)}</ul>
+          {searchable && <p className="border-t border-line px-3 py-1.5 text-11 text-t3">{list.length.toLocaleString('fa-IR')} از {opts.length.toLocaleString('fa-IR')} گزینه</p>}
+        </div></>, document.body)}
+    </>
   )
 }
 export function Toggle({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
@@ -149,10 +181,14 @@ export const Avatar = ({ name, size = 28 }: { name: string; size?: number }) => 
 /** شناسه، سریال و کد: قلم هم‌عرض و کپی با یک کلیک (بخش ۱۲) */
 export function CopyId({ v }: { v: string }) {
   const [ok, setOk] = useState(false)
+  // کلیک روی شناسه: نمای سریع همان مورد (اگر شناخته شود)؛ کلیک روی آیکون: کپی
+  const open = (e: React.MouseEvent) => { const ev = new CustomEvent('quickview', { detail: { ref: v, handled: false } }); window.dispatchEvent(ev); if ((ev.detail as { handled: boolean }).handled) e.stopPropagation(); else copy(e) }
+  const copy = (e: React.MouseEvent) => { e.stopPropagation(); navigator.clipboard?.writeText(v); setOk(true); setTimeout(() => setOk(false), 1200) }
   return (
-    <button title="کپی" onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(v); setOk(true); setTimeout(() => setOk(false), 1200) }} className="ltr group inline-flex items-center gap-1 font-mono text-12 text-t1 hover:text-brand">
-      {v}{ok ? <Check size={11} className="text-success" /> : <Copy size={11} className="opacity-0 group-hover:opacity-60" />}
-    </button>
+    <span className="ltr group inline-flex items-center gap-1 font-mono text-12 text-t1">
+      <button type="button" title="جزئیات" onClick={open} className="hover:text-brand hover:underline">{v}</button>
+      <button type="button" title="کپی" aria-label={`کپی ${v}`} onClick={copy} className="opacity-40 hover:opacity-100 group-hover:opacity-70">{ok ? <Check size={11} className="text-success" /> : <Copy size={11} />}</button>
+    </span>
   )
 }
 /** دادهٔ حساس: پیش‌فرض پوشیده؛ آشکارسازی در لاگ ممیزی ثبت می‌شود (بخش ۲) */

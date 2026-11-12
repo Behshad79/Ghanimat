@@ -10,6 +10,8 @@ import { Returns, Shipping, Warehouse } from './admin/pages/Ops'
 import { PrintCenter } from './admin/print/PrintCenter'
 import { Customers, Reviews, Support } from './admin/pages/People'
 import { Channels, Finance, Pricing } from './admin/pages/Revenue'
+import { ReasonHost } from './shared/ui/reason'
+import { QuickHost } from './shared/ui/quickview'
 import { SiteEditor } from './admin/site/SiteEditor'
 import { CustomerRequests } from './admin/cx/Requests'
 import { CxSettingsPage } from './admin/cx/CxSettings'
@@ -79,6 +81,8 @@ export function App() {
       </Routes>
       <ToastHost />
       <ConfirmHost />
+      <ReasonHost />
+      <QuickHost />
     </>
   )
 }

@@ -1,3 +1,4 @@
+import { QuickText } from './quickview'
 import { useMemo, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, Download, Printer, Search, SearchX } from 'lucide-react'
 import { Button, cx, EmptyState, Input } from './base'
@@ -102,7 +103,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
                 {pageRows.map((r, i) => { const id = rowKey(r); return (
                   <tr key={id} onClick={() => rowClick(r)} className={cx('border-b border-line last:border-0 transition-colors', 'cursor-pointer hover:bg-surface-2', sel.includes(id) && 'bg-brand-tint/60', flashId === id && 'row-flash')} style={{ height: 'var(--row-h)' }}>
                     {bulk && <td className="px-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label="انتخاب ردیف" checked={sel.includes(id)} onChange={() => {}} onClick={(e) => toggle(id, i, e.shiftKey)} /></td>}
-                    {shown.map((c) => <td key={c.key} className={cx('px-3', c.wrap ? 'min-w-48' : 'whitespace-nowrap', c.align === 'left' && 'tnum text-left')}>{c.render(r)}</td>)}
+                    {shown.map((c) => <td key={c.key} className={cx('px-3', c.wrap ? 'min-w-48' : 'whitespace-nowrap', c.align === 'left' && 'tnum text-left')}>{linky(c.render(r))}</td>)}
                     {actions && <td className="sticky left-0 bg-surface px-2" onClick={(e) => e.stopPropagation()}><RowMenu items={actions(r)} /></td>}
                   </tr>
                 ) })}
@@ -113,7 +114,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
           <ul className="divide-y divide-line md:hidden">
             {pageRows.map((r) => (
               <li key={rowKey(r)} onClick={() => rowClick(r)} className="relative cursor-pointer flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2.5 active:bg-surface-2">
-                {shown.filter((c) => !c.hideMobile).slice(0, 5).map((c, i) => <div key={c.key} className={cx(i === 0 && 'w-full font-medium', i === 0 && actions && 'pl-9', i > 0 && 'text-12 text-t2')}>{c.render(r)}</div>)}
+                {shown.filter((c) => !c.hideMobile).slice(0, 5).map((c, i) => <div key={c.key} className={cx(i === 0 && 'w-full font-medium', i === 0 && actions && 'pl-9', i > 0 && 'text-12 text-t2')}>{linky(c.render(r))}</div>)}
                 {actions && <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}><RowMenu items={actions(r)} /></div>}
               </li>
             ))}
@@ -144,3 +145,6 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
     </div>
   )
 }
+
+/** قانون «همه‌چیز قابل کلیک»: متن سادهٔ هر سلول اگر سفارش، مشتری، کالا، واحد یا همکار باشد، نمای سریع باز می‌کند */
+function linky(x: ReactNode): ReactNode { return typeof x === 'string' || typeof x === 'number' ? <QuickText v={String(x)}>{x}</QuickText> : x }

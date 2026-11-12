@@ -245,6 +245,10 @@ export const makeSeed = () => ({
   docSettings: {} as Record<string, { paper?: string; font?: number; margin?: number; footer?: string; seal?: boolean; hide?: string[] }>,
   codeFormat: { product: 'GH-P-', unit: 'GH-U-', pDigits: 6, uDigits: 7, nextProduct: 110, nextUnit: 20480 },
   trash: [] as TrashItem[],
+  reasons: [
+    { id: 'rs1', kind: 'return', ref: 'RT-838745', status: 'رد مرجوعی', reason: 'سریال کالای برگشتی با واحد ارسالی مطابقت ندارد؛ عکس‌های پیش از ارسال پیوست شد.', visible: true, by: 'مریم', at: ago(60 * 30) },
+    { id: 'rs2', kind: 'warranty', ref: 'GR-1840', status: 'نیازمند اصلاح یا مدارک', reason: 'برای بررسی، تصویر کالا و برچسب جعبه را پیوست کنید.', visible: true, by: 'نیما', at: ago(60 * 5) },
+  ] as { id: string; kind: string; ref: string; status: string; reason: string; visible: boolean; by: string; at: string; editedAt?: string }[],
   site: makeSite(),
   sitePublished: makeSite(),
   siteVersions: [{ id: 'v1', at: ago(60 * 24 * 3), by: 'بهراد', note: 'نسخهٔ اولیهٔ سایت' }] as { id: string; at: string; by: string; note: string; data?: ReturnType<typeof makeSite> }[],

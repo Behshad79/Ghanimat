@@ -2,7 +2,8 @@ import { Bell, Check, CheckCheck, CircleX, MessageSquareReply, PackageSearch, Se
 import { Badge, Button, Tabs } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
 import { EntityManager, type EField } from '@/shared/ui/entity'
-import { confirm, toast } from '@/shared/ui/overlay'
+import { toast } from '@/shared/ui/overlay'
+import { askReason } from '@/shared/ui/reason'
 import { mutate, notify, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { Rec } from '@/shared/data/entities'
@@ -59,13 +60,13 @@ export function CustomerRequests() {
         fields={[{ k: 'order', label: 'سفارش', ltr: true, required: true }, { k: 'customer', label: 'مشتری' }, { k: 'scope', label: 'دامنه', type: 'select', options: ['کل سفارش', '۱ کالا', 'چند کالا'] }, { k: 'reason', label: 'دلیل' }, { k: 'refundTo', label: 'بازگشت وجه به', type: 'select', options: ['کیف پول', 'کارت بانکی'] }, { k: 'status', label: 'وضعیت', type: 'select', options: ['در حال بررسی', 'تأییدشده', 'تأیید نشد', 'بازگشت وجه ناموفق'], render: (r) => <St v={r.status} /> }, when]}
         extraActions={(r) => [
           { label: 'تأیید لغو و بازگشت وجه', icon: <CheckCheck size={14} />, disabled: r.status !== 'در حال بررسی', onClick: () => { setRow('cancelRequests', r.id, { status: 'تأییدشده' }, 'تأیید درخواست لغو'); toast(`لغو ${r.order} تأیید شد؛ وجه به ${r.refundTo} برمی‌گردد.`) } },
-          { label: 'رد درخواست لغو', icon: <CircleX size={14} />, danger: true, disabled: r.status !== 'در حال بررسی', onClick: async () => { if (await confirm({ title: `لغو ${r.order} رد شود؟`, body: 'سفارش ارسال می‌شود و دلیل رد برای مشتری فرستاده می‌شود.', danger: true, confirm: 'رد درخواست' })) setRow('cancelRequests', r.id, { status: 'تأیید نشد' }, 'رد درخواست لغو') } },
+          { label: 'رد درخواست لغو', icon: <CircleX size={14} />, danger: true, disabled: r.status !== 'در حال بررسی', onClick: async () => { const why = await askReason({ kind: 'cancel', ref: r.id, status: 'تأیید نشد', title: `دلیل رد درخواست لغو ${r.order}` }); if (why) setRow('cancelRequests', r.id, { status: 'تأیید نشد', reason: why }, 'رد درخواست لغو') } },
         ]} />}
       {tab === 'withdraw' && <EntityManager ek="withdrawals" kind="برداشت" titleKey="id" emptyDesc="درخواست‌های برداشت از کیف پول مشتری."
         fields={[{ k: 'customer', label: 'مشتری', required: true }, { k: 'amount', label: 'مبلغ', type: 'money', required: true }, { k: 'card', label: 'کارت', ltr: true, table: false }, { k: 'iban', label: 'شبا', ltr: true }, { k: 'status', label: 'وضعیت', type: 'select', options: ['در انتظار', 'واریز شد', 'رد شد'], render: (r) => <St v={r.status} /> }, { k: 'reason', label: 'دلیل رد', table: false }, when]}
         extraActions={(r) => [
           { label: 'واریز شد', icon: <Check size={14} />, disabled: r.status !== 'در انتظار', onClick: () => { setRow('withdrawals', r.id, { status: 'واریز شد' }, 'تأیید برداشت از کیف پول'); toast(`${toman(r.amount)} به شبای ${r.customer} واریز شد.`) } },
-          { label: 'رد درخواست', icon: <CircleX size={14} />, danger: true, disabled: r.status !== 'در انتظار', onClick: () => { setRow('withdrawals', r.id, { status: 'رد شد', reason: 'مغایرت اطلاعات حساب' }, 'رد برداشت از کیف پول'); toast('درخواست رد شد و مبلغ به کیف پول برگشت.') } },
+          { label: 'رد درخواست', icon: <CircleX size={14} />, danger: true, disabled: r.status !== 'در انتظار', onClick: async () => { const why = await askReason({ kind: 'withdrawal', ref: r.id, status: 'رد شد', title: `دلیل رد برداشت ${r.id}` }); if (!why) return; setRow('withdrawals', r.id, { status: 'رد شد', reason: why }, 'رد برداشت از کیف پول'); toast('درخواست رد شد، مبلغ به کیف پول برگشت و دلیل برای مشتری نمایش داده می‌شود.') } },
         ]} />}
       {tab === 'bank' && <EntityManager ek="bankAccounts" kind="حساب بانکی" titleKey="customer" emptyDesc="کارت و شبای ثبت‌شده با استعلام مالکیت."
         fields={[{ k: 'customer', label: 'مشتری', required: true }, { k: 'card', label: 'کارت', ltr: true }, { k: 'iban', label: 'شبا', ltr: true }, { k: 'owner', label: 'صاحب حساب (استعلام)' }, { k: 'status', label: 'وضعیت', type: 'select', options: ['تأییدشده', 'در حال استعلام', 'کارت به نام کاربر نیست', 'شبا به نام کاربر نیست', 'کارت و شبا برای یک حساب نیستند', 'استعلام انجام نشد'], render: (r) => <St v={r.status} /> }, when]}

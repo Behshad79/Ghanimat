@@ -23,7 +23,7 @@ import { makePromos } from './promos'
 import { makePickups } from './pickups'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
-export const makeSeed = () => ({
+const makeSeedBase = () => ({
   products: ([
     { id: 'p1', image: './products/p1-500.webp', imagePos: '50% 62%', title: 'گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت', en: 'Apple iPhone 16 Pro 256GB', brand: 'اپل', category: 'گوشی موبایل', status: 'product.published', mode: 'serial', priceNew: 132690000, rating: 4.7, reviews: 38, views: 4210, cvr: 2.4, health: 92, fastEligible: true, seller: 'غنیمت', torob: true },
     { id: 'p2', image: './products/p2-500.webp', title: 'هدست بلوتوثی اپل AirPods Max ۲۰۲۴', en: 'Apple AirPods Max 2024', brand: 'اپل', category: 'هدفون', status: 'product.published', mode: 'serial', priceNew: 20000000, compareAt: 18750000, rating: 4.5, reviews: 21, views: 2890, cvr: 3.1, health: 88, fastEligible: true, seller: 'غنیمت', torob: true },
@@ -284,4 +284,29 @@ export const makeSeed = () => ({
     { id: 'mv4', at: ago(60 * 26), who: 'نیما', kind: 'خروج', unit: 'GU-20471', product: 'p2', from: 'B-01', to: 'بسته‌بندی', read: true },
   ] as { id: string; at: string; who: string; kind: string; unit: string; product: string; from: string; to: string; qty?: number; read: boolean }[],
 })
-export type DB = ReturnType<typeof makeSeed>
+/** سفارش‌های نمونهٔ شبکه‌های اجتماعی (دایرکت اینستاگرام، واتساپ، تلگرام، بله، تلفن، حضوری) با فاکتور و رسید کارت به کارت */
+export const makeSeed = () => {
+  const s = makeSeedBase(); const base = s.orders.find((o) => o.id === 'GH-10458') ?? s.orders[0]
+  const rows: [string, string, string, string, string, string, number, string][] = [
+    ['GH-10490', 'c2', 'اینستاگرام دایرکت', '@negar.amini', 'کارت به کارت', 'p2', 15000000, 'order.paid'],
+    ['GH-10491', 'c3', 'واتساپ', '0912-000-0003', 'لینک پرداخت', 'p9', 1500000, 'order.awaiting_payment'],
+    ['GH-10492', 'c5', 'تلگرام', '@mahsa_t', 'کارت به کارت', 'p4', 38900000, 'order.awaiting_payment'],
+    ['GH-10493', 'c6', 'بله', '0935-000-0006', 'پرداخت در محل', 'p5', 21900000, 'order.preparing'],
+    ['GH-10494', 'c7', 'تلفنی', '021-تماس ورودی', 'لینک پرداخت', 'p8', 8200000, 'order.shipped'],
+    ['GH-10495', 'c1', 'حضوری در شعبه', 'شعبهٔ ونک', 'پرداخت حضوری (کارت‌خوان)', 'p9', 3000000, 'order.delivered'],
+  ]
+  rows.forEach(([id, cid, ch, handle, pay, pid, total, status], i) => {
+    const o = structuredClone(base)
+    Object.assign(o, { id, customerId: cid, channel: ch, pay, total, discount: 0, status, buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - (i + 1) * 95 * 6e4).toISOString(), tags: [ch, `شناسه: ${handle}`] })
+    o.shipments = [{ ...structuredClone(base.shipments[0]), id: `${id}-1`, status: status === 'order.delivered' ? 'ship.delivered' : status === 'order.shipped' ? 'ship.in_transit' : 'ship.pending', method: ch === 'حضوری در شعبه' ? 'دریافت حضوری از شعبه' : 'پست پیشتاز', packPhotos: [], courier: null, items: [{ productId: pid, unitId: '', qty: 1, price: total }] }]
+    s.orders.unshift(o)
+    s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
+  })
+  const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
+  s.bank.receipts.unshift(
+    { id: 'RC-310', orderId: 'GH-10490', customer: 'نگار امینی', amount: 15000000, last4: '4410', ref: '784512', time: '14:20', channel: 'اینستاگرام دایرکت', status: 'تطبیق شد', note: 'CR-1', at: s.orders[5].createdAt },
+    { id: 'RC-311', orderId: 'GH-10492', customer: 'مهسا توکلی', amount: 38900000, last4: '2290', ref: '553311', time: '16:45', channel: 'تلگرام', status: 'در انتظار تطبیق', note: '', at: s.orders[3].createdAt },
+  )
+  return s
+}
+export type DB = ReturnType<typeof makeSeedBase>

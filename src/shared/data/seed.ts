@@ -20,6 +20,7 @@ import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
 import { makePromos } from './promos'
+import { makePickups } from './pickups'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -253,6 +254,8 @@ export const makeSeed = () => ({
   theme: makeTheme(),
   hub: makeHub(),
   promos: makePromos(),
+  pickups: makePickups(),
+  docOverrides: {} as Record<string, { html: string; at: string }>,
   newsletter: makeNewsletter(),
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [

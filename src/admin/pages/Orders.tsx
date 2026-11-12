@@ -9,6 +9,7 @@ import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress } from '../orders/Progress'
 import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
+import { PickupDesk } from '../orders/PickupDesk'
 import { PackPhotos } from '../shared/PackPhotos'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -24,6 +25,7 @@ const TABS: [string, string, (o: Order) => boolean][] = [
   ['preparing', 'آماده‌سازی', (o) => ['order.paid', 'order.preparing'].includes(o.status)],
   ['shipped', 'ارسال‌شده', (o) => o.status === 'order.shipped'],
   ['delivered', 'تحویل‌شده', (o) => o.status === 'order.delivered'],
+  ['pickup', 'دریافت حضوری', () => false],
   ['cancelled', 'لغو و مرجوعی', (o) => ['order.cancelled', 'order.returned'].includes(o.status)],
   ['suspicious', 'مشکوک', (o) => o.status === 'order.suspicious'],
 ]
@@ -48,11 +50,12 @@ export function Orders() {
   return (
     <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>}
       empty={{ title: 'هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های سایت و کانال‌های فروش اینجا نمایش داده می‌شوند. برای سفارش تلفنی یا حضوری، سفارش دستی ثبت کنید.', action: <Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button> }}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : d.orders.filter(f).length }))} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : d.orders.filter(f).length }))} />}>
       {tab === 'all' && <OrdersOverview />}
-      <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>
-      {view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['تحویل به پیک/پست', ['order.shipped']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
-      {view === 'list' && <DataTable name="سفارش‌ها" rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
+      {tab === 'pickup' && <PickupDesk />}
+      {tab !== 'pickup' && <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>}
+      {tab !== 'pickup' && view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['تحویل به پیک/پست', ['order.shipped']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
+      {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
         search={(o) => `${o.id} ${customer(o.customerId).name} ${customer(o.customerId).mobile} ${o.pay}`}
         filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
         empty={{ title: 'سفارشی در این نما نیست.', desc: 'نمای دیگری را انتخاب کنید یا فیلتر انبار را بردارید.' }}

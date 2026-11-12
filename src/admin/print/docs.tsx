@@ -67,7 +67,7 @@ export function Invoice({ o, opts }: { o: Order; opts: DocOpts }) {
         <tbody>{rows.map((r, i) => <tr key={i}><Td>{fa(i + 1)}</Td><Td><span className="ltr font-mono text-[7.5pt]">{r.code}</span></Td><Td l>{r.desc}</Td><Td>{fa(r.qty)}</Td><Td>{rial(r.unit)}</Td><Td>{rial(r.unit * r.qty)}</Td><Td>{fa(0)}</Td><Td>{rial(r.unit * r.qty)}</Td><Td>{vat ? rial(Math.round((r.unit * r.qty * vat) / 100)) : <span className="text-[#8a90a2]">[طبق نرخ مصوب]</span>}</Td><Td>{rial(r.unit * r.qty + (vat ? Math.round((r.unit * r.qty * vat) / 100) : 0))}</Td></tr>)}</tbody>
       </table>
       <div className="mt-[3mm] grid grid-cols-[1.1fr_1fr] gap-[3mm] text-[8.5pt]">
-        {show(opts, 'paymentInfo') && <div className="space-y-[1.6mm] border border-[#9aa0b4] p-[3mm]">{[['معادل', `${num(payable)} تومان`], ['روش پرداخت', /اسنپ|ترب|دیجی|تارا/.test(o.pay) ? `اقساطی — پرداخت با ${o.pay}` : o.pay.includes('کیف') ? `ترکیبی — ${o.pay}` : `نقدی — ${o.pay}`], ['وضعیت', o.status === 'order.delivered' ? 'پرداخت‌شده و تحویل‌شده' : 'پرداخت‌شده'], ['نوع صورت‌حساب', isLegal ? 'الکترونیکی — نوع اول (با مشخصات خریدار)' : 'الکترونیکی — نوع دوم (بدون مشخصات کامل خریدار)'], ['نوع خریدار', isLegal ? 'حقوقی' : 'حقیقی']].map(([k, v]) => <p key={k}><span className="text-[#5a5e78]">{k}:</span> <b>{v}</b></p>)}</div>}
+        {show(opts, 'paymentInfo') && <div className="space-y-[1.6mm] border border-[#9aa0b4] p-[3mm]">{[['معادل', `${num(payable)} تومان`], ['روش پرداخت', /اسنپ|ترب|دیجی|تارا/.test(o.pay) ? `اقساطی — پرداخت با ${o.pay}` : o.pay.includes('کیف') ? `ترکیبی — ${o.pay}` : o.pay === 'کارت به کارت' ? `کارت به کارت — پیگیری ${d.bank.receipts.find((r) => r.orderId === o.id)?.ref || '—'}` : `نقدی — ${o.pay}`], ...(o.channel && !['سایت', 'ترب', 'چت سایت'].includes(o.channel) ? [['کانال فروش', `${o.channel}${(o.tags ?? []).find((t) => t.startsWith('شناسه:')) ? ` · ${(o.tags ?? []).find((t) => t.startsWith('شناسه:'))!.replace('شناسه: ', '')}` : ''}`]] : []), ['وضعیت', o.status === 'order.delivered' ? 'پرداخت‌شده و تحویل‌شده' : 'پرداخت‌شده'], ['نوع صورت‌حساب', isLegal ? 'الکترونیکی — نوع اول (با مشخصات خریدار)' : 'الکترونیکی — نوع دوم (بدون مشخصات کامل خریدار)'], ['نوع خریدار', isLegal ? 'حقوقی' : 'حقیقی']].map(([k, v]) => <p key={k}><span className="text-[#5a5e78]">{k}:</span> <b>{v}</b></p>)}</div>}
         <table className="border-collapse self-start"><tbody>{[['جمع کل (ریال)', rial(gross)], ['تخفیف (ریال)', <span className="text-[#12733f]">-{rial(o.discount)}</span>], ['مالیات و عوارض ارزش افزوده (ریال)', vat ? rial(tax) : <span className="text-[#8a90a2]">[طبق نرخ مصوب]</span>], ['مبلغ قابل پرداخت با احتساب مالیات (ریال)', <b className="text-[11pt] text-[#0000ff]">{rial(payable)}</b>]].map(([k, v], i) => <tr key={i}><td className={cx('border border-[#9aa0b4] p-[2mm] text-center font-bold', i === 3 ? 'bg-[#eef0ff]' : 'bg-[#f1f2f7]')}>{k}</td><td className={cx('tnum border border-[#9aa0b4] p-[2mm] text-center font-bold', i === 3 && 'bg-[#eef0ff]')}>{v}</td></tr>)}</tbody></table>
       </div>
       <div className="mt-[3mm] grid min-h-[44mm] grid-cols-2 border border-[#9aa0b4] p-[3mm] text-[8.5pt]">
@@ -92,7 +92,7 @@ export function PostLabel({ o, s, opts, paper }: { o: Order; s: Shipment; opts: 
   // قانون ادارهٔ پست: A5 افقی؛ فرستنده بالا سمت چپ، گیرنده پایین سمت راست
   if (paper === 'A5 افقی') return (
     <Sheet w="210mm" h="148mm" o={{ ...opts, margin: Math.min(opts.margin, 5) }}>
-      <div dir="ltr" className="grid h-full grid-cols-2 grid-rows-[auto_1fr] gap-[3mm] rounded-[3mm] border-[0.9mm] border-double border-black p-[3mm]" style={{ minHeight: `calc(148mm - ${Math.min(opts.margin, 5) * 2}mm)` }}>
+      <div dir="ltr" className="grid h-full grid-cols-[0.82fr_1.18fr] grid-rows-[auto_1fr] gap-[3mm] rounded-[3mm] border-[0.9mm] border-double border-black p-[3mm]" style={{ minHeight: `calc(148mm - ${Math.min(opts.margin, 5) * 2}mm)` }}>
         <div dir="rtl" className="space-y-[1.2mm] rounded-[2mm] border-[0.4mm] border-black p-[2.4mm] text-[8pt]">
           <p className="text-[9pt] font-black">فرستنده — FROM</p>
           <L k="فرستنده" v={`${d.seller.brand} · ${w.name}`} />
@@ -110,12 +110,12 @@ export function PostLabel({ o, s, opts, paper }: { o: Order; s: Shipment; opts: 
           {show(opts, 'contents') && <span>محتوا: <b>کالای الکترونیک</b></span>}<span>تاریخ: <b>{jd(new Date().toISOString())}</b></span>
           {show(opts, 'fragile') && <span className="mt-[0.6mm] w-fit border border-black px-[1.6mm] font-black">⚠ شکستنی — با احتیاط حمل شود</span>}
         </div>
-        <div dir="rtl" className="space-y-[1.4mm] rounded-[2mm] border-[0.6mm] border-black p-[3mm] text-[9pt]">
-          <p className="text-[10pt] font-black">گیرنده — TO</p>
-          <p className="text-[13pt] font-black">{recipient}</p>
-          <L k="استان و شهر" v={<b>{a?.province}، {a?.city}</b>} />
-          <L k="نشانی" v={[a?.district, a?.street, a?.sub, a?.alley, a?.plaque && `پلاک ${a.plaque}`, a?.floor && `طبقهٔ ${a.floor}`, a?.unit && `واحد ${a.unit}`].filter(Boolean).join('، ')} />
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-[0.6mm]"><span>موبایل: <b className="ltr">{fa(c.mobile)}</b></span><span className="flex items-center gap-1"><b>کد پستی:</b><Boxes v={a?.postal ?? ''} size={3.8} /></span></div>
+        <div dir="rtl" className="space-y-[1.8mm] rounded-[2mm] border-[0.8mm] border-black p-[3.4mm] text-[11.5pt] leading-snug">
+          <p className="text-[11pt] font-black">گیرنده — TO</p>
+          <p className="text-[18pt] font-black leading-tight">{recipient}</p>
+          <p className="text-[14pt] font-black">{a?.province}، {a?.city}</p>
+          <p className="text-[12pt] font-bold leading-relaxed">{[a?.district, a?.street, a?.sub, a?.alley, a?.plaque && `پلاک ${a.plaque}`, a?.floor && `طبقهٔ ${a.floor}`, a?.unit && `واحد ${a.unit}`].filter(Boolean).join('، ')}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-black pt-[1.6mm]"><span className="text-[13pt]">موبایل: <b className="ltr">{fa(c.mobile)}</b></span><span className="flex items-center gap-1 text-[11pt]"><b>کد پستی:</b><Boxes v={a?.postal ?? ''} size={5} /></span></div>
         </div>
       </div>
     </Sheet>

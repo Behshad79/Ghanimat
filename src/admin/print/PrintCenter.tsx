@@ -8,6 +8,7 @@ import { mutate, useDB, useSession } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
 import { CourierLabel, Invoice, Manifest, PickList, PickupReceipt, PostLabel, QCSheet, ReturnForm, WarrantyCard, type DocOpts } from './docs'
 import { useQuickChips } from '../pages/_shared'
+import { EditableDoc } from './EditableDoc'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
@@ -71,6 +72,7 @@ export function PrintCenter() {
         <div className="print-area overflow-auto rounded-xl border border-line bg-neutral-bg p-4 md:p-8">
           {cancelled && <p className="no-print mb-3 rounded-md bg-danger-bg px-3 py-2 text-12 text-danger">این مرسوله لغو شده است؛ چاپ برچسب مسدود است.</p>}
           {d.seller.assumed && ['invoice', 'post', 'warranty', 'return'].includes(doc.id) && <p className="no-print mb-3 flex items-center justify-between gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">اطلاعات فروشنده و انبار هنوز فرضی است.<button className="font-semibold underline" onClick={() => nav('/admin/settings?tab=seller')}>ویرایش در تنظیمات</button></p>}
+          <EditableDoc docKey={`${doc.id}:${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : doc.src === 'ret' ? retId : 'all'}`} label={doc.label}>
           {doc.id === 'invoice' && <Invoice o={order} opts={opts} />}
           {doc.id === 'post' && <PostLabel o={ship.order} s={ship} opts={opts} paper={paper} />}
           {doc.id === 'courier' && <CourierLabel o={ship.order} s={ship} opts={opts} />}
@@ -81,6 +83,7 @@ export function PrintCenter() {
           {doc.id === 'return' && retId && <ReturnForm retId={retId} opts={opts} />}
           {doc.id === 'pickup' && <PickupReceipt o={order} opts={opts} />}
           {doc.id === 'bundle' && <div className="space-y-8"><Invoice o={order} opts={opts} />{order.shipments.map((s) => <div key={s.id}>{/پست|تیپاکس|باربری/.test(s.method) ? <PostLabel o={order} s={s} opts={opts} paper="A6" /> : <CourierLabel o={order} s={s} opts={opts} />}</div>)}{order.shipments.flatMap((s) => s.items.filter((i) => i.unitId)).map((i) => <div key={i.unitId} className="space-y-6"><QCSheet unitId={i.unitId} opts={opts} /><WarrantyCard unitId={i.unitId} opts={opts} /></div>)}</div>}
+          </EditableDoc>
         </div>
       </div>
       <Drawer open={editor} onClose={() => setEditor(false)} title={`ویرایش قالب: ${doc.label}`} footer={<><Button variant="primary" onClick={() => { setEditor(false); toast('قالب ذخیره شد و برای چاپ‌های بعدی هم اعمال می‌شود.') }}>ذخیرهٔ قالب</Button><Button variant="ghost" icon={<RotateCcw size={14} />} onClick={() => { mutate((x) => { delete x.docSettings[doc.id] }); toast('قالب به حالت پیش‌فرض برگشت.') }}>بازگشت به پیش‌فرض</Button></>}>

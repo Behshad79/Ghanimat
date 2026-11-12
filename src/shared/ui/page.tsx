@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, Sparkles, WifiOff } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Sparkles, WifiOff } from 'lucide-react'
 import { CountUp } from './motion'
 import { Button, Card, cx, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
 import { askCopilot, Hint } from './overlay'
@@ -15,13 +15,13 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   module?: string; empty?: { title: string; desc?: string; action?: ReactNode }; back?: string; tabs?: ReactNode
 }) {
   const s = useSession()
-  const nav = useNavigate()
+  const nav = useNavigate(); const loc = useLocation()
   const denied = (module && !can(module, s)) || s.viewState === 'noaccess'
   return (
     <div key={typeof title === 'string' ? title : undefined} className="page-enter mx-auto w-full max-w-[1600px] p-4 md:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          {back && <button onClick={() => nav(back)} className="mb-1 flex items-center gap-0.5 text-12 text-t2 hover:text-brand">بازگشت به فهرست<ChevronLeft size={13} /></button>}
+          {back && <button type="button" onClick={() => (loc.key !== 'default' ? nav(-1) : nav(back))} className="mb-2 inline-flex h-8 items-center gap-1 rounded-full border border-line bg-surface pl-3 pr-2 text-12 font-medium text-t1 transition-colors hover:border-brand/50 hover:text-brand"><ChevronRight size={15} />بازگشت</button>}
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-20 font-bold">{title}</h1>{badge}</div>
           {sub && <p className="mt-0.5 text-13 text-t2">{sub}</p>}
         </div>
@@ -62,7 +62,7 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
           {to && <span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}
         </span>
       </div>
-      <div className="relative mt-3 flex items-center justify-between gap-2"><p className={cx('tnum min-w-0 truncate text-18 font-bold whitespace-nowrap sm:text-24', urgent && t === 'danger' && 'text-danger')} title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>{urgent && <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', t === 'danger' ? 'bg-danger text-white' : 'bg-warning-bg text-warning')}>{t === 'danger' ? 'نیاز به اقدام' : 'پیگیری'}</span>}</div>
+      <div className="relative mt-3 flex items-center justify-between gap-2"><p className={cx('tnum min-w-0 truncate text-18 font-bold whitespace-nowrap sm:text-24', urgent && t === 'danger' && 'text-danger')} title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>{urgent && <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', t === 'danger' ? 'bg-danger-solid text-white' : 'bg-warning-bg text-warning')}>{t === 'danger' ? 'نیاز به اقدام' : 'پیگیری'}</span>}</div>
       <div className="relative mt-2 flex min-h-7 items-end justify-between gap-2">
         {delta !== undefined ? (
           <span className={cx('tnum inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-11 font-medium', featured ? (good ? 'bg-white/15 text-white' : 'bg-[#b3261e] text-white') : good ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>

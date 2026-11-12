@@ -45,7 +45,7 @@ export function DateFilter({ r, set, count, total, noun = 'سفارش' }: { r: D
     <div className="mb-3 rounded-2xl border border-line bg-surface p-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="ml-1 flex items-center gap-1 text-12 font-semibold text-t2"><CalendarDays size={14} />زمان ثبت</span>
-        {PRESETS.map(([k, l]) => <button key={k} type="button" aria-pressed={r.range === k} onClick={() => set({ range: k })} className={cx('h-8 rounded-full border px-3 text-12 transition-colors', r.range === k ? 'border-brand bg-brand text-white' : 'border-line text-t1 hover:border-brand/50')}>{l}</button>)}
+        {PRESETS.map(([k, l]) => <button key={k} type="button" aria-pressed={r.range === k} onClick={() => set({ range: k })} className={cx('h-8 rounded-full border px-3 text-12 transition-colors', r.range === k ? 'border-brand bg-brand-solid text-white' : 'border-line text-t1 hover:border-brand/50')}>{l}</button>)}
         <button type="button" aria-expanded={more} onClick={() => setMore(!more)} className={cx('flex h-8 items-center gap-1 rounded-full border px-3 text-12', more || r.days.length || r.h1 > 0 || r.h2 < 24 ? 'border-brand/50 text-brand' : 'border-line text-t1')}><SlidersHorizontal size={13} />روز هفته و ساعت</button>
         {rangeActive(r) && <Button size="sm" variant="ghost" icon={<X size={12} />} onClick={() => set({ range: 'all', from: '', to: '', days: [], h1: 0, h2: 24 })}>پاک کردن</Button>}
         {count !== undefined && <span className="mr-auto text-12 text-t2">{rangeActive(r) ? <><b className="tnum text-t1">{fa(count)}</b> {noun} از {fa(total ?? 0)} · {rangeLabel(r)}</> : <>{fa(total ?? count)} {noun}</>}</span>}

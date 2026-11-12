@@ -17,6 +17,8 @@ import { makeCxEntities, makeCxSettings } from './cx'
 import { makeJourney } from './journey'
 import { makeDelivery } from './delivery'
 import { BASE_ROLES } from './roles'
+import { makePeople, makePeopleConfig } from './people'
+import { makeVault } from './vault'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -186,6 +188,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

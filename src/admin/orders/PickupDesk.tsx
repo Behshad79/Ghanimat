@@ -81,7 +81,7 @@ export function PickupReceipt({ orderId, customerId, items }: { orderId: string;
     }, { action: p?.receipt ? 'جایگزینی عکس رسید تحویل حضوری' : 'بارگذاری عکس رسید تحویل حضوری', target: orderId })
     toast('عکس رسید امضاشده بایگانی شد.')
   }
-  const picker = (label: string, primary?: boolean) => <label className={cx('inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-12 font-medium', primary ? 'bg-brand text-white' : 'border border-line bg-surface text-t1 hover:bg-neutral-bg')}><Camera size={13} />{label}<input type="file" accept="image/*" capture="environment" className="sr-only" aria-label={label} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = '' }} /></label>
+  const picker = (label: string, primary?: boolean) => <label className={cx('inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-12 font-medium', primary ? 'bg-brand-solid text-white' : 'border border-line bg-surface text-t1 hover:bg-neutral-bg')}><Camera size={13} />{label}<input type="file" accept="image/*" capture="environment" className="sr-only" aria-label={label} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = '' }} /></label>
   return (
     <div className="mb-3 rounded-lg border border-line p-3">
       <p className="mb-2 flex flex-wrap items-center justify-between gap-2 text-12 font-semibold"><span className="flex items-center gap-1.5"><FileSignature size={14} />رسید تحویل حضوری (امضای مشتری)</span>{p?.receipt ? <Badge tone="success">عکس رسید امضاشده بایگانی شد</Badge> : p?.status === 'handed' ? <Badge tone="warning">رسید کاغذی، عکس بارگذاری نشده</Badge> : <Badge>هنوز تحویل نشده</Badge>}</p>

@@ -51,7 +51,7 @@ export function PrintCenter() {
   }
   if (doc.id === 'labels') { nav('/admin/labels', { replace: true }); return null }
   return (
-    <Page title="چاپ و خروجی" module="print" sub={doc.label}
+    <Page title="چاپ و خروجی" module="print" back="/admin/orders" sub={doc.label}
       actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
       primary={<Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc.label.split(' (')[0]}</Button>}>
       <div className="grid gap-4 lg:grid-cols-[290px_1fr]">

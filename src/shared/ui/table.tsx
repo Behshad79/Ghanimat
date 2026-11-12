@@ -1,6 +1,6 @@
 import { QuickText } from './quickview'
-import { isValidElement, useMemo, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Filter, Printer, Search, SearchX, X } from 'lucide-react'
+import { isValidElement, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Filter, Maximize2, Minimize2, Printer, Search, SearchX, X } from 'lucide-react'
 import { Badge, Button, cx, EmptyState, Input } from './base'
 import { DateFilter, inRange, rangeActive, rangeLabel, type DateRange } from './datefilter'
 import { st } from '../data/statuses'
@@ -49,6 +49,9 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   const rowClick = onRow ?? ((r: R) => setPeek(r))
 
   const [fOpen, setFOpen] = useState(false)
+  // بزرگ‌نمایی: جدول کل صفحه را می‌گیرد، ردیف‌های بیشتری در هر صفحه و سربرگ چسبان
+  const [max, setMax] = useState(false)
+  useEffect(() => { if (!max) return; const k = (e: KeyboardEvent) => e.key === 'Escape' && setMax(false); window.addEventListener('keydown', k); document.body.style.overflow = 'hidden'; return () => { window.removeEventListener('keydown', k); document.body.style.overflow = '' } }, [max])
   const [dr, setDr] = useState<DateRange>(R0)
   const [vals, setVals] = useState<Record<string, string[]>>({})
   const [nums, setNums] = useState<Record<string, [string, string]>>({})
@@ -74,8 +77,9 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
     return v
   }, [rows, q, sort, cols, search, cellText, dateKey, dr, vals, nums])
   const shown = cols.filter((c) => !hidden.includes(c.key))
-  const pages = Math.ceil(view.length / pageSize)
-  const pageRows = view.slice(page * pageSize, page * pageSize + pageSize)
+  const ps = max ? Math.max(pageSize, 50) : pageSize
+  const pages = Math.ceil(view.length / ps)
+  const pageRows = view.slice(page * ps, page * ps + ps)
   const toggle = (id: string, i: number, shift: boolean) => {
     if (shift && last !== null) { const ids = pageRows.slice(Math.min(last, i), Math.max(last, i) + 1).map(rowKey); setSel([...new Set([...sel, ...ids])]) }
     else setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id])
@@ -89,7 +93,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <div className={cx('overflow-hidden border border-line bg-surface', max ? 'fixed inset-2 z-50 flex flex-col rounded-2xl shadow-float md:inset-4' : 'rounded-2xl')} role={max ? 'dialog' : undefined} aria-label={max ? `${name} در حالت تمام‌صفحه` : undefined}>
       <div className="no-print flex flex-wrap items-center gap-2 border-b border-line p-2">
         <div className="relative min-w-40 flex-1 sm:max-w-xs">
           <Search size={14} className="absolute top-2.5 right-2.5 text-t3" />
@@ -98,6 +102,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
         {(dateKey || facets.length > 0) && <Button size="sm" variant={fOpen || active ? 'primary' : 'secondary'} icon={<Filter size={13} />} aria-expanded={fOpen} onClick={() => setFOpen(!fOpen)}>فیلتر{active ? ` (${fa(active)})` : ''}</Button>}
         {filters}
         <div className="relative mr-auto flex items-center gap-1">
+          <Button variant="ghost" size="sm" icon={max ? <Minimize2 size={14} /> : <Maximize2 size={14} />} onClick={() => { setMax(!max); setPage(0) }} title={max ? 'خروج از تمام‌صفحه (Esc)' : 'نمایش تمام‌صفحه'}><span className="hidden sm:inline">{max ? 'کوچک کردن' : 'تمام‌صفحه'}</span></Button>
           <Button variant="ghost" size="sm" icon={<Columns3 size={14} />} onClick={() => setColMenu(!colMenu)}><span className="hidden sm:inline">ستون‌ها</span></Button>
           <Button variant="ghost" size="sm" icon={<Download size={14} />} onClick={exportView}><span className="hidden sm:inline">خروجی همین نما</span></Button>
           <Button variant="ghost" size="sm" icon={<Printer size={14} />} onClick={() => window.print()}><span className="hidden sm:inline">چاپ</span></Button>
@@ -118,7 +123,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
           {facets.length > 0 && <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{facets.map(({ c, uniq, numeric }) => (
             <div key={c.key} className="rounded-xl border border-line bg-surface p-2.5">
               <p className="mb-1.5 text-12 font-semibold">{c.title}</p>
-              {uniq.length > 0 && <div className="flex flex-wrap gap-1">{uniq.map((u) => { const on = (vals[c.key] ?? []).includes(u); return <button key={u} type="button" aria-pressed={on} onClick={() => { setVals({ ...vals, [c.key]: on ? vals[c.key].filter((x) => x !== u) : [...(vals[c.key] ?? []), u] }); setPage(0) }} className={cx('max-w-full truncate rounded-full border px-2.5 py-1 text-11', on ? 'border-brand bg-brand text-white' : 'border-line hover:border-brand/50')}>{u}</button> })}</div>}
+              {uniq.length > 0 && <div className="flex flex-wrap gap-1">{uniq.map((u) => { const on = (vals[c.key] ?? []).includes(u); return <button key={u} type="button" aria-pressed={on} onClick={() => { setVals({ ...vals, [c.key]: on ? vals[c.key].filter((x) => x !== u) : [...(vals[c.key] ?? []), u] }); setPage(0) }} className={cx('max-w-full truncate rounded-full border px-2.5 py-1 text-11', on ? 'border-brand bg-brand-solid text-white' : 'border-line hover:border-brand/50')}>{u}</button> })}</div>}
               {numeric && uniq.length === 0 && <div className="flex items-center gap-1.5 text-12">از <Input className="h-8" inputMode="numeric" value={nums[c.key]?.[0] ?? ''} onChange={(e) => { setNums({ ...nums, [c.key]: [e.target.value, nums[c.key]?.[1] ?? ''] }); setPage(0) }} aria-label={`حداقل ${c.key}`} /> تا <Input className="h-8" inputMode="numeric" value={nums[c.key]?.[1] ?? ''} onChange={(e) => { setNums({ ...nums, [c.key]: [nums[c.key]?.[0] ?? '', e.target.value] }); setPage(0) }} aria-label={`حداکثر ${c.key}`} /></div>}
             </div>))}</div>}
         </div>
@@ -139,10 +144,10 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
       ) : (
         <>
           {/* دسکتاپ و iPad */}
-          <div className="hidden overflow-x-auto md:block">
+          <div className={cx('hidden overflow-x-auto md:block', max && 'min-h-0 flex-1 overflow-y-auto')}>
             <table className="gh-table w-full text-13">
               <thead>
-                <tr className="text-12">
+                <tr className={cx('text-12', max && 'sticky top-0 z-10')}>
                   {bulk && <th className="w-9 px-3"><input type="checkbox" aria-label="انتخاب همه" checked={pageRows.every((r) => sel.includes(rowKey(r)))} onChange={(e) => setSel(e.target.checked ? pageRows.map(rowKey) : [])} /></th>}
                   {shown.map((c) => (
                     <th key={c.key} className={cx('h-10 px-3 whitespace-nowrap', c.align === 'left' ? 'text-left' : 'text-right')}>

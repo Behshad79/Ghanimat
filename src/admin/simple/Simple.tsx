@@ -163,7 +163,7 @@ function MsgFlow({ done }: { done: () => void }) {
       <div className="mb-3 space-y-2">{m.messages.map((x, i) => <p key={i} className={cx('rounded-xl p-3 text-14', x.from === 'customer' ? 'bg-surface' : 'mr-8 bg-brand-tint')}>{x.text}</p>)}</div>
       <Textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="پاسخ را بنویسید یا یکی از پیشنهادها را انتخاب کنید" />
       <div className="my-2 flex flex-wrap gap-1.5">{['سلام. بررسی کردم؛ همین امروز پیگیری و نتیجه را اعلام می‌کنم.', 'سلام. بسته در مسیر است و به‌زودی می‌رسد. لینک رصد برایتان پیامک شده است.', 'سلام. حق با شماست؛ قطعهٔ جاافتاده همین امروز رایگان ارسال می‌شود.'].map((r) => <button key={r} onClick={() => setText(r)} className="rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12 text-t2 hover:text-brand">{r.slice(0, 34)}…</button>)}</div>
-      <div className="grid grid-cols-2 gap-2"><Big onClick={() => send(true)}>ارسال و بستن</Big><Big tone="plain" onClick={() => send(false)}>فقط ارسال</Big></div>
+      <div className="grid grid-cols-2 gap-2"><Big onClick={() => send(false)}>ارسال پاسخ</Big><Big tone="plain" onClick={() => send(true)}>ارسال و بستن</Big></div>
     </div>
   )
 }

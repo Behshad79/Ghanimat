@@ -1,4 +1,4 @@
-import { Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -35,6 +35,8 @@ export const NAV: NavItem[] = [
   { id: 'ai', label: 'هوش مصنوعی', icon: Bot, path: '/admin/ai', group: 'رشد' },
   { id: 'branches', label: 'شعب', icon: Building2, path: '/admin/branches', group: 'سازمان' },
   { id: 'sellers', label: 'فروشندگان', icon: Store, path: '/admin/sellers', group: 'سازمان', soon: true },
+  { id: 'people', label: 'پرسنل، قرارداد و حقوق', icon: IdCard, path: '/admin/people', group: 'سازمان', count: (d) => d.people.flatMap((e) => e.pay).filter((p) => p.status === 'due').length },
+  { id: 'vault', label: 'بایگانی اسناد و مجوزها', icon: Archive, path: '/admin/vault', group: 'سازمان', count: (d) => d.vault.filter((v) => v.expires && new Date(v.expires).getTime() - Date.now() < v.remind * 864e5).length },
   { id: 'team', label: 'تیم و دسترسی', icon: UsersRound, path: '/admin/team', group: 'سازمان' },
   { id: 'rules', label: 'قوانین کسب‌وکار', icon: Scale, path: '/admin/rules', group: 'سازمان' },
   { id: 'settings', label: 'تنظیمات و سیستم', icon: Settings, path: '/admin/settings', group: 'سازمان' },

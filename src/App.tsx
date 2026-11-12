@@ -1,3 +1,5 @@
+import { People, PersonFile } from './admin/people/People'
+import { Vault } from './admin/people/Vault'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Shell } from './admin/shell/Shell'
 import { Login } from './admin/Login'
@@ -80,6 +82,9 @@ export function App() {
               <Route path="branches" element={<Branches />} />
               <Route path="sellers" element={<Sellers />} />
               <Route path="team" element={<Team />} />
+              <Route path="people" element={<People />} />
+              <Route path="vault" element={<Vault />} />
+              <Route path="people/:id" element={<PersonFile />} />
               <Route path="rules" element={<Rules />} />
               <Route path="settings" element={<Settings />} />
               <Route path="infra" element={<Infra />} />

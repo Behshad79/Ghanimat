@@ -3,7 +3,7 @@ import { makeSeed, type DB } from '../data/seed'
 import { BASE_ROLES, type RoleDef } from '../data/roles'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v17'
+const DB_KEY = 'ghanimat-demo-db-v19'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -98,6 +98,7 @@ export function restoreTrash(id: string) {
     const t = x.trash.find((i) => i.id === id); if (!t) return
     if (t.ek === 'products') (x.products as any[]).unshift(t.data)
     else if (t.ek === 'units') (x.units as any[]).unshift(t.data)
+    else if (t.ek === 'vault') (x.vault as any[]).unshift(t.data)
     else (x.entities[t.ek] ??= []).unshift(t.data)
     x.trash = x.trash.filter((i) => i.id !== id)
   }, { action: 'بازگردانی از سطل بازیافت', target: id })

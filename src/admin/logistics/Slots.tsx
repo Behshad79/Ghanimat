@@ -27,6 +27,8 @@ export function SlotsEngine() {
   const [t, setT] = useState('00:00'); const [fast, setFast] = useState(true)
   const sim = useMemo(() => { const [a, b] = t.split(':').map(Number); const dt = new Date(); dt.setHours(a || 0, b || 0, 0, 0); return computeSlot(D, dt, fast) }, [t, fast, D])
   return (
+    <div className="space-y-4">
+    <DayTimeline D={D} />
     <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
       <div className="space-y-4">
         <Card title="قانون‌های زمان ارسال">
@@ -52,6 +54,7 @@ export function SlotsEngine() {
         <p className="mt-2 text-12 text-t2">{sim.why}</p>
         <div className="mt-3 flex flex-wrap gap-1">{['00:00', '08:30', '12:00', '18:45', '19:30', '23:10'].map((x) => <button key={x} onClick={() => setT(x)} className="ltr rounded-full border border-line px-2 py-0.5 text-11 hover:border-brand">{x}</button>)}</div>
       </Card>
+    </div>
     </div>
   )
 }
@@ -90,4 +93,29 @@ export function SmsLog() {
     filters={<Select className="w-44" value={kind} onChange={setKind} options={[['all', 'همهٔ انواع'], ...kinds.map((k) => [k, k] as [string, string])]} />}
     cols={[{ key: 'k', title: 'نوع', render: (m) => <Badge dot={false}>{m.kind}</Badge> }, { key: 'to', title: 'گیرنده', render: (m) => <span className="ltr">{m.to}</span> }, { key: 'ref', title: 'مرجع', render: (m) => m.ref || '—' }, { key: 't', title: 'متن', wrap: true, render: (m) => <span className="text-12">{m.text}</span> }, { key: 's', title: 'وضعیت', render: (m) => <Badge tone={m.status === 'تحویل شد' ? 'success' : 'danger'}>{m.status}</Badge> }, { key: 'at', title: 'زمان', render: (m) => <span className="text-12 text-t2">{rel(m.at)}</span>, sort: (m) => m.at }]}
     actions={(m) => [{ label: 'ارسال دوباره', onClick: () => { sendSms(m.to, m.text, m.kind, m.ref, m.customerId); toast('دوباره ارسال شد.') } }]} />
+}
+
+/** نمایش سادهٔ یک روز: از کی تا کی سفارش «همان روز» می‌رسد، بازه‌ها و ظرفیتشان، و از کی به بعد به فردا می‌رود */
+function DayTimeline({ D }: { D: Delivery }) {
+  const H0 = 7, H1 = 24; const W = (h: number) => `${((h - H0) / (H1 - H0)) * 100}%`
+  const now = new Date().getHours() + new Date().getMinutes() / 60
+  return (
+    <Card title="روز ارسال به زبان ساده">
+      <ol className="mb-4 grid gap-2 text-13 sm:grid-cols-3">
+        <li className="rounded-xl bg-success-bg/70 p-3"><b className="block text-success">۱. تحویل سریع همان روز</b>سفارش بین ساعت {hh(D.openHour)} و {hh(D.fastCutoff)} ثبت شود، حداکثر {fa(D.fastHours)} ساعت بعد می‌رسد.</li>
+        <li className="rounded-xl bg-brand-tint/70 p-3"><b className="block text-brand">۲. بازهٔ انتخابی</b>مشتری یکی از بازه‌های ۲ ساعته را برای امروز (اگر جا داشته باشد) یا روزهای بعد انتخاب می‌کند. هر بازه ظرفیت مشخص دارد.</li>
+        <li className="rounded-xl bg-warning-bg/70 p-3"><b className="block text-warning">۳. بعد از ساعت {hh(D.nightAfter)}</b>سفارش شب (مثلا ساعت ۱۲) خودکار برای فردا اولین بازه ({hh(D.slots[0]?.from ?? 8)} تا {hh(D.slots[0]?.to ?? 10)}) زمان‌بندی می‌شود. {D.closedDays.length ? `${D.closedDays.join('، ')} ارسال نداریم.` : ''}</li>
+      </ol>
+      <div className="relative h-24 rounded-xl bg-neutral-bg" aria-label="خط زمانی یک روز">
+        <span className="absolute inset-y-0 rounded-r-xl bg-success/15" style={{ right: W(D.openHour), width: `calc(${W(D.fastCutoff)} - ${W(D.openHour)})` }} title="بازهٔ ثبت تحویل سریع همان روز" />
+        <span className="absolute inset-y-0 bg-warning/15" style={{ right: W(D.nightAfter), left: 0 }} title="سفارش‌های این ساعت‌ها به فردا می‌روند" />
+        {D.slots.map((sl) => { const b = D.booked[`today:${sl.id}`] ?? 0; const full = b >= sl.cap; return <span key={sl.id} className={cx('absolute top-8 flex h-9 flex-col items-center justify-center rounded-lg border text-[10px] leading-tight', full ? 'border-danger/40 bg-danger-bg text-danger' : 'border-brand/30 bg-surface text-t1')} style={{ right: `calc(${W(sl.from)} + 2px)`, width: `calc(${W(sl.to)} - ${W(sl.from)} - 4px)` }}><b>{hh(sl.from)}–{hh(sl.to)}</b><span>{full ? 'پر' : `${fa(b)}/${fa(sl.cap)}`}</span></span> })}
+        <span className="absolute top-1 text-[10px] font-semibold text-success" style={{ right: `calc(${W(D.openHour)} + 4px)` }}>ثبت تحویل سریع</span>
+        <span className="absolute top-1 text-[10px] font-semibold text-warning" style={{ right: `calc(${W(D.nightAfter)} + 4px)` }}>به فردا</span>
+        {now >= H0 && now <= H1 && <span className="absolute inset-y-0 w-0.5 bg-danger" style={{ right: W(now) }}><span className="absolute -top-1 -right-1.5 size-3.5 rounded-full border-2 border-white bg-danger" /></span>}
+        {[8, 10, 12, 14, 16, 18, 20, 22].map((h) => <span key={h} className="absolute bottom-0.5 -translate-x-1/2 text-[10px] text-t2" style={{ right: W(h) }}>{fa(h)}</span>)}
+      </div>
+      <p className="mt-2 text-11 text-t2">خط قرمز ساعت فعلی است. عدد هر بازه یعنی چند سفارش امروز در آن بازه رزرو شده از چند ظرفیت. همهٔ این عددها پایین همین صفحه قابل تغییرند.</p>
+    </Card>
+  )
 }

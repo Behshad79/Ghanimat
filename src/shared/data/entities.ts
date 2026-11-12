@@ -48,8 +48,8 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'SH-116', po: 'PO-2040', units: 3, stage: 'دریافت در تهران', freight: 7600000, customs: 4100000, eta: d(-6), late: false },
   ],
   zones: [
-    { id: 'z1', name: 'تهران (محدودهٔ تحویل سریع)', cities: 'تهران، مناطق ۱ تا ۲۲', methods: 'تحویل سریع، پست، تیپاکس', active: true },
-    { id: 'z2', name: 'کرج', cities: 'کرج، فردیس', methods: 'تحویل سریع، پست', active: true },
+    { id: 'z1', name: 'تهران (محدودهٔ تحویل سریع)', districts: [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 22], cities: 'تهران، مناطق ۱ تا ۸، ۱۰ تا ۱۴ و ۲۲', methods: 'تحویل سریع، پست، تیپاکس', active: true },
+    { id: 'z2', name: 'کرج و مناطق جنوبی تهران', districts: [9, 15, 16, 17, 18, 19, 20, 21], towns: ['کرج', 'فردیس'], cities: 'تهران، مناطق ۹، ۱۵ تا ۲۱، کرج، فردیس', methods: 'تحویل سریع، پست', active: true },
     { id: 'z3', name: 'سایر شهرها', cities: 'سراسر کشور', methods: 'پست پیشتاز، تیپاکس', active: true },
   ],
   slots: [

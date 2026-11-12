@@ -18,6 +18,7 @@ import { PickupRules, SlotsEngine, SmsLog } from '../logistics/Slots'
 import { FastCourier } from '../logistics/FastCourier'
 import { ManualReturn, OriginalOrder } from '../orders/ReturnTools'
 import { SplitRules } from '../orders/Split'
+import { ZoneMap } from '../logistics/ZoneMap'
 
 // ───────── انبار و موجودی ─────────
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
@@ -117,7 +118,7 @@ export function Shipping() {
       {tab === 'slots' && <SlotsEngine />}
       {tab === 'pickup' && <PickupRules />}
       {tab === 'sms' && <SmsLog />}
-      {tab === 'zones' && <div className="space-y-6"><div><h2 className="mb-2 text-14 font-semibold">مناطق ارسال</h2><EntityManager ek="zones" kind="منطقه" fields={[{ k: 'name', label: 'نام منطقه', required: true }, { k: 'cities', label: 'شهرها و محدوده', type: 'textarea' }, { k: 'methods', label: 'روش‌های مجاز' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div><div><h2 className="mb-2 text-14 font-semibold">بازه‌های زمانی تحویل</h2><EntityManager ek="slots" kind="بازه" fields={[{ k: 'name', label: 'بازه', required: true }, { k: 'capacity', label: 'ظرفیت', type: 'number' }, { k: 'days', label: 'روزها' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div></div>}
+      {tab === 'zones' && <div className="space-y-6"><ZoneMap /><div><h2 className="mb-2 text-14 font-semibold">مناطق ارسال</h2><EntityManager ek="zones" kind="منطقه" fields={[{ k: 'name', label: 'نام منطقه', required: true }, { k: 'cities', label: 'شهرها و محدوده', type: 'textarea' }, { k: 'methods', label: 'روش‌های مجاز' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div><div><h2 className="mb-2 text-14 font-semibold">بازه‌های زمانی تحویل</h2><EntityManager ek="slots" kind="بازه" fields={[{ k: 'name', label: 'بازه', required: true }, { k: 'capacity', label: 'ظرفیت', type: 'number' }, { k: 'days', label: 'روزها' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div></div>}
       {tab === 'carriers' && <Providers family="carrier" title="شرکت حمل" list={carriers} />}
       <Modal open={file} onClose={() => setFile(false)} title="تطبیق فایل باجهٔ پست" footer={<><Button variant="primary" onClick={() => { setFile(false); toast('۲ کد رهگیری ثبت شد و مشتریان خبردار شدند. ۱ مورد بدون تطبیق ماند.') }}>تأیید ۲ مورد مطمئن</Button><Button variant="ghost" onClick={() => setFile(false)}>انصراف</Button></>}>
         <ul className="space-y-2">{[['GH-10479-1', 'نام و کد پستی یکی است', 'success', 'مطمئن'], ['GH-10470-1', 'شمارهٔ سفارش در فایل هست', 'success', 'مطمئن'], ['GH-10444-1', 'دو ردیف با همین نام', 'warning', 'مشکوک'], ['ردیف ۷ فایل', 'سفارشی پیدا نشد', 'danger', 'بدون تطبیق']].map(([a, b, t, l]) => <li key={a} className="flex items-center justify-between rounded-md border border-line px-3 py-2"><span><span className="ltr font-mono text-12">{a}</span><span className="mr-2 text-12 text-t2">{b}</span></span><Badge tone={t as any}>{l}</Badge></li>)}</ul>

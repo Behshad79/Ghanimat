@@ -87,8 +87,9 @@ export type Site = ReturnType<typeof makeSite>
 
 // ───── چیدمان انبار: طبقه ← قفسه ← خانه (Bin) ─────
 export type Bin = { id: string; cap: number; blocked?: boolean; qty?: Record<string, number> }
-export type Section = { id: string; name: string; zone: string; bins: Bin[] }
-export type Floor = { id: string; name: string; sections: Section[] }
+export type Section = { id: string; name: string; zone: string; bins: Bin[]; levels?: number; cols?: number; pos?: { x: number; y: number; w: number; h: number; color?: string } }
+export type Mark = { id: string; label: string; kind: 'door' | 'pack' | 'qc' | 'aisle' | 'office' | 'other'; x: number; y: number; w: number; h: number }
+export type Floor = { id: string; name: string; sections: Section[]; marks?: Mark[]; gw?: number; gh?: number }
 const bins = (p: string, n: number, cap: number, extra: Record<string, Partial<Bin>> = {}) =>
   Array.from({ length: n }, (_, i) => { const id = `${p}-${String(i + 1).padStart(2, '0')}`; return { id, cap, ...extra[id] } })
 export const makeLayout = () => ({

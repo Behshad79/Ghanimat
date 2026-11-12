@@ -8,6 +8,7 @@ import { currentUser, mutate, snapshot, useSession } from '@/shared/lib/store'
 import { fa, pct, rel } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import { binOf, type Bin, type Section } from '@/shared/data/site'
+import { FloorPlan } from './FloorPlan'
 import { Cell, ProductImg, useLookup } from '../pages/_shared'
 
 const SEC_COLORS = ['#0000ff', '#ffc24b', '#12a150', '#7c3aed', '#0ea5e9', '#f97316', '#c42f2f']
@@ -18,7 +19,7 @@ export function WarehouseMap() {
   const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate()
   const [wh, setWh] = useState<string>(s.scope !== 'all' ? s.scope : 'tehran'); const floors = d.layout[wh as 'tehran'] ?? []
   const [fl, setFl] = useState(floors[0]?.id ?? ''); const floor = floors.find((f) => f.id === fl) ?? floors[0]
-  const [bin, setBin] = useState<string | null>(null); const [edit, setEdit] = useState<Section | null | 'new'>(null)
+  const [bin, setBin] = useState<string | null>(null); const [edit, setEdit] = useState<Section | null | 'new'>(null); const [view, setView] = useState<'plan' | 'bins'>('plan'); const [flEdit, setFlEdit] = useState<{ id: string; name: string } | null>(null)
   const [moveU, setMoveU] = useState<string | null>(null); const [to, setTo] = useState(''); const [logF, setLogF] = useState('all')
   const units = d.units.filter((u) => u.warehouse === wh && LIVE.includes(u.status))
   const inBin = (b: Bin) => ({ units: units.filter((u) => binOf(u.shelf) === b.id), qty: Object.entries(b.qty ?? {}) })
@@ -46,14 +47,17 @@ export function WarehouseMap() {
         <Card title="نقشهٔ قفسه‌ها" actions={<div className="flex flex-wrap items-center gap-2"><Select className="w-36" value={wh} onChange={(v) => { setWh(v); setFl(d.layout[v as 'tehran'][0]?.id ?? '') }} options={Object.keys(d.layout).map((k) => [k, WAREHOUSE[k]] as [string, string])} /><Button size="sm" icon={<Plus size={13} />} onClick={() => setEdit('new')}>قفسهٔ تازه</Button></div>}>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Segmented size="sm" value={floor?.id ?? ''} onChange={setFl} options={floors.map((f) => [f.id, f.name] as [string, string])} />
+            <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setFlEdit({ id: '', name: '' })}>طبقه یا سالن</Button>
+            {floor && <Button size="sm" variant="ghost" icon={<Pencil size={12} />} onClick={() => setFlEdit({ id: floor.id, name: floor.name })}>{floor.name}</Button>}
+            <Segmented size="sm" value={view} onChange={setView} options={[['plan', 'نقشهٔ چیدمان'], ['bins', 'خانه‌ها']]} />
             <span className="mr-auto flex flex-wrap gap-3 text-11 text-t2">{[['empty', 'خالی'], ['mid', 'نیمه‌پر'], ['high', 'نزدیک به پر'], ['full', 'پر'], ['blocked', 'مسدود']].map(([k, l]) => <span key={k} className="flex items-center gap-1"><span className={cx('bin-swatch size-3 rounded-sm', `bin-${k}`)} />{l}</span>)}</span>
           </div>
-          {!floor || floor.sections.length === 0 ? <EmptyState title="این طبقه قفسه ندارد." desc="قفسه بسازید و خانه‌هایش را تعریف کنید تا واحدها جای مشخص داشته باشند." action={<Button variant="primary" onClick={() => setEdit('new')}>ساخت قفسه</Button>} /> : (
+          {view === 'plan' && floor && floor.sections.length > 0 ? <FloorPlan wh={wh} floor={floor} usage={(sec) => sec.bins.reduce((a, b) => a + used(b), 0)} onOpen={(sec) => { setView('bins'); setEdit(sec) }} /> : !floor || floor.sections.length === 0 ? <EmptyState title="این طبقه قفسه ندارد." desc="قفسه بسازید و خانه‌هایش را تعریف کنید تا واحدها جای مشخص داشته باشند." action={<Button variant="primary" onClick={() => setEdit('new')}>ساخت قفسه</Button>} /> : (
             <div className="grid gap-3 md:grid-cols-2">{floor.sections.map((sec) => { const x = secUse(sec); const hot = x.p >= 85; return (
               <div key={sec.id} className={cx('rounded-2xl border p-3 transition-colors', hot ? 'border-danger/40 bg-danger-bg' : 'border-line bg-surface-2')}>
                 <div className="mb-2 flex items-center gap-2"><p className="text-13 font-bold">{sec.name}</p>{hot && <CircleAlert size={14} className="text-danger" />}<span className="truncate text-11 text-t2">{sec.zone}</span>
                   <button aria-label={`ویرایش ${sec.name}`} onClick={() => setEdit(sec)} className="mr-auto grid size-7 place-items-center rounded-md text-t2 hover:bg-surface hover:text-brand"><Pencil size={13} /></button></div>
-                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{sec.bins.map((b) => { const n = used(b); const p = (n / b.cap) * 100; const t = tone(p, b.blocked); return (
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${sec.cols ?? 4}, minmax(0, 1fr))` }}>{sec.bins.map((b) => { const n = used(b); const p = (n / b.cap) * 100; const t = tone(p, b.blocked); return (
                   <button key={b.id} onClick={() => setBin(b.id)} title={`${b.id}: ${fa(n)} از ${fa(b.cap)}`} className={cx('bin relative h-12 overflow-hidden rounded-lg border text-12 font-semibold transition-transform hover:-translate-y-0.5', `bin-${t}`)}>
                     <span className="ltr relative z-10 font-mono">{b.id}</span><span className="tnum relative z-10 block text-[10px] font-normal opacity-80">{b.blocked ? 'مسدود' : `${fa(n)}/${fa(b.cap)}`}</span>
                     {!b.blocked && <span className="absolute inset-x-0 bottom-0 bg-brand-solid/15" style={{ height: `${Math.min(100, p)}%` }} />}
@@ -100,6 +104,9 @@ export function WarehouseMap() {
           <p className="flex items-center gap-1 text-11 text-t2"><PackageCheck size={12} />جابه‌جایی در گزارش فعالیت انبار و تاریخچهٔ واحد ثبت می‌شود.</p></div>}
       </Modal>
 
+      <Modal open={!!flEdit} onClose={() => setFlEdit(null)} title={flEdit?.id ? 'ویرایش طبقه یا سالن' : 'طبقه یا سالن تازه'} footer={<>{flEdit?.id && <Button variant="danger" icon={<Trash2 size={13} />} onClick={() => { const F = floors.find((f) => f.id === flEdit.id); if (F && F.sections.some((sec) => sec.bins.some((b) => used(b) > 0))) return toast('این طبقه کالا دارد. اول قفسه‌هایش را خالی کنید.', { tone: 'err' }); if (floors.length <= 1) return toast('انبار دست‌کم یک طبقه لازم دارد.', { tone: 'err' }); mutate((x) => { x.layout[wh as 'tehran'] = x.layout[wh as 'tehran'].filter((f) => f.id !== flEdit.id) }, { action: 'حذف طبقهٔ انبار', target: flEdit.name }); setFl(floors.find((f) => f.id !== flEdit.id)?.id ?? ''); setFlEdit(null) }}>حذف</Button>}<Button variant="primary" onClick={() => { if (!flEdit?.name.trim()) return toast('نام را بنویسید.', { tone: 'err' }); if (flEdit.id) mutate((x) => { x.layout[wh as 'tehran'].find((f) => f.id === flEdit.id)!.name = flEdit.name }, { action: 'تغییر نام طبقهٔ انبار', target: flEdit.name }); else { const id = `f${Date.now().toString(36)}`; mutate((x) => { x.layout[wh as 'tehran'].push({ id, name: flEdit.name, sections: [] }) }, { action: 'ساخت طبقهٔ انبار', target: flEdit.name }); setFl(id) } setFlEdit(null) }}>ذخیره</Button></>}>
+        {flEdit && <Field label="نام" help="مثلا «همکف»، «زیرزمین»، «سالن کالای سنگین» یا «انبار پشتی»."><Input value={flEdit.name} onChange={(e) => setFlEdit({ ...flEdit, name: e.target.value })} /></Field>}
+      </Modal>
       <SectionModal key={edit === 'new' ? 'new' : edit?.id ?? 'x'} open={!!edit} sec={edit === 'new' ? null : edit} onClose={() => setEdit(null)} used={(sec) => sec.bins.reduce((a, b) => a + used(b), 0)} binUsed={used}
         onSave={(v, old) => { upd((secs) => { if (old) { const i = secs.findIndex((x) => x.id === old.id); secs[i] = v } else secs.push(v) }, { action: old ? 'ویرایش قفسه' : 'ساخت قفسه', target: v.name }); toast(old ? 'قفسه ذخیره شد.' : 'قفسه ساخته شد.'); setEdit(null) }}
         onDelete={(sec) => { upd((secs) => { secs.splice(secs.findIndex((x) => x.id === sec.id), 1) }, { action: 'حذف قفسه', target: sec.name }); toast('قفسه حذف شد.'); setEdit(null) }} />
@@ -108,14 +115,14 @@ export function WarehouseMap() {
 }
 
 function SectionModal({ open, sec, onClose, onSave, onDelete, used, binUsed }: { open: boolean; sec: Section | null; onClose: () => void; onSave: (v: Section, old: Section | null) => void; onDelete: (s: Section) => void; used: (s: Section) => number; binUsed: (b: Bin) => number }) {
-  const [v, setV] = useState({ id: sec?.id ?? '', name: sec?.name ?? '', zone: sec?.zone ?? '', count: sec?.bins.length ?? 6, cap: sec?.bins[0]?.cap ?? 6 })
+  const [v, setV] = useState({ id: sec?.id ?? '', name: sec?.name ?? '', zone: sec?.zone ?? '', count: sec?.bins.length ?? 6, cap: sec?.bins[0]?.cap ?? 6, levels: sec?.levels ?? 1, cols: sec?.cols ?? (sec?.bins.length ?? 6) })
   const err = !v.id.trim() ? 'کد قفسه لازم است.' : !/^[A-Z]{1,3}$/.test(v.id) ? 'کد قفسه ۱ تا ۳ حرف بزرگ لاتین است، مثل E.' : null
   const save = () => {
     if (err) return
     const lost = (sec?.bins ?? []).slice(v.count).filter((b) => binUsed(b) > 0)
     if (lost.length) return toast(`خانهٔ ${lost.map((b) => b.id).join('، ')} خالی نیست. اول محتوایش را جابه‌جا کنید.`, { tone: 'err' })
     const bins = Array.from({ length: v.count }, (_, i) => { const id = `${v.id}-${String(i + 1).padStart(2, '0')}`; const old = sec?.bins.find((b) => b.id === id); return old ? { ...old, cap: old.cap === (sec?.bins[0]?.cap ?? old.cap) ? v.cap : old.cap } : { id, cap: v.cap } })
-    onSave({ id: v.id, name: v.name || `قفسهٔ ${v.id}`, zone: v.zone, bins }, sec)
+    onSave({ ...(sec ?? {}), id: v.id, name: v.name || `قفسهٔ ${v.id}`, zone: v.zone, bins, levels: v.levels, cols: v.cols }, sec)
   }
   return (
     <Modal open={open} onClose={onClose} title={sec ? `ویرایش ${sec.name}` : 'قفسهٔ تازه'} footer={<><Button variant="primary" disabled={!!err} onClick={save}>{sec ? 'ذخیره' : 'ساخت قفسه'}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button>
@@ -124,7 +131,9 @@ function SectionModal({ open, sec, onClose, onSave, onDelete, used, binUsed }: {
         <Field label="کد قفسه" error={v.id ? err ?? undefined : undefined} help="روی برچسب خانه‌ها چاپ می‌شود."><Input className="ltr text-left font-mono" disabled={!!sec} value={v.id} onChange={(e) => setV({ ...v, id: e.target.value.toUpperCase().slice(0, 3) })} /></Field>
         <Field label="نام"><Input value={v.name} placeholder={`قفسهٔ ${v.id || 'E'}`} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
         <Field label="کاربری (دسته یا ناحیه)"><Input value={v.zone} onChange={(e) => setV({ ...v, zone: e.target.value })} /></Field>
-        <Field label="تعداد خانه"><Input type="number" min={1} max={24} value={v.count} onChange={(e) => setV({ ...v, count: Math.min(24, Math.max(1, +e.target.value || 1)) })} /></Field>
+        <Field label="تعداد طبقهٔ قفسه (ارتفاع)"><Input type="number" min={1} max={8} value={v.levels} onChange={(e) => { const l = Math.min(8, Math.max(1, +e.target.value || 1)); setV({ ...v, levels: l, count: Math.min(48, l * v.cols) }) }} /></Field>
+        <Field label="خانه در هر طبقه (عرض)"><Input type="number" min={1} max={12} value={v.cols} onChange={(e) => { const c = Math.min(12, Math.max(1, +e.target.value || 1)); setV({ ...v, cols: c, count: Math.min(48, v.levels * c) }) }} /></Field>
+        <Field label="جمع خانه‌ها"><Input type="number" min={1} max={48} value={v.count} onChange={(e) => setV({ ...v, count: Math.min(48, Math.max(1, +e.target.value || 1)) })} /></Field>
         <Field label="ظرفیت هر خانه"><Input type="number" min={1} value={v.cap} onChange={(e) => setV({ ...v, cap: Math.max(1, +e.target.value || 1) })} /></Field>
       </div>
       <p className="mt-3 flex items-center gap-1 text-11 text-t2"><Ban size={12} />خانهٔ پر حذف نمی‌شود؛ پیش از کم کردن تعداد خانه‌ها محتوایشان را جابه‌جا کنید.</p>

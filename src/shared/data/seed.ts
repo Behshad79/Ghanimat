@@ -14,6 +14,7 @@ export type Order = { id: string; customerId: string; buyer?: 'person' | 'legal'
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
 import { makeCxEntities, makeCxSettings } from './cx'
+import { makeJourney } from './journey'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -239,6 +240,12 @@ export const makeSeed = () => ({
   carrierLogos: { post: '', tipax: '' } as Record<string, string>,
   entities: { ...makeEntities(), ...makeCxEntities() },
   cx: makeCxSettings(),
+  journey: makeJourney(),
+  smsLog: [
+    { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.example/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
+    { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹. کد تحویل: 4821', status: 'تحویل شد', at: ago(60 * 5) },
+    { id: 'sm3', to: '09120000003', customerId: 'c3', kind: 'کد ورود', ref: '', text: 'کد ورود شما به غنیمت: 52817', status: 'ارسال‌نشده (خطای اپراتور)', at: ago(60 * 9) },
+  ] as { id: string; to: string; customerId?: string; kind: string; ref: string; text: string; status: string; at: string }[],
   settleDue: {} as Record<string, string>,
   settlements: { 'GH-10458': { amount: 29850000, at: '2026-10-26T10:00:00+03:30', ref: 'MLT-77120' }, 'GH-10412': { amount: 29205000, at: ago(60 * 24 * 27), ref: 'ZP-55021' } } as Record<string, { amount: number; at: string; ref: string }>,
   packagingCost: 25000,

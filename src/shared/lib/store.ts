@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v5'
+const DB_KEY = 'ghanimat-demo-db-v6'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -83,6 +83,10 @@ export const fakeCall = <T,>(ok: T, ms = 900) => new Promise<T>((res, rej) => se
 
 // ───── ابزارهای مشترک ─────
 /** اعلان درون‌پنل برای مدیر (و طبق قوانین اعلان، پیامک یا پیام‌رسان) */
+/** ارسال پیامک (شبیه‌سازی‌شده) و ثبت در «گزارش پیامک‌ها» */
+export function sendSms(to: string, text: string, kind: string, ref = '', customerId?: string) {
+  mutate((x) => { x.smsLog.unshift({ id: `sm${Date.now().toString(36)}`, to, customerId, kind, ref, text, status: db.flags.maintenance ? 'در صف' : 'تحویل شد', at: new Date().toISOString() }) }, { action: `ارسال پیامک ${kind}`, target: ref || to })
+}
 export function notify(title: string, body: string, to: string, cat = 'عملیات', tone: 'info' | 'warning' | 'danger' | 'success' = 'info') {
   mutate((x) => { x.alerts.unshift({ id: `al-${Date.now()}`, cat, tone, title, body, to, at: new Date().toISOString(), read: false }) })
 }

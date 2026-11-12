@@ -18,6 +18,8 @@ import { makeJourney } from './journey'
 import { makeDelivery } from './delivery'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
+import { makeHub } from './hub'
+import { makePromos } from './promos'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -249,6 +251,8 @@ export const makeSeed = () => ({
   pages: makePages(),
   pagesPublished: [] as ReturnType<typeof makePages>,
   theme: makeTheme(),
+  hub: makeHub(),
+  promos: makePromos(),
   newsletter: makeNewsletter(),
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [

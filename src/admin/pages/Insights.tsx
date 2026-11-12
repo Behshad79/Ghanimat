@@ -1,3 +1,4 @@
+import { GscPanel, LandingPages, NotFoundMonitor, SchemaBuilder, SerpPreview } from '../pro/SeoPro'
 import { HOME_KINDS } from '../site/SiteEditor'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -66,8 +67,9 @@ export function Seo() {
   const [issues, setIssues] = useState([['۳۴ صفحه بدون توضیح متا', 'اثر بالا', 'meta'], ['۷ زنجیرهٔ ریدایرکت', 'کالاهای فروخته‌شده', 'redirects'], ['۱۲ تصویر بدون Alt', 'Alt خودکار آماده است', 'alt']])
   return (
     <Page title="سئو" module="seo" sub="منبع داده: ابزار جست‌وجو و خزش داخلی (بدون وابستگی به سرویس تحریم‌پذیر)"
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'meta', label: 'متای صفحات' }, { id: 'audit', label: 'سلامت فنی', count: issues.length }, { id: 'redirects', label: 'ریدایرکت‌ها' }, { id: 'keywords', label: 'کلیدواژه‌ها' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'meta', label: 'متای صفحات' }, { id: 'audit', label: 'سلامت فنی', count: issues.length }, { id: 'serp', label: 'پیش‌نمایش گوگل و OG' }, { id: 'schema', label: 'ایندکس و اسکیما' }, { id: 'notfound', label: 'پایش ۴۰۴', count: 4 }, { id: 'redirects', label: 'ریدایرکت‌ها' }, { id: 'landing', label: 'صفحه‌های فرود' }, { id: 'gsc', label: 'Search Console' }, { id: 'keywords', label: 'کلیدواژه‌ها' }]} />}>
       <div className="space-y-4">
+        {tab === 'serp' && <SerpPreview />}{tab === 'schema' && <SchemaBuilder />}{tab === 'notfound' && <NotFoundMonitor />}{tab === 'landing' && <LandingPages />}{tab === 'gsc' && <GscPanel />}
         <KpiRow kpis={[{ label: 'کلیک ارگانیک', value: fa('18,420'), delta: 9.3 }, { label: 'CTR', value: pct(3.8, 1), delta: 0.4 }, { label: 'میانگین رتبه', value: fa(11.2), delta: -1.3, goodDown: true }, { label: 'صفحهٔ ایندکس‌شده', value: fa(412), delta: 2.1 }]} />
         {tab === 'meta' && <EntityManager ek="seoPages" kind="صفحه" titleKey="page" fields={[{ k: 'page', label: 'صفحه', required: true }, { k: 'url', label: 'نشانی', ltr: true }, { k: 'title', label: 'عنوان متا', required: true }, { k: 'desc', label: 'توضیح متا', type: 'textarea', render: (r) => r.desc ? <span className="block max-w-72 truncate">{r.desc}</span> : <Badge tone="danger">خالی</Badge> }, { k: 'score', label: 'نمرهٔ سئو', type: 'number', render: (r) => <Badge tone={r.score > 80 ? 'success' : r.score > 60 ? 'warning' : 'danger'}>{fa(r.score)}</Badge> }]}
           extraActions={(r) => [{ label: 'نوشتن توضیح با AI', icon: <Sparkles size={14} />, onClick: () => { mutate((x) => { const t = x.entities.seoPages.find((y) => y.id === r.id)!; t.desc = t.desc || `خرید ${r.page} اصل با عکس واقعی همان واحد، کنترل کیفیت دو مرحله‌ای و تحویل سریع در تهران؛ غنیمت.`; t.score = Math.max(t.score, 82) }, { action: 'نوشتن توضیح متا با AI', target: r.page, ai: true }); toast('توضیح متا نوشته شد؛ پیش از انتشار بازبینی کنید.') } }]} />}

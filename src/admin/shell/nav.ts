@@ -1,4 +1,4 @@
-import { Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -28,6 +28,7 @@ export const NAV: NavItem[] = [
   { id: 'experience', label: 'تنظیمات سایت و پنل مشتری', icon: SlidersHorizontal, path: '/admin/experience', group: 'رشد' },
   { id: 'content', label: 'محتوا و صفحات سایت', icon: FileText, path: '/admin/content', group: 'رشد' },
   { id: 'seo', label: 'سئو', icon: Search, path: '/admin/seo', group: 'رشد' },
+  { id: 'promotions', label: 'موتور پروموشن و کمپین', icon: BadgePercent, path: '/admin/promotions', group: 'رشد' },
   { id: 'marketing', label: 'مارکتینگ', icon: Megaphone, path: '/admin/marketing', group: 'رشد' },
   { id: 'growth', label: 'رشد و آزمایش', icon: Rocket, path: '/admin/growth', group: 'رشد' },
   { id: 'analytics', label: 'تحلیل و گزارش', icon: BarChart3, path: '/admin/analytics', group: 'رشد' },
@@ -37,6 +38,7 @@ export const NAV: NavItem[] = [
   { id: 'team', label: 'تیم و دسترسی', icon: UsersRound, path: '/admin/team', group: 'سازمان' },
   { id: 'rules', label: 'قوانین کسب‌وکار', icon: Scale, path: '/admin/rules', group: 'سازمان' },
   { id: 'settings', label: 'تنظیمات و سیستم', icon: Settings, path: '/admin/settings', group: 'سازمان' },
+  { id: 'integrations', label: 'مرکز اتصالات و API', icon: Cable, path: '/admin/integrations', group: 'سازمان', count: (d) => d.hub.deliveries.filter((x) => x.status >= 300).length },
   { id: 'infra', label: 'زیرساخت و سرویس‌ها', icon: ServerCog, path: '/admin/infra', group: 'سازمان' },
   { id: 'trash', label: 'سطل بازیافت', icon: Trash2, path: '/admin/trash', group: 'سازمان', count: (d) => d.trash.length },
   { id: 'design', label: 'سیستم طراحی', icon: Palette, path: '/admin/design', group: 'سازمان' },

@@ -18,6 +18,7 @@ import { WIZARD_STEPS } from './Wizard'
 import { LABEL_BG, LABEL_SIZES, ProductLabel } from '../print/ProductLabel'
 import { CardRules } from '../pages/Catalog'
 import { CatalogInsights, ProductBoard } from './ProductBoard'
+import { ContentWorkflow, InlineTable, MediaLibrary, PimPanel } from '../pro/CatalogPro'
 
 export const stockOf = (d: DB, p: Product) => (p.mode === 'qty' ? (p.qty?.tehran ?? 0) + (p.qty?.mahabad ?? 0) : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').length)
 const openOrdersWith = (d: DB, pid: string) => d.orders.filter((o) => !['order.delivered', 'order.cancelled', 'order.returned'].includes(o.status) && o.shipments.some((s) => s.items.some((i) => i.productId === pid)))
@@ -128,7 +129,7 @@ export function Catalog() {
     { key: 'margin', title: <>سود<Hint k="margin" /></>, align: 'left', hideMobile: true, render: (u) => (u.price ? <span className={u.price - u.cost < 0 ? 'text-danger' : 'text-success'}>{compactToman(u.price - u.cost)}</span> : '—'), sort: (u) => u.price - u.cost },
     { key: 'st', title: 'چرخهٔ عمر', render: (u) => <StatusBadge s={u.status} />, sort: (u) => u.status },
   ]
-  const tabs = [{ id: 'products', label: 'محصولات', count: d.products.length }, { id: 'units', label: 'واحدها', count: d.units.length }, { id: 'partner', label: 'صف تأیید شریک', count: d.partnerQueue.length }, { id: 'card', label: 'قوانین کارت محصول' }, { id: 'categories', label: 'دسته‌ها' }, { id: 'brands', label: 'برندها' }, { id: 'attr', label: 'قالب ویژگی‌ها' }, { id: 'collections', label: 'مجموعه‌ها' }]
+  const tabs = [{ id: 'products', label: 'محصولات', count: d.products.length }, { id: 'units', label: 'واحدها', count: d.units.length }, { id: 'partner', label: 'صف تأیید شریک', count: d.partnerQueue.length }, { id: 'card', label: 'قوانین کارت محصول' }, { id: 'categories', label: 'دسته‌ها' }, { id: 'brands', label: 'برندها' }, { id: 'attr', label: 'قالب ویژگی‌ها' }, { id: 'collections', label: 'مجموعه‌ها' }, { id: 'bulk', label: 'ویرایش جدولی' }, { id: 'pim', label: 'تنوع، مکمل و باندل' }, { id: 'workflow', label: 'جریان کار محتوا' }, { id: 'media', label: 'رسانه' }]
   const decide = (id: string, ok: boolean) => { mutate((x) => { const q = x.partnerQueue.find((y) => y.id === id)!; x.products.find((p) => p.id === q.productId)!.status = ok ? 'product.published' : 'product.rejected'; x.partnerQueue = x.partnerQueue.filter((y) => y.id !== id) }, { action: ok ? 'تأیید کالای شریک' : 'رد کالای شریک', target: id }); toast(ok ? 'کالا تأیید و منتشر شد. شریک با اعلان خبردار شد.' : 'کالا رد شد و دلیل برای شریک ارسال شد.') }
   return (
     <Page title="کالا و کاتالوگ" module="catalog" sub="محصول یعنی مدل؛ واحد یعنی یک نمونهٔ فیزیکی با سریال و عکس خودش."
@@ -157,6 +158,10 @@ export function Catalog() {
             <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" onClick={() => decide(q.id, true)}>تأیید و انتشار</Button><Button onClick={() => nav(`/admin/catalog/${p.id}/edit`)}>اصلاح و تأیید</Button><Button variant="danger" onClick={() => decide(q.id, false)}>رد کالا</Button></div>
           </Card>) })}</div>))}
       {tab === 'card' && <CardRules />}
+      {tab === 'bulk' && <InlineTable />}
+      {tab === 'pim' && <PimPanel />}
+      {tab === 'workflow' && <ContentWorkflow />}
+      {tab === 'media' && <MediaLibrary />}
       {tab === 'categories' && <EntityManager ek="categories" kind="دسته" fields={[{ k: 'name', label: 'نام دسته', required: true }, { k: 'parent', label: 'دستهٔ والد' }, { k: 'slug', label: 'نشانی', ltr: true }, { k: 'template', label: 'قالب ویژگی', type: 'select', options: (d.entities.attrTemplates ?? []).map((t) => t.name) }, { k: 'faq', label: 'پرسش متداول', type: 'number' }, { k: 'active', label: 'نمایش در سایت', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.category === r.name).length; return n ? `${fa(n)} کالا در دستهٔ «${r.name}» هست. اول آن‌ها را به دستهٔ دیگری ببرید.` : null }} />}
       {tab === 'brands' && <EntityManager ek="brands" kind="برند" fields={[{ k: 'name', label: 'نام برند', required: true }, { k: 'en', label: 'نام انگلیسی', ltr: true }, { k: 'origin', label: 'کشور' }, { k: 'products', label: 'تعداد کالا', type: 'number' }, { k: 'active', label: 'فعال', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.brand === r.name).length; return n ? `${fa(n)} کالا با برند «${r.name}» ثبت شده است.` : null }} />}
       {tab === 'attr' && <EntityManager ek="attrTemplates" kind="قالب ویژگی" fields={[{ k: 'name', label: 'نام قالب', required: true }, { k: 'fields', label: 'فیلدها (با ویرگول فارسی جدا کنید)', type: 'textarea', required: true }, { k: 'compare', label: 'در مقایسه نمایش داده شود', type: 'toggle' }]} />}

@@ -6,7 +6,8 @@ import { Page } from '@/shared/ui/page'
 import { confirm, toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
-import type { El, PageDef, Sec } from '@/shared/data/pages'
+import { figmaUrl, type El, type PageDef, type Sec } from '@/shared/data/pages'
+import { fileToImage } from '@/shared/lib/image'
 import { useTab } from '../pages/_shared'
 import { Canvas, type Sel } from './Canvas'
 import { Inspector } from './Inspector'
@@ -28,7 +29,7 @@ const SECTION_LIB: [string, string, () => El[]][] = [
 export function Builder() {
   const d = useDB(); const nav = useNavigate(); const [tab, setTab] = useTab('builder')
   const [pid, setPid] = useState(d.pages[0]?.id ?? ''); const [q, setQ] = useState(''); const [sel, setSel] = useState<Sel>(null)
-  const [heat, setHeat] = useState(false); const [mobile, setMobile] = useState(false); const [lib, setLib] = useState(false)
+  const [heat, setHeat] = useState(false); const [mobile, setMobile] = useState(false); const [lib, setLib] = useState(false); const [cmp, setCmp] = useState<'off' | 'side' | 'over'>('off'); const [op, setOp] = useState(50)
   const page = d.pages.find((p) => p.id === pid) ?? d.pages[0]
   const groups = useMemo(() => [...new Set(d.pages.map((p) => p.group))], [d.pages])
   const dirty = JSON.stringify(d.pages) !== JSON.stringify(d.pagesPublished.length ? d.pagesPublished : d.pages)
@@ -51,14 +52,23 @@ export function Builder() {
             <Segmented size="sm" value={mobile ? 'm' : 'd'} onChange={(v) => setMobile(v === 'm')} options={[['d', <span key="d" className="flex items-center gap-1"><Monitor size={13} />دسکتاپ</span>], ['m', <span key="m" className="flex items-center gap-1"><Smartphone size={13} />موبایل</span>]]} />
             <Button size="sm" variant={heat ? 'primary' : 'secondary'} icon={<Flame size={13} />} onClick={() => setHeat(!heat)}>نقشهٔ کلیک</Button>
             <Button size="sm" icon={<Plus size={13} />} onClick={() => setLib(!lib)}>افزودن بخش</Button>
+            <Segmented size="sm" value={cmp} onChange={setCmp} options={[['off', 'بدون مقایسه'], ['side', 'کنار فیگما'], ['over', 'روی فیگما']]} />
+            {cmp === 'over' && <input aria-label="شفافیت" type="range" min={10} max={90} value={op} onChange={(e) => setOp(+e.target.value)} className="w-24" />}
+            {page.node && <a href={figmaUrl(page.node)} target="_blank" rel="noreferrer" className="text-12 text-brand underline">فریم در فیگما</a>}
+            <label className="cursor-pointer text-12 text-t2 underline">بارگذاری تصویر فیگما<input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const src = await fileToImage(f, 1440, 0.8); upd((p) => { p.ref = src }, 'بارگذاری تصویر مرجع فیگما'); setCmp('side') }} /></label>
             <span className="mr-auto text-11 text-t2"><span className="ltr">{page.path}</span> · فیگما: {page.figma}</span>
           </div>
           {lib && <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface p-2 sm:grid-cols-4">{SECTION_LIB.map(([k, l, make]) => <button key={k} onClick={() => { upd((p) => { const at = sel?.sec ? p.sections.findIndex((s) => s.id === sel.sec) + 1 : p.sections.length; p.sections.splice(at, 0, { id: uid('sec'), type: k, name: l, els: make() }) }, `افزودن بخش «${l}»`); setLib(false) }} className="rounded-xl border border-line px-2 py-3 text-12 hover:border-brand hover:text-brand">{l}</button>)}</div>}
-          <div className={cx('mx-auto overflow-hidden rounded-2xl border border-line shadow-sm transition-all', mobile && 'w-[390px] max-w-full border-[6px] border-[#10123d]')}>
+          {cmp !== 'off' && !page.ref && <p className="rounded-xl bg-warning-bg px-3 py-2 text-12 text-warning">تصویر فیگمای این صفحه هنوز نیامده است. از فیگما فریم دسکتاپ را PNG خروجی بگیرید و «بارگذاری تصویر فیگما» را بزنید.</p>}
+          <div className={cx(cmp === 'side' && page.ref && 'grid grid-cols-2 gap-2')}>
+          {cmp === 'side' && page.ref && <div className="max-h-[80vh] overflow-y-auto rounded-2xl border border-line"><p className="sticky top-0 z-10 bg-surface px-2 py-1 text-11 font-semibold">طرح فیگما</p><img src={page.ref} alt="طرح فیگما" className="w-full" /></div>}
+          <div className={cx('relative mx-auto overflow-hidden rounded-2xl border border-line shadow-sm transition-all', mobile && 'w-[390px] max-w-full border-[6px] border-[#10123d]', cmp === 'side' && page.ref && 'max-h-[80vh] overflow-y-auto')}>
+            {cmp === 'over' && page.ref && <img src={page.ref} alt="طرح فیگما" className="pointer-events-none absolute inset-x-0 top-0 z-30 w-full" style={{ opacity: op / 100 }} />}
             <Canvas page={page} theme={T} sel={sel} onSel={setSel} heat={heat} mobile={mobile} onMove={move}
               onDup={(i) => upd((p) => { const c = structuredClone(p.sections[i]); c.id = uid('sec'); c.name += ' (کپی)'; c.els.forEach((e) => (e.id = uid('el'))); p.sections.splice(i + 1, 0, c) }, 'کپی بخش')}
               onHide={(i) => upd((p) => { p.sections[i].hidden = !p.sections[i].hidden }, 'پنهان/نمایش بخش')}
               onDel={async (i) => { if (await confirm({ title: `بخش «${page.sections[i].name}» حذف شود؟`, body: 'تا پیش از انتشار، با «بازگردانی» در لاگ ممیزی برمی‌گردد.', danger: true, confirm: 'حذف بخش' })) { upd((p) => { p.sections.splice(i, 1) }, 'حذف بخش'); setSel(null) } }} />
+          </div>
           </div>
         </div>
         <Card className="h-fit xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">

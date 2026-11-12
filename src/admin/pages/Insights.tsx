@@ -159,7 +159,7 @@ export function Branches() {
   return (
     <Page title="شعب" module="branches" sub="شعبه، ساعت کاری، موجودی شعبه و صف دریافت حضوری">
       <div className="space-y-4">
-        <KpiRow kpis={[{ label: 'سفارش آمادهٔ دریافت حضوری', value: fa(d.orders.filter((o) => o.shipments.some((s) => /حضوری/.test(s.method))).length) }, { label: 'شعبهٔ فعال', value: fa((d.entities.branches ?? []).filter((b) => b.active).length) }, { label: 'فروش حضوری این ماه', value: compactToman(412000000), delta: 6.5 }, { label: 'امتیاز در نقشه‌ها', value: fa(4.6) }]} />
+        <KpiRow kpis={[{ label: 'در انتظار دریافت حضوری', value: fa(d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length), note: `${fa(d.pickups.filter((p) => p.status === 'ready').length)} آماده، ${fa(d.pickups.filter((p) => p.status === 'preparing').length)} در حال آماده‌سازی`, to: '/admin/orders?tab=pickup' }, { label: 'شعبهٔ فعال', value: fa((d.entities.branches ?? []).filter((b) => b.active).length), note: `از ${fa((d.entities.branches ?? []).length)} شعبه` }, { label: 'فروش حضوری این ماه', value: compactToman(412000000), delta: 6.5 }, { label: 'امتیاز در نقشه‌ها', value: fa(4.6), note: 'گوگل‌مپ و نشان' }]} />
         <EntityManager ek="branches" kind="شعبه" fields={[{ k: 'name', label: 'نام شعبه', required: true }, { k: 'address', label: 'نشانی', required: true }, { k: 'hours', label: 'ساعت کاری' }, { k: 'phone', label: 'تلفن', ltr: true }, { k: 'pickup', label: 'دریافت حضوری', type: 'toggle' }, { k: 'test', label: 'تست حضوری', type: 'toggle' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />
       </div>
     </Page>

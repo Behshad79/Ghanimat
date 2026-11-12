@@ -39,7 +39,7 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-12">
         <span>زمان ارسال: <b>{slot ?? `${jday(s.sla)} · تا ${new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`}</b></span>
         {s.courier ? <span className="flex items-center gap-2"><Truck size={13} />{s.courier.company ?? 'پیک'} · {s.courier.name} · <span className="ltr">{fa(s.courier.phone)}</span> <Plate v={s.courier.plate} /></span> : <span className="text-t3">مأمور ارسال هنوز ثبت نشده</span>}
-        <Button size="sm" className="mr-auto" onClick={() => setEdit(true)}>{s.courier ? 'ویرایش مأمور ارسال' : 'ثبت مأمور ارسال و پلاک'}</Button>
+        {!/حضوری/.test(s.method) && <Button size="sm" className="mr-auto" onClick={() => setEdit(true)}>{s.courier ? 'ویرایش مأمور ارسال' : 'ثبت مأمور ارسال و پلاک'}</Button>}
       </div>
       <Modal open={edit} onClose={() => setEdit(false)} title={`مأمور ارسال مرسولهٔ ${s.id}`} footer={<Button variant="primary" disabled={!f.name || !/^\d{2}$/.test(f.p1) || !/^\d{3}$/.test(f.p2) || !/^\d{2}$/.test(f.r)} onClick={save}>ثبت و اطلاع به مشتری</Button>}>
         <div className="grid gap-3 sm:grid-cols-2">

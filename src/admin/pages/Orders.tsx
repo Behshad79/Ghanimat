@@ -9,7 +9,8 @@ import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress } from '../orders/Progress'
 import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
-import { PickupDesk } from '../orders/PickupDesk'
+import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
+import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
 import { PackPhotos } from '../shared/PackPhotos'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -32,7 +33,8 @@ const TABS: [string, string, (o: Order) => boolean][] = [
 export function Orders() {
   const { d, customer, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('all'); const [sp] = useSearchParams()
   const [wh, setWh] = useState('all'); const [manual, setManual] = useState(sp.get('new') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
-  const rows = d.orders.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
+  const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr))
+  const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
   const cols: Col<Order>[] = [
     { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={customer(o.customerId).name} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
@@ -50,12 +52,13 @@ export function Orders() {
   return (
     <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>}
       empty={{ title: 'هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های سایت و کانال‌های فروش اینجا نمایش داده می‌شوند. برای سفارش تلفنی یا حضوری، سفارش دستی ثبت کنید.', action: <Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button> }}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : d.orders.filter(f).length }))} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : dated.filter(f).length }))} />}>
+      {tab !== 'pickup' && <DateFilter r={dr} set={setDr} count={rows.length} total={d.orders.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).length} />}
       {tab === 'all' && <OrdersOverview />}
       {tab === 'pickup' && <PickupDesk />}
       {tab !== 'pickup' && <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>}
       {tab !== 'pickup' && view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['تحویل به پیک/پست', ['order.shipped']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
-      {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
+      {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" noDate rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
         search={(o) => `${o.id} ${customer(o.customerId).name} ${customer(o.customerId).mobile} ${o.pay}`}
         filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
         empty={{ title: 'سفارشی در این نما نیست.', desc: 'نمای دیگری را انتخاب کنید یا فیلتر انبار را بردارید.' }}
@@ -193,6 +196,7 @@ export function OrderDetail() {
                   </li>) })}
               </ul>
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
+              {(/حضوری/.test(s.method) || d.pickups.some((p) => p.orderId === o.id)) && s.status !== 'ship.cancelled' && <PickupReceipt orderId={o.id} customerId={o.customerId} items={s.items.map((x) => x.productId)} />}
               <div className="mb-3"><CustomerProgress o={o} s={s} /></div>
               {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
               {s.tracking && <p className="mb-3 text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}

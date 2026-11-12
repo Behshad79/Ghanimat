@@ -12,7 +12,7 @@ export function UrgentCard({ onOpen, onAll }: { onOpen: (orderId: string) => voi
   const pending = d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status))
   const urgent = d.orders.flatMap((o) => o.shipments.filter((s) => !DONE.includes(s.status)).map((s) => ({ o, s, left: (new Date(s.sla).getTime() - now) / 6e4 }))).filter((x) => x.left < 120).sort((a, b) => a.left - b.left)
   const hot = urgent.filter((x) => x.left < 45).length
-  const clock = (m: number) => { const sec = Math.abs(Math.round(m * 60)); const h = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60; return `${m < 0 ? '−' : ''}${h ? `${fa(h)}:` : ''}${fa(String(mm).padStart(2, '0'))}:${fa(String(ss).padStart(2, '0'))}` }
+  const clock = (m: number) => { if (m < -60) return `${fa(Math.floor(-m / 60))} ساعت دیرکرد`; const sec = Math.abs(Math.round(m * 60)); const h = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60; return `${m < 0 ? '−' : ''}${h ? `${fa(h)}:` : ''}${fa(String(mm).padStart(2, '0'))}:${fa(String(ss).padStart(2, '0'))}` }
   return (
     <div role="link" tabIndex={0} onClick={onAll} onKeyDown={(e) => e.key === 'Enter' && onAll()} className={cx('relative cursor-pointer overflow-hidden rounded-2xl border p-4 text-right text-white', hot ? 'urgent-glow border-transparent' : 'border-transparent')} style={{ background: hot ? 'linear-gradient(135deg,#b3261e 0%,#c2410c 60%,#b45309 110%)' : 'linear-gradient(135deg,#a64b07,#b45309)', backgroundColor: hot ? '#b3261e' : '#a64b07' }}>
       <span className="pointer-events-none absolute -top-8 -left-8 size-28 rounded-full bg-white/10" />

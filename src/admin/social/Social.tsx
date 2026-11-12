@@ -1,3 +1,4 @@
+import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BadgeCheck, Camera as Instagram, CreditCard, MessageCircle, Phone, Plus, ScanLine, Send, ShieldAlert, Store } from 'lucide-react'
@@ -22,7 +23,7 @@ const TONE = (s: string) => (s === 'تطبیق شد' ? 'success' : /مشکوک|�
 export function Social() {
   const d = useDB(); const nav = useNavigate(); const [tab, setTab] = useTab('orders')
   const [order, setOrder] = useState<string | null>(null); const [sms, setSms] = useState(''); const [card, setCard] = useState(d.bank.cards[0]?.id ?? '')
-  const social = d.orders.filter((o) => CHANNELS.slice(1).includes(o.channel))
+  const [dr, setDr] = useDateRange(); const socialAll = d.orders.filter((o) => CHANNELS.slice(1).includes(o.channel)); const social = socialAll.filter((o) => inRange(o.createdAt, dr))
   const B = d.bank
   const parsed = sms ? parseBankSms(sms) : null
   /** موتور تطبیق: مبلغ یکسان، فاصلهٔ زمانی، شمارهٔ پیگیری تکراری */
@@ -55,9 +56,10 @@ export function Social() {
         <KPI label="واریز تطبیق‌نشده" value={fa(B.credits.filter((c) => !c.matched).length)} />
       </div>
       {tab === 'orders' && <div className="space-y-4">
+        <DateFilter r={dr} set={setDr} count={social.length} total={socialAll.length} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">{CHANNELS.slice(1).map((c) => { const list = social.filter((o) => o.channel === c); const st = CH_STYLE[c]; return <button key={c} onClick={() => setOrder(c)} className="lift group flex flex-col gap-2 rounded-2xl border border-line p-3 text-right" style={{ background: st?.tint }}><span className="flex items-center justify-between"><ChannelLogo ch={c} size={42} /><span className="rounded-full bg-white px-2 py-0.5 text-11 font-bold shadow-sm" style={{ color: st?.fg }}>{fa(list.length)} سفارش</span></span><b className="text-13 text-[#10123d]">{c}</b><span className="tnum text-12 text-[#5a5e78]">{compactToman(list.reduce((a, o) => a + o.total, 0))}</span><span className="mt-auto flex h-8 items-center justify-center gap-1 rounded-lg bg-white text-12 font-medium shadow-sm group-hover:shadow" style={{ color: st?.fg }}><Plus size={13} />ثبت سفارش</span></button> })}</div>
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <DataTable name="سفارش‌های شبکه‌های اجتماعی" rows={social} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)} empty={{ title: 'هنوز سفارشی از شبکه‌های اجتماعی ثبت نشده است.', action: <Button variant="primary" onClick={() => setOrder('اینستاگرام دایرکت')}>ثبت اولین سفارش</Button> }}
+          <DataTable name="سفارش‌های شبکه‌های اجتماعی" noDate rows={social} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)} empty={{ title: 'هنوز سفارشی از شبکه‌های اجتماعی ثبت نشده است.', action: <Button variant="primary" onClick={() => setOrder('اینستاگرام دایرکت')}>ثبت اولین سفارش</Button> }}
             cols={[{ key: 'id', title: 'سفارش', render: (o) => <QuickText v={o.id} /> }, { key: 'ch', title: 'کانال', render: (o) => <span className="flex items-center gap-2"><ChannelLogo ch={o.channel} size={24} />{o.channel}</span> }, { key: 'c', title: 'مشتری', render: (o) => <QuickText v={d.customers.find((c) => c.id === o.customerId)?.name ?? ''} /> }, { key: 'p', title: 'پرداخت', render: (o) => o.pay }, { key: 't', title: 'مبلغ', align: 'left', render: (o) => toman(o.total) }, { key: 's', title: 'وضعیت', render: (o) => <Badge tone={o.status === 'order.awaiting_payment' ? 'warning' : 'success'}>{o.status === 'order.awaiting_payment' ? 'در انتظار پرداخت/تطبیق' : 'پرداخت‌شده'}</Badge> }]}
             actions={(o) => [{ label: 'فاکتور', onClick: () => nav(`/admin/print?doc=invoice&orders=${o.id}`) }, { label: 'جزئیات و ارسال', onClick: () => nav(`/admin/orders/${o.id}`) }]} />
           <Card title="فروش هر کانال"><Bars data={byCh} fmt={compactToman} /></Card>

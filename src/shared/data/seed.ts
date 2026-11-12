@@ -16,6 +16,7 @@ import { makeSite, makeLayout } from './site'
 import { makeCxEntities, makeCxSettings } from './cx'
 import { makeJourney } from './journey'
 import { makeDelivery } from './delivery'
+import { BASE_ROLES } from './roles'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -184,6 +185,9 @@ const makeSeedBase = () => ({
     { key: 'review_gift', group: 'مشوق‌ها', name: 'هدیهٔ ثبت دیدگاه', value: 200000, unit: 'تومان', desc: 'پس از پایان مهلت مرجوعی به کیف پول واریز می‌شود.', sensitive: false, usedIn: ['پنل مشتری › دیدگاه‌ها', 'پیامک درخواست دیدگاه'], history: [] },
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
+  roleDefs: structuredClone(BASE_ROLES),
+  // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
+  access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
     { id: 'u1', name: 'بهراد', role: 'super', phone: '09000000001', status: 'آنلاین', twoFA: true },
     { id: 'u2', name: 'نیما', role: 'ops', phone: '09000000002', status: 'آنلاین', twoFA: true },
@@ -298,7 +302,7 @@ export const makeSeed = () => {
   rows.forEach(([id, cid, ch, handle, pay, pid, total, status], i) => {
     const o = structuredClone(base)
     Object.assign(o, { id, customerId: cid, channel: ch, pay, total, discount: 0, status, buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - (i + 1) * 95 * 6e4).toISOString(), tags: [ch, `شناسه: ${handle}`] })
-    o.shipments = [{ ...structuredClone(base.shipments[0]), id: `${id}-1`, status: status === 'order.delivered' ? 'ship.delivered' : status === 'order.shipped' ? 'ship.in_transit' : 'ship.pending', method: ch === 'حضوری در شعبه' ? 'دریافت حضوری از شعبه' : 'پست پیشتاز', packPhotos: [], courier: null, items: [{ productId: pid, unitId: '', qty: 1, price: total }] }]
+    o.shipments = [{ ...structuredClone(base.shipments[0]), id: `${id}-1`, status: status === 'order.delivered' ? 'ship.delivered' : status === 'order.shipped' ? 'ship.in_transit' : 'ship.pending', method: ch === 'حضوری در شعبه' ? 'دریافت حضوری از شعبه' : 'پست پیشتاز', packPhotos: [], courier: null, sla: new Date(Date.now() + (status === 'order.delivered' ? -5 * 36e5 : (i * 55 + 35) * 6e4)).toISOString(), items: [{ productId: pid, unitId: '', qty: 1, price: total }] }]
     s.orders.unshift(o)
     s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
   })

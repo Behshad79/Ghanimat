@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
+import { BASE_ROLES, type RoleDef } from '../data/roles'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v15'
+const DB_KEY = 'ghanimat-demo-db-v17'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -18,25 +19,20 @@ export function mutate(fn: (d: DB) => void, log?: { action: string; target: stri
   fn(next)
   if (log) next.audit.unshift({ at: new Date().toISOString(), who: currentUser()?.name ?? 'سیستم', before: '-', after: '-', ai: false, ...log })
   db = next
+  syncRoles()
   write(DB_KEY, db)
   dbSubs.forEach((f) => f())
 }
 /** برای Undo: عکس فوری از داده و تابع بازگردانی */
-export function snapshot() { const prev = db; return () => { db = prev; write(DB_KEY, db); dbSubs.forEach((f) => f()) } }
-export function resetDB() { db = makeSeed(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
+export function snapshot() { const prev = db; return () => { db = prev; syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) } }
+export function resetDB() { db = makeSeed(); syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
 
 // ───── نقش‌ها و حساب‌های نمونه (بخش ۱۸.۳) ─────
-export type Face = 'full' | 'simple' | 'partner'
-export const ROLES: Record<string, { label: string; face: Face; modules: string[] | '*'; home: string; opens: string }> = {
-  super: { label: 'مدیر کل', face: 'full', modules: '*', home: '/admin', opens: 'پنل کامل، همهٔ ماژول‌ها' },
-  ops: { label: 'مدیر عملیات', face: 'full', modules: ['home', 'live', 'orders', 'warehouse', 'shipping', 'print', 'returns', 'catalog', 'team', 'trash'], home: '/admin/live', opens: 'سفارش‌ها، انبار، ارسال، مرجوعی' },
-  simple: { label: 'اپراتور', face: 'simple', modules: [], home: '/simple', opens: 'حالت سریع (کامل، بدون نیاز به تأیید)' },
-  partner: { label: 'شریک انبار مهاباد', face: 'partner', modules: [], home: '/partner', opens: 'پرتال شریک' },
-  support: { label: 'کارشناس پشتیبانی', face: 'full', modules: ['home', 'support', 'customers', 'orders', 'reviews', 'returns'], home: '/admin/support', opens: 'صندوق ورودی' },
-  finance: { label: 'کارشناس مالی', face: 'full', modules: ['home', 'finance', 'orders', 'pricing', 'returns', 'analytics'], home: '/admin/finance', opens: 'مالی و تسویه' },
-  growth: { label: 'مارکتینگ، سئو و رشد', face: 'full', modules: ['home', 'marketing', 'seo', 'growth', 'analytics', 'content', 'channels', 'pricing', 'reviews'], home: '/admin/marketing', opens: 'مارکتینگ، سئو، رشد، تحلیل' },
-  qc: { label: 'کارشناس کنترل کیفیت و انبار', face: 'full', modules: ['home', 'warehouse', 'catalog', 'print'], home: '/admin/warehouse', opens: 'صف‌های انبار (نسخهٔ iPad)' },
-}
+export type { Face } from '../data/roles'
+/** نقش‌ها از پایگاه‌داده خوانده می‌شوند تا مدیر کل بتواند نقش تازه بسازد و دسترسی هر نقش را تغییر دهد */
+export const ROLES: Record<string, RoleDef> = {}
+function syncRoles() { for (const k of Object.keys(ROLES)) delete ROLES[k]; Object.assign(ROLES, db.roleDefs ?? BASE_ROLES) }
+syncRoles()
 
 export type ViewState = 'normal' | 'empty' | 'loading' | 'error' | 'noaccess' | 'offline'
 export type Session = {
@@ -77,7 +73,13 @@ export function applyTheme() {
 export const currentUser = () => db.team.find((u) => u.id === session.userId) ?? null
 /** نقش مؤثر: اگر مدیر کل «مشاهده به‌جای…» را روشن کرده باشد، نقش همان فرد */
 export const effectiveRole = (s: Session = session) => s.viewAs ?? currentUser()?.role ?? 'super'
-export const can = (module: string, s: Session = session) => { const m = ROLES[effectiveRole(s)]?.modules; return m === '*' || (m ?? []).includes(module) }
+export const can = (module: string, s: Session = session) => {
+  // دسترسی اختصاصی هر فرد بر نقش او مقدم است (افزوده یا گرفته‌شده از نقش)
+  const u = s.viewAs ? null : currentUser(); const ov = u ? db.access?.[u.id] : undefined
+  if (ov?.remove.includes(module)) return false
+  if (ov?.add.includes(module)) return true
+  const m = ROLES[effectiveRole(s)]?.modules; return m === '*' || (m ?? []).includes(module)
+}
 /** شبیه‌سازی سرویس بیرونی با نتیجهٔ قابل انتخاب از نوار نمایشی */
 export const fakeCall = <T,>(ok: T, ms = 900) => new Promise<T>((res, rej) => setTimeout(() => (session.simulate === 'fail' ? rej(new Error('سرویس پاسخ نداد')) : res(ok)), session.simulate === 'slow' ? ms * 4 : ms))
 

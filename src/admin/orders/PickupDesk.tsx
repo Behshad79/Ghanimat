@@ -8,6 +8,7 @@ import { Modal, toast } from '@/shared/ui/overlay'
 import { QuickText } from '@/shared/ui/quickview'
 import { askReason } from '@/shared/ui/reason'
 import { currentUser, mutate, sendSms, useDB } from '@/shared/lib/store'
+import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { fileToImage } from '@/shared/lib/image'
 import { fa, rel } from '@/shared/lib/fa'
 import type { Pickup } from '@/shared/data/pickups'
@@ -17,7 +18,7 @@ const COL: [Pickup['status'], string, string][] = [['preparing', 'در حال آ
 
 /** میز دریافت حضوری: آماده‌سازی، پیامک، تطبیق کد تحویل، ثبت تحویل‌گیرنده و بایگانی رسید امضاشده */
 export function PickupDesk() {
-  const d = useDB(); const nav = useNavigate(); const P = d.pickups
+  const d = useDB(); const nav = useNavigate(); const P = d.pickups; const [dr, setDr] = useDateRange()
   const [hand, setHand] = useState<Pickup | null>(null); const [f, setF] = useState({ code: '', receiver: '', receiverId: '', relation: 'خود مشتری', receipt: '' }); const [view, setView] = useState<string | null>(null)
   const name = (id: string) => d.customers.find((c) => c.id === id)?.name ?? id
   const set = (id: string, patch: Partial<Pickup>, action: string) => mutate((x) => { Object.assign(x.pickups.find((p) => p.id === id)!, patch) }, { action, target: id })
@@ -47,7 +48,9 @@ export function PickupDesk() {
             {st === 'handed' && <Button size="sm" icon={<FileSignature size={12} />} onClick={() => setView(p.id)}>مشاهدهٔ رسید</Button>}
             <Button size="sm" variant="ghost" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?doc=pickup&orders=${p.orderId}`)}>رسید چاپی</Button>
           </div></div>)}{list.length === 0 && <p className="py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>
-      <DataTable name="بایگانی رسیدهای تحویل حضوری" rows={P.filter((p) => p.status === 'handed')} rowKey={(p) => p.id} onRow={(p) => setView(p.id)} empty={{ title: 'هنوز تحویل حضوری ثبت نشده است.' }} search={(p) => `${p.orderId} ${name(p.customerId)} ${p.receiver} ${p.receiverId}`}
+      <h3 className="mb-2 mt-6 text-14 font-semibold">بایگانی رسیدهای تحویل حضوری</h3>
+      <DateFilter r={dr} set={setDr} count={P.filter((p) => p.status === 'handed' && inRange(p.handedAt!, dr)).length} total={P.filter((p) => p.status === 'handed').length} noun="تحویل" />
+      <DataTable name="بایگانی رسیدهای تحویل حضوری" noDate rows={P.filter((p) => p.status === 'handed' && inRange(p.handedAt!, dr))} rowKey={(p) => p.id} onRow={(p) => setView(p.id)} empty={{ title: 'هنوز تحویل حضوری ثبت نشده است.' }} search={(p) => `${p.orderId} ${name(p.customerId)} ${p.receiver} ${p.receiverId}`}
         cols={[{ key: 'o', title: 'سفارش', render: (p) => <QuickText v={p.orderId} /> }, { key: 'c', title: 'مشتری', render: (p) => <QuickText v={name(p.customerId)} /> }, { key: 'r', title: 'تحویل‌گیرنده', render: (p) => `${p.receiver} · ${p.relation}` }, { key: 'id', title: 'کد ملی', render: (p) => <span className="ltr">{p.receiverId || '—'}</span> }, { key: 'b', title: 'شعبه', render: (p) => p.branch }, { key: 'by', title: 'تحویل‌دهنده', render: (p) => p.by ?? '—' }, { key: 'at', title: 'زمان تحویل', render: (p) => <span className="text-12 text-t2">{rel(p.handedAt!)}</span>, sort: (p) => p.handedAt ?? '' }, { key: 'rc', title: 'رسید', render: (p) => (p.receipt ? <Badge tone="success">عکس امضا</Badge> : <Badge>رسید کاغذی (بدون عکس)</Badge>) }]} />
       <Modal open={!!hand} onClose={() => setHand(null)} title={hand ? `تحویل حضوری سفارش ${hand.orderId}` : ''} footer={<Button variant="primary" icon={<CheckCircle2 size={14} />} onClick={done}>ثبت تحویل و بایگانی رسید</Button>}>
         {hand && <div className="space-y-3">
@@ -61,6 +64,46 @@ export function PickupDesk() {
       <Modal open={!!viewP} onClose={() => setView(null)} title={viewP ? `رسید تحویل ${viewP.orderId}` : ''}>
         {viewP && <div className="space-y-2 text-13"><p>تحویل‌گیرنده: <b>{viewP.receiver}</b> ({viewP.relation}) · کد ملی <span className="ltr">{viewP.receiverId || '—'}</span></p><p>شعبه: {viewP.branch} · تحویل‌دهنده: {viewP.by} · {rel(viewP.handedAt!)}</p><p>کد تحویل تطبیق‌شده: <span className="ltr font-mono">{viewP.code}</span></p>{viewP.receipt ? <img src={viewP.receipt} alt="رسید امضاشده" className="w-full rounded-xl" /> : <p className="rounded-xl bg-neutral-bg px-3 py-6 text-center text-12 text-t2">برای این تحویل فقط رسید کاغذی ثبت شده و عکسی بایگانی نشده است.</p>}</div>}
       </Modal>
+    </div>
+  )
+}
+
+/** رسید تحویل حضوری داخل صفحهٔ سفارش: عکس رسید امضاشده، مشخصات تحویل‌گیرنده، بارگذاری یا جایگزینی عکس */
+export function PickupReceipt({ orderId, customerId, items }: { orderId: string; customerId: string; items: string[] }) {
+  const d = useDB(); const nav = useNavigate(); const p = d.pickups.find((x) => x.orderId === orderId); const [big, setBig] = useState(false)
+  const upload = async (file: File) => {
+    const img = await fileToImage(file, 1000, 0.8)
+    if (p?.receipt) { const why = await askReason({ kind: 'order', ref: orderId, status: 'جایگزینی عکس رسید تحویل', title: 'دلیل جایگزینی عکس رسید' }); if (!why) return }
+    mutate((x) => {
+      const q = x.pickups.find((y) => y.orderId === orderId)
+      if (q) { q.receipt = img; if (q.status !== 'handed') { q.status = 'handed'; q.handedAt = new Date().toISOString(); q.by = currentUser()?.name ?? 'شما'; q.receiver = q.receiver || x.customers.find((c) => c.id === customerId)?.name } }
+      else x.pickups.unshift({ id: `PU-${1300 + x.pickups.length}`, orderId, customerId, branch: 'شعبهٔ ونک', status: 'handed', window: '—', code: '—', deadline: new Date().toISOString(), receiver: x.customers.find((c) => c.id === customerId)?.name, relation: 'خود مشتری', handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما', receipt: img, items })
+    }, { action: p?.receipt ? 'جایگزینی عکس رسید تحویل حضوری' : 'بارگذاری عکس رسید تحویل حضوری', target: orderId })
+    toast('عکس رسید امضاشده بایگانی شد.')
+  }
+  const picker = (label: string, primary?: boolean) => <label className={cx('inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-12 font-medium', primary ? 'bg-brand text-white' : 'border border-line bg-surface text-t1 hover:bg-neutral-bg')}><Camera size={13} />{label}<input type="file" accept="image/*" capture="environment" className="sr-only" aria-label={label} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = '' }} /></label>
+  return (
+    <div className="mb-3 rounded-lg border border-line p-3">
+      <p className="mb-2 flex flex-wrap items-center justify-between gap-2 text-12 font-semibold"><span className="flex items-center gap-1.5"><FileSignature size={14} />رسید تحویل حضوری (امضای مشتری)</span>{p?.receipt ? <Badge tone="success">عکس رسید امضاشده بایگانی شد</Badge> : p?.status === 'handed' ? <Badge tone="warning">رسید کاغذی، عکس بارگذاری نشده</Badge> : <Badge>هنوز تحویل نشده</Badge>}</p>
+      {p?.status === 'handed' ? (
+        <div className="flex flex-wrap gap-3">
+          {p.receipt ? <button type="button" onClick={() => setBig(true)} aria-label="نمایش بزرگ رسید امضاشده" className="lift w-28 shrink-0 overflow-hidden rounded-lg border border-line"><img src={p.receipt} alt={`رسید امضاشدهٔ سفارش ${orderId}`} className="aspect-[3/4] w-full object-cover" /></button> : <div className="grid w-28 shrink-0 place-items-center rounded-lg border border-dashed border-line bg-neutral-bg px-2 text-center text-11 text-t2">بدون عکس</div>}
+          <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] content-start gap-x-3 gap-y-1 text-12">
+            <dt className="text-t2">تحویل‌گیرنده</dt><dd className="font-medium">{p.receiver} <span className="text-t2">({p.relation})</span></dd>
+            <dt className="text-t2">کد ملی</dt><dd className="ltr text-right">{p.receiverId || '—'}</dd>
+            <dt className="text-t2">زمان تحویل</dt><dd>{rel(p.handedAt!)}</dd>
+            <dt className="text-t2">شعبه و کارمند</dt><dd>{p.branch} · {p.by}</dd>
+            <dt className="text-t2">کد تحویل</dt><dd className="ltr text-right font-mono">{p.code}</dd>
+          </dl>
+        </div>
+      ) : <p className="text-12 text-t2">{p ? `وضعیت در میز دریافت حضوری: ${COL.find((c) => c[0] === p.status)?.[1]}. تحویل از تب «دریافت حضوری» با تطبیق کد ثبت می‌شود.` : 'برای این سفارش هنوز رکورد دریافت حضوری ساخته نشده. اگر تحویل داده‌اید، عکس رسید امضاشده را بارگذاری کنید.'}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {p?.status === 'handed' && p.receipt && <Button size="sm" variant="ghost" onClick={() => setBig(true)}>نمایش بزرگ</Button>}
+        {p?.status === 'handed' ? picker(p.receipt ? 'جایگزینی عکس رسید' : 'بارگذاری عکس رسید', !p.receipt) : !p && picker('بارگذاری عکس رسید', true)}
+        {p && p.status !== 'handed' && <Button size="sm" variant="primary" onClick={() => nav('/admin/orders?tab=pickup')}>رفتن به میز دریافت حضوری</Button>}
+        <Button size="sm" icon={<Printer size={13} />} onClick={() => nav(`/admin/print?doc=pickup&orders=${orderId}`)}>چاپ رسید برای امضا</Button>
+      </div>
+      <Modal open={big} onClose={() => setBig(false)} title={<span className="flex items-center gap-2">رسید امضاشدهٔ سفارش <span className="ltr font-mono">{orderId}</span></span>}>{p?.receipt && <img src={p.receipt} alt="رسید امضاشده" className="w-full rounded-xl" />}</Modal>
     </div>
   )
 }

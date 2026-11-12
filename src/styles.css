@@ -33,6 +33,8 @@
   --neutral-bg: #eff0f5;
   --shadow-float: 0 8px 28px rgba(16, 18, 61, 0.14), 0 1px 3px rgba(16, 18, 61, 0.08);
   --row-h: 44px;
+  /* جدول: سطرهای یکی‌درمیان خیلی کم‌رنگ برای دنبال کردن سطر؛ حالت hover و انتخاب از آن متمایزند */
+  --zebra: #f6f7fa; --row-hover: #eef0fb; --row-sel: #e4e8ff; --th-bg: #f1f2f7; --row-line: #eceef4;
   --sidebar-w: 264px;
 }
 [data-theme='dark'] {
@@ -51,6 +53,7 @@
   --bg: #0c0d1a;
   --surface: #15172a;
   --surface-2: #1a1c33;
+  --zebra: #181a2f; --row-hover: #1f2240; --row-sel: #232867; --th-bg: #1b1d35; --row-line: #22253f;
   --border: #282b47;
   --success: #4ade80; --success-bg: #10291c;
   --warning: #fbbf24; --warning-bg: #2e2110;
@@ -185,3 +188,17 @@ button:disabled { cursor: not-allowed; }
 .urgent-glow { animation: urgent-glow 1.6s ease-out infinite; }
 @keyframes flame { 0%, 100% { transform: scale(1) rotate(0); } 25% { transform: scale(1.08) rotate(-4deg); } 75% { transform: scale(.96) rotate(3deg); } }
 .flame-flicker { animation: flame 1.1s ease-in-out infinite; }
+
+/* ───────── جدول‌ها: سربرگ مشخص، سطر یکی‌درمیان، hover و انتخاب متمایز، فوکوس صفحه‌کلید ───────── */
+.gh-table { border-collapse: separate; border-spacing: 0; }
+.gh-table thead th { background: var(--th-bg); color: var(--text-2); font-weight: 600; font-size: 12px; border-bottom: 1px solid var(--border); }
+.gh-table tbody td { border-bottom: 1px solid var(--row-line); background: var(--surface); transition: background-color .12s ease; }
+.gh-table tbody tr:last-child td { border-bottom: 0; }
+.gh-table tbody tr:nth-child(even) > td { background: var(--zebra); }
+.gh-table tbody tr:hover > td { background: var(--row-hover); }
+.gh-table tbody tr[aria-selected='true'] > td { background: var(--row-sel); }
+.gh-table tbody tr:hover > td:first-child, .gh-table tbody tr:focus-visible > td:first-child { box-shadow: inset -3px 0 0 var(--brand); }
+.gh-table tbody tr:focus-visible { outline: none; }
+.gh-table tbody tr:focus-visible > td { background: var(--row-hover); }
+.gh-list > li:nth-child(even) { background: var(--zebra); }
+.row-flash > td { animation: flash 2s ease-out; }

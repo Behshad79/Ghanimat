@@ -112,12 +112,14 @@ export function Select({ value, onChange, options, className, chips, placeholder
     </>
   )
 }
-export function Toggle({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-50', on ? 'bg-brand-solid' : 'bg-line')}>
+export function Toggle({ on, onChange, label, disabled, text }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean; text?: ReactNode }) {
+  const sw = (
+    <button type="button" role="switch" aria-checked={on} aria-label={label ?? (typeof text === 'string' ? text : undefined)} disabled={disabled} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-50', on ? 'bg-brand-solid' : 'bg-line')}>
       <span className={cx('absolute top-0.5 size-4 rounded-full bg-white shadow transition-all duration-150', on ? 'right-[18px]' : 'right-0.5')} />
     </button>
   )
+  // با text، متن کنار کلید دیده می‌شود و کلیک روی متن هم کلید را عوض می‌کند
+  return text ? <span className="inline-flex items-center gap-2">{sw}<span className={cx('cursor-pointer select-none', disabled && 'opacity-60')} onClick={() => !disabled && onChange(!on)}>{text}</span></span> : sw
 }
 export function Segmented<T extends string>({ value, onChange, options, size = 'md' }: { value: T; onChange: (v: T) => void; options: [T, ReactNode][]; size?: 'sm' | 'md' }) {
   return (

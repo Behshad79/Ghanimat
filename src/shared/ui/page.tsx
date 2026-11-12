@@ -5,6 +5,7 @@ import { CountUp } from './motion'
 import { Button, Card, cx, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
 import { askCopilot, Hint } from './overlay'
 import { Spark } from './charts'
+import { isZero, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
 import { can, useSession } from '../lib/store'
 import { rel, signedPct } from '../lib/fa'
 
@@ -40,24 +41,31 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
 }
 
 /** کارت شاخص: آیکون در دایرهٔ رنگی، مقدار (با شمارش متحرک)، قرص تغییر، Sparkline، «چرا تغییر کرد؟» و پیکان رفتن به جزئیات */
-export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown, icon, featured, num, fmt }: { label: string; value?: ReactNode; full?: string; delta?: number; spark?: number[]; hint?: string; note?: string; to?: string; goodDown?: boolean; icon?: ReactNode; featured?: boolean; num?: number; fmt?: (n: number) => string }) {
+/** کارت شاخص: آیکون معنادار و رنگ لحن خودکار از عنوان؛ شاخص‌های هشدار با مقدار غیرصفر اولویت بصری می‌گیرند */
+export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown, icon, featured, num, fmt, tone, priority }: { label: string; value?: ReactNode; full?: string; delta?: number; spark?: number[]; hint?: string; note?: string; to?: string; goodDown?: boolean; icon?: ReactNode; featured?: boolean; num?: number; fmt?: (n: number) => string; tone?: KpiTone; priority?: boolean }) {
+  const t: KpiTone = tone ?? kpiTone(label); const zero = num === 0 || isZero(value)
+  const urgent = !featured && (priority ?? ((t === 'danger' || t === 'warning') && !zero))
+  const calm = !featured && (t === 'danger' || t === 'warning') && zero
+  const T = TONE_CLS[calm ? 'success' : t]
   const nav = useNavigate()
-  const good = delta === undefined ? true : goodDown ? delta <= 0 : delta >= 0
+  // قانون طراحی غنیمت: هر روند کاهشی قرمز و هر روند افزایشی سبز است، مستقل از اینکه کاهش آن شاخص خوب باشد یا بد (goodDown فقط معنا را در راهنما نگه می‌دارد)
+  const good = delta === undefined ? true : delta >= 0; void goodDown
   return (
     <div role={to ? 'link' : undefined} tabIndex={to ? 0 : undefined} onClick={() => to && nav(to)} onKeyDown={(e) => e.key === 'Enter' && to && nav(to)}
-      className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : 'border-line bg-surface', to && 'lift cursor-pointer', to && !featured && 'hover:border-brand/40')}>
+      className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', to && 'lift cursor-pointer', to && !featured && 'hover:border-brand/40')}>
       {featured && <span className="pointer-events-none absolute -top-12 -left-12 size-36 rounded-full bg-white/10" />}
+      {urgent && <span aria-hidden className={cx('absolute inset-y-3 right-0 w-1 rounded-l-full', t === 'danger' ? 'bg-danger' : 'bg-warning')} />}
       <div className="relative flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">{icon && <span className={cx('grid size-9 shrink-0 place-items-center rounded-full', featured ? 'bg-white/15 text-white' : 'bg-brand-tint text-brand')}>{icon}</span>}<span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
+        <span className="flex min-w-0 items-center gap-2"><span className={cx('grid size-9 shrink-0 place-items-center rounded-xl', featured ? 'bg-white/15 text-white' : T.bubble)}>{icon ?? kpiIcon(label)}</span><span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : urgent ? 'text-t1' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
         <span className="flex items-center gap-1">
           <button title="چرا تغییر کرد؟" onClick={(e) => { e.stopPropagation(); askCopilot(`چرا «${label}» تغییر کرد؟`) }} className={cx('hidden opacity-0 sm:inline transition-opacity group-hover:opacity-100', featured ? 'text-white/80' : 'text-t3 hover:text-brand')}><Sparkles size={13} /></button>
           {to && <span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}
         </span>
       </div>
-      <p className="tnum relative mt-3 truncate text-18 font-bold whitespace-nowrap sm:text-24" title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>
+      <div className="relative mt-3 flex items-center justify-between gap-2"><p className={cx('tnum min-w-0 truncate text-18 font-bold whitespace-nowrap sm:text-24', urgent && t === 'danger' && 'text-danger')} title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>{urgent && <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', t === 'danger' ? 'bg-danger text-white' : 'bg-warning-bg text-warning')}>{t === 'danger' ? 'نیاز به اقدام' : 'پیگیری'}</span>}</div>
       <div className="relative mt-2 flex min-h-7 items-end justify-between gap-2">
         {delta !== undefined ? (
-          <span className={cx('tnum inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-11 font-medium', featured ? 'bg-white/15 text-white' : good ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>
+          <span className={cx('tnum inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-11 font-medium', featured ? (good ? 'bg-white/15 text-white' : 'bg-[#b3261e] text-white') : good ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>
             {delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}{signedPct(delta)}<span className={cx('mr-1 hidden font-normal sm:inline', featured ? 'text-white/85' : '')}>نسبت به دورهٔ قبل</span>
           </span>
         ) : note ? <span className={cx('text-11', featured ? 'text-white/85' : 'text-t2')}>{note}</span> : <span />}

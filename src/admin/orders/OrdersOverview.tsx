@@ -1,3 +1,4 @@
+import { inRange, useDateRange } from '@/shared/ui/datefilter'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Banknote, Check, MapPin, PackageCheck, RotateCcw, ShoppingBag, Timer, Truck, Warehouse } from 'lucide-react'
@@ -15,7 +16,8 @@ const FLOW_L = ['ثبت و تأیید سفارش', 'جمع‌آوری از قف�
 
 /** سربرگ صفحهٔ سفارش‌ها: شاخص‌ها، پیگیری مرسوله و قیف فروش */
 export function OrdersOverview() {
-  const { d, customer, product } = useLookup(); const nav = useNavigate()
+  const { d: d0, customer, product } = useLookup(); const nav = useNavigate(); const [dr] = useDateRange()
+  const d = { ...d0, orders: d0.orders.filter((o) => inRange(o.createdAt, dr)) }
   const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ o, s }))).filter(({ s }) => !['ship.cancelled'].includes(s.status))
   const [sel, setSel] = useState(ships.find(({ s }) => s.status === 'ship.in_transit' || s.status === 'ship.handed')?.s.id ?? ships[0]?.s.id ?? '')
   const cur = ships.find(({ s }) => s.id === sel)

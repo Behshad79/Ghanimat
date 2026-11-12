@@ -11,7 +11,7 @@ import { useQuickChips } from '../pages/_shared'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
-  { id: 'post', label: 'برچسب مرسولهٔ پستی', src: 'ship', papers: ['A6', '100x150', 'A5'], fields: [['carrierLogo', 'لوگوی شرکت حمل'], ['barcode', 'بارکد مرسوله و رهگیری'], ['fragile', 'علامت شکستنی'], ['contents', 'محتوای کلی']] },
+  { id: 'post', label: 'برچسب مرسولهٔ پستی (قانون پست: A5 افقی)', src: 'ship', papers: ['A5 افقی', 'A6', '100x150', 'A5'], fields: [['carrierLogo', 'لوگوی شرکت حمل'], ['barcode', 'بارکد مرسوله و رهگیری'], ['fragile', 'علامت شکستنی'], ['contents', 'محتوای کلی']] },
   { id: 'courier', label: 'برچسب مرسولهٔ پیک', src: 'ship', papers: ['100x100'], fields: [] },
   { id: 'labels', label: 'برچسب کالا و واحد', src: 'labels', papers: ['50x30', '40x25', '60x40', 'A4'], fields: [] },
   { id: 'qc', label: 'برگهٔ کنترل کیفیت', src: 'unit', papers: ['A5'], fields: [] },

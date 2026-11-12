@@ -15,6 +15,7 @@ import { QuickHost } from './shared/ui/quickview'
 import { Customer360 } from './admin/customer/Customer360'
 import { SiteEditor } from './admin/site/SiteEditor'
 import { CustomerRequests } from './admin/cx/Requests'
+import { Social } from './admin/social/Social'
 import { Conversations } from './admin/cx/Conversations'
 import { CxSettingsPage } from './admin/cx/CxSettings'
 import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo, Supply } from './admin/pages/Insights'
@@ -62,6 +63,7 @@ export function App() {
               <Route path="content" element={<Content />} />
               <Route path="site" element={<SiteEditor />} />
               <Route path="requests" element={<CustomerRequests />} />
+              <Route path="social" element={<Social />} />
               <Route path="conversations" element={<Conversations />} />
               <Route path="experience" element={<CxSettingsPage />} />
               <Route path="seo" element={<Seo />} />

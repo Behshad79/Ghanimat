@@ -13,10 +13,12 @@ type Line = { pid: string; uid: string; qty: number; price: number }
 const available = () => { const d = getDB(); return d.products.filter((p) => p.status === 'product.published').flatMap((p) => p.mode === 'qty' ? [{ pid: p.id, uid: '', label: p.title, price: p.price ?? 0, wh: (p.qty?.tehran ?? 0) > 0 ? 'tehran' : 'mahabad' }] : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').map((u) => ({ pid: p.id, uid: u.id, label: `${p.title} · ${u.color} · ${u.condition === 'sealed' ? 'اکبند' : u.condition === 'openbox' ? 'جعبه‌باز' : 'استوک'}`, price: u.price, wh: u.warehouse }))) }
 
 /** ثبت سفارش دستی (تلفنی یا حضوری): مشتری موجود یا تازه، کالاها، نشانی، روش ارسال، روش پرداخت */
-export function ManualOrder({ open, onClose }: { open: boolean; onClose: () => void }) {
+export const PAYS: Record<string, string> = { link: 'لینک پرداخت', pos: 'پرداخت حضوری (کارت‌خوان)', wallet: 'کیف پول', c2c: 'کارت به کارت', cod: 'پرداخت در محل' }
+export const CHANNELS = ['سفارش دستی', 'اینستاگرام دایرکت', 'واتساپ', 'تلگرام', 'بله', 'تلفنی', 'حضوری در شعبه']
+export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی' }: { open: boolean; onClose: () => void; channel?: string }) {
   const d = useDB(); const nav = useNavigate(); const qc = useQuickChips()
   const [cid, setCid] = useState('c1'); const [isNew, setIsNew] = useState(false); const [nc, setNc] = useState({ name: '', mobile: '', city: 'تهران', street: '', alley: '', plaque: '', postal: '' })
-  const [lines, setLines] = useState<Line[]>([]); const [method, setMethod] = useState<string>('پست پیشتاز'); const [pay, setPay] = useState('link'); const [discount, setDiscount] = useState(0); const [note, setNote] = useState('')
+  const [lines, setLines] = useState<Line[]>([]); const [method, setMethod] = useState<string>('پست پیشتاز'); const [pay, setPay] = useState('link'); const [discount, setDiscount] = useState(0); const [note, setNote] = useState(''); const [channel, setChannel] = useState(ch0); const [handle, setHandle] = useState(''); const [rcpt, setRcpt] = useState({ last4: '', ref: '', time: '' })
   const opts = useMemo(available, [d.units, d.products])
   const sub = lines.reduce((a, l) => a + l.price * l.qty, 0); const ship = METHODS.find((m) => m[0] === method)?.[1] ?? 0; const total = Math.max(0, sub + ship - discount)
   const submit = () => {
@@ -26,11 +28,14 @@ export function ManualOrder({ open, onClose }: { open: boolean; onClose: () => v
     const byWh = new Map<string, Line[]>(); lines.forEach((l) => { const w = opts.find((o) => o.pid === l.pid && o.uid === l.uid)?.wh ?? 'tehran'; byWh.set(w, [...(byWh.get(w) ?? []), l]) })
     mutate((x) => {
       if (isNew) x.customers.unshift({ ...x.customers[1], id: custId, name: nc.name, mobile: nc.mobile, email: '', city: nc.city, orders: 0, ltv: 0, aov: 0, segment: 'جدید', source: 'سفارش دستی', wallet: 0, tags: [], addr: { province: nc.city, city: nc.city, district: '', street: nc.street, sub: '', alley: nc.alley, plaque: nc.plaque, floor: '', unit: '', postal: nc.postal } } as any)
-      x.orders.unshift({ id, customerId: custId, createdAt: new Date().toISOString(), status: pay === 'link' ? 'order.awaiting_payment' : 'order.paid', pay: pay === 'link' ? 'لینک پرداخت' : pay === 'pos' ? 'پرداخت حضوری (کارت‌خوان)' : 'کیف پول', total, discount, shippingFee: ship, fee: 0, margin: 15, risk: 5, channel: 'سفارش دستی', tags: ['سفارش دستی', ...(note ? ['یادداشت'] : [])], lockedBy: null,
+      x.orders.unshift({ id, customerId: custId, createdAt: new Date().toISOString(), status: pay === 'link' || pay === 'c2c' ? 'order.awaiting_payment' : 'order.paid', pay: PAYS[pay] ?? pay, total, discount, shippingFee: ship, fee: 0, margin: 15, risk: 5, channel, tags: [channel, ...(handle ? [`شناسه: ${handle}`] : []), ...(note ? ['یادداشت'] : [])], lockedBy: null,
         shipments: [...byWh.entries()].map(([w, ls], i) => ({ id: `${id}-${i + 1}`, warehouse: w, method: w === 'mahabad' && /تحویل سریع|پیک/.test(method) ? 'پست پیشتاز' : method, shipFee: i === 0 ? ship : 0, status: 'ship.pending', sla: new Date(Date.now() + (/سریع/.test(method) ? 2 : 48) * 36e5).toISOString(), items: ls.map((l) => ({ productId: l.pid, unitId: l.uid, qty: l.qty, price: l.price })), courier: null, tracking: '', allocReason: w === 'mahabad' ? 'فقط در انبار مهاباد موجود بود.' : 'موجودی تهران کافی بود.' })) })
+      // ثبت هم‌زمان در مالی: تراکنش و (برای کارت به کارت) رسید در صف تطبیق
+      x.txns.unshift({ id: `TX-${Date.now().toString(36).slice(-6).toUpperCase()}`, orderId: id, amount: total, gateway: PAYS[pay] ?? pay, ref: pay === 'c2c' ? rcpt.ref : '', status: pay === 'pos' || pay === 'wallet' || pay === 'cod' ? 'pay.success' : 'pay.unknown', at: new Date().toISOString() } as any)
+      if (pay === 'c2c') x.bank.receipts.unshift({ id: `RC-${Date.now().toString(36).slice(-5).toUpperCase()}`, orderId: id, customer: isNew ? nc.name : x.customers.find((c) => c.id === cid)?.name ?? '', amount: total, last4: rcpt.last4, ref: rcpt.ref, time: rcpt.time, channel, status: 'در انتظار تطبیق', note: '', at: new Date().toISOString() })
       lines.forEach((l) => { if (l.uid) x.units.find((u) => u.id === l.uid)!.status = 'unit.reserved'; else { const p = x.products.find((y) => y.id === l.pid)!; if (p.qty) p.qty.tehran = Math.max(0, p.qty.tehran - l.qty) } })
     }, { action: 'ثبت سفارش دستی', target: id, after: toman(total) })
-    toast(pay === 'link' ? `سفارش ${id} ثبت شد و لینک پرداخت برای مشتری پیامک شد.` : `سفارش ${id} ثبت و پرداخت حضوری ثبت شد.`); onClose(); setLines([]); nav(`/admin/orders/${id}`)
+    toast(pay === 'link' ? `سفارش ${id} ثبت شد و لینک پرداخت برای مشتری پیامک شد.` : pay === 'c2c' ? `سفارش ${id} ثبت شد؛ فاکتور صادر و رسید کارت به کارت به صف تطبیق رفت. تا تطبیق، ارسال قفل است.` : `سفارش ${id} ثبت شد و تراکنش در مالی ثبت شد.`); onClose(); setLines([]); nav(`/admin/orders/${id}`)
   }
   return (
     <Modal open={open} onClose={onClose} wide title="ثبت سفارش دستی" footer={<><Button variant="primary" onClick={submit}>{pay === 'link' ? `ثبت و ارسال لینک پرداخت ${toman(total)}` : `ثبت سفارش ${toman(total)}`}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
@@ -45,7 +50,10 @@ export function ManualOrder({ open, onClose }: { open: boolean; onClose: () => v
         </section>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="روش ارسال"><Select value={method} onChange={setMethod} options={METHODS.map(([m, f]) => [m, `${m} · ${f ? toman(f) : 'رایگان'}`])} /></Field>
-          <Field label="روش پرداخت"><Segmented size="sm" value={pay} onChange={setPay} options={[['link', 'لینک پرداخت'], ['pos', 'پرداخت حضوری'], ['wallet', 'کیف پول']]} /></Field>
+          <Field label="کانال فروش"><Select value={channel} onChange={setChannel} options={CHANNELS} /></Field>
+          {channel !== 'سفارش دستی' && <Field label="شناسهٔ مشتری در کانال" help="آیدی اینستاگرام/تلگرام یا شمارهٔ واتساپ و بله؛ برای پیگیری گفتگو."><Input className="ltr text-left" placeholder="@username" value={handle} onChange={(e) => setHandle(e.target.value)} /></Field>}
+          <Field label="روش پرداخت"><Select value={pay} onChange={setPay} options={Object.entries(PAYS)} /></Field>
+          {pay === 'c2c' && <div className="grid grid-cols-3 gap-2 sm:col-span-2"><Field label="۴ رقم آخر کارت مبدأ"><Input className="ltr text-left" maxLength={4} value={rcpt.last4} onChange={(e) => setRcpt({ ...rcpt, last4: e.target.value.replace(/\D/g, '') })} /></Field><Field label="شمارهٔ پیگیری رسید"><Input className="ltr text-left" value={rcpt.ref} onChange={(e) => setRcpt({ ...rcpt, ref: e.target.value })} /></Field><Field label="ساعت واریز"><Input type="time" className="ltr" value={rcpt.time} onChange={(e) => setRcpt({ ...rcpt, time: e.target.value })} /></Field></div>}
           <Field label="تخفیف دستی (تومان)"><Input className="ltr text-left font-mono" value={discount ? discount.toLocaleString('en-US') : ''} onChange={(e) => setDiscount(Number(e.target.value.replace(/\D/g, '')))} /></Field>
           <Field label="یادداشت داخلی"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
         </div>

@@ -3,7 +3,7 @@ const now = Date.now()
 const ago = (min: number) => new Date(now - min * 60000).toISOString()
 const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
-export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number }
+export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number; company?: string }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; allocReason: string }
 export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; covered: string; notCovered: string }
 export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
@@ -15,6 +15,8 @@ import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
 import { makeCxEntities, makeCxSettings } from './cx'
 import { makeJourney } from './journey'
+import { makeDelivery } from './delivery'
+import { makeBank } from './bank'
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 export const makeSeed = () => ({
@@ -241,6 +243,8 @@ export const makeSeed = () => ({
   entities: { ...makeEntities(), ...makeCxEntities() },
   cx: makeCxSettings(),
   journey: makeJourney(),
+  delivery: makeDelivery(),
+  bank: makeBank(),
   smsLog: [
     { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.example/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
     { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹. کد تحویل: 4821', status: 'تحویل شد', at: ago(60 * 5) },

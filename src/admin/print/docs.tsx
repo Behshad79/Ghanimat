@@ -6,7 +6,7 @@ import { fa, num } from '@/shared/lib/fa'
 import { CONDITION } from '@/shared/data/statuses'
 import type { Order, Shipment } from '@/shared/data/seed'
 
-export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[] }
+export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[]; carrier?: string }
 const show = (o: DocOpts, k: string) => !o.hide.includes(k)
 const jd = (iso?: string) => (iso ? new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(iso)) : '—')
 const rial = (toman: number) => num(toman * 10)
@@ -88,6 +88,38 @@ export function PostLabel({ o, s, opts, paper }: { o: Order; s: Shipment; opts: 
   const size = paper === 'A5' ? { w: '148mm', h: '210mm' } : paper === '100x150' ? { w: '100mm', h: '150mm' } : { w: '105mm', h: '148mm' }
   const a = c.addr
   const L = ({ k, v }: { k: string; v: ReactNode }) => <p className="flex gap-[1.4mm] border-b border-dotted border-black/60 pb-[0.8mm] leading-snug"><span className="shrink-0 font-bold">{k}:</span><span className="min-w-0">{v}</span></p>
+  const recipient = o.buyer === 'legal' ? `${d.customers.find((x) => x.id === o.legalId)?.name} · ${c.name}` : c.name
+  // قانون ادارهٔ پست: A5 افقی؛ فرستنده بالا سمت چپ، گیرنده پایین سمت راست
+  if (paper === 'A5 افقی') return (
+    <Sheet w="210mm" h="148mm" o={{ ...opts, margin: Math.min(opts.margin, 5) }}>
+      <div dir="ltr" className="grid h-full grid-cols-2 grid-rows-[auto_1fr] gap-[3mm] rounded-[3mm] border-[0.9mm] border-double border-black p-[3mm]" style={{ minHeight: `calc(148mm - ${Math.min(opts.margin, 5) * 2}mm)` }}>
+        <div dir="rtl" className="space-y-[1.2mm] rounded-[2mm] border-[0.4mm] border-black p-[2.4mm] text-[8pt]">
+          <p className="text-[9pt] font-black">فرستنده — FROM</p>
+          <L k="فرستنده" v={`${d.seller.brand} · ${w.name}`} />
+          <L k="نشانی" v={`${w.province}، ${w.city}، ${w.district}، ${w.street}، ${w.alley}، پلاک ${fa(w.plaque)}`} />
+          <L k="تلفن" v={<span className="ltr">{fa(w.phone)}</span>} />
+          <div className="flex items-center gap-1"><b>کد پستی:</b><Boxes v={w.postalCode} size={3.4} /></div>
+        </div>
+        <div dir="rtl" className="flex flex-col items-end justify-between gap-[2mm]">
+          <div className="flex w-full items-center justify-between"><Logo h={28} />{show(opts, 'carrierLogo') && (logo ? <img src={logo} alt="لوگوی شرکت حمل" style={{ height: 32 }} /> : <span className="grid h-[11mm] w-[26mm] place-items-center border border-dashed border-black text-center text-[6.5pt] leading-tight">لوگوی {carrier === 'tipax' ? 'تیپاکس' : 'ادارهٔ پست'}</span>)}</div>
+          {show(opts, 'barcode') && <div className="w-full"><Barcode value={s.id} height={26} module={1.2} className="h-[10mm] w-full" />{s.tracking && <Barcode value={s.tracking} height={22} module={1} className="mt-[1mm] h-[8mm] w-full" />}</div>}
+        </div>
+        <div dir="rtl" className="grid content-end gap-y-[0.8mm] text-[7.5pt]">
+          <span>سفارش: <b className="ltr font-mono">{o.id}</b> · مرسوله: <b className="ltr font-mono">{s.id}</b></span>
+          <span>سرویس: <b>{s.method}</b> · بسته {fa(idx)} از {fa(o.shipments.length)} · وزن {fa(weight)} گرم</span>
+          {show(opts, 'contents') && <span>محتوا: <b>کالای الکترونیک</b></span>}<span>تاریخ: <b>{jd(new Date().toISOString())}</b></span>
+          {show(opts, 'fragile') && <span className="mt-[0.6mm] w-fit border border-black px-[1.6mm] font-black">⚠ شکستنی — با احتیاط حمل شود</span>}
+        </div>
+        <div dir="rtl" className="space-y-[1.4mm] rounded-[2mm] border-[0.6mm] border-black p-[3mm] text-[9pt]">
+          <p className="text-[10pt] font-black">گیرنده — TO</p>
+          <p className="text-[13pt] font-black">{recipient}</p>
+          <L k="استان و شهر" v={<b>{a?.province}، {a?.city}</b>} />
+          <L k="نشانی" v={[a?.district, a?.street, a?.sub, a?.alley, a?.plaque && `پلاک ${a.plaque}`, a?.floor && `طبقهٔ ${a.floor}`, a?.unit && `واحد ${a.unit}`].filter(Boolean).join('، ')} />
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-[0.6mm]"><span>موبایل: <b className="ltr">{fa(c.mobile)}</b></span><span className="flex items-center gap-1"><b>کد پستی:</b><Boxes v={a?.postal ?? ''} size={3.8} /></span></div>
+        </div>
+      </div>
+    </Sheet>
+  )
   return (
     <Sheet w={size.w} h={size.h} o={{ ...opts, margin: Math.min(opts.margin, 5) }}>
       <div className="flex h-full flex-col rounded-[3mm] border-[0.9mm] border-double border-black p-[2.4mm]" style={{ minHeight: `calc(${size.h} - ${Math.min(opts.margin, 5) * 2}mm)` }}>
@@ -125,12 +157,14 @@ export function PostLabel({ o, s, opts, paper }: { o: Order; s: Shipment; opts: 
 /** ۳) برچسب مرسولهٔ پیک */
 export function CourierLabel({ o, s, opts }: { o: Order; s: Shipment; opts: DocOpts }) {
   const { c } = useParties(o); const code = String(1000 + (parseInt(s.id.replace(/\D/g, '').slice(-4)) % 9000))
+  // قانون اسنپ‌باکس: مأمور اسنپ‌باکس به کد تحویل روی کاغذ نیاز ندارد
+  const snapp = /اسنپ/.test(s.method) || s.courier?.company === 'اسنپ‌باکس' || opts.carrier === 'snappbox'
   return (
     <Sheet w="100mm" h="100mm" o={{ ...opts, margin: 4 }}>
       <div className="flex items-center justify-between border-b-2 border-black pb-2"><Logo h={24} /><b className="text-[11pt]">{s.method}</b></div>
       <p className="mt-2 text-[13pt] font-black">{c.name}</p><p className="text-[9pt]">موبایل: <b className="ltr">{fa(c.mobile)}</b></p>
       <p className="mt-1 text-[9pt] leading-6">{addrLine(c.addr)}</p>
-      <div className="mt-2 flex items-end justify-between"><div className="text-[8.5pt]"><p>سفارش <b className="ltr font-mono">{o.id}</b></p><p>بازهٔ تحویل: <b>امروز تا {new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</b></p><p className="mt-1">کد تأیید تحویل: <b className="text-[14pt] tracking-widest">{fa(code)}</b></p></div><QR value={`https://ghanimat.example/deliver/${s.id}/${code}`} size={84} /></div>
+      <div className="mt-2 flex items-end justify-between"><div className="text-[8.5pt]"><p>سفارش <b className="ltr font-mono">{o.id}</b></p><p>بازهٔ تحویل: <b>امروز تا {new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</b></p>{!snapp && <p className="mt-1">کد تأیید تحویل: <b className="text-[14pt] tracking-widest">{fa(code)}</b></p>}{snapp && <p className="mt-1 text-[7.5pt]">اسنپ‌باکس: کد تحویل روی برگه چاپ نمی‌شود (در اپ مأمور ثبت است).</p>}</div><QR value={snapp ? `https://ghanimat.example/t/${s.id}` : `https://ghanimat.example/deliver/${s.id}/${code}`} size={84} /></div>
       <Barcode value={s.id} height={26} module={1.4} className="mt-2 h-[10mm] w-full" />
     </Sheet>
   )

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v6'
+const DB_KEY = 'ghanimat-demo-db-v8'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */

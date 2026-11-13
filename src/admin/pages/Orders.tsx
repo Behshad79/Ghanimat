@@ -209,7 +209,7 @@ export function OrderDetail() {
               {s.status === 'ship.partner_confirm' && <p className="mb-3 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">منتظر تأیید موجودی شریک انبار. پیامک و پیام‌رسان برای او ارسال شده است. اگر تا پایان مهلت تأیید نکند، سفارش به جریان تصمیم مشتری می‌رود.</p>}
               {!dead && s.status !== 'ship.partner_confirm' && (
                 <div className="space-y-3">
-                  {s.status === 'ship.packed' && !s.courier && !s.tracking && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.providers.find((p) => p.family === 'carrier' && p.isDefault)?.name ?? 'سرویس پیک'} />}
+                  {s.status === 'ship.packed' && !s.courier && !s.tracking && /سریع|پیک|اسنپ/.test(s.method) && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.delivery.fast.couriers.find((c) => c.id === d.delivery.fast.primary)?.name ?? 'سرویس پیک'} />}
                   <div className="flex flex-wrap gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
                     {s.status === 'ship.picking' && <Button variant="primary" onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی')}>تأیید بسته‌بندی</Button>}

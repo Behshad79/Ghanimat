@@ -11,16 +11,16 @@ const show = (o: DocOpts, k: string) => !o.hide.includes(k)
 const jd = (iso?: string) => (iso ? new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(iso)) : '—')
 const rial = (toman: number) => num(toman * 10)
 const Sheet = ({ w, h, o, children, className }: { w: string; h?: string; o: DocOpts; children: ReactNode; className?: string }) => (
-  <div className={cx('doc-sheet mx-auto bg-white text-black shadow-float', className)} style={{ width: w, minHeight: h, padding: `${o.margin}mm`, fontSize: `${o.font * 10}pt`, fontFamily: 'Vazirmatn', boxSizing: 'border-box' }}>{children}</div>
+  <div className={cx('doc-sheet mx-auto bg-white text-black shadow-float', className)} style={{ width: w, minHeight: h, padding: `${o.margin}mm`, fontSize: `${o.font * 10}pt`, fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif", boxSizing: 'border-box' }}>{children}</div>
 )
 const Logo = ({ h = 34 }: { h?: number }) => <img src="./brand/logo-full.png" alt="غنیمت" style={{ height: h }} />
 /** مهر پیش‌فرض فروشگاه، تا وقتی تصویر مهر واقعی در تنظیمات بارگذاری نشده است */
 const DefaultStamp = () => (
   <svg viewBox="0 0 120 120" width="104" height="104" aria-label="مهر فروشگاه"><circle cx="60" cy="60" r="56" fill="none" stroke="#2b3fd1" strokeWidth="3" /><circle cx="60" cy="60" r="47" fill="none" stroke="#2b3fd1" strokeWidth="1.2" />
     <defs><path id="st" d="M 22 60 A 38 38 0 0 1 98 60" /><path id="sb" d="M 26 66 A 34 34 0 0 0 94 66" /></defs>
-    <text fontSize="10" fill="#2b3fd1" fontFamily="Vazirmatn" fontWeight="700"><textPath href="#st" startOffset="50%" textAnchor="middle">فروشگاه اینترنتی</textPath></text>
-    <text x="60" y="66" fontSize="18" textAnchor="middle" fill="#2b3fd1" fontFamily="Vazirmatn" fontWeight="900">غنیمت</text>
-    <text fontSize="9" fill="#2b3fd1" fontFamily="Vazirmatn"><textPath href="#sb" startOffset="50%" textAnchor="middle">واحد فروش</textPath></text></svg>
+    <text fontSize="10" fill="#2b3fd1" fontFamily="PeydaNoEn, Vazirmatn, sans-serif" fontWeight="700"><textPath href="#st" startOffset="50%" textAnchor="middle">فروشگاه اینترنتی</textPath></text>
+    <text x="60" y="66" fontSize="18" textAnchor="middle" fill="#2b3fd1" fontFamily="PeydaNoEn, Vazirmatn, sans-serif" fontWeight="900">غنیمت</text>
+    <text fontSize="9" fill="#2b3fd1" fontFamily="PeydaNoEn, Vazirmatn, sans-serif"><textPath href="#sb" startOffset="50%" textAnchor="middle">واحد فروش</textPath></text></svg>
 )
 const Boxes = ({ v, n = 10, size = 6 }: { v: string; n?: number; size?: number }) => (
   <span className="ltr inline-flex" style={{ direction: 'ltr' }}>{Array.from({ length: n }).map((_, i) => <span key={i} className="grid place-items-center border border-black font-mono font-bold" style={{ width: `${size}mm`, height: `${size * 1.25}mm`, marginLeft: i ? '-0.3mm' : 0, fontSize: `${size * 0.6}mm` }}>{v[i] ?? ''}</span>)}</span>
@@ -179,7 +179,7 @@ export function WarrantyCard({ unitId, opts, bw }: { unitId: string; opts: DocOp
   const end = new Date(new Date(start).getTime() + months * 30.4 * 864e5).toISOString()
   const wcode = d.warranties.find((w) => w.unitId === u.id)?.code ?? `GW-${u.id.replace(/\D/g, '').padStart(6, '8')}`
   const dark = !bw
-  const card = (children: ReactNode) => <div className={cx('relative overflow-hidden rounded-[3.2mm]', dark ? 'bg-[#10123d] text-white' : 'border-[0.4mm] border-black bg-white text-black')} style={{ width: '85.6mm', height: '54mm', padding: '4mm', fontFamily: 'Vazirmatn' }}>{children}</div>
+  const card = (children: ReactNode) => <div className={cx('relative overflow-hidden rounded-[3.2mm]', dark ? 'bg-[#10123d] text-white' : 'border-[0.4mm] border-black bg-white text-black')} style={{ width: '85.6mm', height: '54mm', padding: '4mm', fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }}>{children}</div>
   return (
     <div className="flex flex-wrap justify-center gap-[6mm]">
       {card(<>

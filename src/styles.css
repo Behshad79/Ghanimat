@@ -1,3 +1,4 @@
+@import './fonts/peyda.css';
 @import 'vazirmatn/Vazirmatn-Variable-font-face.css';
 @import 'tailwindcss';
 
@@ -67,7 +68,7 @@
 [data-density='compact'] { --row-h: 36px; }
 
 @theme inline {
-  --font-sans: 'Vazirmatn', system-ui, sans-serif;
+  --font-sans: 'PeydaNoEn', 'Vazirmatn', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --color-brand: var(--brand);
   --color-brand-pressed: var(--brand-pressed);

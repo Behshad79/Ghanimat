@@ -53,7 +53,7 @@ export function Canvas({ page, theme: T, sel, onSel, heat, mobile, onMove, onDup
     }
   }
   return (
-    <div dir="rtl" style={{ background: T.bg, fontFamily: 'Vazirmatn' }} className="text-[#10123d]">
+    <div dir="rtl" style={{ background: T.bg, fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }} className="text-[#10123d]">
       <div onClick={pick('__header')} className={cx('relative cursor-pointer bg-white -outline-offset-2', sel?.sec === '__header' ? 'outline-2 outline-[#0000ff]' : 'hover:outline-2 hover:outline-dashed hover:outline-[#0000ff]/60')}>
         <p className="py-1.5 text-center text-11 text-white" style={{ background: T.brand }}>{d.site.announce.items[0]?.text.replace('{آستانه_ارسال_رایگان}', '۱۰ میلیون تومان')}</p>
         <div className="flex items-center gap-3 px-[5.5%] py-3"><img src={H.logo === 'mark' ? './brand/logo-mark.png' : './brand/logo-full.png'} alt="غنیمت" style={{ height: mobile ? T.logoHeightMobile : T.logoHeight }} />{!mobile && <span className="mx-auto flex h-10 w-[42%] items-center gap-2 rounded-xl bg-[#f2f3f7] px-3 text-12 text-[#5a5e78]"><Search size={14} />{H.search}</span>}<span className="mr-auto flex items-center gap-3 text-[#10123d]"><MagicIcon name="bell" size={18} /><MagicIcon name="shopping-cart" size={18} /><span className="flex h-8 items-center gap-1 rounded-lg border border-[#e6e8f0] px-2 text-11"><UserRound size={14} />{H.login}</span></span></div>

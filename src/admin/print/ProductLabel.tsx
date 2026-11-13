@@ -14,7 +14,7 @@ export function ProductLabel({ p, u, size = '50x30', bg = 'white', qty }: { p: P
   const code = u?.code ?? p.code ?? p.id
   const desc = u ? [u.color, u.condition === 'sealed' ? 'اکبند' : u.condition === 'openbox' ? 'جعبه‌باز' : 'استوک', `قفسه ${u.shelf}`].join(' · ') : [p.model ?? p.en, qty ? `${fa(qty)} عدد` : ''].filter(Boolean).join(' · ')
   return (
-    <div className={cx('relative flex flex-col overflow-hidden text-black', bg === 'thermal' && 'grayscale')} style={{ width: `${s.w}mm`, height: `${s.h}mm`, background: LABEL_BG[bg]?.bg ?? '#fff', padding: '1.6mm', border: '0.2mm solid #000', boxSizing: 'border-box', fontFamily: 'Vazirmatn' }}>
+    <div className={cx('relative flex flex-col overflow-hidden text-black', bg === 'thermal' && 'grayscale')} style={{ width: `${s.w}mm`, height: `${s.h}mm`, background: LABEL_BG[bg]?.bg ?? '#fff', padding: '1.6mm', border: '0.2mm solid #000', boxSizing: 'border-box', fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }}>
       <div className="flex items-start justify-between gap-[1mm]">
         <div className="min-w-0 flex-1">
           <p className="ltr text-left font-mono font-bold leading-none" style={{ fontSize: small ? '3.2mm' : '4mm' }}>{code}</p>

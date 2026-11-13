@@ -6,7 +6,7 @@ import { fa, num } from '@/shared/lib/fa'
 import { CONDITION } from '@/shared/data/statuses'
 import type { Order, Shipment } from '@/shared/data/seed'
 
-export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[]; carrier?: string }
+export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[]; carrier?: string; proforma?: boolean; validDays?: number }
 const show = (o: DocOpts, k: string) => !o.hide.includes(k)
 const jd = (iso?: string) => (iso ? new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(iso)) : '—')
 const rial = (toman: number) => num(toman * 10)
@@ -49,8 +49,8 @@ export function Invoice({ o, opts }: { o: Order; opts: DocOpts }) {
     <Sheet w="210mm" h="297mm" o={opts}>
       <div className="flex items-start justify-between gap-4">
         <div className="w-[34%]"><Logo h={56} /></div>
-        <div className="flex-1 pt-3 text-center"><p className="text-[15pt] font-black">صورت‌حساب فروش کالا و خدمات</p><p className="mt-1 text-[9pt] text-[#5a5e78]">خریدار {isLegal ? 'حقوقی' : 'حقیقی'} · {seller.brand === 'غنیمت' ? 'فروشگاه اینترنتی غنیمت' : seller.brand}</p></div>
-        <table className="w-[36%] border border-[#9aa0b4] text-[8.5pt]"><tbody>{[['شماره فاکتور', o.invoiceNo ? o.invoiceNo : <Ph v="شمارهٔ فاکتور" />], ['شمارهٔ منحصربه‌فرد مالیاتی', <Ph v="شمارهٔ سامانهٔ مودیان" />], ['تاریخ صدور', jd(o.createdAt)], ['شماره سفارش', <span className="ltr font-mono">{o.id}</span>], ['تاریخ تحویل', jd(o.deliveredAt)]].map(([k, v], i) => <tr key={i}><td className="px-[2mm] py-[1.2mm] text-[#5a5e78]">{k}:</td><td className="px-[2mm] py-[1.2mm] text-left font-bold">{v}</td></tr>)}</tbody></table>
+        <div className="flex-1 pt-3 text-center"><p className="text-[15pt] font-black">{opts.proforma ? 'پیش‌فاکتور (پیش‌صورت‌حساب)' : 'صورت‌حساب فروش کالا و خدمات'}</p>{opts.proforma && <p className="mt-1 rounded border border-[#c42f2f] px-2 py-0.5 text-[8pt] font-bold text-[#c42f2f]">این سند فاکتور فروش نیست · اعتبار قیمت تا {jd(new Date(Date.now() + (opts.validDays ?? 3) * 864e5).toISOString())}</p>}<p className="mt-1 text-[9pt] text-[#5a5e78]">خریدار {isLegal ? 'حقوقی' : 'حقیقی'} · {seller.brand === 'غنیمت' ? 'فروشگاه اینترنتی غنیمت' : seller.brand}</p></div>
+        <table className="w-[36%] border border-[#9aa0b4] text-[8.5pt]"><tbody>{[...(opts.proforma ? [['شمارهٔ پیش‌فاکتور', <span className="ltr font-mono">PF-{o.id.replace(/\D/g, '')}</span>]] : [['شماره فاکتور', o.invoiceNo ? o.invoiceNo : <Ph v="شمارهٔ فاکتور" />], ['شمارهٔ منحصربه‌فرد مالیاتی', <Ph v="شمارهٔ سامانهٔ مودیان" />]]), ['تاریخ صدور', jd(o.createdAt)], ['شماره سفارش', <span className="ltr font-mono">{o.id}</span>], ['تاریخ تحویل', jd(o.deliveredAt)]].map(([k, v], i) => <tr key={i}><td className="px-[2mm] py-[1.2mm] text-[#5a5e78]">{k}:</td><td className="px-[2mm] py-[1.2mm] text-left font-bold">{v}</td></tr>)}</tbody></table>
       </div>
       <div className="mt-[4mm] flex border border-[#9aa0b4]">
         <div className="grid w-[22mm] shrink-0 place-items-center border-l border-[#9aa0b4] bg-[#f1f2f7] font-bold">فروشنده</div>

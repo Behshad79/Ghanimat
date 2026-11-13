@@ -1,3 +1,4 @@
+import { LifetimeCards, MostViewed, SalesGoalChart, VisitsChart, WelcomeHero } from '../home/Pulse'
 import type { Order, Shipment } from '@/shared/data/seed'
 import { cx } from '@/shared/ui/base'
 import { useNavigate } from 'react-router-dom'
@@ -23,7 +24,7 @@ import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
-const WIDGETS: [string, string][] = [['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
+const WIDGETS: [string, string][] = [['welcome', 'خوشامد و موارد منتظر شما'], ['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
 export function Home() {
   const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false)
   const hidden: string[] = (d.entities.homeHidden?.[0]?.list as string[]) ?? []
@@ -47,6 +48,7 @@ export function Home() {
       empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
       actions={<><Button icon={<Download size={14} />} onClick={() => { download('خلاصهٔ-امروز.csv', csv([['شاخص', 'مقدار'], ['فروش امروز', gmv], ['سفارش امروز', today.length], ['سود امروز', profitToday]])); toast('خلاصهٔ امروز دانلود شد.') }}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
+        {on('welcome') && <WelcomeHero />}
         <ActionChips items={[
           { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', tone: 'danger' },
           { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc' },
@@ -67,6 +69,9 @@ export function Home() {
           <KPI icon={<Truck size={17} />} label="تحویل به‌موقع" hint="sla" value={pct(94)} delta={1.2} to="/admin/shipping" />
           <KPI icon={<RotateCcw size={17} />} label="نرخ مرجوعی" value={pct(6.4, 1)} delta={-1.1} goodDown to="/admin/returns" />
         </div>}
+        {on('lifetime') && <LifetimeCards />}
+        {(on('visits') || on('salesgoal')) && <div className="grid gap-4 xl:grid-cols-2">{on('salesgoal') && <SalesGoalChart />}{on('visits') && <VisitsChart />}</div>}
+        {on('mostviewed') && <MostViewed />}
         {on('ai') && <AISummary source="سفارش‌ها، موجودی و هشدارهای ۲۴ ساعت اخیر" lines={[
           `فروش امروز ${compactToman(gmv)} از ${fa(today.length)} سفارش است؛ ۱۲٪ بالاتر از سه‌شنبهٔ معمول.`,
           'درگاه اقساطی تارا پاسخ نمی‌دهد و خودکار از صفحهٔ پرداخت پنهان شده است؛ پرداخت‌ها از سایر درگاه‌ها ادامه دارد.',

@@ -12,6 +12,7 @@ import { EditableDoc } from './EditableDoc'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
+  { id: 'proforma', label: 'پیش‌فاکتور (برای خریدار حقوقی و استعلام قیمت)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
   { id: 'post', label: 'برچسب مرسولهٔ پستی (قانون پست: A5 افقی)', src: 'ship', papers: ['A5 افقی', 'A6', '100x150', 'A5'], fields: [['carrierLogo', 'لوگوی شرکت حمل'], ['barcode', 'بارکد مرسوله و رهگیری'], ['fragile', 'علامت شکستنی'], ['contents', 'محتوای کلی']] },
   { id: 'courier', label: 'برچسب مرسولهٔ پیک', src: 'ship', papers: ['100x100'], fields: [] },
   { id: 'labels', label: 'برچسب کالا و واحد', src: 'labels', papers: ['50x30', '40x25', '60x40', 'A4'], fields: [] },
@@ -74,6 +75,7 @@ export function PrintCenter() {
           {d.seller.assumed && ['invoice', 'post', 'warranty', 'return'].includes(doc.id) && <p className="no-print mb-3 flex items-center justify-between gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">اطلاعات فروشنده و انبار هنوز فرضی است.<button className="font-semibold underline" onClick={() => nav('/admin/settings?tab=seller')}>ویرایش در تنظیمات</button></p>}
           <EditableDoc docKey={`${doc.id}:${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : doc.src === 'ret' ? retId : 'all'}`} label={doc.label}>
           {doc.id === 'invoice' && <Invoice o={order} opts={opts} />}
+          {doc.id === 'proforma' && <Invoice o={order} opts={{ ...opts, proforma: true, seal: false }} />}
           {doc.id === 'post' && <PostLabel o={ship.order} s={ship} opts={opts} paper={paper} />}
           {doc.id === 'courier' && <CourierLabel o={ship.order} s={ship} opts={opts} />}
           {doc.id === 'qc' && <QCSheet unitId={unitId} opts={opts} />}

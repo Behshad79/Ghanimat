@@ -23,6 +23,7 @@ import { makeAxes, makeOptions } from './options'
 import { makeOrderEvents } from './orderEvents'
 import { makeContentQueue } from './contentQueue'
 import { makeBlog } from './blog'
+import { makeTraffic } from './traffic'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -78,8 +79,8 @@ const makeSeedBase = () => ({
     { id: 'c7', addr: { province: 'فارس', city: 'شیراز', district: 'معالی‌آباد', street: 'بلوار چمران', sub: 'خیابان ستارخان', alley: 'کوچهٔ ۶', plaque: '۱۴', floor: '۲', unit: '۳', postal: '7187654321' }, name: 'الهام کریمی', mobile: '09366667788', nid: '0067890123', email: 'elham@example.com', city: 'شیراز', orders: 2, ltv: 104400000, aov: 52200000, lastOrder: ago(60 * 2), segment: 'جدید', health: 77, source: 'دعوت دوستان', wallet: 1000000, returnRate: 0, churn: 28, tags: [], blocked: false },
   ],
   orders: ([
-    { id: 'GH-10481', customerId: 'c1', createdAt: ago(18), status: 'order.paid', pay: 'زرین‌پال', total: 147400000, discount: 0, shippingFee: 0, fee: 1474000, margin: 14.2, risk: 12, channel: 'سایت', tags: ['تحویل سریع'], lockedBy: null,
-      shipments: [{ id: 'GH-10481-1', warehouse: 'tehran', method: 'تحویل سریع (پیک)', status: 'ship.pending', sla: inMin(102), items: [{ productId: 'p1', unitId: 'GU-20412', qty: 1, price: 124500000 }, { productId: 'p5', unitId: 'GU-20440', qty: 1, price: 22900000 }], courier: null, tracking: '', allocReason: 'هر دو کالا در انبار تهران موجود بود.' }] },
+    { id: 'GH-10481', customerId: 'c1', createdAt: ago(18), status: 'order.preparing', pay: 'زرین‌پال', total: 147400000, discount: 0, shippingFee: 0, fee: 1474000, margin: 14.2, risk: 12, channel: 'سایت', tags: ['تحویل سریع'], lockedBy: null,
+      shipments: [{ id: 'GH-10481-1', warehouse: 'tehran', method: 'تحویل سریع (پیک)', status: 'ship.packed', sla: inMin(102), items: [{ productId: 'p1', unitId: 'GU-20412', qty: 1, price: 124500000 }, { productId: 'p5', unitId: 'GU-20440', qty: 1, price: 22900000 }], courier: null, tracking: '', allocReason: 'هر دو کالا در انبار تهران موجود بود.' }] },
     { id: 'GH-10480', customerId: 'c6', createdAt: ago(42), status: 'order.paid', pay: 'اسنپ‌پی', total: 15000000, discount: 0, shippingFee: 0, fee: 900000, margin: 14.7, risk: 34, channel: 'ترب', tags: ['اقساطی'], lockedBy: null,
       shipments: [{ id: 'GH-10480-1', warehouse: 'tehran', method: 'تحویل سریع (اسنپ‌باکس)', status: 'ship.pending', sla: inMin(60 * 20), items: [{ productId: 'p2', unitId: 'GU-20471', qty: 1, price: 15000000 }], courier: null, tracking: '', allocReason: 'موجودی تهران کافی بود.' }] },
     { id: 'GH-10479', customerId: 'c7', createdAt: ago(60 * 2), status: 'order.preparing', pay: 'درگاه ملت', total: 104400000, discount: 2000000, shippingFee: 95000, fee: 0, margin: 16.8, risk: 8, channel: 'سایت', tags: ['دو مرسوله'], lockedBy: null,
@@ -197,7 +198,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

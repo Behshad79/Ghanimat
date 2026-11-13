@@ -1,3 +1,4 @@
+import { StoriesTab } from '../analytics/Traffic'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame, Monitor, Plus, Search, Smartphone, Upload } from 'lucide-react'
@@ -41,7 +42,7 @@ export function Builder() {
     <Page title="صفحه‌ساز سایت و پنل مشتری" module="content" sub={`${fa(d.pages.length)} صفحه از سایت‌مپ‌های فیگما؛ روی هر بخش، کارت، متن، بنر یا آیکون بزنید تا ویرایش شود.`}
       actions={<><Button onClick={() => nav('/admin/site')}>سربرگ، منو و فوتر</Button><Button variant="ghost" onClick={() => nav('/admin/experience')}>تنظیمات رفتاری</Button></>}
       primary={<Button variant="primary" icon={<Upload size={14} />} disabled={!dirty} onClick={async () => { if (await confirm({ title: 'تغییرات صفحه‌ها منتشر شود؟', body: 'همهٔ صفحه‌های ویرایش‌شده روی سایت می‌روند. نسخهٔ قبلی در لاگ ممیزی ثبت است.', confirm: 'انتشار' })) { mutate((x) => { x.pagesPublished = structuredClone(x.pages) }, { action: 'انتشار صفحه‌ساز', target: `${d.pages.length} صفحه` }); toast('صفحه‌ها منتشر شدند.') } }}>{dirty ? 'انتشار تغییرات' : 'همه منتشر شده'}</Button>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'builder', label: 'صفحه‌ساز' }, { id: 'banners', label: 'بنرها', count: d.pages.flatMap((p) => p.sections.flatMap((s) => s.els)).filter((e) => e.kind === 'banner').length }, { id: 'clicks', label: 'آمار کلیک' }, { id: 'theme', label: 'پوسته و رنگ' }, { id: 'categories', label: 'دسته‌ها و آیکون‌ها' }, { id: 'badges', label: 'نشان‌های کارت کالا' }, { id: 'blog', label: 'نویسندهٔ وبلاگ' }, { id: 'newsletter', label: 'خبرنامه', count: d.newsletter.filter((n) => n.active).length }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'builder', label: 'صفحه‌ساز' }, { id: 'stories', label: 'استوری‌ها', count: d.traffic.stories.filter((x) => x.on).length }, { id: 'banners', label: 'بنرها', count: d.pages.flatMap((p) => p.sections.flatMap((s) => s.els)).filter((e) => e.kind === 'banner').length }, { id: 'clicks', label: 'آمار کلیک' }, { id: 'theme', label: 'پوسته و رنگ' }, { id: 'categories', label: 'دسته‌ها و آیکون‌ها' }, { id: 'badges', label: 'نشان‌های کارت کالا' }, { id: 'blog', label: 'نویسندهٔ وبلاگ' }, { id: 'newsletter', label: 'خبرنامه', count: d.newsletter.filter((n) => n.active).length }]} />}>
       {tab === 'builder' && page && <div className="grid gap-3 xl:grid-cols-[230px_1fr_330px]">
         <Card pad={false} className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
           <div className="border-b border-line p-2"><div className="relative"><Search size={14} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-t3" /><Input aria-label="جست‌وجوی صفحه" className="h-9 pr-8" placeholder="جست‌وجوی صفحه…" value={q} onChange={(e) => setQ(e.target.value)} /></div></div>
@@ -92,6 +93,7 @@ export function Builder() {
       {tab === 'badges' && <BadgesTab />}
       {tab === 'blog' && <BlogTab />}
       {tab === 'newsletter' && <NewsletterTab />}
+      {tab === 'stories' && <StoriesTab />}
     </Page>
   )
 }

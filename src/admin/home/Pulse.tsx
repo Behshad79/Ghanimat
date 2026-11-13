@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpLeft, Eye, FileText, Headphones, MessageSquare, Package, ShoppingBag, Users } from 'lucide-react'
+import { ArrowUpLeft, Eye, FileText, Package, ShoppingBag, Users, type LucideIcon } from 'lucide-react'
 import { Badge, Card, cx } from '@/shared/ui/base'
 import { useDB, currentUser } from '@/shared/lib/store'
 import { compactToman, fa, rel } from '@/shared/lib/fa'
@@ -8,27 +8,22 @@ import { ProductImg } from '../pages/_shared'
 
 const days = (n: number) => Array.from({ length: n }, (_, i) => { const t = new Date(Date.now() - (n - 1 - i) * 864e5); return new Intl.DateTimeFormat('fa-IR', { weekday: 'short' }).format(t) })
 
-/** خوشامد شخصی و «منتظر شما»: آنچه همین حالا باید بررسی یا منتشر شود */
-export function WelcomeHero() {
-  const d = useDB(); const nav = useNavigate(); const me = currentUser()
-  const items: [string, string, number, typeof ShoppingBag, string][] = [
-    ['سفارش', 'منتظر بررسی', d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status)).length, ShoppingBag, '/admin/orders?tab=action'],
-    ['تیکت', 'منتظر پاسخ', d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length, Headphones, '/admin/support'],
-    ['کالا', 'آمادهٔ انتشار', d.units.filter((u) => u.status === 'unit.ready').length, Package, '/admin/warehouse?tab=publish'],
-    ['مقاله', 'منتظر انتشار', d.blog.posts.filter((p) => p.status === 'در بازبینی' || p.status === 'پیش‌نویس').length, FileText, '/admin/blog'],
-    ['دیدگاه', 'منتظر تأیید', d.reviews.filter((r) => r.status === 'review.pending').length + d.blog.comments.filter((c) => c.status === 'pending').length, MessageSquare, '/admin/reviews'],
-  ]
-  const total = items.reduce((a, x) => a + x[2], 0)
+/** «منتظر شما»: یک جا برای هر چیزی که همین حالا باید بررسی، تأیید یا منتشر شود (ادغام خوشامد و میانبرهای اقدام) */
+export type WaitItem = { label: string; count: number; to: string; icon: LucideIcon; urgent?: boolean }
+export function WelcomeHero({ items }: { items: WaitItem[] }) {
+  const nav = useNavigate()
+  const open = items.filter((x) => x.count > 0).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)); const clear = items.filter((x) => x.count === 0)
+  const total = open.reduce((a, x) => a + x.count, 0)
   return (
     <div className="relative overflow-hidden rounded-3xl bg-brand-solid p-5 text-white">
       <span aria-hidden className="pointer-events-none absolute -top-16 -left-10 size-56 rounded-full bg-white/10" /><span aria-hidden className="pointer-events-none absolute -bottom-20 left-40 size-48 rounded-full bg-[#ffc24b]/20" />
-      <p className="relative text-18 font-bold">{me?.name ?? 'مدیر'} عزیز، خوش آمدی!</p>
-      <p className="relative mt-1 text-13 text-white/85">{total ? `${fa(total)} مورد منتظر بررسی و تصمیم شماست.` : 'همه‌چیز مرتب است؛ موردی منتظر شما نیست.'}</p>
-      <div className="relative mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{items.map(([t, s, n, I, to]) => (
-        <button key={t} type="button" onClick={() => nav(to)} className={cx('lift flex items-center gap-2.5 rounded-2xl p-3 text-right transition-colors', n ? 'bg-white text-[#10123d]' : 'bg-white/10 text-white')}>
-          <span className={cx('grid size-10 shrink-0 place-items-center rounded-xl', n ? 'bg-brand-tint text-brand' : 'bg-white/15')}><I size={18} /></span>
-          <span className="min-w-0"><b className="tnum block text-22 leading-none">{fa(n)}</b><span className={cx('mt-1 block truncate text-11', n ? 'text-t2' : 'text-white/80')}>{t} {s}</span></span>
-        </button>))}</div>
+      <p className="relative text-16 font-bold">{total ? `${fa(total)} مورد منتظر بررسی و تصمیم شماست` : 'همه‌چیز مرتب است؛ موردی منتظر شما نیست.'}</p>
+      {open.length > 0 && <div className="relative mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">{open.map((x) => { const I = x.icon; return (
+        <button key={x.label} type="button" onClick={() => nav(x.to)} className="lift flex items-center gap-2.5 rounded-2xl bg-white p-3 text-right text-[#10123d]">
+          <span className={cx('grid size-10 shrink-0 place-items-center rounded-xl', x.urgent ? 'bg-danger-bg text-danger' : 'bg-brand-tint text-brand')}><I size={18} /></span>
+          <span className="min-w-0"><b className={cx('tnum block text-22 leading-none', x.urgent && 'text-danger')}>{fa(x.count)}</b><span className="mt-1 block truncate text-11 text-t2">{x.label}</span></span>
+        </button>) })}</div>}
+      {clear.length > 0 && <p className="relative mt-3 flex flex-wrap items-center gap-1.5 text-11 text-white/80"><span>بدون مورد:</span>{clear.map((x) => <button key={x.label} type="button" onClick={() => nav(x.to)} className="rounded-full bg-white/10 px-2 py-0.5 hover:bg-white/20">{x.label}</button>)}</p>}
     </div>
   )
 }

@@ -1,10 +1,11 @@
+import { CheckCheck, CircleDollarSign, FileText, Headphones, MessageSquare, Store } from 'lucide-react'
 import { LifetimeCards, MostViewed, SalesGoalChart, VisitsChart, WelcomeHero } from '../home/Pulse'
 import type { Order, Shipment } from '@/shared/data/seed'
 import { cx } from '@/shared/ui/base'
 import { useNavigate } from 'react-router-dom'
 import { Hourglass, Mail, Maximize2, PackageCheck, PackageOpen, Plus, Zap } from 'lucide-react'
 import { Badge, Button, Card, Light, Progress, StatusBadge } from '@/shared/ui/base'
-import { ActionChips, AISummary, KPI, Page } from '@/shared/ui/page'
+import { AISummary, KPI, Page } from '@/shared/ui/page'
 import { Bars, Columns, Donut, Funnel, Gauge, IranTiles, LineChart } from '@/shared/ui/charts'
 import { CountUp } from '@/shared/ui/motion'
 import { Boxes, Download, LayoutGrid, Package, Percent, Receipt, RotateCcw, ShoppingBag, TrendingUp, Truck } from 'lucide-react'
@@ -24,7 +25,7 @@ import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
-const WIDGETS: [string, string][] = [['welcome', 'خوشامد و موارد منتظر شما'], ['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
+const WIDGETS: [string, string][] = [['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
 export function Home() {
   const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false)
   const hidden: string[] = (d.entities.homeHidden?.[0]?.list as string[]) ?? []
@@ -48,16 +49,16 @@ export function Home() {
       empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
       actions={<><Button icon={<Download size={14} />} onClick={() => { download('خلاصهٔ-امروز.csv', csv([['شاخص', 'مقدار'], ['فروش امروز', gmv], ['سفارش امروز', today.length], ['سود امروز', profitToday]])); toast('خلاصهٔ امروز دانلود شد.') }}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
-        {on('welcome') && <WelcomeHero />}
-        <ActionChips items={[
-          { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', tone: 'danger' },
-          { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc' },
-          { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns' },
-          { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns', tone: 'danger' },
-          { label: 'تیکت باز', count: cnt('support'), to: '/admin/support' },
-          { label: 'دیدگاه منتظر تأیید', count: cnt('reviews'), to: '/admin/reviews' },
-          { label: 'کالای شریک منتظر تأیید', count: d.partnerQueue.length, to: '/admin/catalog?tab=partner' },
-          { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals' },
+        <WelcomeHero items={[
+          { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', icon: ShoppingBag, urgent: true },
+          { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns', icon: CircleDollarSign, urgent: true },
+          { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc', icon: Package },
+          { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns', icon: RotateCcw },
+          { label: 'تیکت باز', count: cnt('support'), to: '/admin/support', icon: Headphones },
+          { label: 'دیدگاه و پرسش منتظر تأیید', count: cnt('reviews') + d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length + d.blog.comments.filter((c) => c.status === 'pending').length, to: '/admin/reviews', icon: MessageSquare },
+          { label: 'مقالهٔ منتظر انتشار', count: d.blog.posts.filter((p) => p.status === 'در بازبینی').length, to: '/admin/blog', icon: FileText },
+          { label: 'کالای شریک منتظر تأیید', count: d.partnerQueue.length, to: '/admin/catalog?tab=partner', icon: Store },
+          { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals', icon: CheckCheck },
         ]} />
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note="هدف روزانه: ۶۰۰ میلیون" />

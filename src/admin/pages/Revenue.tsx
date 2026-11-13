@@ -1,3 +1,4 @@
+import { CouponForm } from '../pro/CouponForm'
 import { PriceWatch, SocialChannelStats } from '../pro/PriceWatch'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -45,9 +46,7 @@ export function Pricing() {
         <Field label="درصد کاهش" hint={<Hint k="maker_checker" />} help="تغییر قیمت گروهی همیشه به تأیید نفر دوم نیاز دارد."><Input className="ltr text-left font-mono" inputMode="numeric" value={pctOff} onChange={(e) => setPctOff(e.target.value.replace(/\D/g, ''))} /></Field>
         <ul className="mt-3 divide-y divide-line text-12">{rows.filter((u) => sim?.includes(u.id)).map((u) => { const n = u.price * (1 - Number(pctOff) / 100); const m = ((n - u.cost) / n) * 100; return <li key={u.id} className="flex justify-between py-1.5"><span>{product(u.productId).en}</span><span className="tnum">{compactToman(u.price)} ← {compactToman(n)} · <b className={m < floor ? 'text-danger' : 'text-success'}>{pct(m, 1)}</b></span></li> })}</ul>
       </Modal>
-      <Modal open={newCode} onClose={() => setNewCode(false)} title="ساخت کد تخفیف" footer={<><Button variant="primary" onClick={() => { if (!/^[A-Z0-9-]{3,}$/.test(code)) return toast('کد باید دست‌کم ۳ نویسهٔ انگلیسی بزرگ یا عدد باشد.', { tone: 'err' }); if (d.codes.some((c) => c.id === code)) return toast('این کد قبلاً ساخته شده است.', { tone: 'err' }); mutate((x) => { x.codes.unshift({ id: code, type: 'درصدی', value: '۵٪', used: 0, limit: 100, active: true, cond: 'همهٔ کالاها' }) }, { action: 'ساخت کد تخفیف', target: code }); setNewCode(false); setCode(''); setTab('codes'); toast(`کد ${code} ساخته شد.`) }}>ساخت کد {code}</Button><Button variant="ghost" onClick={() => setNewCode(false)}>انصراف</Button></>}>
-        <div className="space-y-3"><Field label="کد" help="حروف بزرگ انگلیسی، عدد و خط تیره."><Input className="ltr text-left font-mono" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلاً AZAR5" /></Field><Field label="نوع"><Select value="درصدی" onChange={() => {}} options={['درصدی', 'مبلغی', 'ارسال رایگان']} /></Field><AIButton size="sm" onClick={() => setCode('STOCK7')}>پیشنهاد کد برای موجودی راکد</AIButton></div>
-      </Modal>
+      <CouponForm open={newCode} onClose={() => setNewCode(false)} onDone={() => setTab('codes')} />
     </Page>
   )
 }

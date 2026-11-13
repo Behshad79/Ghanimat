@@ -86,15 +86,15 @@ export function ContentWorkflow() {
 
 /** پایپ‌لاین رسانه: تبدیل به WebP، برش در سه اندازهٔ استاندارد، و Alt با هوش مصنوعی */
 export function MediaLibrary() {
-  const d = useDB(); const [who, setWho] = useState<'all' | 'mine' | 'others'>('all'); const me = currentUser()?.name ?? 'بهراد'
+  const d = useDB(); const [who, setWho] = useState<'all' | 'mine' | 'others'>('all'); const [fs, setFs] = useState<'all' | 'noalt' | 'raw'>('all'); const me = currentUser()?.name ?? 'بهشاد'
   const by = (i: number) => (i % 3 === 1 ? 'نیما' : me)
-  const P = (d.products as PX[]).filter((p) => p.image).filter((_, i) => who === 'all' || (who === 'mine' ? by(i) === me : by(i) !== me))
+  const P = (d.products as PX[]).filter((p) => p.image).filter((_, i) => who === 'all' || (who === 'mine' ? by(i) === me : by(i) !== me)).filter((p) => fs === 'all' || (fs === 'noalt' ? !p.alt : !p.webp))
   const [busy, setBusy] = useState(false)
   const run = async () => { setBusy(true); await new Promise((r) => setTimeout(r, 700)); mutate((x) => (x.products as PX[]).forEach((p) => { if (p.image) { p.webp = true; p.alt = p.alt || `${p.title}، عکس واقعی همین کالا در انبار غنیمت` } }), { action: 'اجرای پایپ‌لاین رسانه', target: `${P.length} تصویر` }); setBusy(false); toast('تصویرها به WebP تبدیل، در ۳ اندازه برش و Alt پیشنهادی ساخته شد.') }
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2"><Button variant="primary" icon={<Wand2 size={14} />} loading={busy} onClick={run}>اجرای پایپ‌لاین روی همه</Button><p className="text-12 text-t2">اندازه‌ها: کوچک ۲۰۰، کارت ۵۰۰، بزرگ‌نمایی ۱۲۰۰ پیکسل · کیفیت WebP ۸۲ · Alt فارسی با AI</p></div>
-      <div className="flex flex-wrap items-center gap-2 text-12"><span className="text-t2">نمایش:</span><Segmented size="sm" value={who} onChange={setWho} options={[['all', 'همه'], ['mine', 'فایل‌های من'], ['others', 'سایر کاربران']]} /><span className="text-t2">فرمت‌های مجاز JPG، PNG، WEBP، GIF، SVG · حداکثر ۵۰ مگابایت · انتخاب گروهی</span></div>
+      <div className="flex flex-wrap items-center gap-2 text-12"><span className="text-t2">نمایش:</span><Segmented size="sm" value={who} onChange={setWho} options={[['all', 'همه'], ['mine', 'فایل‌های من'], ['others', 'سایر کاربران']]} /><Segmented size="sm" value={fs} onChange={setFs} options={[['all', 'همهٔ وضعیت‌ها'], ['noalt', 'بدون Alt'], ['raw', 'پردازش‌نشده']]} /><span className="text-t2">فرمت‌های مجاز JPG، PNG، WEBP، GIF، SVG · حداکثر ۵۰ مگابایت · انتخاب گروهی</span></div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{P.map((p, i) => <Card key={p.id}><div className="flex gap-3"><img src={p.image} alt={p.alt ?? ''} className="size-24 rounded-xl object-cover" style={{ objectPosition: p.imagePos }} /><div className="min-w-0 flex-1 space-y-1 text-12"><p className="truncate font-bold">{p.en}</p><p>{p.webp ? <Badge tone="success">WebP · ۳ اندازه</Badge> : <Badge tone="warning">پردازش‌نشده</Badge>}</p>
         <Field label="متن Alt"><Input className="h-8 text-12" value={p.alt ?? ''} placeholder="Alt ندارد" onChange={(e) => mutate((x) => { (x.products.find((y) => y.id === p.id)! as PX).alt = e.target.value })} /></Field>
         <dl className="grid grid-cols-2 gap-x-2 text-11 text-t2"><dt>شناسهٔ فایل</dt><dd className="tnum text-left text-t1">{fa(270 + i)}</dd><dt>نام فایل</dt><dd className="ltr truncate text-left font-mono text-t1">{p.id}-500.webp</dd><dt>حجم</dt><dd className="tnum text-left text-t1">{fa(((p.id.charCodeAt(1) * 7) % 40 + 6) / 100)} مگابایت</dd><dt>بارگذاری توسط</dt><dd className="text-left text-t1">{by(i)}</dd></dl>

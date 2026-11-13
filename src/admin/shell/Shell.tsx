@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
+import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
@@ -93,6 +93,8 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
           <button onClick={() => setPanel('status')} title="وضعیت سیستم" className="btn flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg hover:text-t1">
             <Light s={lv} /><span className="hidden md:inline">{lv === 'ok' ? 'سیستم سالم' : lv === 'warn' ? `${fa(bad.length)} هشدار` : `${fa(bad.filter((b) => b.status === 'prov.error').length)} سرویس قطع`}</span>
           </button>) })()}
+        <button onClick={() => window.dispatchEvent(new Event('site-preview'))} className="btn mx-1 hidden h-9 shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 text-12 hover:border-brand hover:text-brand xl:flex"><ExternalLink size={14} />مشاهدهٔ فروشگاه</button>
+        <span className="hidden xl:block"><IconBtn label="تمام‌صفحه" onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}) }}><Maximize size={17} /></IconBtn></span>
         <IconBtn label="صندوق تأییدها" n={pend.length} onClick={() => setPanel('approvals')}><CheckCheck size={18} /></IconBtn>
         <IconBtn label="هشدارها" n={unread} onClick={() => setPanel('alerts')}><Bell size={18} /></IconBtn>
         <span className="hidden sm:block"><IconBtn label="تغییر تم" onClick={() => setSession({ theme: s.theme === 'dark' ? 'light' : 'dark' })}>{s.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</IconBtn></span>

@@ -1,6 +1,7 @@
+import { CsvImport } from './CsvImport'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Barcode as BarcodeIcon, Camera, Copy, Eye, Link2, Package, PackagePlus, Pause, Pencil, Play, Plus, Printer, RotateCcw, ScanLine, Sparkles, Trash2 } from 'lucide-react'
+import { Barcode as BarcodeIcon, Camera, FileSpreadsheet, Copy, Eye, Link2, Package, PackagePlus, Pause, Pencil, Play, Plus, Printer, RotateCcw, ScanLine, Sparkles, Trash2 } from 'lucide-react'
 import { AIButton, AITag, Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Progress, Row, Segmented, Select, StatusBadge, Tabs, Toggle } from '@/shared/ui/base'
 import { Page, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -96,7 +97,7 @@ export function UnitDrawer({ u, onClose }: { u: Unit | null; onClose: () => void
 
 export function Catalog() {
   const { d, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('products'); const [sp, setSp] = useSearchParams()
-  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all'); const [pv, setPvRaw] = useState<'board' | 'table'>(() => (localStorage.getItem('gh-catalog-view') as 'table') || 'board'); const setPv = (v: 'board' | 'table') => { setPvRaw(v); try { localStorage.setItem('gh-catalog-view', v) } catch { /* حافظهٔ مرورگر پر است */ } }
+  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all'); const [qf, setQf] = useState('all'); const [csvOpen, setCsvOpen] = useState(false); const [pv, setPvRaw] = useState<'board' | 'table'>(() => (localStorage.getItem('gh-catalog-view') as 'table') || 'board'); const setPv = (v: 'board' | 'table') => { setPvRaw(v); try { localStorage.setItem('gh-catalog-view', v) } catch { /* حافظهٔ مرورگر پر است */ } }
   const pa = useProductActions()
   const unitActions = (u: Unit) => {
     const inOrder = unitInOpenOrder(d, u.id)
@@ -109,7 +110,10 @@ export function Catalog() {
       { label: 'انتقال به سطل بازیافت', icon: <Trash2 size={14} />, danger: true, disabled: ['unit.sold', 'unit.reserved'].includes(u.status) || !!inOrder, hint: inOrder ? `در سفارش باز ${inOrder.id}` : u.status === 'unit.sold' ? 'واحد فروخته‌شده حذف نمی‌شود' : undefined, onClick: () => { const undo = snapshot(); mutate((x) => { x.units = x.units.filter((y) => y.id !== u.id); x.trash.unshift({ id: `tr-${u.id}-${Date.now()}`, kind: 'واحد', ek: 'units', label: `${product(u.productId).en} · ${u.code}`, data: u as any, at: new Date().toISOString() }) }, { action: 'انتقال واحد به سطل بازیافت', target: u.code ?? u.id }); toast('واحد به سطل بازیافت رفت.', { undo }) } },
     ]
   }
-  const prodRows = d.products.filter((p) => st === 'all' || p.status === st)
+  const vMed = [...d.products].map((p) => p.views).sort((a, b) => a - b)[Math.floor(d.products.length * 0.7)] ?? 0
+  const soldN = (p: Product) => d.orders.reduce((a, o) => a + o.shipments.reduce((b, s) => b + s.items.filter((i) => i.productId === p.id).reduce((c, i) => c + i.qty, 0), 0), 0)
+  const QF: [string, string, (p: Product) => boolean][] = [['all', 'همه', () => true], ['pub', 'منتشرشده', (p) => p.status === 'product.published'], ['draft', 'پیش‌نویس', (p) => p.status === 'product.draft'], ['pending', 'منتظر تأیید', (p) => p.status === 'product.pending'], ['in', 'دارای موجودی', (p) => stockOf(d, p) > 0], ['out', 'بدون موجودی', (p) => stockOf(d, p) === 0], ['best', 'پرفروش', (p) => soldN(p) > 0], ['viewed', 'پربازدید', (p) => p.views >= vMed]]
+  const prodRows = d.products.filter((p) => (st === 'all' || p.status === st) && (QF.find((q) => q[0] === qf)?.[2] ?? (() => true))(p)).sort((a, b) => qf === 'best' ? soldN(b) - soldN(a) : qf === 'viewed' ? b.views - a.views : 0)
   const pcols: Col<Product>[] = [
     { key: 'title', title: 'محصول', render: (p) => <Cell pid={p.id} size={44} a={p.title} b={<><span className="ltr font-mono">{p.code}</span> · {p.brand}</>} />, sort: (p) => p.title, text: (p) => p.title },
     { key: 'cat', title: 'دسته', hideMobile: true, render: (p) => p.category, sort: (p) => p.category, text: (p) => p.category },
@@ -134,10 +138,11 @@ export function Catalog() {
   return (
     <Page title="کالا و کاتالوگ" module="catalog" sub="محصول یعنی مدل؛ واحد یعنی یک نمونهٔ فیزیکی با سریال و عکس خودش."
       empty={{ title: 'هنوز محصولی ثبت نشده است.', desc: 'کالا را دستی و گام‌به‌گام ثبت کنید، یا از لینک و عکس جعبه شروع کنید.', action: <Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن کالا</Button> }}
-      actions={<><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/labels')}>چاپ برچسب</Button><Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => nav('/admin/trash')}>سطل بازیافت{d.trash.length > 0 && ` (${fa(d.trash.length)})`}</Button></>}
+      actions={<><Button icon={<FileSpreadsheet size={14} />} onClick={() => setCsvOpen(true)}>ورود از اکسل</Button><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/labels')}>چاپ برچسب</Button><Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => nav('/admin/trash')}>سطل بازیافت{d.trash.length > 0 && ` (${fa(d.trash.length)})`}</Button></>}
       primary={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن کالا</Button>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={tabs} />}>
-      {tab === 'products' && <div className="mb-4 space-y-4"><CatalogInsights /><div className="flex items-center justify-between"><p className="text-15 font-bold">همهٔ محصولات</p><Segmented size="sm" value={pv} onChange={setPv} options={[['board', 'کارت و فیلتر'], ['table', 'جدول']]} /></div>{pv === 'board' && <ProductBoard items={pa.items} onAdd={() => setAdd(true)} />}</div>}
+      <CsvImport open={csvOpen} onClose={() => setCsvOpen(false)} />
+      {tab === 'products' && <div className="mb-4 space-y-4"><CatalogInsights /><div className="flex items-center justify-between"><p className="text-15 font-bold">همهٔ محصولات</p><Segmented size="sm" value={pv} onChange={setPv} options={[['board', 'کارت و فیلتر'], ['table', 'جدول']]} /></div>{pv === 'board' && <ProductBoard items={pa.items} onAdd={() => setAdd(true)} />}{pv === 'table' && <div className="flex flex-wrap items-center gap-1.5">{QF.map(([k, l, fn]) => <button key={k} onClick={() => setQf(k)} className={cx('rounded-full border px-3 py-1 text-12 transition-colors', qf === k ? 'border-[#10123d] bg-[#10123d] text-white' : 'border-line hover:border-brand')}>{l} <span className="tnum opacity-70">({fa(d.products.filter(fn).length)})</span></button>)}<span className="mr-auto text-11 text-t2">موجودی هر کالا از واحدهای قابل فروش همهٔ انبارها شمرده می‌شود.</span></div>}</div>}
       {tab === 'products' && pv === 'table' && <DataTable name="محصولات" rows={prodRows} cols={pcols} rowKey={(p) => p.id} onRow={(p) => nav(`/admin/catalog/${p.id}`)} search={(p) => `${p.title} ${p.en} ${p.brand} ${p.code}`} actions={pa.items}
         filters={<Select className="w-36" value={st} onChange={setSt} options={[['all', 'همهٔ وضعیت‌ها'], ['product.published', 'منتشرشده'], ['product.draft', 'پیش‌نویس'], ['product.pending', 'منتظر تأیید']]} />}
         empty={{ title: 'هنوز محصولی ثبت نشده است.', action: <Button variant="primary" onClick={() => setAdd(true)}>افزودن کالا</Button> }}
@@ -163,7 +168,7 @@ export function Catalog() {
       {tab === 'workflow' && <ContentWorkflow />}
       {tab === 'media' && <MediaLibrary />}
       {tab === 'categories' && <EntityManager ek="categories" kind="دسته" fields={[{ k: 'name', label: 'نام دسته', required: true }, { k: 'parent', label: 'دستهٔ والد' }, { k: 'slug', label: 'نشانی', ltr: true }, { k: 'template', label: 'قالب ویژگی', type: 'select', options: (d.entities.attrTemplates ?? []).map((t) => t.name) }, { k: 'faq', label: 'پرسش متداول', type: 'number' }, { k: 'active', label: 'نمایش در سایت', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.category === r.name).length; return n ? `${fa(n)} کالا در دستهٔ «${r.name}» هست. اول آن‌ها را به دستهٔ دیگری ببرید.` : null }} />}
-      {tab === 'brands' && <EntityManager ek="brands" kind="برند" fields={[{ k: 'name', label: 'نام برند', required: true }, { k: 'en', label: 'نام انگلیسی', ltr: true }, { k: 'origin', label: 'کشور' }, { k: 'products', label: 'تعداد کالا', type: 'number' }, { k: 'active', label: 'فعال', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.brand === r.name).length; return n ? `${fa(n)} کالا با برند «${r.name}» ثبت شده است.` : null }} />}
+      {tab === 'brands' && <EntityManager ek="brands" kind="برند" fields={[{ k: 'name', label: 'نام برند', required: true }, { k: 'en', label: 'نام انگلیسی', ltr: true }, { k: 'origin', label: 'کشور' }, { k: 'site', label: 'سایت رسمی', ltr: true, table: false, help: 'برای لینک «مشاهده در سایت سازنده» و تطبیق اصالت.' }, { k: 'slug', label: 'نامک صفحهٔ برند', ltr: true, table: false, help: 'خالی بماند تا از نام انگلیسی ساخته شود.' }, { k: 'seoDesc', label: 'توضیح سئو', type: 'textarea', table: false, help: '۱۲۰ تا ۱۶۰ نویسه؛ در نتیجهٔ گوگل صفحهٔ برند.' }, { k: 'products', label: 'تعداد کالا', type: 'number', render: (r) => fa(d.products.filter((p) => p.brand === r.name).length) }, { k: 'active', label: 'فعال', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.brand === r.name).length; return n ? `${fa(n)} کالا با برند «${r.name}» ثبت شده است.` : null }} />}
       {tab === 'attr' && <EntityManager ek="attrTemplates" kind="قالب ویژگی" fields={[{ k: 'name', label: 'نام قالب', required: true }, { k: 'fields', label: 'فیلدها (با ویرگول فارسی جدا کنید)', type: 'textarea', required: true }, { k: 'compare', label: 'در مقایسه نمایش داده شود', type: 'toggle' }]} />}
       {tab === 'collections' && <EntityManager ek="collections" kind="مجموعه" fields={[{ k: 'name', label: 'نام مجموعه', required: true }, { k: 'type', label: 'نوع', type: 'select', options: ['دستی', 'مبتنی بر قانون'] }, { k: 'rule', label: 'قانون عضویت', type: 'textarea' }, { k: 'items', label: 'تعداد کالا', type: 'number' }, { k: 'active', label: 'فعال', type: 'toggle' }]} />}
       <Modal open={add} onClose={() => { setAdd(false); setSp({}, { replace: true }) }} title="افزودن کالا" wide>

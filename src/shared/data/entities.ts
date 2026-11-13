@@ -143,12 +143,12 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'in1', title: 'قطعی درگاه اقساطی تارا', owner: 'مسئول فنی', severity: 'بالا', status: 'باز', at: new Date(now - 9 * 6e4).toISOString().slice(0, 16) },
   ],
   shipMethods: [
-    { id: 'sm1', name: 'تحویل {مدت_تحویل_سریع} ساعته', scope: 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', price: 150000, active: true },
-    { id: 'sm2', name: 'تحویل سریع در بازهٔ انتخابی (برای بعد)', scope: 'انبار تهران · تهران و کرج', price: 95000, active: true },
-    { id: 'sm3', name: 'پست پیشتاز', scope: 'هر دو انبار · سراسر کشور', price: 90000, active: true },
-    { id: 'sm4', name: 'تیپاکس', scope: 'هر دو انبار · مراکز استان', price: 140000, active: true },
-    { id: 'sm5', name: 'باربری کالای سنگین', scope: 'انبار تهران · کلاس سنگین', price: 450000, active: true },
-    { id: 'sm6', name: 'دریافت حضوری از شعبه', scope: 'شعبهٔ مرکزی', price: 0, active: true },
+    { id: 'sm1', name: 'تحویل {مدت_تحویل_سریع} ساعته', scope: 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', price: 150000, perKg: 0, maxKg: 30, timeMode: 'انتخاب بازه توسط مشتری', timeText: 'تا {مدت_تحویل_سریع} ساعت پس از پرداخت', active: true },
+    { id: 'sm2', name: 'تحویل سریع در بازهٔ انتخابی (برای بعد)', scope: 'انبار تهران · تهران و کرج', price: 95000, perKg: 0, maxKg: 30, timeMode: 'انتخاب بازه توسط مشتری', timeText: 'بازه‌های ۲ ساعته تا ۷ روز آینده', active: true },
+    { id: 'sm3', name: 'پست پیشتاز', scope: 'هر دو انبار · سراسر کشور', price: 90000, perKg: 15000, maxKg: 30, timeMode: 'متن ثابت', timeText: '۲ تا ۴ روز کاری', active: true },
+    { id: 'sm4', name: 'تیپاکس', scope: 'هر دو انبار · مراکز استان', price: 140000, perKg: 20000, maxKg: 50, timeMode: 'متن ثابت', timeText: '۱ تا ۳ روز کاری', active: true },
+    { id: 'sm5', name: 'باربری کالای سنگین', scope: 'انبار تهران · کلاس سنگین', price: 450000, perKg: 8000, maxKg: 300, timeMode: 'متن ثابت', timeText: 'هماهنگی تلفنی پس از پرداخت', active: true },
+    { id: 'sm6', name: 'دریافت حضوری از شعبه', scope: 'شعبهٔ مرکزی', price: 0, perKg: 0, maxKg: 0, timeMode: 'انتخاب بازه توسط مشتری', timeText: 'از ۲ ساعت پس از پرداخت', active: true },
   ],
   reports: [
     { id: 'rp1', name: 'خلاصهٔ فروش هفتگی', schedule: 'هر شنبه ساعت ۹', to: 'مدیر کل · ایمیل', format: 'PDF', active: true },

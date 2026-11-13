@@ -5,7 +5,7 @@ const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number; company?: string }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; trackingUrl?: string; trackingCarrier?: string; allocReason: string }
-export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string }
+export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string; saleMode?: 'online' | 'inquiry'; featured?: boolean; showQA?: boolean; showReviews?: boolean; headCode?: string }
 export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
@@ -24,6 +24,8 @@ import { makeOrderEvents } from './orderEvents'
 import { makeContentQueue } from './contentQueue'
 import { makeBlog } from './blog'
 import { makeTraffic } from './traffic'
+import { makeStoreCfg } from './storeCfg'
+import { makeQuestions, makeReviewMeta } from './qa'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -151,7 +153,7 @@ const makeSeedBase = () => ({
     { id: 'SORRY-CANCEL', type: 'مبلغی', value: '۵۰۰٬۰۰۰ تومان', used: 31, limit: 0, active: true, cond: 'کد جبرانی لغو' },
     { id: 'YALDA', type: 'درصدی', value: '۸٪ هدفون‌ها', used: 0, limit: 300, active: false, cond: 'دستهٔ هدفون، حداقل خرید ۲۰ میلیون' },
     { id: 'FREESHIP', type: 'ارسال رایگان', value: 'ارسال رایگان', used: 88, limit: 500, active: true, cond: 'حداقل خرید ۱۰ میلیون' },
-  ],
+  ] as { id: string; type: string; value: string; used: number; limit: number; active: boolean; cond: string; title?: string; cap?: number; expires?: string; perUser?: number; audience?: string; customerId?: string; minCart?: number }[],
   // ثبت ارائه‌دهنده (بخش ۵.۱۱-الف)؛ هیچ نام سرویسی در منطق ثابت نیست.
   providers: [
     { id: 'snapppay', family: 'bnpl', name: 'اسنپ‌پی', status: 'prov.active', share: 14, installments: 4, fee: 6, settleDays: 7, pending: 412000000, isDefault: true, min: 1000000, max: 100000000, health: 99.1 },
@@ -198,11 +200,11 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
-    { id: 'u1', name: 'بهراد', role: 'super', phone: '09000000001', status: 'آنلاین', twoFA: true },
+    { id: 'u1', name: 'بهشاد', role: 'super', phone: '09000000001', status: 'آنلاین', twoFA: true },
     { id: 'u2', name: 'نیما', role: 'ops', phone: '09000000002', status: 'آنلاین', twoFA: true },
     { id: 'u3', name: 'آرش', role: 'simple', phone: '09000000003', status: 'آنلاین', twoFA: false },
     { id: 'u4', name: 'کاک هیوا', role: 'partner', phone: '09000000004', status: 'آفلاین', twoFA: false },
@@ -220,7 +222,7 @@ const makeSeedBase = () => ({
     { at: ago(8), who: 'نیما', action: 'تغییر وضعیت مرسوله', target: 'GH-10479-1', before: 'در حال جمع‌آوری', after: 'بسته‌بندی‌شده', ai: false },
     { at: ago(31), who: 'دستیار غنیمت', action: 'پیش‌نویس پاسخ تیکت', target: 'TK-482044', before: '-', after: 'پذیرفته شد', ai: true },
     { at: ago(55), who: 'مریم', action: 'درخواست بازگشت وجه', target: 'RT-300398', before: '-', after: '۳۸٬۵۰۰٬۰۰۰ تومان', ai: false },
-    { at: ago(60 * 3), who: 'بهراد', action: 'مشاهدهٔ دادهٔ حساس', target: 'شمارهٔ موبایل c1', before: '-', after: '-', ai: false },
+    { at: ago(60 * 3), who: 'بهشاد', action: 'مشاهدهٔ دادهٔ حساس', target: 'شمارهٔ موبایل c1', before: '-', after: '-', ai: false },
     { at: ago(60 * 5), who: 'کاک هیوا', action: 'تغییر موجودی', target: 'Kindle Paperwhite / انبار مهاباد', before: '۹', after: '۷', ai: false },
   ],
   alerts: [
@@ -292,7 +294,7 @@ const makeSeedBase = () => ({
   ] as { id: string; kind: string; ref: string; status: string; reason: string; visible: boolean; by: string; at: string; editedAt?: string }[],
   site: makeSite(),
   sitePublished: makeSite(),
-  siteVersions: [{ id: 'v1', at: ago(60 * 24 * 3), by: 'بهراد', note: 'نسخهٔ اولیهٔ سایت' }] as { id: string; at: string; by: string; note: string; data?: ReturnType<typeof makeSite> }[],
+  siteVersions: [{ id: 'v1', at: ago(60 * 24 * 3), by: 'بهشاد', note: 'نسخهٔ اولیهٔ سایت' }] as { id: string; at: string; by: string; note: string; data?: ReturnType<typeof makeSite> }[],
   layout: makeLayout(),
   moves: [
     { id: 'mv1', at: ago(25), who: 'نیما', kind: 'ورود', unit: 'GU-20413', product: 'p1', from: 'رسید', to: 'QC-1', read: false },

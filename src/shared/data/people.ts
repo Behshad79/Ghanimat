@@ -31,7 +31,7 @@ const emp = (id: string, teamId: string, name: string, position: string, dept: s
     { id: `${id}-p2`, date: d(-11), type: 'حقوق ماهانه', amount: Math.round(base * 1.08), method: 'پایا (شبا)', status: 'paid', by: 'مریم' },
     { id: `${id}-p3`, date: d(19), type: 'حقوق ماهانه', amount: Math.round(base * 1.08), method: 'پایا (شبا)', status: 'scheduled' },
   ],
-  loans: [], notes: [{ id: `${id}-n1`, at: d(-start), by: 'بهراد', kind: 'استخدام', text: 'شروع همکاری؛ مدارک هویتی و قرارداد امضاشده دریافت شد.' }], docs: [{ id: `${id}-d1`, title: 'کپی کارت ملی', at: d(-start) }, { id: `${id}-d2`, title: 'قرارداد امضاشده', at: d(-start) }],
+  loans: [], notes: [{ id: `${id}-n1`, at: d(-start), by: 'بهشاد', kind: 'استخدام', text: 'شروع همکاری؛ مدارک هویتی و قرارداد امضاشده دریافت شد.' }], docs: [{ id: `${id}-d1`, title: 'کپی کارت ملی', at: d(-start) }, { id: `${id}-d2`, title: 'قرارداد امضاشده', at: d(-start) }],
   ...extra,
 })
 
@@ -40,9 +40,9 @@ export const makePeople = (): Employee[] => [
     loans: [{ id: 'e1-l1', title: 'وام خرید خودرو', amount: 60000000, installments: 12, paid: 5, start: d(-150), note: 'قسط ماهانه از حقوق کسر می‌شود.' }],
     pay: [
       { id: 'e1-p1', date: d(-41), type: 'حقوق ماهانه', amount: 34560000, method: 'پایا (شبا)', status: 'paid', by: 'مریم' },
-      { id: 'e1-p0', date: d(-33), type: 'مساعده', amount: 8000000, method: 'کارت به کارت', status: 'paid', by: 'بهراد', note: 'هزینهٔ درمان پدر؛ از حقوق ماه بعد کسر شد.' },
+      { id: 'e1-p0', date: d(-33), type: 'مساعده', amount: 8000000, method: 'کارت به کارت', status: 'paid', by: 'بهشاد', note: 'هزینهٔ درمان پدر؛ از حقوق ماه بعد کسر شد.' },
       { id: 'e1-p2', date: d(-11), type: 'حقوق ماهانه', amount: 34560000, method: 'پایا (شبا)', status: 'paid', by: 'مریم' },
-      { id: 'e1-p4', date: d(-9), type: 'کمک (هدیه یا اضطراری)', amount: 5000000, method: 'کارت به کارت', status: 'paid', by: 'بهراد', note: 'هدیهٔ تولد فرزند' },
+      { id: 'e1-p4', date: d(-9), type: 'کمک (هدیه یا اضطراری)', amount: 5000000, method: 'کارت به کارت', status: 'paid', by: 'بهشاد', note: 'هدیهٔ تولد فرزند' },
       { id: 'e1-p3', date: d(19), type: 'حقوق ماهانه', amount: 34560000, method: 'پایا (شبا)', status: 'scheduled' },
     ],
   }),

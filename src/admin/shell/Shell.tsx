@@ -1,7 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
-import { NAV } from './nav'
+import { NAV, NAV_CLOSED_DEFAULT } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
 import { CommandPalette } from './CommandPalette'
@@ -44,6 +44,11 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   const mini = s.collapsed && !mobile
   const items = NAV.filter((n) => can(n.id, s) && (!n.soon || d.flags.showSoon))
   const groups = [...new Set(items.map((n) => n.group))]
+  const loc = useLocation(); const [q, setQ] = useState('')
+  const closed = s.navClosed ?? NAV_CLOSED_DEFAULT
+  const activeG = items.filter((n) => n.path !== '/admin' && loc.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.group
+  const toggle = (g: string) => setSession({ navClosed: closed.includes(g) ? closed.filter((x) => x !== g) : [...closed, g] })
+  const shown = q.trim() ? items.filter((n) => n.label.includes(q.trim()) || n.group.includes(q.trim())) : null
   const link = (n: (typeof NAV)[number]) => { const c = n.count?.(d) ?? 0; return (
     <NavLink key={n.id} to={n.path} end={n.path === '/admin'} onClick={onNav} title={mini ? n.label : undefined}
       className={({ isActive }) => cx('group relative flex h-10 items-center gap-2.5 rounded-xl px-3 text-13 transition-colors', isActive ? 'bg-brand-solid font-semibold text-white shadow-sm [&_.navcount]:bg-white/20 [&_.navcount]:text-white' : 'text-t2 hover:bg-neutral-bg hover:text-t1', mini && 'justify-center px-0')}>
@@ -62,10 +67,16 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
           : <img src="./brand/logo-full.png" alt="غنیمت" className="h-8" />}
       </div>
       <nav className="flex-1 space-y-3 overflow-y-auto p-2" aria-label="منوی اصلی">
-        {!mini && s.pinned.some((p) => items.find((i) => i.id === p)) && (
+        {!mini && <div className="relative px-0.5"><Search size={13} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-t3" /><input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ('') }} aria-label="جست‌وجو در منو" placeholder="جست‌وجو در منو" className="h-8 w-full rounded-lg border border-line bg-neutral-bg/60 pe-2 ps-8 text-12 outline-none focus:border-brand" /></div>}
+        {!mini && !shown && s.pinned.some((p) => items.find((i) => i.id === p)) && (
           <div><p className="px-2.5 pb-1 text-11 font-medium text-t3">سنجاق‌شده</p>{items.filter((i) => s.pinned.includes(i.id)).map(link)}</div>
         )}
-        {groups.map((g) => <div key={g}>{!mini && <p className="px-2.5 pb-1 text-11 font-medium text-t3">{g}</p>}{items.filter((i) => i.group === g).map(link)}</div>)}
+        {shown ? (shown.length ? <div>{shown.map(link)}</div> : <p className="px-3 py-2 text-12 text-t3">موردی پیدا نشد.</p>)
+          : groups.map((g) => { const gi = items.filter((i) => i.group === g); const isOpen = mini || g === activeG || !closed.includes(g) || g === 'امروز'; const sum = gi.reduce((a, n) => a + (n.count?.(d) ?? 0), 0); return (
+            <div key={g}>
+              {!mini && g !== 'امروز' && <button onClick={() => toggle(g)} aria-expanded={isOpen} className="flex w-full items-center gap-1 rounded-md px-2.5 pb-1 text-11 font-medium text-t3 hover:text-t1"><span className="flex-1 text-right">{g}</span>{!isOpen && sum > 0 && <span className="tnum rounded-full bg-danger-bg px-1.5 text-[10px] font-semibold text-danger">{fa(sum)}</span>}<ChevronDown size={12} className={cx('transition-transform', !isOpen && 'rotate-90')} /></button>}
+              {isOpen && gi.map(link)}
+            </div>) })}
       </nav>
       {!mobile && <button onClick={() => setSession({ collapsed: !s.collapsed })} className="flex h-10 items-center justify-center gap-2 border-t border-line text-12 text-t3 hover:text-t1"><ChevronsRight size={15} className={cx('transition-transform', mini && 'rotate-180')} />{!mini && 'جمع‌کردن منو'}</button>}
     </aside>

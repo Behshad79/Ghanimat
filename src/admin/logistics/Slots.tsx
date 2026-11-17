@@ -75,7 +75,7 @@ export function PickupRules() {
           {P.mode === 'window' && <><Field label="از ساعت"><Input type="number" value={P.windowFrom} onChange={(e) => set((x) => { x.pickup.windowFrom = +e.target.value })} /></Field><Field label="تا ساعت"><Input type="number" value={P.windowTo} onChange={(e) => set((x) => { x.pickup.windowTo = +e.target.value })} /></Field></>}
         </div>
         <Field label="اگر بخشی از کالاها در شعبه نبود"><Select value={P.partialStock} onChange={(v) => set((x) => { x.pickup.partialStock = v as Delivery['pickup']['partialStock'] }, 'تغییر قانون موجودی ناقص شعبه')} options={[['ask', 'از مشتری بپرس (طبق فیگما)'], ['ship_rest', 'موجودها در شعبه، بقیه ارسال شود'], ['wait_all', 'صبر تا همه در شعبه برسد']]} /></Field>
-        <label className="mt-3 flex items-center justify-between rounded-xl border border-line px-3 py-2 text-13">نمایش کد تحویل در نتیجهٔ پرداخت و پیامک<Toggle on={P.showCode} label="کد تحویل" onChange={(v) => set((x) => { x.pickup.showCode = v })} /></label>
+        
       </Card>
       <Card title={<span className="flex items-center gap-2"><MessageSquareText size={15} />متن پیامک‌ها</span>}>
         {([['pickupReady', 'آماده‌شدن سفارش در شعبه'], ['pickupReminder', 'یادآوری مهلت'], ['pickupExpired', 'پایان مهلت و لغو'], ['callFirst', 'درخواست تماس پیش از مراجعه'], ['slotConfirmed', 'تأیید زمان ارسال']] as const).map(([k, l]) => <div key={k} className="mb-3"><Field label={l}><Textarea rows={2} value={T[k]} onChange={(e) => set((x) => { x.templates[k] = e.target.value })} /></Field><p className="mt-1 rounded-lg bg-neutral-bg px-2 py-1 text-11 text-t2">پیش‌نمایش: {preview(T[k])}</p></div>)}

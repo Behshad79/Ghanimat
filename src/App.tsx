@@ -33,6 +33,7 @@ import { Partner } from './admin/partner/Partner'
 import { PartnersAdmin } from './admin/partner/PartnersAdmin'
 import { Messaging } from './admin/cx/Messaging'
 import { Calls } from './admin/cx/Calls'
+import { Remote } from './admin/cx/Remote'
 import { ConfirmHost, ToastHost } from './shared/ui/overlay'
 import { currentUser, ROLES, useSession } from './shared/lib/store'
 
@@ -92,6 +93,7 @@ export function App() {
               <Route path="sellers" element={<PartnersAdmin />} />
               <Route path="messaging" element={<Messaging />} />
               <Route path="calls" element={<Calls />} />
+              <Route path="remote" element={<Remote />} />
               <Route path="team" element={<Team />} />
               <Route path="people" element={<People />} />
               <Route path="vault" element={<Vault />} />

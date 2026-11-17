@@ -20,7 +20,7 @@ export type PartnerT = {
   couriers: { name: string; phone: string; vehicle: string; active: boolean }[]; iban: string
   reviews: { id: string; orderId: string; customer: string; rating: number; text: string; tags: string[]; at: string; reply?: string }[]
   penalties: { id: string; at: string; reason: string; amount: number; orderId?: string }[]
-  metrics: { ontime: number; noStock: number; cancel: number; prepMin: number }
+  metrics: { ontime: number; noStock: number; cancel: number; prepMin: number }; stockCheckedAt?: string
   checklist: { t: string; done: boolean }[]; payouts: { id: string; at: string; amount: number; status: 'پرداخت شد' | 'در انتظار تأیید' | 'ردشده'; note?: string }[]
 }
 

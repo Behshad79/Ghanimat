@@ -60,7 +60,7 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
           <Field label="پلاک" help="دو رقم، حرف، سه رقم، کد استان"><div className="flex items-center gap-1" dir="ltr"><Input aria-label="دو رقم" className="w-14 text-center" maxLength={2} value={f.p1} onChange={(e) => setF({ ...f, p1: e.target.value.replace(/\D/g, '') })} /><Select className="w-20" value={f.l} onChange={(v) => setF({ ...f, l: v })} options={LETTERS} /><Input aria-label="سه رقم" className="w-16 text-center" maxLength={3} value={f.p2} onChange={(e) => setF({ ...f, p2: e.target.value.replace(/\D/g, '') })} /><span className="text-12">ایران</span><Input aria-label="کد استان" className="w-14 text-center" maxLength={2} value={f.r} onChange={(e) => setF({ ...f, r: e.target.value.replace(/\D/g, '') })} /></div></Field>
         </div>
         {f.p1 && f.p2 && f.r && <div className="mt-3"><Plate v={`${f.p1} ${f.l} ${f.p2} ایران ${f.r}`} /></div>}
-        {f.company === 'اسنپ‌باکس' && <p className="mt-3 rounded-xl bg-info-bg px-3 py-2 text-12 text-info">اسنپ‌باکس: کد تحویل پیک روی برگهٔ چاپی نوشته نمی‌شود.</p>}
+        
       </Modal>
     </div>
   )

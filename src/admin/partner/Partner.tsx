@@ -12,7 +12,7 @@ import { compactToman, csv, download, fa, left, minsLeft, rel, toman } from '@/s
 import { CAPITAL, statement, type Capital } from '@/shared/data/partners'
 import { partnerTheme } from './theme'
 import { ProductImg } from '../pages/_shared'
-import { PartnerCouriers, PartnerLedger, PartnerOrders, PartnerReviews, PartnerToday } from './PartnerOps'
+import { PartnerCouriers, PartnerLedger, PartnerOrders, PartnerReviews, PartnerStock, PartnerToday } from './PartnerOps'
 
 /** پرتال شعبه و شریک فروش: همان چیدمان پنل مدیریت، با رنگ خود شعبه. فقط دادهٔ همین شعبه نمایش داده می‌شود؛ هیچ دادهٔ مالی یا مشتری دیگر غنیمت اینجا نیست. */
 type Tab = 'home' | 'orders' | 'stock' | 'fast' | 'money' | 'reviews' | 'contract' | 'sites'
@@ -71,6 +71,7 @@ export function Partner() {
 
           {tab === 'orders' && <PartnerOrders P={P} />}
 
+          {tab === 'stock' && <PartnerStock P={P} />}
           {tab === 'stock' && <>
             <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-16 font-bold">موجودی و سرمایه</h1>{P.services.ownProducts ? <Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن کالای خودم</Button> : <span className="text-12 text-t2">افزودن کالای شخصی در قرارداد شما فعال نیست.</span>}</div>
             {(Object.keys(CAPITAL) as Capital[]).map((k) => { const r = st.byCap(k); if (!r.length) return null; return <Card key={k} title={<span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: CAPITAL[k].color }} />{CAPITAL[k].label}</span>} pad={false}>

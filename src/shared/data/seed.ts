@@ -31,6 +31,7 @@ import { makeAcct } from './acct'
 import { makeLots, makePartners } from './partners'
 import { makeNudges } from './nudges'
 import { makeCalls } from './calls'
+import { makeRemote } from './remote'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -209,7 +210,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), remote: makeRemote(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
@@ -288,7 +289,7 @@ const makeSeedBase = () => ({
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [
     { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.example/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
-    { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹. کد تحویل: 4821', status: 'تحویل شد', at: ago(60 * 5) },
+    { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹.', status: 'تحویل شد', at: ago(60 * 5) },
     { id: 'sm3', to: '09120000003', customerId: 'c3', kind: 'کد ورود', ref: '', text: 'کد ورود شما به غنیمت: 52817', status: 'ارسال‌نشده (خطای اپراتور)', at: ago(60 * 9) },
   ] as { id: string; to: string; customerId?: string; kind: string; ref: string; text: string; status: string; at: string }[],
   settleDue: {} as Record<string, string>,
@@ -341,7 +342,7 @@ export const makeSeed = () => {
   { const c2 = s.customers.find((x) => x.id === 'c2')!
     s.customers.push({ ...structuredClone(c2), id: 'c8', name: 'هیمن رسولی', mobile: '09141239876', city: 'مهاباد', email: '', orders: 3, ltv: 96000000, segment: 'وفادار', source: 'اینستاگرام', addr: { ...c2.addr, province: 'آذربایجان غربی', city: 'مهاباد', district: 'محلهٔ تپه‌قاضی', street: 'خیابان جمهوری' } })
     s.customers.push({ ...structuredClone(c2), id: 'c9', name: 'شیلان کریمی', mobile: '09149876543', city: 'بوکان', email: '', orders: 1, ltv: 24500000, segment: 'جدید', source: 'مستقیم', addr: { ...c2.addr, province: 'آذربایجان غربی', city: 'بوکان', district: 'مرکز شهر', street: 'خیابان انقلاب' } })
-    const mk = (id: string, cid: string, minsAgo: number, ship: Partial<Shipment>, total: number, tags: string[]) => { const o = structuredClone(base); Object.assign(o, { id, customerId: cid, channel: 'سایت', pay: 'زرین‌پال', total, discount: 0, status: 'order.preparing', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - minsAgo * 6e4).toISOString(), tags }); o.shipments = [{ ...structuredClone(base.shipments[0]), courier: null, tracking: '', allocReason: 'نزدیک‌ترین انبار به مشتری: مهاباد', ...ship } as Shipment]; s.orders.unshift(o) }
+    const mk = (id: string, cid: string, minsAgo: number, ship: Partial<Shipment>, total: number, tags: string[]) => { const o = structuredClone(base); Object.assign(o, { id, customerId: cid, channel: 'سایت', pay: 'زرین‌پال', total, discount: 0, status: 'order.preparing', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - minsAgo * 6e4).toISOString(), tags }); o.shipments = [{ ...structuredClone(base.shipments[0]), courier: null, tracking: '', packPhotos: [], allocReason: 'نزدیک‌ترین انبار به مشتری: مهاباد', ...ship } as Shipment]; s.orders.unshift(o) }
     mk('GH-10501', 'c8', 25, { id: 'GH-10501-1', warehouse: 'mahabad', method: 'تحویل سریع شهری (۳ ساعته)', status: 'ship.partner_confirm', sla: new Date(Date.now() + 18 * 6e4).toISOString(), items: [{ productId: 'p2', unitId: 'GU-20472', qty: 1, price: 15500000 }], shipFee: 90000 }, 15590000, ['تحویل سریع'])
     mk('GH-10502', 'c9', 70, { id: 'GH-10502-1', warehouse: 'mahabad', method: 'تحویل سریع شهری (۳ ساعته)', status: 'ship.picking', sla: new Date(Date.now() + 95 * 6e4).toISOString(), items: [{ productId: 'p1', unitId: 'GU-20414', qty: 1, price: 129900000 }], shipFee: 90000 }, 129990000, ['تحویل سریع'])
     mk('GH-10503', 'c8', 180, { id: 'GH-10503-1', warehouse: 'mahabad', method: 'دریافت حضوری از شعبه', status: 'ship.packed', sla: new Date(Date.now() + 6 * 36e5).toISOString(), items: [{ productId: 'p7', unitId: 'GU-20450', qty: 1, price: 74900000 }] }, 74900000, ['دریافت حضوری']) }

@@ -198,7 +198,7 @@ export function CheckoutRules() {
             <Field label={`مالیات بر ارزش افزوده: ${pct(v.vat)}`} help="روی فاکتور رسمی جدا نمایش داده می‌شود."><input type="range" min={0} max={15} value={v.vat} onChange={(e) => C.set({ vat: +e.target.value })} className="w-full accent-[var(--brand)]" /></Field>
             <Field label="تحویل‌شده فرض‌کردن مرسولهٔ پستی بعد از (روز)" help="فقط وقتی رهگیری پست تحویل را اعلام نکرده و مشتری شکایتی ثبت نکرده است.">{numIn('autoDeliverDays')}</Field>
           </div>
-          <p className="mt-2 flex items-center gap-1.5 text-11 text-t2"><Globe size={12} />تحویل سریع و پیک همیشه با کد تحویل یا عکس تحویل بسته می‌شود و این قاعده شامل آن‌ها نیست.</p>
+          <p className="mt-2 flex items-center gap-1.5 text-11 text-t2"><Globe size={12} />تحویل سریع و پیک با ثبت تحویل توسط پیک یا شعبه بسته می‌شود و این قاعده شامل آن‌ها نیست.</p>
         </Sec>
       </div>
       <Card><p className="flex flex-wrap items-center gap-2 text-12 text-t2"><Badge tone="info" dot={false}>مرتبط</Badge>درگاه‌ها و سرویس‌های اقساطی در <button className="text-brand underline" onClick={() => nav('/admin/finance?tab=gateways')}>مالی ← درگاه‌ها</button>، روش‌ها و هزینهٔ ارسال در <button className="text-brand underline" onClick={() => nav('/admin/shipping?tab=methods')}>ارسال ← روش‌ها</button>.</p></Card>

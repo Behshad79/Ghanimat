@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Zap, Bell, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
+import { Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
@@ -11,22 +11,30 @@ import { can, currentUser, effectiveRole, mutate, resetDB, ROLES, setSession, us
 import { compactToman, fa, rel } from '@/shared/lib/fa'
 import { StorePreview } from '@/storefront/Preview'
 
+/** انتخابگر نوار نمایشی: ظاهر یکسان در همهٔ مرورگرها، فلش سمت چپ و متن خوانا روی زمینهٔ تیره */
+function DemoSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (e: ChangeEvent<HTMLSelectElement>) => void; children: ReactNode }) {
+  return <label className="relative flex h-6 shrink-0 items-center rounded-md border border-white/15 bg-white/10 transition hover:bg-white/15 focus-within:border-white/50">
+    <select aria-label={label} value={value} onChange={onChange} style={{ colorScheme: 'dark' }} className="h-full cursor-pointer appearance-none bg-transparent pe-6 ps-2 text-11 text-white outline-none [&>option]:bg-[#10123d] [&>option]:text-white">{children}</select>
+    <ChevronDown size={12} className="pointer-events-none absolute end-1.5 text-white/70" />
+  </label>
+}
+
 /** نوار «نسخهٔ نمایشی»: تعویض سریع نقش، منوی حالت‌ها، نتیجهٔ سرویس‌های بیرونی، بازنشانی داده (بخش ۱۸) */
 export function DemoBar() {
   const s = useSession(); const d = useDB(); const nav = useNavigate()
   return (
     <div className="no-print flex h-9 shrink-0 items-center gap-2 overflow-x-auto bg-[#10123d] px-3 text-11 text-white/80">
       <span className="flex shrink-0 items-center gap-1 font-semibold text-white"><FlaskConical size={13} />نسخهٔ نمایشی</span>
-      <select aria-label="تعویض سریع نقش" value={s.userId ?? ''} onChange={(e) => { const u = d.team.find((x) => x.id === e.target.value)!; setSession({ userId: u.id, viewAs: null }); nav(ROLES[u.role].home) }} className="h-6 shrink-0 rounded-sm bg-white/10 px-1 text-white [&>option]:text-black">
+      <DemoSelect label="تعویض سریع نقش" value={s.userId ?? ''} onChange={(e) => { const u = d.team.find((x) => x.id === e.target.value)!; setSession({ userId: u.id, viewAs: null }); nav(ROLES[u.role].home) }}>
         {d.team.map((u) => <option key={u.id} value={u.id}>{ROLES[u.role].label} ({u.name})</option>)}
-      </select>
-      <select aria-label="منوی حالت‌ها" value={s.viewState} onChange={(e) => setSession({ viewState: e.target.value as ViewState })} className="h-6 shrink-0 rounded-sm bg-white/10 px-1 text-white [&>option]:text-black">
+      </DemoSelect>
+      <DemoSelect label="منوی حالت‌ها" value={s.viewState} onChange={(e) => setSession({ viewState: e.target.value as ViewState })}>
         {([['normal', 'حالت: عادی'], ['empty', 'حالت: خالی'], ['loading', 'حالت: بارگذاری'], ['error', 'حالت: خطا'], ['noaccess', 'حالت: بدون دسترسی'], ['offline', 'حالت: آفلاین']] as const).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
-      <select aria-label="نتیجهٔ سرویس‌های بیرونی" value={s.simulate} onChange={(e) => setSession({ simulate: e.target.value as any })} className="h-6 shrink-0 rounded-sm bg-white/10 px-1 text-white [&>option]:text-black">
+      </DemoSelect>
+      <DemoSelect label="نتیجهٔ سرویس‌های بیرونی" value={s.simulate} onChange={(e) => setSession({ simulate: e.target.value as any })}>
         <option value="success">سرویس‌های بیرونی: موفق</option><option value="fail">سرویس‌های بیرونی: ناموفق</option><option value="slow">سرویس‌های بیرونی: کند</option>
-      </select>
-      <button className="shrink-0 hover:text-white" onClick={() => { resetDB(); toast('دادهٔ نمونه به حالت اول برگشت.') }}>بازنشانی دادهٔ نمونه</button>
+      </DemoSelect>
+      <button className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-white/20 px-2 text-white/90 transition hover:bg-white/10 hover:text-white" onClick={() => { resetDB(); toast('دادهٔ نمونه به حالت اول برگشت.') }}>بازنشانی دادهٔ نمونه</button>
     </div>
   )
 }

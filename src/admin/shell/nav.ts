@@ -7,6 +7,7 @@ export type NavItem = { id: string; label: string; icon: LucideIcon; path: strin
 export const NAV: NavItem[] = [
   { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
   { id: 'live', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
+  { id: 'remote', label: 'ربات تلگرام و فرمان پیامکی', icon: Bot, path: '/admin/remote', group: 'فروش و عملیات', count: (d) => (d.remote?.telegram.on && d.remote?.sms.on ? 0 : 1) },
   { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'فروش و عملیات', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
   { id: 'social', label: 'فروش اجتماعی و کارت به کارت', icon: SocialIcon, path: '/admin/social', group: 'فروش و عملیات', count: (d) => d.bank.receipts.filter((r) => r.status !== 'تطبیق شد').length },
   { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'فروش و عملیات', count: (d) => d.partnerQueue.length },

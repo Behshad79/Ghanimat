@@ -9,6 +9,7 @@ import { mutate, notify, setSession, useDB } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { CAPITAL, statement, type Capital, type PartnerT } from '@/shared/data/partners'
 import { ProductImg } from '../pages/_shared'
+import { PartnerLedger, PartnerReviews } from './PartnerOps'
 
 const ST_TONE = { 'فعال': 'success', 'در حال راه‌اندازی': 'warning', 'متوقف': 'danger' } as const
 const num = (v: string) => +v.replace(/[^\d.]/g, '') || 0
@@ -52,7 +53,7 @@ function AddPartner({ open, onClose, onDone }: { open: boolean; onClose: () => v
   const colors = ['#0891b2', '#c2410c', '#7c3aed', '#be185d', '#0e9f6e', '#a16207']
   return <Modal open={open} onClose={onClose} title="افزودن شعبه یا شریک فروش" footer={<Button variant="primary" disabled={!f.name.trim() || !f.city.trim() || !f.owner.trim()} onClick={() => {
     const id = `pt${Date.now().toString(36)}`; const tpl = d.partners.find((x) => x.id === f.template) ?? d.partners[0]
-    mutate((x) => { x.partners.push({ ...structuredClone(tpl), id, name: f.name.trim(), city: f.city.trim(), owner: f.owner.trim(), phone: f.phone, warehouse: id, address: '', status: 'در حال راه‌اندازی', color: f.color, since: new Date().toISOString(), userId: undefined, fast: { ...tpl.fast, on: false, cities: f.city.trim() }, checklist: tpl.checklist.map((c) => ({ t: c.t, done: false })), payouts: [] }) }, { action: 'افزودن شعبه یا شریک فروش', target: f.name })
+    mutate((x) => { x.partners.push({ ...structuredClone(tpl), id, name: f.name.trim(), city: f.city.trim(), owner: f.owner.trim(), phone: f.phone, warehouse: id, address: '', status: 'در حال راه‌اندازی', color: f.color, since: new Date().toISOString(), userId: undefined, fast: { ...tpl.fast, on: false, cities: f.city.trim() }, checklist: tpl.checklist.map((c) => ({ t: c.t, done: false })), payouts: [], couriers: [], reviews: [], penalties: [], iban: '', metrics: { ontime: 0, noStock: 0, cancel: 0, prepMin: 0 } }) }, { action: 'افزودن شعبه یا شریک فروش', target: f.name })
     toast('شعبه ساخته شد؛ چک‌لیست راه‌اندازی را جلو ببرید.'); onDone(id) }}>ساخت</Button>}>
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="نام شعبه"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="مثلاً شعبهٔ تبریز" /></Field>
@@ -73,7 +74,7 @@ function PartnerDetail({ p, onBack }: { p: PartnerT; onBack: () => void }) {
   return (
     <Page title={p.name} back="/admin/sellers" sub={`${p.owner} · ${p.city} · از ${rel(p.since)}`} badge={<Badge tone={ST_TONE[p.status]}>{p.status}</Badge>}
       actions={<><Button variant="ghost" onClick={onBack}>همهٔ شعب</Button><Button icon={<ExternalLink size={14} />} onClick={openPortal}>مشاهدهٔ پرتال این شعبه</Button></>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'overview', label: 'نمای کلی' }, { id: 'contract', label: 'قرارداد و کمیسیون' }, { id: 'stock', label: 'موجودی و سرمایه', count: d.lots.filter((l) => l.partnerId === p.id).length }, { id: 'fast', label: 'انبار و ارسال سریع' }, { id: 'settle', label: 'تسویه' }, { id: 'setup', label: 'راه‌اندازی', count: p.checklist.filter((c) => !c.done).length }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'overview', label: 'نمای کلی' }, { id: 'contract', label: 'قرارداد و کمیسیون' }, { id: 'stock', label: 'موجودی و سرمایه', count: d.lots.filter((l) => l.partnerId === p.id).length }, { id: 'fast', label: 'انبار و ارسال سریع' }, { id: 'settle', label: 'تسویه و دفتر حساب' }, { id: 'score', label: 'کارنامه و نظر مشتریان', count: p.reviews.filter((r) => r.rating <= 3).length }, { id: 'setup', label: 'راه‌اندازی', count: p.checklist.filter((c) => !c.done).length }]} />}>
       <div className="space-y-4">
         {tab === 'overview' && <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -95,7 +96,8 @@ function PartnerDetail({ p, onBack }: { p: PartnerT; onBack: () => void }) {
           <p className="border-t border-line px-4 py-2 text-11 text-t2">کالای امانی تا فروش مال غنیمت است؛ کسری در انبارگردانی به قیمت خرید از تسویهٔ شعبه کم می‌شود.</p>
         </Card>}
         {tab === 'fast' && <FastTab p={p} upd={upd} />}
-        {tab === 'settle' && <SettleTab p={p} s={s} upd={upd} />}
+        {tab === 'settle' && <><SettleTab p={p} s={s} upd={upd} /><PartnerLedger P={p} admin /></>}
+        {tab === 'score' && <PartnerReviews P={p} admin />}
         {tab === 'setup' && <Card title="چک‌لیست راه‌اندازی شعبه">
           <ul className="space-y-2">{p.checklist.map((c, i) => <li key={c.t} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2 text-13"><button aria-label={c.t} onClick={() => upd((x) => { x.checklist[i].done = !c.done }, c.done ? 'برگرداندن مرحلهٔ راه‌اندازی' : 'تکمیل مرحلهٔ راه‌اندازی', c.t)} className={cx('grid size-6 place-items-center rounded-full border', c.done ? 'border-transparent bg-success-solid text-white' : 'border-line')}>{c.done && <Check size={13} />}</button><span className={c.done ? 'text-t2 line-through' : ''}>{c.t}</span></li>)}</ul>
           <div className="mt-4 flex flex-wrap gap-2">{p.status !== 'فعال' && <Button variant="primary" disabled={p.checklist.some((c) => !c.done)} onClick={() => { upd((x) => { x.status = 'فعال' }, 'فعال‌سازی شعبه'); notify('شعبهٔ تازه فعال شد', `${p.name} از امروز سفارش می‌گیرد.`, '/admin/sellers', 'عملیات'); toast('شعبه فعال شد و در سایت و صفحهٔ پرداخت دیده می‌شود.') }}>فعال‌سازی شعبه</Button>}

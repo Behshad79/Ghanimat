@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Building2, FileText, Home, Link2, Minus, Package, Plus, ShoppingBag, Store, Truck, Wallet } from 'lucide-react'
+import { Boxes, Building2, Star, FileText, Home, Link2, Minus, Package, Plus, ShoppingBag, Store, Truck, Wallet } from 'lucide-react'
 import { DemoBar } from '../shell/Shell'
 import { Avatar, Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Progress, Row, Select, StatusBadge, Toggle } from '@/shared/ui/base'
 import { Modal, toast } from '@/shared/ui/overlay'
@@ -12,9 +12,10 @@ import { compactToman, csv, download, fa, left, minsLeft, rel, toman } from '@/s
 import { CAPITAL, statement, type Capital } from '@/shared/data/partners'
 import { partnerTheme } from './theme'
 import { ProductImg } from '../pages/_shared'
+import { PartnerCouriers, PartnerLedger, PartnerOrders, PartnerReviews, PartnerToday } from './PartnerOps'
 
 /** پرتال شعبه و شریک فروش: همان چیدمان پنل مدیریت، با رنگ خود شعبه. فقط دادهٔ همین شعبه نمایش داده می‌شود؛ هیچ دادهٔ مالی یا مشتری دیگر غنیمت اینجا نیست. */
-type Tab = 'home' | 'orders' | 'stock' | 'fast' | 'money' | 'contract' | 'sites'
+type Tab = 'home' | 'orders' | 'stock' | 'fast' | 'money' | 'reviews' | 'contract' | 'sites'
 export function Partner() {
   const d = useDB(); const s = useSession(); const nav = useNavigate(); const me = currentUser()!
   const P = d.partners.find((x) => x.id === s.partnerId) ?? d.partners.find((x) => x.userId === me.id) ?? d.partners[0]
@@ -31,7 +32,7 @@ export function Partner() {
   const chg = (pid: string, by: number) => { const undo = snapshot(); mutate((x) => { const p = x.products.find((y) => y.id === pid)!; if (p.qty) p.qty.mahabad = Math.max(0, p.qty.mahabad + by) }, { action: `تغییر موجودی ${P.name}`, target: pid, after: `${by > 0 ? '+' : ''}${by}` }); toast('موجودی فوری در سایت اعمال شد.', { undo }) }
   const attach = () => { const sh = ships.find((x) => x.id === track)!; if (!/^\d{24}$|^\d{11}$/.test(code)) return toast('کد رهگیری نامعتبر است. کد پست ۲۴ رقم و کد تیپاکس ۱۱ رقم است.', { tone: 'err' }); if (d.orders.flatMap((o) => o.shipments).some((x) => x.tracking === code)) return toast('این کد قبلاً برای مرسولهٔ دیگری ثبت شده است.', { tone: 'err' }); mutate((x) => { const o = x.orders.find((y) => y.id === sh.order.id)!; const y = o.shipments.find((z) => z.id === sh.id)!; y.tracking = code; y.method = carrier; y.status = 'ship.in_transit'; if (o.shipments.every((z) => !['ship.pending', 'ship.picking', 'ship.packed', 'ship.partner_confirm'].includes(z.status))) o.status = 'order.shipped' }, { action: 'تحویل به پست و ثبت رهگیری (شریک)', target: sh.id, after: code }); setTrack(null); setCode(''); toast('ثبت شد. پیام رهگیری خودکار برای مشتری ارسال شد.') }
   const storeSale = (lid: string) => { const l = d.lots.find((x) => x.id === lid)!; if (l.soldOnline + l.soldStore >= l.qty) return toast('موجودی این محموله تمام است.', { tone: 'err' }); mutate((x) => { x.lots.find((y) => y.id === lid)!.soldStore += 1 }, { action: 'ثبت فروش حضوری در شعبه', target: lid }); toast('فروش حضوری ثبت شد و در صورت‌حساب آمد.') }
-  const tabs: [Tab, string, typeof Home, number?][] = [['home', 'داشبورد', Home], ['orders', 'سفارش‌ها', ShoppingBag, waiting.length + toSend.length], ['stock', 'موجودی و سرمایه', Boxes], ['fast', 'ارسال سریع', Truck], ['money', 'تسویه و کمیسیون', Wallet], ['contract', 'قرارداد', FileText], ['sites', 'سایت‌های من', Link2]]
+  const tabs: [Tab, string, typeof Home, number?][] = [['home', 'داشبورد', Home], ['orders', 'سفارش‌ها', ShoppingBag, waiting.length + toSend.length], ['stock', 'موجودی و سرمایه', Boxes], ['fast', 'ارسال سریع', Truck], ['money', 'حساب و تسویه', Wallet], ['reviews', 'کارنامه و نظر مشتریان', Star, P.reviews.filter((r) => r.rating <= 3 && !r.reply).length], ['contract', 'قرارداد', FileText], ['sites', 'سایت‌های من', Link2]]
   const spark = Array.from({ length: 14 }, (_, i) => Math.round(st.revenue / 14 * (0.6 + ((i * 37) % 9) / 10)))
   const done = P.checklist.filter((c) => c.done).length
   return (
@@ -60,6 +61,7 @@ export function Partner() {
               <KPI label="منتظر تأیید موجودی" value={fa(waiting.length)} tone="danger" to={undefined} />
               <KPI label="بستهٔ منتظر ارسال" value={fa(toSend.length)} tone="warning" />
             </div>
+            <PartnerToday P={P} go={() => setTab('orders')} />
             <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
               <Card title="فروش ۱۴ روز اخیر"><Area data={spark} fmt={compactToman} color={P.color} /></Card>
               <Card title={st.net >= 0 ? 'غنیمت به شما بدهکار است' : 'شما به غنیمت بدهکارید'}><p className="tnum text-24 font-bold">{toman(Math.abs(st.net))}</p><p className="mt-1 text-12 text-t2">تسویهٔ بعدی تا {fa(P.contract.settleDays)} روز دیگر</p><Button className="mt-3" onClick={() => setTab('money')}>جزئیات صورت‌حساب</Button></Card>
@@ -67,19 +69,7 @@ export function Partner() {
             <div className="grid gap-3 md:grid-cols-3">{(Object.keys(CAPITAL) as Capital[]).map((k) => { const r = st.byCap(k); return <Card key={k} title={<span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: CAPITAL[k].color }} />{CAPITAL[k].label}</span>}><Row k="مانده در انبار">{fa(r.reduce((a, x) => a + x.l.qty - x.sold, 0))} واحد</Row><Row k="ارزش">{compactToman(r.reduce((a, x) => a + x.stockValue, 0))}</Row><Row k="سهم من از فروش">{compactToman(r.reduce((a, x) => a + x.partnerShare, 0))}</Row></Card> })}</div>
           </>}
 
-          {tab === 'orders' && (ships.length === 0 || s.viewState === 'empty' ? <Card><EmptyState title="سفارشی از انبار شما نیست." desc="با هر سفارش تازه، پیامک و پیام‌رسان برای شما ارسال می‌شود." /></Card> : ships.map((x) => { const stp = ({ 'ship.partner_confirm': 0, 'ship.picking': 1, 'ship.packed': 2, 'ship.in_transit': 3, 'ship.delivered': 4 } as Record<string, number>)[x.status] ?? 0; return (
-            <Card key={x.id} title={<span className="flex flex-wrap items-center gap-2"><CopyId v={x.id} /><StatusBadge s={x.status} /></span>} actions={!['ship.delivered', 'ship.cancelled', 'ship.in_transit'].includes(x.status) && <Badge tone={minsLeft(x.sla) < 45 ? 'danger' : 'warning'}>{left(x.sla)}</Badge>}>
-              {x.status !== 'ship.cancelled' && <div className="mb-3"><Stepper current={stp} steps={['تأیید موجودی', 'بسته‌بندی', 'چاپ برچسب', 'تحویل به پست', 'تحویل']} /></div>}
-              <p className="text-13 font-medium">{x.items.map((i) => `${d.products.find((p) => p.id === i.productId)!.title} · ${fa(i.qty)} عدد`).join('، ')}</p>
-              <p className="mt-1 text-12 text-t2">گیرنده: {cust(x.order.customerId).name} · {cust(x.order.customerId).city}، خیابان نمونه، پلاک ۱۲ · کد پستی ۱۹۸۷۶۵۴۳۲۱ · موبایل پوشیده</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {x.status === 'ship.partner_confirm' && <><Button variant="primary" onClick={() => { setStatus(x.order.id, x.id, 'ship.picking', 'تأیید موجودی (شریک)'); toast('موجودی تأیید شد. بسته را آماده کنید.') }}>دارم؛ تأیید موجودی</Button><Button variant="danger" onClick={() => setNone(x.id)}>ندارم</Button></>}
-                {x.status === 'ship.picking' && <Button variant="primary" onClick={() => { setStatus(x.order.id, x.id, 'ship.packed', 'بسته‌بندی (شریک)'); toast('بسته‌بندی ثبت شد. برچسب پستی را چاپ کنید.') }}>بسته‌بندی شد (کالا، برگهٔ کنترل کیفیت، کارت گارانتی)</Button>}
-                {x.status === 'ship.packed' && <><Button onClick={() => { toast(`برچسب پستی با نشانی فرستندهٔ ${P.name} آماده شد.`); window.print() }}>چاپ برچسب پستی</Button><Button variant="primary" onClick={() => setTrack(x.id)}>ثبت کد رهگیری و تحویل به پست</Button></>}
-                {x.status === 'ship.in_transit' && <span className="text-12 text-t2">کد رهگیری: <CopyId v={x.tracking} /></span>}
-                <Button variant="ghost" onClick={() => { mutate(() => {}, { action: 'تماس شریک با مشتری از طریق مرکز تماس', target: x.id }); toast('تماس از طریق مرکز تماس غنیمت برقرار می‌شود؛ شمارهٔ مشتری نمایش داده نمی‌شود.') }}>تماس با مشتری</Button>
-              </div>
-            </Card>) }))}
+          {tab === 'orders' && <PartnerOrders P={P} />}
 
           {tab === 'stock' && <>
             <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-16 font-bold">موجودی و سرمایه</h1>{P.services.ownProducts ? <Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن کالای خودم</Button> : <span className="text-12 text-t2">افزودن کالای شخصی در قرارداد شما فعال نیست.</span>}</div>
@@ -94,6 +84,7 @@ export function Partner() {
             <p className="text-12 text-t2">تغییر تعداد فوری اعمال می‌شود. کالای جدید و هر تغییر در عنوان، توضیح، عکس یا مشخصات تا تأیید غنیمت منتشر نمی‌شود.</p>
           </>}
 
+          {tab === 'fast' && <PartnerCouriers P={P} />}
           {tab === 'fast' && <Card title={<span className="flex items-center gap-2"><Truck size={15} />ارسال سریع از انبار {P.city}</span>}>
             <Row k="شهرها">{P.fast.cities}</Row><Row k="وعدهٔ تحویل">{fa(P.fast.hours)} ساعت</Row><Row k="هزینه">{toman(P.fast.fee)}</Row><Row k="ساعت قطع سفارش">{P.fast.cutoff}</Row><Row k="ظرفیت روزانه">{fa(P.fast.capacity)} سفارش</Row><Row k="پیک">{P.fast.courier}</Row>
             <div className="mt-3 rounded-xl border border-line p-3"><Toggle on={P.fast.on} disabled={P.status !== 'فعال'} onChange={(v) => { mutate((x) => { x.partners.find((y) => y.id === P.id)!.fast.on = v }, { action: v ? 'روشن‌کردن ارسال سریع امروز (شریک)' : 'توقف ارسال سریع امروز (شریک)', target: P.name }); if (!v) notify('ارسال سریع شعبه متوقف شد', `${P.name} ارسال سریع امروز را خاموش کرد.`, '/admin/sellers', 'عملیات', 'warning'); toast(v ? 'ارسال سریع روشن شد.' : 'ارسال سریع امروز خاموش شد و غنیمت خبردار شد.') }} text="امروز ارسال سریع انجام می‌دهم" /><p className="mt-1 text-11 text-t2">اگر پیک ندارید یا ظرفیت پر شده، خاموش کنید تا مشتری وعدهٔ اشتباه نبیند. تغییر هزینه و محدوده با غنیمت هماهنگ می‌شود.</p></div>
@@ -108,8 +99,10 @@ export function Partner() {
               <div className="px-4 pb-4"><Button onClick={() => { mutate((x) => { x.approvals.unshift({ id: `AP-${900 + x.approvals.length}`, type: 'اختلاف تسویهٔ شریک', title: `${P.name} به صورت‌حساب دورهٔ جاری اعتراض دارد`, ref: 'تسویه', amount: Math.round(Math.abs(st.net)), by: me.name, byRole: 'partner', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'ثبت اختلاف تسویه', target: P.name }); notify('اختلاف در تسویهٔ شریک', `${P.name} به صورت‌حساب دورهٔ جاری اعتراض کرد.`, '/admin/sellers', 'مالی', 'warning'); toast('اختلاف ثبت شد و برای کارشناس مالی غنیمت ارسال شد.') }}>ثبت اختلاف</Button></div>
             </Card>
             <Card title="تسویه‌های قبلی">{P.payouts.length === 0 ? <EmptyState title="هنوز تسویه‌ای انجام نشده است." /> : <ul className="space-y-2">{P.payouts.map((x) => <li key={x.id} className="flex items-center justify-between text-13"><span>{x.id} · {rel(x.at)}</span><span className="flex items-center gap-2"><b className="tnum">{toman(x.amount)}</b><Badge tone={x.status === 'پرداخت شد' ? 'success' : 'warning'}>{x.status}</Badge></span></li>)}</ul>}</Card>
+            <PartnerLedger P={P} />
           </div>}
 
+          {tab === 'reviews' && <PartnerReviews P={P} />}
           {tab === 'contract' && <Card title="شرایط قرارداد با غنیمت">
             <Row k="کمیسیون من از فروش کالای امانی غنیمت">{fa(P.contract.hqCommission)}٪</Row>
             <Row k="کارمزد غنیمت از فروش کالای خودم">{fa(P.contract.platformFee)}٪</Row>

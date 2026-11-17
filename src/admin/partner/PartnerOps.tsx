@@ -1,0 +1,120 @@
+import { useState } from 'react'
+import { AlarmClock, Bike, CheckCircle2, Download, Link2, MessageSquareText, PackageCheck, Printer, Star, Store, Truck, UserPlus } from 'lucide-react'
+import { Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Segmented, Select, StatusBadge, Textarea, Toggle } from '@/shared/ui/base'
+import { KPI, Stepper } from '@/shared/ui/page'
+import { Modal, toast } from '@/shared/ui/overlay'
+import { askReason } from '@/shared/ui/reason'
+import { mutate, notify, useDB } from '@/shared/lib/store'
+import { csv, download, fa, left, minsLeft, rel, toman } from '@/shared/lib/fa'
+import { ledger, scorecard, type PartnerT } from '@/shared/data/partners'
+import type { Order, Shipment } from '@/shared/data/seed'
+import { ProductImg } from '../pages/_shared'
+
+type Row = Shipment & { order: Order }
+const kind = (s: Shipment) => /حضوری/.test(s.method) ? 'pickup' : /سریع|پیک/.test(s.method) ? 'fast' : 'post'
+const KIND: Record<string, [string, typeof Truck]> = { fast: ['ارسال سریع', Bike], pickup: ['دریافت حضوری', Store], post: ['پست', Truck] }
+const open = (s: Shipment) => !['ship.delivered', 'ship.cancelled'].includes(s.status)
+
+export const useShips = (P: PartnerT) => { const d = useDB(); return d.orders.flatMap((o) => o.shipments.filter((x) => x.warehouse === P.warehouse).map((x) => ({ ...x, order: o }))) as Row[] }
+
+/** خلاصهٔ امروز روی داشبورد شعبه: کارهای فوری به ترتیب مهلت */
+export function PartnerToday({ P, go }: { P: PartnerT; go: () => void }) {
+  const ships = useShips(P).filter(open).sort((a, b) => a.sla.localeCompare(b.sla))
+  const today = useShips(P).filter((x) => Date.now() - new Date(x.order.createdAt).getTime() < 864e5)
+  const urgent = ships.filter((x) => minsLeft(x.sla) < 45)
+  return <Card title={<span className="flex items-center gap-2"><AlarmClock size={15} />کارهای امروز به ترتیب مهلت</span>} actions={<Button size="sm" onClick={go}>همهٔ سفارش‌ها</Button>}>
+    <div className="mb-3 grid grid-cols-3 gap-2 text-center text-12">{[['سفارش امروز', today.length], ['فوری (زیر ۴۵ دقیقه)', urgent.length], ['ارسال سریع باز', ships.filter((x) => kind(x) === 'fast').length]].map(([k, v]) => <div key={k as string} className={cx('rounded-xl p-2', k === 'فوری (زیر ۴۵ دقیقه)' && +v > 0 ? 'bg-danger-bg text-danger' : 'bg-surface-2')}><p className="tnum text-18 font-bold">{fa(v)}</p><p>{k}</p></div>)}</div>
+    {ships.length === 0 ? <p className="text-13 text-t2">کار بازی ندارید.</p> : <ul className="space-y-1.5">{ships.slice(0, 5).map((x) => { const [l, I] = KIND[kind(x)]; const m = minsLeft(x.sla); return <li key={x.id} onClick={go} className={cx('flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-13', m < 20 ? 'border-danger bg-danger-bg/50' : m < 45 ? 'border-warning' : 'border-line')}><I size={15} className="shrink-0" /><b className="ltr font-mono text-12">{x.order.id}</b><span className="truncate text-t2">{l}</span><StatusBadge s={x.status} /><span className={cx('tnum mr-auto shrink-0 text-12 font-semibold', m < 20 ? 'text-danger' : m < 45 ? 'text-warning' : 'text-t2')}>{m < 20 ? 'لحظهٔ آخر · ' : ''}{left(x.sla)}</span></li> })}</ul>}
+  </Card>
+}
+
+/** سفارش‌های شعبه: فیلتر امروز و فوری، مسیر کامل پست، ارسال سریع با پیک خودی یا اسنپ‌باکس، و دریافت حضوری */
+export function PartnerOrders({ P }: { P: PartnerT }) {
+  const d = useDB(); const all = useShips(P); const [f, setF] = useState('open')
+  const [track, setTrack] = useState<Row | null>(null); const [code, setCode] = useState(''); const [carrier, setCarrier] = useState('پست پیشتاز')
+  const [cour, setCour] = useState<{ row: Row; mode: 'own' | 'app'; who: string; link: string; app: string } | null>(null)
+  const [deliver, setDeliver] = useState<{ row: Row; code: string } | null>(null)
+  const rows = all.filter((x) => f === 'all' ? true : f === 'open' ? open(x) : f === 'urgent' ? open(x) && minsLeft(x.sla) < 45 : f === 'today' ? Date.now() - new Date(x.order.createdAt).getTime() < 864e5 : f === 'done' ? !open(x) : open(x) && kind(x) === f).sort((a, b) => (open(a) === open(b) ? a.sla.localeCompare(b.sla) : open(a) ? -1 : 1))
+  const cust = (id: string) => d.customers.find((c) => c.id === id)
+  const setSt = (r: Row, st: string, label: string, extra?: (s: Shipment, o: Order) => void) => mutate((x) => { const o = x.orders.find((y) => y.id === r.order.id)!; const s = o.shipments.find((y) => y.id === r.id)!; s.status = st; extra?.(s, o); if (o.shipments.every((z) => !open(z))) o.status = 'order.delivered'; else if (o.shipments.every((z) => ['ship.in_transit', 'ship.delivered', 'ship.cancelled'].includes(z.status))) o.status = 'order.shipped' }, { action: `${label} (${P.name})`, target: r.id })
+  const cnt = (k: string) => all.filter((x) => k === 'open' ? open(x) : k === 'urgent' ? open(x) && minsLeft(x.sla) < 45 : k === 'today' ? Date.now() - new Date(x.order.createdAt).getTime() < 864e5 : k === 'done' ? !open(x) : open(x) && kind(x) === k).length
+  return <>
+    <Segmented value={f} onChange={setF} options={[['open', `باز (${fa(cnt('open'))})`], ['urgent', `فوری (${fa(cnt('urgent'))})`], ['today', `امروز (${fa(cnt('today'))})`], ['fast', `ارسال سریع (${fa(cnt('fast'))})`], ['post', `پست (${fa(cnt('post'))})`], ['pickup', `حضوری (${fa(cnt('pickup'))})`], ['done', 'تمام‌شده'], ['all', 'همه']]} />
+    {rows.length === 0 ? <Card><EmptyState title="سفارشی در این فیلتر نیست." desc="با هر سفارش تازه، پیامک و پیام‌رسان برای شما ارسال می‌شود." /></Card> : rows.map((x) => { const k = kind(x); const [l, I] = KIND[k]; const m = minsLeft(x.sla); const c = cust(x.order.customerId)
+      const steps = k === 'post' ? ['تأیید موجودی', 'بسته‌بندی', 'چاپ برچسب', 'تحویل به پست', 'تحویل'] : k === 'fast' ? ['تأیید موجودی', 'بسته‌بندی', 'تعیین پیک', 'در راه', 'تحویل با کد'] : ['تأیید موجودی', 'بسته‌بندی', 'آماده و پیامک', 'تحویل با کد']
+      const cur = ({ 'ship.partner_confirm': 0, 'ship.picking': 1, 'ship.packed': 2, 'ship.in_transit': 3, 'ship.delivered': k === 'pickup' ? 3 : 4 } as Record<string, number>)[x.status] ?? 0
+      return <Card key={x.id} className={cx(open(x) && m < 20 && 'ring-2 ring-danger')} title={<span className="flex flex-wrap items-center gap-2"><CopyId v={x.order.id} /><Badge tone={k === 'fast' ? 'brand' : 'neutral'} dot={false}><I size={11} className="ml-1 inline" />{l}</Badge><StatusBadge s={x.status} /></span>} actions={open(x) && <Badge tone={m < 20 ? 'danger' : m < 45 ? 'warning' : 'info'}>{m < 20 ? 'لحظهٔ آخر · ' : ''}{left(x.sla)}</Badge>}>
+        {x.status !== 'ship.cancelled' && <div className="mb-3"><Stepper current={cur} steps={steps} /></div>}
+        <ul className="space-y-1.5">{x.items.map((i, j) => { const u = d.units.find((y) => y.id === i.unitId); return <li key={j} className="flex items-center gap-2 text-13"><ProductImg pid={i.productId} size={36} /><span className="min-w-0 flex-1 truncate">{d.products.find((p) => p.id === i.productId)?.title}</span>{u && <span className="ltr rounded-md bg-neutral-bg px-1.5 font-mono text-11">قفسه {u.shelf}</span>}<b className="tnum">{toman(i.price)}</b></li> })}</ul>
+        <p className="mt-2 text-12 text-t2">{c?.name} · {c?.city}{k !== 'pickup' && '، نشانی کامل روی برچسب'} · موبایل پوشیده؛ تماس از مرکز تماس غنیمت</p>
+        {x.courier && <p className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-12"><Bike size={14} /><b>{x.courier.company ?? 'پیک شعبه'}</b>{x.courier.name} · <span className="ltr">{x.courier.phone}</span>{x.courier.code && <CopyId v={x.courier.code} />}</p>}
+        {open(x) && <div className="mt-3 flex flex-wrap gap-2">
+          {x.status === 'ship.partner_confirm' && <><Button variant="primary" onClick={() => { setSt(x, 'ship.picking', 'تأیید موجودی'); toast('موجودی تأیید شد. کالا را از قفسه بردارید و بسته‌بندی کنید.') }}>دارم؛ تأیید موجودی</Button><Button variant="danger" onClick={async () => { const why = await askReason({ kind: 'cancel', ref: x.id, status: 'ندارم', title: 'چرا کالا موجود نیست؟ (جریمهٔ قرارداد اعمال می‌شود)' }); if (!why) return; setSt(x, 'ship.cancelled', 'اعلام ندارم', (_s, o) => { o.status = 'order.needs_decision' }); mutate((y) => { y.partners.find((z) => z.id === P.id)!.penalties.unshift({ id: `PN-${Date.now().toString(36).slice(-3)}`, at: new Date().toISOString(), reason: 'اعلام «ندارم» پس از فروش', amount: P.contract.noStockPenalty, orderId: x.order.id }) }); notify('شعبه «ندارم» اعلام کرد', `${P.name}: ${x.order.id}`, `/admin/orders/${x.order.id}`, 'عملیات', 'danger'); toast(`ثبت شد. جریمهٔ ${toman(P.contract.noStockPenalty)} در دفتر حساب آمد.`) }}>ندارم</Button></>}
+          {x.status === 'ship.picking' && <Button variant="primary" icon={<PackageCheck size={14} />} onClick={() => { setSt(x, 'ship.packed', 'بسته‌بندی'); if (k === 'pickup') toast('پیامک «سفارش آماده است» با کد تحویل برای مشتری رفت.'); else toast('بسته‌بندی ثبت شد.') }}>بسته‌بندی شد (کالا، برگهٔ کنترل کیفیت، کارت گارانتی)</Button>}
+          {x.status === 'ship.packed' && k === 'post' && <><Button icon={<Printer size={14} />} onClick={() => { toast(`برچسب پستی با نشانی فرستندهٔ ${P.name} آماده شد.`); window.print() }}>چاپ برچسب پستی</Button><Button variant="primary" onClick={() => setTrack(x)}>ثبت کد رهگیری و تحویل به پست</Button></>}
+          {x.status === 'ship.packed' && k === 'fast' && <Button variant="primary" icon={<Bike size={14} />} onClick={() => setCour({ row: x, mode: P.couriers.some((c) => c.active) ? 'own' : 'app', who: P.couriers.find((c) => c.active)?.name ?? '', link: '', app: 'اسنپ‌باکس' })}>تعیین پیک</Button>}
+          {x.status === 'ship.in_transit' && k === 'fast' && <Button variant="primary" icon={<CheckCircle2 size={14} />} onClick={() => setDeliver({ row: x, code: '' })}>تحویل شد (کد تحویل مشتری)</Button>}
+          {x.status === 'ship.packed' && k === 'pickup' && <Button variant="primary" icon={<CheckCircle2 size={14} />} onClick={() => setDeliver({ row: x, code: '' })}>مشتری آمد و تحویل گرفت</Button>}
+          {x.status === 'ship.in_transit' && k === 'post' && <span className="text-12 text-t2">کد رهگیری: <CopyId v={x.tracking} /></span>}
+        </div>}
+      </Card> })}
+    <Modal open={!!track} onClose={() => setTrack(null)} title="تحویل به پست" footer={<Button variant="primary" onClick={() => { if (!/^\d{24}$|^\d{11}$/.test(code)) return toast('کد رهگیری نامعتبر است. کد پست ۲۴ رقم و کد تیپاکس ۱۱ رقم است.', { tone: 'err' }); setSt(track!, 'ship.in_transit', 'تحویل به پست و ثبت رهگیری', (s) => { s.tracking = code; s.method = carrier }); setTrack(null); setCode(''); toast('ثبت شد. پیام رهگیری خودکار برای مشتری ارسال شد.') }}>ثبت «تحویل به پست شد»</Button>}>
+      <div className="space-y-3"><Field label="شرکت حمل"><Select value={carrier} onChange={setCarrier} options={['پست پیشتاز', 'تیپاکس']} /></Field><Field label="کد رهگیری" help="اسکن بارکد رسید، تایپ یا عکس رسید."><Input className="ltr text-left font-mono" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="۲۴ رقم پست یا ۱۱ رقم تیپاکس" /></Field><button className="text-12 text-brand" onClick={() => setCode('120459870001245789630077')}>کد نمونه بگذار</button></div>
+    </Modal>
+    <Modal open={!!cour} onClose={() => setCour(null)} title="تعیین پیک برای ارسال سریع" footer={<Button variant="primary" onClick={() => { const C = cour!; let courier
+      if (C.mode === 'own') { const k2 = P.couriers.find((z) => z.name === C.who); if (!k2) return toast('پیک را انتخاب کنید.', { tone: 'err' }); courier = { name: k2.name, phone: k2.phone, plate: '', vehicle: k2.vehicle, eta: P.fast.hours * 30, code: '', cost: 0, company: 'پیک شعبه' } }
+      else { const m = C.link.match(/([A-Z]{2,}-?\d{4,})|(\d{6,})/i); if (!m) return toast('لینک یا کد سفر را از برنامهٔ پیک بچسبانید.', { tone: 'err' }); courier = { name: 'در حال تخصیص', phone: '—', plate: '', vehicle: 'موتور', eta: 30, code: m[0].toUpperCase(), cost: 120000, company: C.app } }
+      setSt(C.row, 'ship.in_transit', 'تحویل به پیک', (s) => { s.courier = courier! }); setCour(null); toast('پیک ثبت شد؛ لینک پیگیری برای مشتری پیامک شد.') }}>ثبت و ارسال</Button>}>
+      {cour && <div className="space-y-3">
+        <Segmented value={cour.mode} onChange={(v) => setCour({ ...cour, mode: v })} options={[['own', 'پیک خود شعبه'], ['app', 'اسنپ‌باکس یا برنامهٔ پیک']]} />
+        {cour.mode === 'own' ? (P.couriers.filter((c) => c.active).length ? <Field label="پیک"><Select value={cour.who} onChange={(v) => setCour({ ...cour, who: v })} options={P.couriers.filter((c) => c.active).map((c) => [c.name, `${c.name} · ${c.vehicle} · ${c.phone}`] as [string, string])} other={false} /></Field> : <p className="text-12 text-warning">هنوز پیکی تعریف نکرده‌اید؛ از تب «ارسال سریع» اضافه کنید.</p>)
+          : <><Field label="برنامهٔ پیک"><Select value={cour.app} onChange={(v) => setCour({ ...cour, app: v })} options={['اسنپ‌باکس', 'الوپیک', 'تپسی پک']} /></Field><Field label="لینک یا کد سفر" help="در برنامهٔ پیک سفر بگیرید و لینک پیگیری را اینجا بچسبانید؛ کد خودکار خوانده می‌شود."><Input className="ltr text-left font-mono" value={cour.link} onChange={(e) => setCour({ ...cour, link: e.target.value })} placeholder="https://… یا SB-12345" /></Field><button className="text-12 text-brand" onClick={() => setCour({ ...cour, link: 'https://snappbox.example/track/SB-90421' })}><Link2 size={11} className="ml-1 inline" />لینک نمونه</button></>}
+        <p className="text-11 text-t2">وعدهٔ تحویل به مشتری {fa(P.fast.hours)} ساعت است؛ مهلت این سفارش {left(cour.row.sla)}.</p>
+      </div>}
+    </Modal>
+    <Modal open={!!deliver} onClose={() => setDeliver(null)} title="ثبت تحویل" footer={<Button variant="primary" disabled={!/^\d{4}$/.test(deliver?.code ?? '')} onClick={() => { setSt(deliver!.row, 'ship.delivered', 'تحویل به مشتری'); setDeliver(null); toast('تحویل ثبت شد. نظرسنجی برای مشتری ارسال می‌شود.') }}>ثبت تحویل</Button>}>
+      {deliver && <Field label="کد ۴ رقمی تحویل" help="کدی که برای مشتری پیامک شده است؛ بدون کد، تحویل ثبت نمی‌شود."><Input autoFocus className="ltr text-center font-mono text-18 tracking-[0.5em]" inputMode="numeric" maxLength={4} value={deliver.code} onChange={(e) => setDeliver({ ...deliver, code: e.target.value.replace(/\D/g, '') })} /></Field>}
+    </Modal>
+  </>
+}
+
+/** پیک‌های خود شعبه */
+export function PartnerCouriers({ P }: { P: PartnerT }) {
+  const [f, setF] = useState({ name: '', phone: '', vehicle: 'موتور' })
+  const upd = (fn: (x: PartnerT) => void, action: string) => mutate((x) => fn(x.partners.find((y) => y.id === P.id)!), { action, target: P.name })
+  return <Card title={<span className="flex items-center gap-2"><Bike size={15} />پیک‌های شعبه</span>}>
+    {P.couriers.length === 0 ? <p className="mb-3 text-13 text-t2">پیکی تعریف نشده؛ تا آن موقع از اسنپ‌باکس یا الوپیک استفاده کنید.</p> : <ul className="mb-3 divide-y divide-line">{P.couriers.map((c, i) => <li key={c.name} className="flex items-center gap-3 py-2 text-13"><b className="flex-1">{c.name}</b><span className="text-t2">{c.vehicle}</span><span className="ltr text-t2">{c.phone}</span><Toggle on={c.active} label={`فعال ${c.name}`} onChange={(v) => upd((x) => { x.couriers[i].active = v }, v ? 'فعال‌کردن پیک' : 'غیرفعال‌کردن پیک')} /></li>)}</ul>}
+    <div className="grid gap-2 sm:grid-cols-[1fr_1fr_120px_auto]"><Input placeholder="نام پیک" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /><Input className="ltr text-left" placeholder="09…" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /><Select value={f.vehicle} onChange={(v) => setF({ ...f, vehicle: v })} options={['موتور', 'خودرو', 'وانت']} /><Button icon={<UserPlus size={14} />} disabled={!f.name.trim() || !/^09\d{9}$/.test(f.phone)} onClick={() => { upd((x) => { x.couriers.push({ ...f, name: f.name.trim(), active: true }) }, 'افزودن پیک شعبه'); setF({ name: '', phone: '', vehicle: 'موتور' }) }}>افزودن</Button></div>
+  </Card>
+}
+
+/** کارنامه و نظر مشتریان دربارهٔ شعبه */
+export function PartnerReviews({ P, admin }: { P: PartnerT; admin?: boolean }) {
+  const sc = scorecard(P); const [rep, setRep] = useState<Record<string, string>>({})
+  return <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><KPI featured label="امتیاز مشتریان شعبه" value={sc.rating ? `${fa(sc.rating.toFixed(1))} از ۵` : '—'} note={`${fa(P.reviews.length)} نظر`} /><KPI label="تحویل به‌موقع" value={P.metrics.ontime ? `${fa(P.metrics.ontime)}٪` : '—'} /><KPI label="ناموجودی بعد از فروش" value={`${fa(P.metrics.noStock)}٪`} /><KPI label="میانگین آماده‌سازی" value={P.metrics.prepMin ? `${fa(P.metrics.prepMin)} دقیقه` : '—'} /></div>
+    <Card title="کارنامهٔ شعبه" actions={<Badge tone={sc.ok ? 'success' : 'warning'}>{sc.ok ? 'وضعیت خوب' : 'نیاز به بهبود'}</Badge>}><ul className="divide-y divide-line">{sc.rows.map((r) => <li key={r.k} className="flex flex-wrap items-center gap-2 py-2 text-13"><span className={cx('size-2.5 rounded-full', r.ok ? 'bg-success' : 'bg-danger')} /><b className="w-44">{r.k}</b><span className="tnum w-24">{r.v}</span><span className="text-11 text-t2">{r.rule}</span></li>)}</ul>
+      <p className="mt-2 text-11 text-t2">نظر مشتریان سفارش‌هایی که از انبار {P.city} رفته، مستقیم روی امتیاز غنیمت اثر دارد؛ برای همین کارنامه در تسویه و سهم سفارش‌های سریع اثر دارد.</p></Card>
+    <Card title={<span className="flex items-center gap-2"><Star size={15} />نظر مشتریان</span>}>{P.reviews.length === 0 ? <EmptyState title="هنوز نظری ثبت نشده است." /> : <ul className="space-y-2">{P.reviews.map((r) => <li key={r.id} className={cx('rounded-xl border p-3 text-13', r.rating <= 3 ? 'border-warning/50 bg-warning-bg/40' : 'border-line')}>
+      <p className="flex flex-wrap items-center gap-2 text-12"><b>{r.customer}</b><span>{'★'.repeat(r.rating)}<span className="text-line">{'★'.repeat(5 - r.rating)}</span></span><span className="ltr text-t3">{r.orderId}</span><span className="mr-auto text-t3">{rel(r.at)}</span></p>
+      <p className="mt-1">{r.text}</p><p className="mt-1 flex flex-wrap gap-1">{r.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</p>
+      {r.reply ? <p className="mt-2 rounded-lg bg-surface-2 p-2 text-12"><MessageSquareText size={12} className="ml-1 inline" />توضیح شعبه: {r.reply}</p> : !admin && <div className="mt-2 flex gap-2"><Input className="flex-1" placeholder="توضیح شعبه برای پشتیبانی غنیمت (به مشتری نمایش داده نمی‌شود)" value={rep[r.id] ?? ''} onChange={(e) => setRep({ ...rep, [r.id]: e.target.value })} /><Button size="sm" disabled={!(rep[r.id] ?? '').trim()} onClick={() => mutate((x) => { x.partners.find((y) => y.id === P.id)!.reviews.find((y) => y.id === r.id)!.reply = rep[r.id].trim() }, { action: 'توضیح شعبه دربارهٔ نظر مشتری', target: r.id })}>ثبت</Button></div>}
+    </li>)}</ul>}</Card>
+  </div>
+}
+
+/** دفتر حساب و گزارش مالی شعبه */
+export function PartnerLedger({ P, admin }: { P: PartnerT; admin?: boolean }) {
+  const d = useDB(); const L = ledger(P, d.lots); const [per, setPer] = useState('all'); const [iban, setIban] = useState(P.iban)
+  const rows = L.filter((x) => per === 'all' || Date.now() - new Date(x.at).getTime() < +per * 864e5)
+  const inSum = rows.filter((x) => x.amount > 0).reduce((a, x) => a + x.amount, 0); const outSum = rows.filter((x) => x.amount < 0).reduce((a, x) => a + x.amount, 0)
+  return <div className="space-y-4">
+    <Card title="دفتر حساب" actions={<span className="flex items-center gap-2"><Segmented size="sm" value={per} onChange={setPer} options={[['7', '۷ روز'], ['30', '۳۰ روز'], ['90', '۳ ماه'], ['all', 'همه']]} /><Button size="sm" icon={<Download size={13} />} onClick={() => download(`دفتر-حساب-${P.name}.csv`, csv([['تاریخ', 'شرح', 'مرجع', 'مبلغ (تومان)', 'مانده'], ...rows.map((x) => [new Date(x.at).toLocaleDateString('fa-IR'), x.title, x.ref, x.amount, x.bal])]))}>خروجی</Button></span>} pad={false}>
+      {rows.length === 0 ? <div className="p-5"><EmptyState title="در این بازه گردشی نیست." /></div> : <table className="gh-table w-full text-12"><thead><tr className="bg-surface-2">{['تاریخ', 'شرح', 'مرجع', 'مبلغ', 'مانده'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>{rows.map((x, i) => <tr key={i} className="border-t border-line"><td className="p-2 text-t2">{new Date(x.at).toLocaleDateString('fa-IR')}</td><td className="p-2">{x.title}</td><td className="ltr p-2 text-right font-mono text-11">{x.ref}</td><td className={cx('tnum p-2', x.amount < 0 ? 'text-danger' : 'text-success')}>{toman(x.amount)}</td><td className="tnum p-2 font-semibold">{toman(x.bal)}</td></tr>)}</tbody></table>}
+      <div className="grid grid-cols-3 gap-2 border-t border-line p-3 text-center text-12"><div><p className="text-t2">ورودی</p><b className="tnum text-success">{toman(inSum)}</b></div><div><p className="text-t2">کسورات و تسویه‌ها</p><b className="tnum text-danger">{toman(outSum)}</b></div><div><p className="text-t2">ماندهٔ فعلی</p><b className="tnum">{toman(L.at(-1)?.bal ?? 0)}</b></div></div>
+      <p className="px-4 pb-3 text-11 text-t2">ماندهٔ مثبت یعنی غنیمت به شعبه بدهکار است؛ منفی یعنی شعبه باید واریز کند.</p>
+    </Card>
+    <Card title="حساب بانکی تسویه"><div className="flex flex-wrap items-end gap-2"><Field label="شبا"><Input className="ltr w-80 text-left font-mono" value={iban} onChange={(e) => setIban(e.target.value)} placeholder="IR…" /></Field><Button disabled={iban === P.iban || !/^IR\d{2}/.test(iban.replace(/\s/g, ''))} onClick={() => { mutate((x) => { x.partners.find((y) => y.id === P.id)!.iban = iban }, { action: admin ? 'تغییر شبای تسویهٔ شعبه' : 'درخواست تغییر شبای تسویه (شریک)', target: P.name, after: iban }); if (!admin) notify('درخواست تغییر شبای شعبه', `${P.name} شبای تسویه را تغییر داد؛ پیش از تسویهٔ بعدی بررسی کنید.`, '/admin/sellers', 'مالی', 'warning'); toast(admin ? 'شبا ذخیره شد.' : 'شبا ثبت شد؛ تسویهٔ بعدی پس از بررسی غنیمت به این حساب می‌رود.') }}>ذخیره</Button></div><p className="mt-1 text-11 text-t2">شبا باید به نام صاحب قرارداد ({P.owner}) باشد.</p></Card>
+  </div>
+}
+export const PartnerOpsIcons = { Textarea }

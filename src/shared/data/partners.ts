@@ -17,6 +17,10 @@ export type PartnerT = {
   id: string; name: string; city: string; owner: string; userId?: string; phone: string; warehouse: string; address: string
   status: 'فعال' | 'در حال راه‌اندازی' | 'متوقف'; color: string; since: string
   contract: Contract; fast: FastZone; services: { pickup: boolean; test: boolean; ownProducts: boolean; storeSales: boolean }
+  couriers: { name: string; phone: string; vehicle: string; active: boolean }[]; iban: string
+  reviews: { id: string; orderId: string; customer: string; rating: number; text: string; tags: string[]; at: string; reply?: string }[]
+  penalties: { id: string; at: string; reason: string; amount: number; orderId?: string }[]
+  metrics: { ontime: number; noStock: number; cancel: number; prepMin: number }
   checklist: { t: string; done: boolean }[]; payouts: { id: string; at: string; amount: number; status: 'پرداخت شد' | 'در انتظار تأیید' | 'ردشده'; note?: string }[]
 }
 
@@ -28,17 +32,28 @@ export function makePartners(): PartnerT[] {
       contract: { hqCommission: 9, platformFee: 12, sharedSplit: 50, settleDays: 7, noStockPenalty: 1500000, deposit: 800000000, returnsBy: 'صاحب سرمایه', minMargin: 6 },
       fast: { on: true, cities: 'مهاباد، بوکان، میاندوآب', hours: 3, fee: 90000, cutoff: '17:00', capacity: 25, courier: 'پیک خود شعبه' },
       services: { pickup: true, test: true, ownProducts: true, storeSales: true },
+      couriers: [{ name: 'کاوه احمدی', phone: '09141110000', vehicle: 'موتور', active: true }, { name: 'سیروان', phone: '09142220000', vehicle: 'خودرو', active: true }], iban: 'IR12 0170 0000 0012 3456 7890 01',
+      reviews: [
+        { id: 'PR-1', orderId: 'GH-10458', customer: 'سروش رنجبران', rating: 5, text: 'بسته‌بندی عالی بود و زودتر از وعده رسید.', tags: ['بسته‌بندی خوب', 'زودتر از وعده'], at: ago(3) },
+        { id: 'PR-2', orderId: 'GH-10475', customer: 'امیرحسین صادقی', rating: 2, text: 'سفارش لغو شد چون کالا موجود نبود؛ کاش زودتر خبر می‌دادند.', tags: ['ناموجودی بعد از خرید'], at: ago(6) },
+        { id: 'PR-3', orderId: 'GH-10433', customer: 'هیمن رسولی', rating: 4, text: 'پیک مؤدب بود ولی ۲۰ دقیقه دیرتر رسید.', tags: ['تأخیر کوتاه', 'پیک مؤدب'], at: ago(9) },
+        { id: 'PR-4', orderId: 'GH-10427', customer: 'شیلان کریمی', rating: 5, text: 'تست حضوری در شعبه خیلی کمک کرد.', tags: ['تست حضوری'], at: ago(14) },
+      ],
+      penalties: [{ id: 'PN-7', at: ago(6), reason: 'اعلام «ندارم» پس از فروش', amount: 1500000, orderId: 'GH-10475' }],
+      metrics: { ontime: 93, noStock: 2.1, cancel: 1.4, prepMin: 38 },
       checklist: CHECK.map((t) => ({ t, done: true })),
       payouts: [{ id: 'PO-118', at: ago(9), amount: 74200000, status: 'پرداخت شد' }, { id: 'PO-112', at: ago(16), amount: 61800000, status: 'پرداخت شد' }] },
     { id: 'mashhad', name: 'شعبهٔ مشهد', city: 'مشهد', owner: 'آقای رضوی', phone: '0915-000-0010', warehouse: 'mashhad', address: 'مشهد، بلوار سجاد، نبش سجاد ۱۰', status: 'در حال راه‌اندازی', color: '#c2410c', since: ago(12),
       contract: { hqCommission: 8, platformFee: 10, sharedSplit: 40, settleDays: 7, noStockPenalty: 1500000, deposit: 500000000, returnsBy: 'صاحب سرمایه', minMargin: 6 },
       fast: { on: false, cities: 'مشهد', hours: 3, fee: 95000, cutoff: '16:00', capacity: 15, courier: 'اسنپ‌باکس' },
       services: { pickup: true, test: false, ownProducts: true, storeSales: true },
+      couriers: [], iban: '', reviews: [], penalties: [], metrics: { ontime: 0, noStock: 0, cancel: 0, prepMin: 0 },
       checklist: CHECK.map((t, i) => ({ t, done: i < 3 })), payouts: [] },
     { id: 'shiraz', name: 'شعبهٔ شیراز', city: 'شیراز', owner: 'خانم کریمی', phone: '0917-000-0020', warehouse: 'shiraz', address: 'شیراز، خیابان ملاصدرا', status: 'در حال راه‌اندازی', color: '#7c3aed', since: ago(4),
       contract: { hqCommission: 8, platformFee: 12, sharedSplit: 50, settleDays: 14, noStockPenalty: 2000000, deposit: 400000000, returnsBy: 'صاحب سرمایه', minMargin: 6 },
       fast: { on: false, cities: 'شیراز', hours: 4, fee: 100000, cutoff: '15:00', capacity: 10, courier: 'پیک خود شعبه' },
       services: { pickup: false, test: false, ownProducts: false, storeSales: false },
+      couriers: [], iban: '', reviews: [], penalties: [], metrics: { ontime: 0, noStock: 0, cancel: 0, prepMin: 0 },
       checklist: CHECK.map((t, i) => ({ t, done: i < 1 })), payouts: [] },
   ]
 }
@@ -67,4 +82,30 @@ export function statement(p: PartnerT, lots: Lot[]) {
   const sum = (k: 'revenue' | 'partnerShare' | 'hqShare' | 'hqOwes' | 'partnerOwes' | 'stockValue') => rows.reduce((a, r) => a + r[k], 0)
   const byCap = (c: Capital) => rows.filter((r) => r.l.capital === c)
   return { rows, revenue: sum('revenue'), partnerShare: sum('partnerShare'), hqShare: sum('hqShare'), net: sum('hqOwes') - sum('partnerOwes'), stockValue: sum('stockValue'), byCap }
+}
+
+/** کارنامهٔ شعبه: امتیاز مشتری، تحویل به‌موقع، ناموجودی و لغو؛ با آستانه‌هایی که پیامد دارند */
+export function scorecard(p: PartnerT) {
+  const rating = p.reviews.length ? p.reviews.reduce((a, r) => a + r.rating, 0) / p.reviews.length : 0
+  const rows: { k: string; v: string; ok: boolean; rule: string }[] = [
+    { k: 'امتیاز مشتریان', v: rating ? rating.toFixed(1) : '—', ok: !rating || rating >= 4, rule: 'زیر ۴: هشدار · زیر ۳٫۵: ارسال سریع موقتاً خاموش می‌شود' },
+    { k: 'تحویل به‌موقع', v: `${p.metrics.ontime}٪`, ok: !p.metrics.ontime || p.metrics.ontime >= 92, rule: 'هدف ۹۵٪ · زیر ۹۰٪: سفارش سریع کمتری به شعبه می‌رسد' },
+    { k: 'ناموجودی بعد از فروش', v: `${p.metrics.noStock}٪`, ok: p.metrics.noStock <= 2, rule: 'بالای ۲٪: جریمه طبق قرارداد · بالای ۵٪: توقف فروش' },
+    { k: 'لغو از سمت شعبه', v: `${p.metrics.cancel}٪`, ok: p.metrics.cancel <= 2, rule: 'بالای ۲٪: بازبینی همکاری' },
+    { k: 'میانگین آماده‌سازی', v: `${p.metrics.prepMin} دقیقه`, ok: !p.metrics.prepMin || p.metrics.prepMin <= 45, rule: 'برای ارسال سریع زیر ۴۵ دقیقه' },
+  ]
+  return { rating, rows, ok: rows.every((r) => r.ok) }
+}
+
+/** دفتر حساب شعبه: هر فروش، کمیسیون، جریمه و تسویه با ماندهٔ جاری (مثبت یعنی غنیمت بدهکار است) */
+export function ledger(p: PartnerT, lots: Lot[]) {
+  const st = statement(p, lots); const items: { at: string; title: string; ref: string; amount: number }[] = []
+  st.rows.forEach((r) => {
+    if (r.l.soldOnline) items.push({ at: r.l.at, title: `سهم شعبه از فروش آنلاین (${r.l.soldOnline} عدد)`, ref: r.l.id, amount: Math.round(r.hqOwes) })
+    if (r.l.soldStore) items.push({ at: r.l.at, title: `سهم غنیمت از فروش حضوری (${r.l.soldStore} عدد)`, ref: r.l.id, amount: -Math.round(r.partnerOwes) })
+  })
+  p.penalties.forEach((x) => items.push({ at: x.at, title: `جریمه: ${x.reason}`, ref: x.orderId ?? x.id, amount: -x.amount }))
+  p.payouts.filter((x) => x.status === 'پرداخت شد').forEach((x) => items.push({ at: x.at, title: 'تسویه به حساب شعبه', ref: x.id, amount: -x.amount }))
+  items.sort((a, b) => a.at.localeCompare(b.at)); let bal = 0
+  return items.map((x) => { bal += x.amount; return { ...x, bal } })
 }

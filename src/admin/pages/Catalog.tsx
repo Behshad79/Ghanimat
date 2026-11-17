@@ -1,3 +1,4 @@
+import { AmazonReviews, ImagePicker, type ExtReview } from '../catalog/LinkExtras'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Check, Flame, Link2, ShoppingCart, Sparkles, Star, X, Zap } from 'lucide-react'
@@ -5,7 +6,7 @@ import { AIButton, AITag, Badge, Button, Card, CopyId, cx, EmptyState, Field, In
 import { Page, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { Hint, Modal, toast } from '@/shared/ui/overlay'
-import { fakeCall, mutate, snapshot } from '@/shared/lib/store'
+import { fakeCall, mutate, snapshot, takeCode, useDB } from '@/shared/lib/store'
 import { compactToman, fa, num, pct, rel, toman, g } from '@/shared/lib/fa'
 import { CONDITION, SOURCE, WAREHOUSE } from '@/shared/data/statuses'
 import type { DB } from '@/shared/data/seed'
@@ -44,7 +45,7 @@ export function CardRules() {
 /** واردکردن محصول از لینک با نمای مقایسه، ویرایش با دستور و نمرهٔ یکتایی (بخش ۶.۴) */
 export function ImportLink() {
   const nav = useNavigate(); const [url, setUrl] = useState(''); const [st, setSt] = useState<'idle' | 'reading' | 'done' | 'err' | 'dup'>('idle'); const [msg, setMsg] = useState('')
-  const [text, setText] = useState('آیپد ایر ۱۱ اینچی با تراشهٔ M2 برای کار روزمره، طراحی و تماشای ویدیو سبک و پرقدرت است. نمایشگر Liquid Retina رنگ‌ها را دقیق نشان می‌دهد و باتری آن یک روز کاری کامل دوام می‌آورد.'); const [cmd, setCmd] = useState(''); const [uniq, setUniq] = useState(71); const [acc, setAcc] = useState<Record<string, boolean>>({})
+  const [text, setText] = useState('آیپد ایر ۱۱ اینچی با تراشهٔ M2 برای کار روزمره، طراحی و تماشای ویدیو سبک و پرقدرت است. نمایشگر Liquid Retina رنگ‌ها را دقیق نشان می‌دهد و باتری آن یک روز کاری کامل دوام می‌آورد.'); const [cmd, setCmd] = useState(''); const [uniq, setUniq] = useState(71); const [acc, setAcc] = useState<Record<string, boolean>>({}); const d = useDB(); const SRC = ['./products/p3-500.webp', './products/p4-500.webp', './products/p6-500.webp', './products/p8-500.webp']; const [imgs, setImgs] = useState<string[]>(SRC.slice(0, 2)); const [amz, setAmz] = useState<ExtReview[]>([])
   const read = async (v = url) => {
     if (!/^https?:\/\/|^B0\w{8}$/.test(v.trim())) { setSt('err'); return setMsg('لینک نامعتبر است. لینک صفحهٔ کالا، ASIN یا بارکد را وارد کنید.') }
     if (/iphone/i.test(v)) { setSt('dup'); return }
@@ -53,7 +54,7 @@ export function ImportLink() {
   const rows: [string, string, string, string][] = [['عنوان', 'Apple iPad Air 11-inch (M2) Wi-Fi 128GB - Blue', 'تبلت اپل iPad Air 11 M2 ظرفیت ۱۲۸ گیگابایت', 'بالا'], ['برند', 'Apple', 'اپل', 'بالا'], ['نمایشگر', '11" Liquid Retina, 2360x1640', '۱۱ اینچ Liquid Retina، ۲۳۶۰ در ۱۶۴۰', 'بالا'], ['وزن', '1.02 lb', '۴۶۲ گرم', 'متوسط'], ['دسته', 'Tablets', 'تبلت', 'بالا'], ['باتری', 'Up to 10 hours (دو منبع متفاوت)', '۱۰ ساعت', 'پایین']]
   return (
     <Page module="catalog" back="/admin/catalog" title="واردکردن محصول از لینک" sub="لینک دیجی‌کالا، آمازون یا سایت سازنده را بدهید. گارانتی، قیمت و موجودی هرگز از منبع کپی نمی‌شود."
-      primary={st === 'done' ? <Button variant="primary" onClick={() => { toast('اطلاعات استخراج‌شده به فرم گام‌به‌گام منتقل شد؛ همه را بازبینی و اصلاح کنید.'); nav(`/admin/catalog/new?title=${encodeURIComponent('تبلت اپل iPad Air 11 M2 ظرفیت ۱۲۸ گیگابایت')}`) }}>ذخیرهٔ پیش‌نویس محصول</Button> : undefined}>
+      primary={st === 'done' ? <Button variant="primary" onClick={() => { const id = `p${Date.now().toString(36)}`; const base = d.products[0]; const take = (f: string, v: string) => acc[f] === false ? '' : v; mutate((x) => { x.products.unshift({ ...base, id, code: takeCode('product'), title: take('عنوان', 'تبلت اپل iPad Air 11 M2 ظرفیت ۱۲۸ گیگابایت') || 'کالای واردشده', en: 'Apple iPad Air 11-inch (M2) 128GB', brand: take('برند', 'اپل') || base.brand, category: take('دسته', 'تبلت') || base.category, image: imgs[0] ?? '', images: imgs, short: text, status: 'product.draft', views: 0, cvr: 0, reviews: 0, rating: 0, health: 55, pdp: { ...(base.pdp ?? {} as any), amazonUrl: /amazon/i.test(url) ? url : undefined } } as typeof base); if (amz.length) { x.extReviews = x.extReviews ?? {}; x.extReviews[id] = amz } }, { action: 'ساخت پیش‌نویس از لینک', target: url, after: `${imgs.length} عکس · ${amz.length} نظر آمازون` }); toast('پیش‌نویس ساخته شد؛ در فرم گام‌به‌گام بازبینی و تکمیل کنید.'); nav(`/admin/catalog/${id}/edit`) }}>ذخیرهٔ پیش‌نویس محصول</Button> : undefined}>
       <Card className="mb-4"><form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); read() }}><Input className="ltr text-left font-mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://… یا ASIN مثل B0D3J6L2ZC" /><Button variant="primary" loading={st === 'reading'}>خواندن و ساخت پیش‌نویس</Button></form>
         <div className="mt-2 flex flex-wrap gap-1 text-11 text-t3">نمونه‌ها: {[['لینک سالم', 'https://www.amazon.example/dp/B0D3J6L2ZC'], ['محصول تکراری', 'https://www.digikala.example/product/iphone-16-pro'], ['لینک نامعتبر', 'ipad air']].map(([l, v]) => <button key={l} className="rounded-sm bg-neutral-bg px-1.5 py-0.5 hover:text-brand" onClick={() => { setUrl(v); read(v) }}>{l}</button>)}</div></Card>
       {st === 'reading' && <div className="space-y-2"><div className="skeleton h-10" /><div className="skeleton h-40" /></div>}
@@ -68,6 +69,8 @@ export function ImportLink() {
           <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!cmd) return; setText(/کوتاه/.test(cmd) ? 'آیپد ایر ۱۱ اینچی با تراشهٔ M2؛ سبک، سریع و با شارژدهی یک روز کاری.' : text + ' تراشهٔ M2 در ویرایش ویدیو و چندوظیفگی سنگین هم کم نمی‌آورد.'); setUniq(93); setCmd(''); toast('متن بازنویسی شد.', { undo: () => {} }) }}><Input value={cmd} onChange={(e) => setCmd(e.target.value)} placeholder="بگو چه تغییری بدهم؛ مثلاً کوتاه‌تر و فنی‌تر" /><AIButton>اعمال دستور</AIButton></form>
           <div className="mt-2 flex flex-wrap gap-1">{['کوتاه‌تر کن', 'فنی‌تر کن', 'روی باتری تأکید کن', 'برای سئو بهینه کن'].map((c) => <button key={c} onClick={() => setCmd(c)} className="rounded-sm bg-neutral-bg px-2 py-1 text-11 hover:text-brand">{c}</button>)}</div>
           <div className="mt-3"><AITag confidence="متوسط" source="صفحهٔ منبع" /></div></Card>
+        <div className="xl:col-span-2"><ImagePicker value={imgs} onChange={setImgs} source={SRC} /></div>
+        <div className="xl:col-span-2"><AmazonReviews initialUrl={/amazon/i.test(url) ? url : ''} onPicked={setAmz} /></div>
       </div>}
     </Page>
   )

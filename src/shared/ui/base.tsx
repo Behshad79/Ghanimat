@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import { JDateInput } from './jdate'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Copy, Eye, Inbox, Lock, RotateCcw, Search, Sparkles, TriangleAlert, Loader2 } from 'lucide-react'
 import { st, type Tone } from '../data/statuses'
@@ -72,20 +73,25 @@ export function Field({ label, help, error, hint, children }: { label: string; h
 /** اگر پهنا داده نشده، تمام‌عرض (رفع تداخل w-full با w-36) */
 const withW = (c?: string) => cx(inputBase, /(^|\s)(w-|min-w-|max-w-|flex-1)/.test(c ?? '') ? '' : 'w-full')
 const inputBase = 'ctl h-9 rounded-md border border-line bg-surface px-3 text-13 text-t1 placeholder:font-sans placeholder:text-t3 focus:border-brand focus:outline-none disabled:opacity-60'
-export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={cx(withW(p.className), p.className)} />
+export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => p.type === 'date' || p.type === 'datetime-local' ? <JDateInput {...p} /> : <input {...p} className={cx(withW(p.className), p.className)} />
 export const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className={cx(withW(p.className), 'h-auto py-2 leading-6', p.className)} />
 export type QuickChip = { label: string; test: (value: string, label: string) => boolean }
 /** منوی کشویی با جست‌وجو و فیلتر سریع داخل خود منو (قانون سراسری پنل: هیچ دراپ‌داونی بدون جست‌وجو نیست) */
-export function Select({ value, onChange, options, className, chips, placeholder = 'انتخاب کنید', label }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[]; className?: string; chips?: QuickChip[]; placeholder?: string; label?: string }) {
-  const opts = options.map((o) => (Array.isArray(o) ? o : [o, o]) as [string, string])
+export function Select({ value, onChange, options, className, chips, placeholder = 'انتخاب کنید', label, other }: { value: string; onChange: (v: string) => void; options: (string | [string, string])[]; className?: string; chips?: QuickChip[]; placeholder?: string; label?: string; other?: boolean }) {
+  // قانون سراسری: هر فهرست انتخاب متنی گزینهٔ «سایر» دارد (به‌جز فیلترها و انتخاب رکورد مثل مشتری یا سفارش)
+  const auto = other ?? (options.length >= 2 && options.every((o) => typeof o === 'string') && !options.some((o) => /^همه/.test(o as string)))
+  const opts = [...options.map((o) => (Array.isArray(o) ? o : [o, o]) as [string, string]), ...(auto && !options.some((o) => isOther(Array.isArray(o) ? o[0] : o)) ? [['سایر', 'سایر'] as [string, string]] : [])]
   const [open, setOpen] = useState(false); const [q, setQ] = useState(''); const [chip, setChip] = useState(-1); const [hi, setHi] = useState(0)
   const btn = useRef<HTMLButtonElement>(null); const [pos, setPos] = useState({ top: 0, left: 0, width: 0, up: false })
-  const cur = opts.find(([v]) => v === value)
+  // گزینهٔ «سایر»: با انتخابش کادر توضیح باز می‌شود و مقدار به شکل «سایر: …» ذخیره می‌شود
+  const otherOpt = opts.find(([v]) => isOther(v)); const custom = !!otherOpt && value.startsWith('سایر: ')
+  const cur = opts.find(([v]) => v === value) ?? (custom ? [value, value] as [string, string] : undefined)
+  const showOther = !!otherOpt && (isOther(value) || custom)
   const norm = (t: string) => t.toLowerCase().replace(/[ي]/g, 'ی').replace(/[ك]/g, 'ک').replace(/\u200c/g, ' ')
   const list = opts.filter(([v, l]) => (!q || norm(`${l} ${v}`).includes(norm(q))) && (chip < 0 || !chips || chips[chip].test(v, l)))
   const place = () => { const r = btn.current!.getBoundingClientRect(); const up = window.innerHeight - r.bottom < 300 && r.top > 300; setPos({ top: up ? r.top : r.bottom, left: r.left, width: Math.max(r.width, 220), up }) }
   useEffect(() => { if (!open) return; const close = () => setOpen(false); window.addEventListener('scroll', close, true); window.addEventListener('resize', close); return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) } }, [open])
-  const pick = (v: string) => { onChange(v); setOpen(false); setQ(''); btn.current?.focus() }
+  const pick = (v: string) => { onChange(isOther(v) ? 'سایر: ' : v); setOpen(false); setQ(''); if (!isOther(v)) btn.current?.focus() }
   const key = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(list.length - 1, h + 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(0, h - 1)) }
@@ -93,7 +99,7 @@ export function Select({ value, onChange, options, className, chips, placeholder
     else if (e.key === 'Escape') { setOpen(false); btn.current?.focus() }
   }
   const searchable = opts.length > 5 || !!chips
-  return (
+  const trigger = (
     <>
       <button ref={btn} type="button" role="combobox" aria-expanded={open} aria-haspopup="listbox" aria-label={label} title={cur?.[1]}
         onClick={() => { place(); setOpen((o) => !o); setHi(Math.max(0, list.findIndex(([v]) => v === value))) }}
@@ -111,7 +117,11 @@ export function Select({ value, onChange, options, className, chips, placeholder
         </div></>, document.body)}
     </>
   )
+  if (!showOther) return trigger
+  return <span className={cx('flex flex-col gap-1.5', withW(className))}>{trigger}<input autoFocus aria-label="توضیح گزینهٔ سایر" value={value.startsWith('سایر: ') ? value.slice(6) : ''} onChange={(e) => onChange('سایر: ' + e.target.value)} placeholder="منظورتان از «سایر» چیست؟ بنویسید…" className={cx('h-9 w-full rounded-md border bg-surface px-3 text-13 outline-none focus:border-brand', value.trim() === 'سایر:' || isOther(value) ? 'border-warning' : 'border-line')} /></span>
 }
+/** آیا این گزینه «سایر» است؟ */
+export const isOther = (v: string) => /^سایر($|\s*\(|\s*…)/.test(v.trim())
 export function Toggle({ on, onChange, label, disabled, text }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean; text?: ReactNode }) {
   const sw = (
     <button type="button" role="switch" aria-checked={on} aria-label={label ?? (typeof text === 'string' ? text : undefined)} disabled={disabled} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 disabled:opacity-50', on ? 'bg-brand-solid' : 'bg-line')}>
@@ -122,6 +132,8 @@ export function Toggle({ on, onChange, label, disabled, text }: { on: boolean; o
   return text ? <span className="inline-flex items-center gap-2">{sw}<span className={cx('cursor-pointer select-none', disabled && 'opacity-60')} onClick={() => !disabled && onChange(!on)}>{text}</span></span> : sw
 }
 export function Segmented<T extends string>({ value, onChange, options, size = 'md' }: { value: T; onChange: (v: T) => void; options: [T, ReactNode][]; size?: 'sm' | 'md' }) {
+  const other = options.find(([v]) => isOther(v))
+  if (other && (value === other[0] || String(value).startsWith('سایر: '))) return <span className="inline-flex flex-col gap-1.5"><span className="inline-flex rounded-md bg-neutral-bg p-0.5">{options.map(([v, l]) => <button key={v} onClick={() => onChange(v)} className={cx('rounded-sm px-2.5 font-medium transition-colors', size === 'sm' ? 'h-6 text-11' : 'h-8 text-12', v === other[0] ? 'bg-surface text-t1 shadow-sm' : 'text-t2 hover:text-t1')}>{l}</button>)}</span><input autoFocus aria-label="توضیح گزینهٔ سایر" value={String(value).startsWith('سایر: ') ? String(value).slice(6) : ''} onChange={(e) => onChange(('سایر: ' + e.target.value) as T)} placeholder="منظورتان از «سایر» چیست؟" className="h-9 rounded-md border border-line bg-surface px-3 text-13 outline-none focus:border-brand" /></span>
   return (
     <div className="inline-flex rounded-md bg-neutral-bg p-0.5">
       {options.map(([v, l]) => (

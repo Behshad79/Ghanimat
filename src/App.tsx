@@ -30,6 +30,9 @@ import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
 import { Partner } from './admin/partner/Partner'
+import { PartnersAdmin } from './admin/partner/PartnersAdmin'
+import { Messaging } from './admin/cx/Messaging'
+import { Calls } from './admin/cx/Calls'
 import { ConfirmHost, ToastHost } from './shared/ui/overlay'
 import { currentUser, ROLES, useSession } from './shared/lib/store'
 
@@ -86,7 +89,9 @@ export function App() {
               <Route path="analytics" element={<Analytics />} />
               <Route path="ai" element={<AiCenter />} />
               <Route path="branches" element={<Branches />} />
-              <Route path="sellers" element={<Sellers />} />
+              <Route path="sellers" element={<PartnersAdmin />} />
+              <Route path="messaging" element={<Messaging />} />
+              <Route path="calls" element={<Calls />} />
               <Route path="team" element={<Team />} />
               <Route path="people" element={<People />} />
               <Route path="vault" element={<Vault />} />

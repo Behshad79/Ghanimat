@@ -1,3 +1,4 @@
+import { ExportDialog } from '@/shared/ui/exportDialog'
 import { CheckCheck, CircleDollarSign, FileText, Headphones, MessageSquare, Store } from 'lucide-react'
 import { LifetimeCards, MostViewed, SalesGoalChart, VisitsChart, WelcomeHero } from '../home/Pulse'
 import type { Order, Shipment } from '@/shared/data/seed'
@@ -27,7 +28,7 @@ const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', '�
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
 const WIDGETS: [string, string][] = [['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
 export function Home() {
-  const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false)
+  const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false); const [exp, setExp] = useState(false)
   const hidden: string[] = (d.entities.homeHidden?.[0]?.list as string[]) ?? []
   const on = (k: string) => !hidden.includes(k)
   const toggleW = (k: string) => mutate((x) => { const l = new Set((x.entities.homeHidden?.[0]?.list as string[]) ?? []); l.has(k) ? l.delete(k) : l.add(k); x.entities.homeHidden = [{ id: 'hh', list: [...l] }] }, { action: 'تغییر ویجت‌های خانه', target: k })
@@ -47,7 +48,7 @@ export function Home() {
   return (
     <Page title={`سلام ${me.name}`} sub={new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date())} module="home"
       empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
-      actions={<><Button icon={<Download size={14} />} onClick={() => { download('خلاصهٔ-امروز.csv', csv([['شاخص', 'مقدار'], ['فروش امروز', gmv], ['سفارش امروز', today.length], ['سود امروز', profitToday]])); toast('خلاصهٔ امروز دانلود شد.') }}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
+      actions={<><Button icon={<Download size={14} />} onClick={() => setExp(true)}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
         <WelcomeHero items={[
           { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', icon: ShoppingBag, urgent: true },
@@ -61,7 +62,7 @@ export function Home() {
           { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals', icon: CheckCheck },
         ]} />
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note="هدف روزانه: ۶۰۰ میلیون" />
+          <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note={`هدف روزانه: ${compactToman(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 0))}`} />
           <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit" />
           <KPI icon={<Package size={17} />} label="تعداد سفارش" num={today.length} fmt={(n) => fa(Math.round(n))} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
           <KPI icon={<Percent size={17} />} label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" />
@@ -101,6 +102,14 @@ export function Home() {
         {(d.entities.homeWidgets ?? []).length > 0 && <div className="grid gap-4 md:grid-cols-2">{d.entities.homeWidgets.map((w) => <Card key={w.id} title={w.name} actions={<Button size="sm" variant="ghost" onClick={() => mutate((x) => { x.entities.homeWidgets = x.entities.homeWidgets.filter((y) => y.id !== w.id) }, { action: 'حذف ویجت سنجاق‌شده', target: w.name })}>برداشتن</Button>}><Bars data={[['استوک', 46], ['جعبه‌باز', 31], ['اکبند', 23]].map(([l, v]) => ({ label: l as string, value: v as number }))} fmt={pct} /></Card>)}</div>}
       </div>
       <Modal open={pick} onClose={() => setPick(false)} title="چیدمان ویجت‌های خانه"><ul className="space-y-2">{WIDGETS.map(([k, l]) => <li key={k} className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-13"><span>{l}</span><Toggle on={on(k)} label={l} onChange={() => toggleW(k)} /></li>)}</ul><p className="mt-3 text-11 text-t2">از «تحلیل و گزارش» یا دستیار غنیمت هم می‌توانید نمودار دلخواه را به خانه سنجاق کنید.</p></Modal>
+      <ExportDialog open={exp} onClose={() => setExp(false)} name="گزارش داشبورد" sections={[
+        { id: 'kpi', label: 'خلاصهٔ شاخص‌های امروز', build: () => [['شاخص', 'مقدار'], ['فروش امروز (تومان)', gmv], ['سفارش امروز', today.length], ['سود امروز (تومان)', Math.round(profitToday)]] },
+        { id: 'orders', label: 'فهرست سفارش‌ها', hint: 'شماره، مشتری، وضعیت، مبلغ', build: (r) => [['شماره', 'تاریخ', 'مشتری', 'موبایل', 'وضعیت', 'روش پرداخت', 'کانال', 'مبلغ (تومان)'], ...d.orders.filter((o) => { const t = new Date(o.createdAt).getTime(); return t >= r.from && t <= r.to }).map((o) => { const c = d.customers.find((x) => x.id === o.customerId); return [o.id, new Date(o.createdAt).toLocaleDateString('fa-IR'), c?.name ?? '', c?.mobile ?? '', o.status, o.pay, o.channel, o.total] })] },
+        { id: 'products', label: 'فروش به تفکیک کالا', build: (r) => { const m = new Map<string, [number, number]>(); d.orders.filter((o) => counted(o) && +new Date(o.createdAt) >= r.from && +new Date(o.createdAt) <= r.to).forEach((o) => o.shipments.forEach((s) => s.items.forEach((it) => { const x = m.get(it.productId) ?? [0, 0]; m.set(it.productId, [x[0] + it.qty, x[1] + it.price * it.qty]) }))); return [['کالا', 'تعداد', 'فروش (تومان)'], ...[...m].sort((a, b) => b[1][1] - a[1][1]).map(([pid, [q, v]]) => [d.products.find((p) => p.id === pid)?.title ?? pid, q, v])] } },
+        { id: 'cats', label: 'فروش به تفکیک دسته', build: () => [['دسته', 'فروش (تومان)'], ...[...cats].sort((a, b) => b[1] - a[1])] },
+        { id: 'prov', label: 'فروش به تفکیک استان', build: () => [['استان', 'فروش (تومان)'], ...Object.entries(prov).sort((a, b) => b[1] - a[1])] },
+        { id: 'pay', label: 'فروش به تفکیک روش پرداخت', build: (r) => { const m: Record<string, number> = {}; d.orders.filter((o) => counted(o) && +new Date(o.createdAt) >= r.from && +new Date(o.createdAt) <= r.to).forEach((o) => { m[o.pay] = (m[o.pay] ?? 0) + o.total }); return [['روش پرداخت', 'فروش (تومان)'], ...Object.entries(m)] } },
+      ]} />
     </Page>
   )
 }

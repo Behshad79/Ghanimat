@@ -4,7 +4,7 @@ import { BASE_ROLES, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v34'
+const DB_KEY = 'ghanimat-demo-db-v37'
 const S_KEY = 'ghanimat-demo-session-v1'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -43,6 +43,7 @@ export type ViewState = 'normal' | 'empty' | 'loading' | 'error' | 'noaccess' | 
 export type Session = {
   userId: string | null
   viewAs: string | null // «مشاهده به‌جای…» فقط برای مدیر کل
+  partnerId?: string // پرتال کدام شریک نمایش داده شود
   theme: 'light' | 'dark'
   density: 'comfortable' | 'normal' | 'compact'
   collapsed: boolean

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Ban, Box, CircleAlert, LogIn, LogOut, MoveRight, PackageCheck, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { ArrowLeftRight, Ban, Sparkles, Box, CircleAlert, LogIn, LogOut, MoveRight, PackageCheck, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Segmented, Select, StatusBadge, Toggle } from '@/shared/ui/base'
 import { SegGauge } from '@/shared/ui/charts'
 import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
@@ -9,6 +9,7 @@ import { fa, pct, rel } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import { binOf, type Bin, type Section } from '@/shared/data/site'
 import { FloorPlan } from './FloorPlan'
+import { PutAway, suggestBins } from './PutAway'
 import { Cell, ProductImg, useLookup } from '../pages/_shared'
 
 const SEC_COLORS = ['#0000ff', '#ffc24b', '#12a150', '#7c3aed', '#0ea5e9', '#f97316', '#c42f2f']
@@ -20,7 +21,7 @@ export function WarehouseMap() {
   const [wh, setWh] = useState<string>(s.scope !== 'all' ? s.scope : 'tehran'); const floors = d.layout[wh as 'tehran'] ?? []
   const [fl, setFl] = useState(floors[0]?.id ?? ''); const floor = floors.find((f) => f.id === fl) ?? floors[0]
   const [bin, setBin] = useState<string | null>(null); const [edit, setEdit] = useState<Section | null | 'new'>(null); const [view, setView] = useState<'plan' | 'bins'>('plan'); const [flEdit, setFlEdit] = useState<{ id: string; name: string } | null>(null)
-  const [moveU, setMoveU] = useState<string | null>(null); const [to, setTo] = useState(''); const [logF, setLogF] = useState('all')
+  const [moveU, setMoveU] = useState<string | null>(null); const [put, setPut] = useState(false); const [to, setTo] = useState(''); const [logF, setLogF] = useState('all')
   const units = d.units.filter((u) => u.warehouse === wh && LIVE.includes(u.status))
   const inBin = (b: Bin) => ({ units: units.filter((u) => binOf(u.shelf) === b.id), qty: Object.entries(b.qty ?? {}) })
   const used = (b: Bin) => { const c = inBin(b); return c.units.length + c.qty.reduce((a, [, n]) => a + n, 0) }
@@ -44,7 +45,7 @@ export function WarehouseMap() {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
-        <Card title="نقشهٔ قفسه‌ها" actions={<div className="flex flex-wrap items-center gap-2"><Select className="w-36" value={wh} onChange={(v) => { setWh(v); setFl(d.layout[v as 'tehran'][0]?.id ?? '') }} options={Object.keys(d.layout).map((k) => [k, WAREHOUSE[k]] as [string, string])} /><Button size="sm" icon={<Plus size={13} />} onClick={() => setEdit('new')}>قفسهٔ تازه</Button></div>}>
+        <Card title="نقشهٔ قفسه‌ها" actions={<div className="flex flex-wrap items-center gap-2"><Select className="w-36" value={wh} onChange={(v) => { setWh(v); setFl(d.layout[v as 'tehran'][0]?.id ?? '') }} options={Object.keys(d.layout).map((k) => [k, WAREHOUSE[k]] as [string, string])} /><Button size="sm" variant="primary" icon={<Sparkles size={13} />} onClick={() => setPut(true)}>جانمایی کالا</Button><Button size="sm" icon={<Plus size={13} />} onClick={() => setEdit('new')}>قفسهٔ تازه</Button></div>}>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Segmented size="sm" value={floor?.id ?? ''} onChange={setFl} options={floors.map((f) => [f.id, f.name] as [string, string])} />
             <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setFlEdit({ id: '', name: '' })}>طبقه یا سالن</Button>
@@ -100,10 +101,11 @@ export function WarehouseMap() {
 
       <Modal open={!!moveU} onClose={() => setMoveU(null)} title="جابه‌جایی واحد" footer={<><Button variant="primary" disabled={!to} onClick={doMove}>جابه‌جا کن</Button><Button variant="ghost" onClick={() => setMoveU(null)}>انصراف</Button></>}>
         {moveU && <div className="space-y-3"><p className="text-13">واحد <CopyId v={d.units.find((u) => u.id === moveU)?.code ?? moveU} /> از خانهٔ <b className="ltr font-mono">{binOf(d.units.find((u) => u.id === moveU)!.shelf)}</b> به:</p>
-          <div className="grid max-h-72 grid-cols-4 gap-1.5 overflow-y-auto sm:grid-cols-6">{allBins.map((b) => { const n = used(b); const full = b.blocked || n >= b.cap; return <button key={b.id} disabled={full || b.id === binOf(d.units.find((u) => u.id === moveU)!.shelf)} onClick={() => setTo(b.id)} className={cx('ltr h-11 rounded-lg border font-mono text-12 disabled:opacity-35', to === b.id ? 'border-brand bg-brand-solid text-white' : 'border-line hover:border-brand')}>{b.id}<span className="tnum block text-[10px]">{fa(n)}/{fa(b.cap)}</span></button> })}</div>
-          <p className="flex items-center gap-1 text-11 text-t2"><PackageCheck size={12} />جابه‌جایی در گزارش فعالیت انبار و تاریخچهٔ واحد ثبت می‌شود.</p></div>}
+          <div className="grid max-h-72 grid-cols-4 gap-1.5 overflow-y-auto sm:grid-cols-6">{(() => { const best = suggestBins(d, wh, d.units.find((u) => u.id === moveU)!, 1)[0]?.bin.id; return allBins.map((b) => { const n = used(b); const full = b.blocked || n >= b.cap; return <button key={b.id} disabled={full || b.id === binOf(d.units.find((u) => u.id === moveU)!.shelf)} onClick={() => setTo(b.id)} className={cx('ltr relative h-11 rounded-lg border font-mono text-12 disabled:opacity-35', to === b.id ? 'border-brand bg-brand-solid text-white' : b.id === best ? 'border-brand/60 bg-brand-tint' : 'border-line hover:border-brand')}>{b.id === best && <Sparkles size={10} className="absolute top-1 left-1" />}{b.id}<span className="tnum block text-[10px]">{fa(n)}/{fa(b.cap)}</span></button> }) })()}</div>
+          <p className="flex items-center gap-1 text-11 text-t2"><Sparkles size={12} className="text-brand" />خانهٔ علامت‌دار پیشنهاد خودکار است (کنار کالاهای مشابه و متناسب با اندازه). <PackageCheck size={12} />جابه‌جایی در گزارش فعالیت انبار و تاریخچهٔ واحد ثبت می‌شود.</p></div>}
       </Modal>
 
+      <PutAway open={put} onClose={() => setPut(false)} wh={wh} allBins={allBins} used={used} />
       <Modal open={!!flEdit} onClose={() => setFlEdit(null)} title={flEdit?.id ? 'ویرایش طبقه یا سالن' : 'طبقه یا سالن تازه'} footer={<>{flEdit?.id && <Button variant="danger" icon={<Trash2 size={13} />} onClick={() => { const F = floors.find((f) => f.id === flEdit.id); if (F && F.sections.some((sec) => sec.bins.some((b) => used(b) > 0))) return toast('این طبقه کالا دارد. اول قفسه‌هایش را خالی کنید.', { tone: 'err' }); if (floors.length <= 1) return toast('انبار دست‌کم یک طبقه لازم دارد.', { tone: 'err' }); mutate((x) => { x.layout[wh as 'tehran'] = x.layout[wh as 'tehran'].filter((f) => f.id !== flEdit.id) }, { action: 'حذف طبقهٔ انبار', target: flEdit.name }); setFl(floors.find((f) => f.id !== flEdit.id)?.id ?? ''); setFlEdit(null) }}>حذف</Button>}<Button variant="primary" onClick={() => { if (!flEdit?.name.trim()) return toast('نام را بنویسید.', { tone: 'err' }); if (flEdit.id) mutate((x) => { x.layout[wh as 'tehran'].find((f) => f.id === flEdit.id)!.name = flEdit.name }, { action: 'تغییر نام طبقهٔ انبار', target: flEdit.name }); else { const id = `f${Date.now().toString(36)}`; mutate((x) => { x.layout[wh as 'tehran'].push({ id, name: flEdit.name, sections: [] }) }, { action: 'ساخت طبقهٔ انبار', target: flEdit.name }); setFl(id) } setFlEdit(null) }}>ذخیره</Button></>}>
         {flEdit && <Field label="نام" help="مثلا «همکف»، «زیرزمین»، «سالن کالای سنگین» یا «انبار پشتی»."><Input value={flEdit.name} onChange={(e) => setFlEdit({ ...flEdit, name: e.target.value })} /></Field>}
       </Modal>

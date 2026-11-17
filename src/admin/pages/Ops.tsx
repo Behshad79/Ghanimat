@@ -1,3 +1,4 @@
+import { WarehouseDetail } from '../warehouse/WarehouseDetail'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, Check, Printer, ScanLine, X } from 'lucide-react'
@@ -23,7 +24,7 @@ import { ZoneMap } from '../logistics/ZoneMap'
 // ───────── انبار و موجودی ─────────
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
 export function Warehouse() {
-  const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('stock')
+  const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('stock'); const [whD, setWhD] = useState<string | null>(null)
   const [scan, setScan] = useState<string | null>(null)
   const [focus, setFocus] = useState<string | null>(null); const [checks, setChecks] = useState<Record<string, boolean>>({}); const [grade, setGrade] = useState('A')
   const inScope = (w: string) => s.scope === 'all' || s.scope === w
@@ -61,7 +62,7 @@ export function Warehouse() {
           <KPI label="واحد قابل فروش" value={fa(q('unit.published').length)} to="/admin/catalog?tab=units" /><KPI label="ارزش موجودی (فروش)" value={compactToman(d.units.filter((u) => inScope(u.warehouse)).reduce((a, u) => a + u.price, 0))} />
           <KPI label="موجودی راکد (بیش از ۳۰ روز)" value={fa(d.units.filter((u) => u.status === 'unit.published' && Date.now() - new Date(u.received).getTime() > 30 * 864e5).length)} note="پیشنهاد AI: کاهش پلکانی قیمت" to="/admin/pricing" /><KPI label="زمان ورود تا انتشار" value={`${fa(1.8)} روز`} delta={-12} goodDown />
         </div>
-        <div className="grid gap-4 md:grid-cols-2"><Card title="موجودی به تفکیک انبار"><Bars data={Object.keys(WAREHOUSE).map((w) => ({ label: WAREHOUSE[w], value: d.units.filter((u) => u.warehouse === w && u.status === 'unit.published').length + d.products.reduce((a, p) => a + (p.qty?.[w as 'tehran'] ?? 0), 0) }))} fmt={(n) => `${fa(n)} عدد`} /></Card>
+        <div className="grid gap-4 md:grid-cols-2"><Card title="موجودی به تفکیک انبار" actions={<span className="text-11 text-t2">روی هر انبار بزنید</span>}><Bars onPick={(l) => setWhD(Object.keys(WAREHOUSE).find((k) => WAREHOUSE[k] === l) ?? null)} data={Object.keys(WAREHOUSE).map((w) => ({ label: WAREHOUSE[w], value: d.units.filter((u) => u.warehouse === w && u.status === 'unit.published').length + d.products.reduce((a, p) => a + (p.qty?.[w as 'tehran'] ?? 0), 0) }))} fmt={(n) => `${fa(n)} عدد`} /></Card>
           <Card title="موجودی به تفکیک چرخهٔ عمر"><Bars onPick={() => nav('/admin/catalog?tab=units')} data={['unit.qc', 'unit.photo', 'unit.ready', 'unit.published', 'unit.reserved', 'unit.sold'].map((k) => ({ label: k.replace('unit.', '').replace('qc', 'در انتظار QC').replace('photo', 'در انتظار عکاسی').replace('ready', 'آمادهٔ انتشار').replace('published', 'منتشرشده').replace('reserved', 'رزروشده').replace('sold', 'فروخته‌شده'), value: d.units.filter((u) => u.status === k).length }))} /></Card></div></div>}
       {tab === 'sync' && <div className="space-y-4">
         <Card title={<>سلامت همگام‌سازی موجودی انبار مهاباد<Hint k="buffer" /></>} actions={<div className="flex items-center gap-2 text-12"><span>فروش از انبار شریک</span><Toggle on={d.flags.mahabadSales} label="کلید توقف" onChange={async (v) => { if (!v && !(await confirm({ title: 'توقف فروش از انبار مهاباد؟', body: 'همهٔ کالاهای این انبار موقتاً در سایت ناموجود می‌شوند. سفارش‌های ثبت‌شده ادامه پیدا می‌کنند. هر زمان بخواهید دوباره روشن می‌شود.', confirm: 'توقف فروش', danger: true }))) return; mutate((x) => { x.flags.mahabadSales = v }, { action: v ? 'ازسرگیری فروش انبار شریک' : 'توقف فروش انبار شریک', target: 'انبار مهاباد' }) }} /></div>}>
@@ -87,6 +88,7 @@ export function Warehouse() {
             <Field label="ایراد ظاهری (اختیاری)"><Input placeholder="مثلاً خط ریز کنار قاب" /></Field></div>
         </div>}
       </Modal>
+      <WarehouseDetail wh={whD} onClose={() => setWhD(null)} />
     </Page>
   )
 }

@@ -1,9 +1,11 @@
+import { AmazonReviews } from './LinkExtras'
+import { suggestBins } from '../warehouse/PutAway'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Camera, Check, CircleAlert, GripVertical, ImagePlus, Plus, RefreshCw, Sparkles, Star, Trash2 } from 'lucide-react'
 import { AITag, Badge, Button, Card, cx, Field, Input, Segmented, Select, Textarea, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
-import { Hint, toast } from '@/shared/ui/overlay'
+import { Hint, Modal, toast } from '@/shared/ui/overlay'
 import { Barcode, QR } from '@/shared/ui/codes'
 import { currentUser, getDB, mutate, notify, takeCode, useDB } from '@/shared/lib/store'
 import { fileToImage } from '@/shared/lib/image'
@@ -47,7 +49,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
   const draftKey = editing ? `edit-${editing.id}` : quick ? 'quick' : 'new'
   const saved = (d as any).drafts?.[draftKey] as Draft | undefined
   const [f, setF] = useState<Draft>(() => saved ?? (editing ? fromProduct(editing, d.units.filter((u) => u.productId === editing.id)) : { ...blank(), title: sp.get('title') ?? '' }))
-  const [step, setStep] = useState(() => Number(sp.get('step') ?? (quick ? QUICK[0] : 0)))
+  const [step, setStep] = useState(() => Number(sp.get('step') ?? (quick ? QUICK[0] : 0))); const [sch, setSch] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(saved ? Date.now() : null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const order = quick ? QUICK : STEPS.map((_, i) => i)
@@ -77,14 +79,16 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
     [(f.condition !== 'sealed') && f.images.length < 2, 'برای کالای استوک یا جعبه‌باز دست‌کم ۲ عکس واقعی همان واحد', 2],
   ].filter((x) => x[0]) as [boolean, string, number][], [f])
 
-  const save = (status: string) => {
+  const saveRef = useRef<(s: string) => void>(() => {})
+  const save = (status0: string) => {
+    const status = status0 === 'product.published' && f.scheduledAt && new Date(f.scheduledAt).getTime() > Date.now() + 6e4 ? 'product.scheduled' : status0
     for (const s of order) { const e = validate(s); if (Object.keys(e).length) { setErrors(e); setStep(s); return toast(Object.values(e)[0], { tone: 'err' }) } }
-    if (status === 'product.published' && missing.length) { setStep(missing[0][2]); return toast(`برای انتشار کامل کنید: ${missing.map((m) => m[1]).join('، ')}`, { tone: 'err' }) }
+    if (status !== 'product.draft' && missing.length) { setStep(missing[0][2]); return toast(`برای انتشار کامل کنید: ${missing.map((m) => m[1]).join('، ')}`, { tone: 'err' }) }
     const isNew = !editing; const pid = editing?.id ?? `p${Date.now().toString(36)}`
     const code = f.code || takeCode('product')
     const prod: Product = { ...(editing ?? {} as Product), pdp: f.pdp, id: pid, image: f.images[0] ?? '', images: f.images, title: f.title.trim(), en: f.en.trim() || f.title.trim(), brand: f.brand, category: f.category, status, mode: f.mode, qty: f.mode === 'qty' ? { tehran: f.qtyTehran, mahabad: f.qtyMahabad } : undefined, priceNew: f.priceNew || f.price, price: f.mode === 'qty' ? finalPrice : undefined, compareAt: f.discount ? f.price : undefined, cost: landed, rating: editing?.rating ?? 0, reviews: editing?.reviews ?? 0, views: editing?.views ?? 0, cvr: editing?.cvr ?? 0, health: Math.min(100, 30 + f.images.length * 10 + (f.short ? 15 : 0) + (f.long ? 15 : 0) + (Object.keys(f.specs).length ? 10 : 0) + (f.metaDesc ? 10 : 0)), fastEligible: f.fastEligible && tehranStock, seller: 'غنیمت', torob: f.torob, code, ean: f.ean, model: f.model, specs: f.specs, keyFeatures: f.keyFeatures, short: f.short, long: f.long, box: f.box, pros: f.pros, cons: f.cons, condition: f.condition, grade: f.grade, source: f.source, originLabel: f.source === 'amazon' ? 'خریداری‌شده از آمازون' : 'خرید مستقیم اقلیم کردستان', supplier: f.supplier, currency: f.currency, costFx: f.costFx, rate: f.rate, extraCost: f.freight + f.customs + f.other, discount: f.discount, weight: f.weight, dims: f.dims, shipClass: f.shipClass, insurance: f.insurance, install: f.install, warrantyType: f.warrantyType, warrantyMonths: f.warrantyMonths, warrantyTerms: f.warrantyTerms, metaTitle: f.metaTitle, metaDesc: f.metaDesc, slug: f.slug, scheduledAt: f.scheduledAt, video: f.video }
     const existing = d.units.filter((u) => u.productId === pid)
-    const newUnits: Unit[] = f.mode === 'serial' ? f.units.filter((r) => !existing.some((u) => u.serial === r.serial)).map((r) => { const c = takeCode('unit'); return { id: `GU-${c.replace(/\D/g, '').slice(-5)}`, code: c, productId: pid, serial: r.serial.trim(), condition: f.condition, grade: r.grade || f.grade, warehouse: r.warehouse, source: f.source, status: status === 'product.published' ? 'unit.published' : 'unit.ready', cost: landed, price: finalPrice, shelf: r.shelf || 'جدید', received: new Date().toISOString(), flaws: [], color: r.color, warrantyMonths: f.warrantyMonths } }) : []
+    const newUnits: Unit[] = f.mode === 'serial' ? f.units.filter((r) => !existing.some((u) => u.serial === r.serial)).map((r) => { const c = takeCode('unit'); return { id: `GU-${c.replace(/\D/g, '').slice(-5)}`, code: c, productId: pid, serial: r.serial.trim(), condition: f.condition, grade: r.grade || f.grade, warehouse: r.warehouse, source: f.source, status: status === 'product.published' ? 'unit.published' : 'unit.ready', cost: landed, price: finalPrice, shelf: r.shelf || suggestBins(d, r.warehouse, { id: 'new', productId: pid, status: 'unit.ready', category: f.category, brand: f.brand }, 1)[0]?.bin.id || 'جدید', received: new Date().toISOString(), flaws: [], color: r.color, warrantyMonths: f.warrantyMonths } }) : []
     const by = currentUser()
     mutate((x) => {
       const i = x.products.findIndex((p) => p.id === pid); if (i >= 0) x.products[i] = prod; else x.products.unshift(prod)
@@ -93,9 +97,10 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
       delete ((x as any).drafts ?? {})[draftKey]
     }, { action: isNew ? (status === 'product.published' ? 'ثبت و انتشار کالا' : 'ثبت پیش‌نویس کالا') : 'ویرایش کالا', target: `${prod.title} (${code})` })
     if (by && by.role !== 'super' && status === 'product.published') notify('کالای تازه منتشر شد', `${by.name}: «${prod.title}» با قیمت ${toman(finalPrice)} منتشر شد.`, `/admin/catalog/${pid}`, 'عملیات', 'info')
-    toast(status === 'product.published' ? (f.scheduledAt ? `انتشار «${prod.title}» برای ${new Date(f.scheduledAt).toLocaleString('fa-IR')} زمان‌بندی شد.` : `«${prod.title}» منتشر شد.`) : `پیش‌نویس «${prod.title}» ذخیره شد.`)
+    toast(status !== 'product.draft' ? (status === 'product.scheduled' ? `انتشار «${prod.title}» برای ${new Date(f.scheduledAt).toLocaleString('fa-IR')} زمان‌بندی شد.` : `«${prod.title}» منتشر شد.`) : `پیش‌نویس «${prod.title}» ذخیره شد. پیش‌نویس‌ها در «کالا و کاتالوگ ← جدول ← پیش‌نویس» هستند و در سایت دیده نمی‌شوند.`)
     onDone ? onDone(pid) : nav(`/admin/catalog/${pid}`)
   }
+  saveRef.current = save
   const addImages = async (files: FileList | null) => { if (!files) return; try { const imgs = await Promise.all([...files].slice(0, 10).map((fl) => fileToImage(fl))); set({ images: [...f.images, ...imgs].slice(0, 12) }); toast(`${fa(imgs.length)} تصویر اضافه شد.`) } catch (e) { toast((e as Error).message, { tone: 'err' }) } }
   const [drag, setDrag] = useState<number | null>(null)
 
@@ -133,6 +138,9 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
         {f.pdp.videos.map((v, i) => <div key={i} className="flex gap-2"><Select className="w-40" value={v.kind} onChange={(k) => set({ pdp: { ...f.pdp, videos: f.pdp.videos.map((x, j) => j === i ? { ...x, kind: k } : x) } })} options={['ویدیوی معرفی', 'ویدیوی بررسی', 'ویدیوی باز کردن جعبه', 'ویدیوی تست غنیمت']} /><Input aria-label="نشانی ویدیو" className="ltr flex-1 text-left" value={v.url} placeholder="https://…" onChange={(e) => set({ pdp: { ...f.pdp, videos: f.pdp.videos.map((x, j) => j === i ? { ...x, url: e.target.value } : x) } })} /><Button variant="ghost" aria-label="حذف ویدیو" icon={<Trash2 size={14} />} onClick={() => set({ pdp: { ...f.pdp, videos: f.pdp.videos.filter((_, j) => j !== i) } })} /></div>)}
         <Button size="sm" icon={<Plus size={13} />} onClick={() => set({ pdp: { ...f.pdp, videos: [...f.pdp.videos, { kind: 'ویدیوی معرفی', url: f.video || '' }] } })}>افزودن ویدیو</Button></div></div>,
     3: <div className="space-y-4">
+      <Field label="لینک کالا در آمازون (اختیاری)" help="برای خواندن نظرات خریداران آمازون و نمایش انتخاب‌شده‌ها زیر «نظرات آمازون» در صفحهٔ کالا."><Input className="ltr text-left font-mono" value={f.pdp.amazonUrl ?? ''} onChange={(e) => set({ pdp: { ...f.pdp, amazonUrl: e.target.value } })} placeholder="https://www.amazon.com/dp/…" /></Field>
+      {f.pdp.amazonUrl && f.id && <AmazonReviews pid={f.id} initialUrl={f.pdp.amazonUrl} />}
+      {f.pdp.amazonUrl && !f.id && <p className="text-11 text-t2">بعد از اولین ذخیره، نظرات آمازون را از همین‌جا انتخاب و اضافه کنید.</p>}
       <div className="flex justify-end"><Button variant="ai" icon={<Sparkles size={14} />} onClick={() => { set({ short: f.short || `${f.title} با کنترل کیفیت دو مرحله‌ای و عکس واقعی همان واحد در غنیمت عرضه می‌شود.`, box: f.box || 'دستگاه، کابل شارژ، دفترچهٔ راهنما' }); toast('پیشنهاد AI در فیلدهای خالی گذاشته شد؛ پیش از انتشار بازبینی کنید.') }}>پیشنهاد بده (اختیاری)</Button></div>
       <Field label="معرفی کوتاه" help="اختصاصی بنویسید؛ متن منبع کپی نشود."><Textarea rows={3} value={f.short} onChange={(e) => set({ short: e.target.value })} /></Field>
       <Field label="معرفی کامل"><Textarea rows={6} value={f.long} onChange={(e) => set({ long: e.target.value })} /></Field>
@@ -156,7 +164,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
             <Field label={`سریال یا IMEI واحد ${fa(i + 1)}`}><Input className="ltr text-left font-mono" value={u.serial} onChange={(e) => set({ units: f.units.map((x, j) => (j === i ? { ...x, serial: e.target.value } : x)) })} /></Field>
             <Field label="رنگ"><Input value={u.color} onChange={(e) => set({ units: f.units.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)) })} /></Field>
             <Field label="انبار"><Select value={u.warehouse} onChange={(v) => set({ units: f.units.map((x, j) => (j === i ? { ...x, warehouse: v } : x)) })} options={d.warehouses.map((w) => [w.id, w.name])} /></Field>
-            <Field label="قفسه"><Input className="ltr text-left font-mono" value={u.shelf} onChange={(e) => set({ units: f.units.map((x, j) => (j === i ? { ...x, shelf: e.target.value } : x)) })} /></Field>
+            <Field label="قفسه" hint={!u.shelf ? <button type="button" className="text-11 text-brand" onClick={() => { const sg = suggestBins(d, u.warehouse || 'tehran', { id: `new${i}`, productId: f.id ?? '', status: 'unit.qc', category: f.category, brand: f.brand }, 1)[0]; if (!sg) return toast('خانهٔ خالی مناسبی پیدا نشد.', { tone: 'err' }); set({ units: f.units.map((x, j) => (j === i ? { ...x, shelf: sg.bin.id } : x)) }); toast(`پیشنهاد: ${sg.bin.id} · ${sg.why.slice(0, 2).join('، ')}`) }}>پیشنهاد جا</button> : undefined}><Input className="ltr text-left font-mono" value={u.shelf} placeholder="خالی = پیشنهاد خودکار" onChange={(e) => set({ units: f.units.map((x, j) => (j === i ? { ...x, shelf: e.target.value } : x)) })} /></Field>
             <Field label="گرید"><Select value={u.grade} onChange={(v) => set({ units: f.units.map((x, j) => (j === i ? { ...x, grade: v } : x)) })} options={['A+', 'A', 'B']} /></Field>
             <Button variant="ghost" aria-label="حذف واحد" icon={<Trash2 size={14} />} onClick={() => set({ units: f.units.filter((_, j) => j !== i) })} />
           </div>)}
@@ -223,7 +231,7 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
   return (
     <Page title={editing ? `ویرایش «${editing.title}»` : quick ? 'افزودن سریع کالا' : 'افزودن کالا'} module={quick ? undefined : 'catalog'} back={editing ? `/admin/catalog/${editing.id}` : quick ? undefined : '/admin/catalog'}
       badge={savedAt ? <Badge tone="success">پیش‌نویس ذخیره شد</Badge> : undefined}
-      actions={<Button variant="ghost" onClick={() => save('product.draft')}>ذخیرهٔ پیش‌نویس</Button>}
+      actions={<><Button variant="ghost" title="پیش‌نویس در سایت دیده نمی‌شود و در «کالا و کاتالوگ ← جدول ← پیش‌نویس» می‌ماند." onClick={() => save('product.draft')}>ذخیرهٔ پیش‌نویس</Button><Button variant="ghost" onClick={() => setSch(f.scheduledAt || (() => { const t = new Date(Date.now() + 864e5); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}T10:00` })())}>انتشار زمان‌بندی‌شده</Button><Button variant="ghost" onClick={() => nav('/admin/catalog?tab=products&view=drafts')}>پیش‌نویس‌ها ({fa(d.products.filter((p) => p.status === 'product.draft').length)})</Button></>}
       primary={<Button variant="primary" onClick={() => save('product.published')}>{editing ? 'ذخیره و انتشار' : f.scheduledAt ? 'زمان‌بندی انتشار' : 'انتشار الان'}</Button>}>
       {sp.get('from') === 'photo' && !f.images.length && <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-brand/50 bg-brand-tint/40 p-3 text-13"><Camera size={18} className="text-brand" /><span className="flex-1">از جعبهٔ کالا یا بارکد آن عکس بگیرید؛ عکس به گام تصاویر اضافه می‌شود و عنوان پیشنهادی برای تأیید شما در فرم می‌نشیند.</span><span className="btn rounded-md bg-brand-solid px-3 py-1.5 text-white">گرفتن عکس</span><input type="file" accept="image/*" capture="environment" className="sr-only" onChange={async (e) => { const fl = e.target.files?.[0]; if (!fl) return; try { const img = await fileToImage(fl); set({ images: [img], title: f.title || 'کالای تشخیص‌داده‌شده از عکس (عنوان را اصلاح کنید)' }); toast('عکس اضافه شد. عنوان پیشنهادی را بازبینی کنید.') } catch (er) { toast((er as Error).message, { tone: 'err' }) } }} /></label>}
       {saved && <div className="mb-3 flex items-center justify-between gap-2 rounded-md bg-info-bg px-3 py-2 text-12 text-info">پیش‌نویس قبلی بارگذاری شد.<button className="font-semibold underline" onClick={() => { mutate((x) => { delete ((x as any).drafts ?? {})[draftKey] }); setF(editing ? fromProduct(editing, d.units.filter((u) => u.productId === editing.id)) : blank()); setStep(order[0]); setSavedAt(null) }}>شروع از نو</button></div>}
@@ -243,6 +251,9 @@ export function ProductWizard({ quick, onDone }: { quick?: boolean; onDone?: (id
           </div>
         </Card>
       </div>
+      <Modal open={sch !== null} onClose={() => setSch(null)} title="انتشار زمان‌بندی‌شده" footer={<Button variant="primary" disabled={!sch || new Date(sch).getTime() < Date.now()} onClick={() => { set({ scheduledAt: sch! }); setSch(null); setTimeout(() => saveRef.current('product.published')) }}>زمان‌بندی</Button>}>
+        <Field label="زمان انتشار" help="تا این زمان کالا با وضعیت «زمان‌بندی‌شده» می‌ماند و در سایت دیده نمی‌شود؛ سر وقت خودکار منتشر می‌شود."><Input type="datetime-local" value={sch ?? ''} onChange={(e) => setSch(e.target.value)} /></Field>
+      </Modal>
     </Page>
   )
 }

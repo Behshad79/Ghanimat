@@ -35,10 +35,10 @@ export function CustomerRequests() {
     <Page title="درخواست‌های مشتری" module="support" sub="هر فرم، دکمه و درخواستی که مشتری در سایت و پنل کاربری می‌زند اینجا یک صف قابل پیگیری دارد."
       tabs={<Tabs value={tab} onChange={setTab} tabs={tabs} />}>
       <div className="stagger mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KPI featured icon={<Bell size={17} />} label="درخواست باز" value={fa(totalOpen)} note="در همهٔ صف‌ها" />
-        <KPI icon={<PackageSearch size={17} />} label="منتظر موجود شدن" value={fa((E.notifyMe ?? []).filter((r) => !r.sent).reduce((a, r) => a + r.subscribers, 0))} note="مشترک «خبرم کن»" />
-        <KPI icon={<Send size={17} />} label="برداشت در انتظار" value={toman((E.withdrawals ?? []).filter((r) => r.status === 'در انتظار').reduce((a, r) => a + r.amount, 0))} />
-        <KPI icon={<ShieldCheck size={17} />} label="حساب بانکی نیازمند بررسی" value={fa(open('bankAccounts', /نیست|نشد/))} />
+        <KPI featured to={`/admin/requests?tab=${tabs.find((t) => t.count > 0)?.id ?? 'contact'}`} icon={<Bell size={17} />} label="درخواست باز" value={fa(totalOpen)} note="در همهٔ صف‌ها" />
+        <KPI to="/admin/requests?tab=notify" icon={<PackageSearch size={17} />} label="منتظر موجود شدن" value={fa((E.notifyMe ?? []).filter((r) => !r.sent).reduce((a, r) => a + r.subscribers, 0))} note="مشترک «خبرم کن»" />
+        <KPI to="/admin/requests?tab=withdraw" icon={<Send size={17} />} label="برداشت در انتظار" value={toman((E.withdrawals ?? []).filter((r) => r.status === 'در انتظار').reduce((a, r) => a + r.amount, 0))} />
+        <KPI to="/admin/requests?tab=bank" icon={<ShieldCheck size={17} />} label="حساب بانکی نیازمند بررسی" value={fa(open('bankAccounts', /نیست|نشد/))} />
       </div>
       {tab === 'contact' && <EntityManager ek="contactMessages" kind="پیام" titleKey="subject" emptyDesc="پیام‌های فرم «تماس با ما» اینجا می‌آیند."
         fields={[{ k: 'name', label: 'نام', required: true }, { k: 'mobile', label: 'موبایل', ltr: true }, { k: 'email', label: 'ایمیل', ltr: true, table: false }, { k: 'subject', label: 'موضوع', type: 'select', options: (E.contactSubjects ?? []).map((x) => x.name) }, { k: 'text', label: 'متن پیام', type: 'textarea', table: false }, { k: 'files', label: 'پیوست‌های مشتری', type: 'files', table: true }, { k: 'reply', label: 'پاسخ', type: 'textarea', table: false }, { k: 'replyFiles', label: 'پیوست پاسخ (برای مشتری ارسال می‌شود)', type: 'files', table: false }, { k: 'status', label: 'وضعیت', type: 'select', options: ['جدید', 'در حال بررسی', 'پاسخ داده‌شده', 'بسته'], render: (r) => <St v={r.status} /> }, when]}

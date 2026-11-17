@@ -1,3 +1,4 @@
+import { OtherUpload } from '@/shared/ui/upload'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CalendarClock, Check, FileSignature, FileText, HandCoins, IdCard, NotebookPen, Paperclip, Plus, Printer, Trash2, UserPlus, Wallet } from 'lucide-react'
@@ -143,7 +144,7 @@ export function PersonFile() {
           <ul className="mt-4 space-y-2">{e.notes.map((n) => <li key={n.id} className="rounded-lg border border-line p-2.5 text-13"><p className="mb-1 flex justify-between text-11 text-t2"><span>{n.kind} · {n.by}</span><span>{fd(n.at)}</span></p>{n.text}</li>)}</ul>
         </Card>
         <Card title={<span className="flex items-center gap-1.5"><FileText size={15} />مدارک</span>}>
-          <div className="mb-3 flex flex-wrap gap-2">{['کپی کارت ملی', 'کپی شناسنامه', 'قرارداد امضاشده', 'سفته یا چک ضمانت', 'گواهی عدم سوءپیشینه', 'مدرک تحصیلی'].map((t) => <label key={t} className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-line px-2.5 text-12 hover:bg-neutral-bg"><Paperclip size={12} />{t}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(ev) => { const fl = ev.target.files?.[0]; if (fl) void upload(fl, t) }} /></label>)}</div>
+          <div className="mb-3 flex flex-wrap gap-2">{['کپی کارت ملی', 'کپی شناسنامه', 'قرارداد امضاشده', 'سفته یا چک ضمانت', 'گواهی عدم سوءپیشینه', 'مدرک تحصیلی'].map((t) => <label key={t} className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-line px-2.5 text-12 hover:bg-neutral-bg"><Paperclip size={12} />{t}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(ev) => { const fl = ev.target.files?.[0]; if (fl) void upload(fl, t) }} /></label>)}<OtherUpload onFile={(fl, t) => void upload(fl, t)} /></div>
           <ul className="divide-y divide-line">{e.docs.map((x) => <li key={x.id} className="flex items-center justify-between gap-2 py-2 text-13"><span className="flex items-center gap-2">{x.file && x.file.startsWith('data:image') ? <img src={x.file} alt="" className="size-10 rounded object-cover" /> : <FileText size={16} className="text-t2" />}{x.title}</span><span className="flex items-center gap-2 text-11 text-t2">{rel(x.at)}{x.file && <a href={x.file} target="_blank" rel="noreferrer" className="text-brand underline">مشاهده</a>}</span></li>)}</ul>
         </Card>
       </div>}

@@ -97,7 +97,7 @@ export function UnitDrawer({ u, onClose }: { u: Unit | null; onClose: () => void
 
 export function Catalog() {
   const { d, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('products'); const [sp, setSp] = useSearchParams()
-  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all'); const [qf, setQf] = useState('all'); const [csvOpen, setCsvOpen] = useState(false); const [pv, setPvRaw] = useState<'board' | 'table'>(() => (localStorage.getItem('gh-catalog-view') as 'table') || 'board'); const setPv = (v: 'board' | 'table') => { setPvRaw(v); try { localStorage.setItem('gh-catalog-view', v) } catch { /* حافظهٔ مرورگر پر است */ } }
+  const [add, setAdd] = useState(sp.get('add') === '1'); const [editU, setEditU] = useState<Unit | null>(null); const [st, setSt] = useState('all'); const [qf, setQf] = useState(sp.get('view') === 'drafts' ? 'draft' : 'all'); const [csvOpen, setCsvOpen] = useState(false); const [pv, setPvRaw] = useState<'board' | 'table'>(() => sp.get('view') === 'drafts' ? 'table' : (localStorage.getItem('gh-catalog-view') as 'table') || 'board'); const setPv = (v: 'board' | 'table') => { setPvRaw(v); try { localStorage.setItem('gh-catalog-view', v) } catch { /* حافظهٔ مرورگر پر است */ } }
   const pa = useProductActions()
   const unitActions = (u: Unit) => {
     const inOrder = unitInOpenOrder(d, u.id)
@@ -112,7 +112,7 @@ export function Catalog() {
   }
   const vMed = [...d.products].map((p) => p.views).sort((a, b) => a - b)[Math.floor(d.products.length * 0.7)] ?? 0
   const soldN = (p: Product) => d.orders.reduce((a, o) => a + o.shipments.reduce((b, s) => b + s.items.filter((i) => i.productId === p.id).reduce((c, i) => c + i.qty, 0), 0), 0)
-  const QF: [string, string, (p: Product) => boolean][] = [['all', 'همه', () => true], ['pub', 'منتشرشده', (p) => p.status === 'product.published'], ['draft', 'پیش‌نویس', (p) => p.status === 'product.draft'], ['pending', 'منتظر تأیید', (p) => p.status === 'product.pending'], ['in', 'دارای موجودی', (p) => stockOf(d, p) > 0], ['out', 'بدون موجودی', (p) => stockOf(d, p) === 0], ['best', 'پرفروش', (p) => soldN(p) > 0], ['viewed', 'پربازدید', (p) => p.views >= vMed]]
+  const QF: [string, string, (p: Product) => boolean][] = [['all', 'همه', () => true], ['pub', 'منتشرشده', (p) => p.status === 'product.published'], ['draft', 'پیش‌نویس', (p) => p.status === 'product.draft'], ['scheduled', 'زمان‌بندی‌شده', (p) => p.status === 'product.scheduled'], ['pending', 'منتظر تأیید', (p) => p.status === 'product.pending'], ['in', 'دارای موجودی', (p) => stockOf(d, p) > 0], ['out', 'بدون موجودی', (p) => stockOf(d, p) === 0], ['best', 'پرفروش', (p) => soldN(p) > 0], ['viewed', 'پربازدید', (p) => p.views >= vMed]]
   const prodRows = d.products.filter((p) => (st === 'all' || p.status === st) && (QF.find((q) => q[0] === qf)?.[2] ?? (() => true))(p)).sort((a, b) => qf === 'best' ? soldN(b) - soldN(a) : qf === 'viewed' ? b.views - a.views : 0)
   const pcols: Col<Product>[] = [
     { key: 'title', title: 'محصول', render: (p) => <Cell pid={p.id} size={44} a={p.title} b={<><span className="ltr font-mono">{p.code}</span> · {p.brand}</>} />, sort: (p) => p.title, text: (p) => p.title },

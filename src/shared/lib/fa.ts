@@ -40,9 +40,9 @@ export const csv = (rows: (string | number)[][]) => '﻿' + rows.map((r) => r.ma
 export const download = (name: string, content: string, type = 'text/csv;charset=utf-8') => {
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob([content], { type }))
-  a.download = name
+  a.download = name; a.style.display = 'none'; document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(a.href)
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove() }, 1500)
 }
 
 /** گرید «A+» در متن راست‌به‌چپ درست نمایش داده شود */

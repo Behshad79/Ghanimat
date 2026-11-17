@@ -5,6 +5,7 @@ import { Badge, Card, cx } from '@/shared/ui/base'
 import { useDB, currentUser } from '@/shared/lib/store'
 import { compactToman, fa, rel } from '@/shared/lib/fa'
 import { ProductImg } from '../pages/_shared'
+import { GoalEdit } from '@/shared/ui/goal'
 
 const days = (n: number) => Array.from({ length: n }, (_, i) => { const t = new Date(Date.now() - (n - 1 - i) * 864e5); return new Intl.DateTimeFormat('fa-IR', { weekday: 'short' }).format(t) })
 
@@ -68,10 +69,10 @@ export function VisitsChart() {
 
 /** فروش روزانه در برابر هدف: نشانگر هدف روی هر ستون، سبز وقتی هدف رد شده */
 export function SalesGoalChart() {
-  const L = days(14); const goal = 600; const sales = [420, 510, 380, 640, 590, 710, 300, 455, 620, 680, 520, 740, 610, 468]; const [hov, setHov] = useState<number | null>(null)
+  const d = useDB(); const L = days(14); const goal = Math.round(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 600000000) / 1e6); const sales = [420, 510, 380, 640, 590, 710, 300, 455, 620, 680, 520, 740, 610, 468]; const [hov, setHov] = useState<number | null>(null)
   const mx = Math.max(...sales, goal) * 1.1; const hit = sales.filter((s) => s >= goal).length
   return (
-    <Card title="فروش روزانه در برابر هدف" actions={<Badge tone={hit >= 7 ? 'success' : 'warning'}>{fa(hit)} روز از ۱۴ روز بالای هدف</Badge>}>
+    <Card title="فروش روزانه در برابر هدف" actions={<span className="flex items-center gap-2"><GoalEdit k="daily_sales_goal" compact /><Badge tone={hit >= 7 ? 'success' : 'warning'}>{fa(hit)} روز از ۱۴ روز بالای هدف</Badge></span>}>
       <div className="mb-3 grid grid-cols-3 gap-2 text-center text-12">{[['فروش امروز', sales[13]], ['فروش ۱۴ روز', sales.reduce((a, b) => a + b, 0)], ['هدف روزانه', goal]].map(([k, v]) => <div key={k as string} className="rounded-xl bg-neutral-bg p-2"><p className="text-t2">{k}</p><b className="tnum text-15">{compactToman((v as number) * 1e6)}</b></div>)}</div>
       <div className="relative flex h-44 items-end gap-1.5" role="img" aria-label="فروش روزانه در برابر هدف">
         <span className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-[#c42f2f]/50" style={{ bottom: `${(goal / mx) * 100}%` }}><span className="absolute -top-4 left-0 text-[10px] text-danger">هدف</span></span>

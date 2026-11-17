@@ -39,7 +39,7 @@ export function CouponForm({ open, onClose, onDone }: { open: boolean; onClose: 
             {f.type === 'درصدی' && <Field label="سقف مبلغ تخفیف (تومان)" error={errs.cap} help={f.cap ? toman(+f.cap) : undefined}><Input className="ltr text-left" inputMode="numeric" value={f.cap} onChange={(e) => set({ cap: digits(e.target.value) })} /></Field>}
           </div>}
           <div className="grid gap-3 sm:grid-cols-4">
-            <Field label="اعتبار (روز)"><Input className="ltr text-left" inputMode="numeric" value={f.days} onChange={(e) => set({ days: digits(e.target.value) })} /></Field>
+            <Field label="تاریخ انقضا" help={`${fa(+f.days || 0)} روز اعتبار`}><Input type="date" value={(() => { const x = new Date(Date.now() + (+f.days || 30) * 864e5); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` })()} onChange={(e) => { if (!e.target.value) return; const days = Math.max(1, Math.ceil((new Date(`${e.target.value}T23:59:00`).getTime() - Date.now()) / 864e5)); set({ days: String(days) }) }} /></Field>
             <Field label="تعداد کل" help="۰ یعنی نامحدود"><Input className="ltr text-left" inputMode="numeric" value={f.limit} onChange={(e) => set({ limit: digits(e.target.value) })} /></Field>
             <Field label="برای هر مشتری"><Input className="ltr text-left" inputMode="numeric" value={f.perUser} onChange={(e) => set({ perUser: digits(e.target.value) })} /></Field>
             <Field label="حداقل سبد (تومان)"><Input className="ltr text-left" inputMode="numeric" value={f.minCart} onChange={(e) => set({ minCart: digits(e.target.value) })} /></Field>

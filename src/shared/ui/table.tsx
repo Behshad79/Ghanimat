@@ -7,6 +7,7 @@ import { st } from '../data/statuses'
 import { Drawer, toast } from './overlay'
 import { RowMenu, type MenuItem } from './menu'
 import { csv, download, fa } from '../lib/fa'
+import { ExportDialog } from './exportDialog'
 import { mutate } from '../lib/store'
 
 export type Col<R> = { key: string; title: ReactNode; render: (r: R) => ReactNode; sort?: (r: R) => number | string; text?: (r: R) => string | number; align?: 'left'; hideMobile?: boolean; optional?: boolean; wrap?: boolean }
@@ -86,6 +87,8 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
     else setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id])
     setLast(i)
   }
+  const [expOpen, setExpOpen] = useState(false)
+  const tableOf = (src: R[]) => [shown.map((c) => (typeof c.title === 'string' ? c.title : c.key)), ...src.map((r) => shown.map((c) => (c.text ?? c.sort ?? (() => ''))(r) as string | number))]
   const exportView = () => {
     const src = sel.length ? view.filter((r) => sel.includes(rowKey(r))) : view
     download(`${name}.csv`, csv([shown.map((c) => (typeof c.title === 'string' ? c.title : c.key)), ...src.map((r) => shown.map((c) => (c.text ?? c.sort ?? (() => ''))(r)))]))
@@ -105,7 +108,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
         <div className="relative mr-auto flex items-center gap-1">
           <Button variant="ghost" size="sm" icon={max ? <Minimize2 size={14} /> : <Maximize2 size={14} />} onClick={() => { setMax(!max); setPage(0) }} title={max ? 'خروج از تمام‌صفحه (Esc)' : 'نمایش تمام‌صفحه'}><span className="hidden sm:inline">{max ? 'کوچک کردن' : 'تمام‌صفحه'}</span></Button>
           <Button variant="ghost" size="sm" icon={<Columns3 size={14} />} onClick={() => setColMenu(!colMenu)}><span className="hidden sm:inline">ستون‌ها</span></Button>
-          <Button variant="ghost" size="sm" icon={<Download size={14} />} onClick={exportView}><span className="hidden sm:inline">خروجی همین نما</span></Button>
+          <Button variant="ghost" size="sm" icon={<Download size={14} />} onClick={() => setExpOpen(true)}><span className="hidden sm:inline">خروجی</span></Button><ExportDialog open={expOpen} onClose={() => setExpOpen(false)} name={name} single period={false} columns={shown.map((c) => (typeof c.title === 'string' ? c.title : c.key))} sections={[{ id: 'view', label: `همین نما با فیلتر و جست‌وجوی فعلی (${fa(view.length)} ردیف)`, build: () => tableOf(view) }, ...(sel.length ? [{ id: 'sel', label: `فقط ردیف‌های انتخاب‌شده (${fa(sel.length)})`, build: () => tableOf(view.filter((r) => sel.includes(rowKey(r)))) }] : []), { id: 'all', label: `همهٔ ردیف‌ها بدون فیلتر (${fa(rows.length)})`, build: () => tableOf(rows) }]} />
           <Button variant="ghost" size="sm" icon={<Printer size={14} />} onClick={() => window.print()}><span className="hidden sm:inline">چاپ</span></Button>
           {colMenu && (
             <div className="anim-pop absolute top-8 left-0 z-20 w-48 rounded-md border border-line bg-surface p-2 shadow-float">

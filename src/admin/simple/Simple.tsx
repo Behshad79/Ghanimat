@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Boxes, Camera, Check, CheckCircle2, ClipboardCheck, HelpCircle, LayoutDashboard, MessageCircle, Package, PackagePlus, PhoneCall, Printer, RotateCcw, Search, Send, Star, Truck, Video, WifiOff, Zap } from 'lucide-react'
+import { ArrowRight, BookOpen, Boxes, MapPin, Camera, Check, CheckCircle2, ClipboardCheck, HelpCircle, LayoutDashboard, MessageCircle, Package, PackagePlus, PhoneCall, Printer, RotateCcw, Search, Send, Star, Truck, Video, WifiOff, Zap } from 'lucide-react'
 import { DemoBar } from '../shell/Shell'
 import { Badge, Button, cx, Input, StatusBadge, Textarea } from '@/shared/ui/base'
 import { Modal, toast } from '@/shared/ui/overlay'
@@ -10,12 +10,14 @@ import { currentUser, fakeCall, mutate, notify, permOf, setSession, useDB, useSe
 import { fa, minsLeft, num, rel, toman } from '@/shared/lib/fa'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 import { ProductImg } from '../pages/_shared'
+import { binOf } from '@/shared/data/site'
 import { PackPhotos } from '../shared/PackPhotos'
 import { ProductWizard } from '../catalog/Wizard'
 import { LiveAlert } from '../shared/LiveAlert'
+import { FindFlow, Glossary, PrintFlow } from './SimpleExtras'
 
 /** حالت سریع: نمای روزمرهٔ اپراتور و خود مدیر روی موبایل. همهٔ کارها تا آخر انجام می‌شود؛ تأیید فقط جایی که مجوز «با تأیید» باشد. */
-type Flow = null | 'orders' | 'ship' | 'msg' | 'add' | 'stock' | 'phone' | 'track' | 'returns' | 'reviews' | 'day'
+type Flow = null | 'orders' | 'ship' | 'msg' | 'add' | 'stock' | 'phone' | 'track' | 'returns' | 'reviews' | 'day' | 'find' | 'print'
 const Big = ({ children, tone = 'go', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: 'go' | 'stop' | 'plain' | 'brand' }) => (
   <button {...p} className={cx('btn flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-4 text-16 font-bold disabled:opacity-40', tone === 'go' ? 'bg-success-solid text-white' : tone === 'brand' ? 'bg-brand-solid text-white' : tone === 'stop' ? 'bg-danger-bg text-danger' : 'border border-line bg-surface text-t1', p.className)}>{children}</button>
 )
@@ -44,6 +46,8 @@ export function Simple() {
     ['phone', <PhoneCall size={22} />, 'سفارش تلفنی', 'ثبت برای مشتری پشت خط', 0, []],
     ['returns', <RotateCcw size={22} />, 'مرجوعی‌های رسیده', 'دریافت و مقایسهٔ عکس', rets.length, []],
     ['reviews', <Star size={22} />, 'دیدگاه‌ها', 'تأیید یا رد، با عکس مشتری', revs.length, revs.map((r) => r.productId)],
+    ['find', <MapPin size={22} />, 'کالا کجاست؟', 'قفسه و خانهٔ هر کالا', 0, []],
+    ['print', <Printer size={22} />, 'چاپ فاکتور و برچسب', 'فاکتور، برچسب پستی، برگهٔ جمع‌آوری', 0, []],
     ['track', <Search size={22} />, 'پیگیری سفارش', 'با نام، موبایل یا شماره', 0, []],
     ['day', <ClipboardCheck size={22} />, 'کارهای امروز', 'شروع و پایان روز', 0, []],
   ]
@@ -82,9 +86,11 @@ export function Simple() {
         {flow === 'reviews' && <ReviewsFlow />}
         {flow === 'track' && <TrackFlow />}
         {flow === 'day' && <DayFlow done={home} />}
+        {flow === 'find' && <FindFlow />}
+        {flow === 'print' && <PrintFlow />}
       </main>
       <Modal open={help} onClose={() => setHelp(false)} title="راهنما و کمک">
-        <div className="space-y-2"><Big tone="plain" onClick={() => { setHelp(false); toast('ویدیوی ۳۰ ثانیه‌ای همین بخش پخش می‌شود.') }}><Video size={20} />ویدیوی آموزشی همین کار</Big><Big tone="plain" onClick={() => { setHelp(false); window.dispatchEvent(new CustomEvent('copilot', { detail: 'در حالت سریع چطور سفارش را بسته‌بندی و ارسال کنم؟' })) }}><MessageCircle size={20} />پرسش از دستیار</Big>{!isBoss && <Big tone="brand" onClick={() => { setHelp(false); notify('اپراتور کمک خواست', `${me.name} از حالت سریع کمک خواست.`, '/simple', 'عملیات', 'warning'); toast('به مدیر خبر داده شد.') }}><PhoneCall size={20} />خبر دادن به مدیر</Big>}</div>
+        <div className="space-y-2"><details className="rounded-xl border border-line p-3"><summary className="flex cursor-pointer items-center gap-2 text-15 font-bold"><BookOpen size={18} />هر وضعیت یعنی چه؟</summary><div className="mt-3"><Glossary /></div></details><Big tone="plain" onClick={() => { setHelp(false); toast('ویدیوی ۳۰ ثانیه‌ای همین بخش پخش می‌شود.') }}><Video size={20} />ویدیوی آموزشی همین کار</Big><Big tone="plain" onClick={() => { setHelp(false); window.dispatchEvent(new CustomEvent('copilot', { detail: 'در حالت سریع چطور سفارش را بسته‌بندی و ارسال کنم؟' })) }}><MessageCircle size={20} />پرسش از دستیار</Big>{!isBoss && <Big tone="brand" onClick={() => { setHelp(false); notify('اپراتور کمک خواست', `${me.name} از حالت سریع کمک خواست.`, '/simple', 'عملیات', 'warning'); toast('به مدیر خبر داده شد.') }}><PhoneCall size={20} />خبر دادن به مدیر</Big>}</div>
       </Modal>
     </div>
   )
@@ -174,7 +180,7 @@ function StockFlow() {
   return (
     <div className="page-enter"><h2 className="mb-3 text-20 font-bold">موجودی و قیمت</h2><Input className="mb-3 h-12" value={q} onChange={(e) => setQ(e.target.value)} placeholder="جست‌وجوی کالا" />
       <ul className="space-y-2">{list.map((p) => { const units = d.units.filter((u) => u.productId === p.id && u.status === 'unit.published'); const price = units[0]?.price ?? p.price ?? 0; return (
-        <li key={p.id} className="rounded-xl border border-line bg-surface p-3"><div className="flex items-center gap-3"><ProductImg pid={p.id} size={52} /><div className="min-w-0 flex-1"><p className="truncate text-14 font-semibold">{p.title}</p><p className="tnum text-13 text-t2">{toman(price)}</p></div>
+        <li key={p.id} className="rounded-xl border border-line bg-surface p-3"><div className="flex items-center gap-3"><ProductImg pid={p.id} size={52} /><div className="min-w-0 flex-1"><p className="truncate text-14 font-semibold">{p.title}</p><p className="tnum text-13 text-t2">{toman(price)}</p>{units.length > 0 && <p className="flex items-center gap-1 text-12 text-brand"><MapPin size={12} />{[...new Set(units.map((u) => binOf(u.shelf)))].slice(0, 3).join('، ')}</p>}</div>
           {p.mode === 'qty' ? <div className="flex items-center gap-1.5"><button className="btn grid size-10 place-items-center rounded-lg border border-line text-18" onClick={() => mutate((x) => { const t = x.products.find((y) => y.id === p.id)!; t.qty = { tehran: Math.max(0, (t.qty?.tehran ?? 0) - 1), mahabad: t.qty?.mahabad ?? 0 } }, { action: 'کاهش موجودی (حالت سریع)', target: p.title })}>−</button><b className="tnum w-8 text-center text-16">{fa(p.qty?.tehran ?? 0)}</b><button className="btn grid size-10 place-items-center rounded-lg border border-line text-18" onClick={() => mutate((x) => { const t = x.products.find((y) => y.id === p.id)!; t.qty = { tehran: (t.qty?.tehran ?? 0) + 1, mahabad: t.qty?.mahabad ?? 0 } }, { action: 'افزایش موجودی (حالت سریع)', target: p.title })}>+</button></div> : <Badge dot={false}>{fa(units.length)} واحد</Badge>}</div>
           {edit?.id === p.id ? <div className="mt-2 flex gap-2"><Input className="ltr h-11 text-left font-mono" inputMode="numeric" value={edit.price} onChange={(e) => setEdit({ id: p.id, price: e.target.value })} /><Button variant="primary" onClick={() => { const n = Number(edit.price.replace(/\D/g, '')); const cost = units[0]?.cost ?? p.cost ?? 0; if (!n) return toast('قیمت را وارد کنید.', { tone: 'err' }); if (cost && n < cost) return toast(`قیمت از قیمت تمام‌شده (${toman(cost)}) کمتر است.`, { tone: 'err' }); if (!ask('تغییر قیمت', `تغییر قیمت ${p.title} به ${toman(n)}`)) return; mutate((x) => { const t = x.products.find((y) => y.id === p.id)!; if (t.mode === 'qty') t.price = n; x.units.filter((u) => u.productId === p.id && u.status === 'unit.published').forEach((u) => (u.price = n)) }, { action: 'تغییر قیمت (حالت سریع)', target: p.title, after: toman(n) }); notify('قیمت تغییر کرد', `«${p.title}» به ${toman(n)} تغییر کرد.`, `/admin/catalog/${p.id}`); setEdit(null); toast('قیمت جدید در سایت اعمال شد.') }}>ذخیره</Button></div>
             : <button className="mt-2 text-13 font-medium text-brand" onClick={() => setEdit({ id: p.id, price: String(price) })}>تغییر قیمت</button>}

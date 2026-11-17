@@ -5,7 +5,7 @@ const inMin = (min: number) => new Date(now + min * 60000).toISOString()
 
 export type Courier = { name: string; phone: string; plate: string; vehicle: string; eta: number; code: string; cost: number; company?: string }
 export type Shipment = { id: string; warehouse: string; method: string; shipFee?: number; packPhotos?: { at: string; by: string; src: string }[]; status: string; sla: string; items: { productId: string; unitId: string; qty: number; price: number }[]; courier: Courier | null; tracking: string; trackingUrl?: string; trackingCarrier?: string; allocReason: string }
-export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string; saleMode?: 'online' | 'inquiry'; featured?: boolean; showQA?: boolean; showReviews?: boolean; headCode?: string }
+export type Pdp = { videos: { kind: string; url: string }[]; flaws: { zone: string; status: string; note: string }[]; importRoute: string; variantGroup: string; variantLabel: string; variant?: Record<string, string>; covered: string; notCovered: string; saleMode?: 'online' | 'inquiry'; amazonUrl?: string; featured?: boolean; showQA?: boolean; showReviews?: boolean; headCode?: string }
 export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 export type Unit = { id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
@@ -28,6 +28,9 @@ import { makeStoreCfg } from './storeCfg'
 import { makeQuestions, makeReviewMeta } from './qa'
 import { makeReasonPresets } from './reasons'
 import { makeAcct } from './acct'
+import { makeLots, makePartners } from './partners'
+import { makeNudges } from './nudges'
+import { makeCalls } from './calls'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
@@ -192,6 +195,10 @@ const makeSeedBase = () => ({
     { key: 'reserve_minutes', group: 'موجودی و سبد', name: 'مدت رزرو واحد هنگام پرداخت', value: 15, unit: 'دقیقه', desc: 'واحد از شروع پرداخت برای این مدت قفل می‌شود.', sensitive: false, usedIn: ['صفحهٔ پرداخت', 'مانیتور رزروها', 'قفل بین کانال‌ها'], history: [] },
     { key: 'low_stock_threshold', group: 'موجودی و سبد', name: 'آستانهٔ «موجودی محدود»', value: 2, unit: 'عدد', desc: 'کمتر یا مساوی این تعداد، بج «موجودی محدود» نمایش داده می‌شود.', sensitive: false, usedIn: ['بج چرخشی کارت محصول', 'صفحهٔ کالا'], history: [] },
     { key: 'decision_hours', group: 'سفارش', name: 'مهلت تصمیم مشتری در کمبود تأمین', value: 24, unit: 'ساعت', desc: 'پس از پایان مهلت، قلم تأمین‌نشده خودکار لغو می‌شود.', sensitive: true, usedIn: ['پنل مشتری › سفارش جاری', 'پیامک درخواست تصمیم', 'لغو خودکار'], history: [] },
+    { key: 'daily_sales_goal', group: 'اهداف', name: 'هدف فروش روزانه', value: 600000000, unit: 'تومان', desc: 'خط هدف نمودار «فروش روزانه در برابر هدف» و یادداشت کارت «فروش امروز».', sensitive: false, usedIn: ['خانه › فروش روزانه در برابر هدف', 'کارت فروش امروز', 'گزارش روزانه'], history: [] },
+    { key: 'monthly_sales_goal', group: 'اهداف', name: 'هدف فروش ماهانه', value: 15000000000, unit: 'تومان', desc: 'پیشرفت ماه در داشبورد و گزارش‌های زمان‌بندی‌شده.', sensitive: false, usedIn: ['خانه', 'تحلیل و گزارش'], history: [] },
+    { key: 'ontime_goal', group: 'اهداف', name: 'هدف تحویل به‌موقع', value: 95, unit: 'درصد', desc: 'زیر این مقدار، کارت «تحویل به‌موقع» هشدار می‌دهد.', sensitive: false, usedIn: ['خانه', 'ارسال ← تحلیل'], history: [] },
+    { key: 'margin_goal', group: 'اهداف', name: 'هدف حاشیهٔ سود', value: 18, unit: 'درصد', desc: 'حاشیهٔ هدف در میز قیمت‌گذاری و کارت سود.', sensitive: false, usedIn: ['میز قیمت‌گذاری', 'کارت سود'], history: [] },
     { key: 'margin_floor', group: 'قیمت', name: 'کف حاشیهٔ سود', value: 8, unit: 'درصد', desc: 'قیمتی که حاشیه را زیر این مقدار ببرد، بدون تأیید مدیر ذخیره نمی‌شود.', sensitive: true, usedIn: ['میز قیمت‌گذاری', 'پیشنهاد قیمت AI', 'قواعد انتشار ترب'], history: [] },
     { key: 'refund_cap', group: 'پرداخت', name: 'سقف بازگشت وجه بدون تأیید دوم', value: 20000000, unit: 'تومان', desc: 'بازگشت وجه بالاتر از این مبلغ به تأیید نفر دوم می‌رود.', sensitive: true, usedIn: ['بازگشت وجه', 'مرجوعی', 'صندوق تأییدها'], history: [] },
     { key: 'installments_shown', group: 'پرداخت', name: 'تعداد اقساط نمایش‌داده‌شده', value: 4, unit: 'قسط', desc: 'از سرویس اقساطی پیش‌فرض خوانده می‌شود.', sensitive: false, usedIn: ['بج چرخشی کارت محصول', 'صفحهٔ کالا', 'سبد خرید'], history: [] },
@@ -202,7 +209,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

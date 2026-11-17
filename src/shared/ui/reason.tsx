@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MessageSquareText, Pencil, Plus } from 'lucide-react'
-import { Badge, Button, cx, Textarea, Toggle } from './base'
+import { Badge, Button, cx, isOther, Textarea, Toggle } from './base'
 import { Modal, toast } from './overlay'
 import { currentUser, mutate, useDB } from '../lib/store'
 import { rel } from '../lib/fa'
@@ -25,8 +25,8 @@ export function ReasonHost() {
     <Modal open={!!p} onClose={() => close(null)} title={p?.title ?? ''} footer={<><Button variant="primary" disabled={text.trim().length < 3} onClick={() => close(text.trim())}>ثبت دلیل و ادامه</Button><Button variant="ghost" onClick={() => close(null)}>انصراف</Button></>}>
       {p && <div className="space-y-3">
         <p className="text-12 text-t2">{d.reasonPresets?.[p.kind]?.other === false ? 'یکی از دلیل‌های آماده را انتخاب کنید (متن آزاد در تنظیمات خاموش است).' : 'دلیل را بنویسید یا از گزینه‌های آماده انتخاب کنید. بعداً هم از «سوابق دلیل‌ها» قابل ویرایش است.'}</p>
-        <div className="flex flex-wrap gap-1.5">{(d.reasonPresets?.[p.kind]?.items.filter((x) => x.on).map((x) => x.text) ?? REASON_PRESETS[p.kind] ?? []).map((r) => <button key={r} type="button" onClick={() => setText(r)} className={cx('rounded-full border px-2.5 py-1 text-12', text === r ? 'border-transparent bg-brand-solid text-white' : 'border-line hover:border-brand')}>{r}</button>)}</div>
-        <Textarea aria-label="متن دلیل" rows={3} value={text} readOnly={d.reasonPresets?.[p.kind]?.other === false} onChange={(e) => setText(e.target.value)} placeholder="مثلاً: بر اساس تصاویر ارسالی، ایراد ناشی از آسیب فیزیکی پس از تحویل است." />
+        <div className="flex flex-wrap gap-1.5">{(d.reasonPresets?.[p.kind]?.items.filter((x) => x.on).map((x) => x.text) ?? REASON_PRESETS[p.kind] ?? []).map((r) => <button key={r} type="button" onClick={() => { if (isOther(r)) { setText(''); setTimeout(() => (document.querySelector('[aria-label="متن دلیل"]') as HTMLTextAreaElement | null)?.focus()) } else setText(r) }} className={cx('rounded-full border px-2.5 py-1 text-12', text === r ? 'border-transparent bg-brand-solid text-white' : 'border-line hover:border-brand')}>{r}</button>)}</div>
+        <Textarea aria-label="متن دلیل" rows={3} value={text} readOnly={d.reasonPresets?.[p.kind]?.other === false && !isOther(text)} onChange={(e) => setText(e.target.value)} placeholder="مثلاً: بر اساس تصاویر ارسالی، ایراد ناشی از آسیب فیزیکی پس از تحویل است." />
         <label className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-13">نمایش این دلیل برای مشتری (پنل کاربری و پیامک)<Toggle on={visible} onChange={setVisible} label="نمایش برای مشتری" /></label>
       </div>}
     </Modal>

@@ -1,8 +1,10 @@
+import { SupportCsat } from '../cx/SupportCsat'
+import { OtherUpload } from '@/shared/ui/upload'
 import { tierOf } from '@/shared/data/storeCfg'
 import { DeletionQueue } from '../customer/AccountExtras'
 import { QuestionsTab, ReviewMetaBlock } from '../cx/ReviewExtras'
 import { NeedInfoButton, OfferReturnButton, TicketContext, TicketStatusPicker, TicketSteps, TICKET_ST } from '../cx/TicketExtras'
-import { Select } from '@/shared/ui/base'
+import { Select, Toggle } from '@/shared/ui/base'
 import { STATUS as TST } from '@/shared/data/statuses'
 import { Attachments, Composer } from '@/shared/ui/chat'
 import type { Att } from '@/shared/data/seed'
@@ -16,7 +18,7 @@ import { DataTable } from '@/shared/ui/table'
 import { confirm, Drawer, Hint, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { EntityManager } from '@/shared/ui/entity'
-import { mutate, notify, snapshot } from '@/shared/lib/store'
+import { mutate, notify, snapshot, useDB } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
 
@@ -43,7 +45,7 @@ export function Customers() {
           const checks: [string, boolean][] = [['شناسهٔ ملی ۱۱ رقمی است', /^\d{11}$/.test(nid)], ['کد اقتصادی با شناسهٔ ملی مطابقت دارد', !!eco && (eco === nid || eco.length === 12)], ['شمارهٔ ثبت وارد شده', !!L.regNo], ['نشانی مطابق روزنامهٔ رسمی', !!L.address], ['آگهی روزنامهٔ رسمی بارگذاری شده', L.docs !== false], ['اطلاعات بانکی شرکت (برای بازگشت وجه)', !!L.iban || true]]
           return <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">بررسی خودکار اطلاعات</p><ul className="space-y-1 text-12">{checks.map(([k, ok]) => <li key={k} className={ok ? 'text-success' : 'text-danger'}>{ok ? '✓' : '✗'} {k}</li>)}</ul></div>
-            <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">مدارک ارسالی</p><ul className="space-y-1 text-12">{['آگهی-روزنامه-رسمی.pdf', 'کارت-شناسایی-نماینده.jpg', 'معرفی‌نامهٔ نماینده.pdf'].map((f) => <li key={f} className="flex items-center justify-between"><span className="ltr">{f}</span><button className="text-brand" onClick={() => toast(`پیش‌نمایش «${f}» در نسخهٔ واقعی از فضای ذخیره‌سازی باز می‌شود.`)}>مشاهده</button></li>)}</ul><p className="mt-2 text-11 text-t2">تا زمان تأیید، فاکتور سفارش‌های حقوقی موقت صادر می‌شود. زمان بررسی: تا ۲ روز کاری.</p></div>
+            <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">مدارک ارسالی</p><ul className="space-y-1 text-12">{['آگهی-روزنامه-رسمی.pdf', 'کارت-شناسایی-نماینده.jpg', 'معرفی‌نامهٔ نماینده.pdf', ...((L.extraDocs ?? []) as string[])].map((f) => <li key={f} className="flex items-center justify-between"><span className="ltr">{f}</span><button className="text-brand" onClick={() => toast(`پیش‌نمایش «${f}» در نسخهٔ واقعی از فضای ذخیره‌سازی باز می‌شود.`)}>مشاهده</button></li>)}</ul><div className="mt-2"><OtherUpload label="افزودن مدرک دیگر" onFile={(fl, t) => { mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.extraDocs = [...(l.extraDocs ?? []), `${t} (${fl.name})`] }, { action: 'افزودن مدرک حقوقی', target: c.name, after: t }); toast(`«${t}» به مدارک اضافه شد.`) }} /></div><p className="mt-2 text-11 text-t2">تا زمان تأیید، فاکتور سفارش‌های حقوقی موقت صادر می‌شود. زمان بررسی: تا ۲ روز کاری.</p></div>
           </div> })()}
         <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" disabled={c.legal!.verified} onClick={() => { mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = true; l.status = 'verified' }, { action: 'تأیید حساب حقوقی', target: c.name }); toast('حساب حقوقی تأیید شد و مشتری با پیامک خبردار شد.') }}>تأیید حساب حقوقی</Button><Button onClick={async () => { if (!(await askReason({ kind: 'legal', ref: c.id, status: 'نیاز به تکمیل', title: `چه چیزی باید تکمیل شود؟ (${c.name})` }))) return; mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = false; l.status = 'needs_docs' }, { action: 'درخواست تکمیل مدارک حقوقی', target: c.name }); toast('درخواست بارگذاری دوبارهٔ روزنامهٔ رسمی برای مشتری ارسال شد.') }}>درخواست تکمیل مدارک</Button><Button variant="danger" onClick={async () => { if (!(await askReason({ kind: 'legal', ref: c.id, status: 'ردشده', title: `علت رد حساب حقوقی ${c.name}` }))) return; mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = false; l.status = 'rejected' }, { action: 'رد حساب حقوقی', target: c.name }); toast('حساب حقوقی رد شد و علت برای مشتری نمایش داده می‌شود.') }}>رد با ذکر علت</Button></div>
         <div className="mt-4"><ReasonLog kind="legal" refId={c.id} /></div>
@@ -92,6 +94,7 @@ export function Support() {
   const draft = () => { if (!t) return; const o = d.orders.find((x) => x.id === t.orderId); setText(`سلام ${customer(t.customerId).name.split(' ')[0]} عزیز. دربارهٔ سفارش ${t.orderId}${o ? ` (${o.shipments[0]?.method ?? ''})` : ''} بررسی کردم. ${/پیک/.test(t.subject) ? 'پیک در مسیر است و حدود ۱۴ دقیقهٔ دیگر می‌رسد.' : /شارژر|نبود/.test(t.subject) ? 'حق با شماست؛ کابل باید داخل جعبه می‌بود. همین امروز رایگان برای شما ارسال می‌کنیم.' : 'نتیجه را تا یک ساعت دیگر اطلاع می‌دهم.'}`) }
   return (
     <Page title="پشتیبانی" module="support" sub="صندوق ورودی یکپارچه: چت سایت، تیکت، تماس و پیام‌رسان‌ها" empty={{ title: 'صندوق ورودی خالی است.', desc: 'پیام‌های مشتریان از همهٔ کانال‌ها اینجا می‌آید.' }}>
+      <SupportCsat />
       {!t ? <Card><EmptyState title="همهٔ گفت‌وگوها پاسخ داده شده است." desc="پیام تازه که برسد، کارشناس کشیک طبق زنجیرهٔ کانال‌ها خبردار می‌شود." /></Card> : (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
           <Card pad={false} className="self-start"><div className="border-b border-line p-2"><Select value={tf} onChange={setTf} options={[['active', `باز (${fa(open.length)})`], ['all', `همه (${fa(d.tickets.length)})`], ...TICKET_ST.map((k) => [k, `${TST[k].label} (${fa(d.tickets.filter((x) => x.status === k).length)})`] as [string, string])]} /></div><ul className="divide-y divide-line">{listed.length === 0 && <li className="p-4 text-12 text-t2">تیکتی با این وضعیت نیست.</li>}{listed.map((x) => (
@@ -126,8 +129,8 @@ export function Reviews() {
   const z = zoom ? d.reviews.find((r) => r.id === zoom.rid)?.media.find((m) => m.id === zoom.mid) : undefined
   return (
     <Page title="دیدگاه‌ها و پرسش‌ها" module="reviews" sub={`هدیهٔ دیدگاه ${toman(rule('review_gift'))} پس از پایان مهلت مرجوعی؛ هدیهٔ عکس جدا محاسبه می‌شود.`} empty={{ title: 'هنوز دیدگاهی ثبت نشده است.', desc: 'دیدگاه‌ها و عکس‌های خریداران پیش از نمایش در سایت اینجا تأیید می‌شوند.' }}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'pending', label: 'منتظر تأیید', count: d.reviews.filter((r) => r.status === 'review.pending').length }, { id: 'media', label: 'دارای عکس یا ویدیو', count: d.reviews.filter((r) => r.media?.length).length }, { id: 'buyers', label: 'خریداران', count: d.reviews.filter((r) => buyOrder(r)).length }, { id: 'visitors', label: 'غیرخریدار', count: d.reviews.filter((r) => !buyOrder(r)).length }, { id: 'reported', label: 'گزارش‌شده', count: d.reviews.filter((r) => (d.reviewMeta[r.id]?.reports.length ?? 0) > 0).length }, { id: 'all', label: 'همه', count: d.reviews.length }, { id: 'questions', label: 'پرسش و پاسخ', count: d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length }]} />}>
-      {tab === 'questions' ? <QuestionsTab /> : rows.length === 0 ? <Card><EmptyState title="موردی در این بخش نیست." desc="همهٔ دیدگاه‌ها بررسی شده‌اند." /></Card> : (
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'pending', label: 'منتظر تأیید', count: d.reviews.filter((r) => r.status === 'review.pending').length }, { id: 'media', label: 'دارای عکس یا ویدیو', count: d.reviews.filter((r) => r.media?.length).length }, { id: 'buyers', label: 'خریداران', count: d.reviews.filter((r) => buyOrder(r)).length }, { id: 'visitors', label: 'غیرخریدار', count: d.reviews.filter((r) => !buyOrder(r)).length }, { id: 'reported', label: 'گزارش‌شده', count: d.reviews.filter((r) => (d.reviewMeta[r.id]?.reports.length ?? 0) > 0).length }, { id: 'all', label: 'همه', count: d.reviews.length }, { id: 'amazon', label: 'نظرات آمازون', count: Object.values(d.extReviews ?? {}).flat().length }, { id: 'questions', label: 'پرسش و پاسخ', count: d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length }]} />}>
+      {tab === 'amazon' ? <AmazonTab /> : tab === 'questions' ? <QuestionsTab /> : rows.length === 0 ? <Card><EmptyState title="موردی در این بخش نیست." desc="همهٔ دیدگاه‌ها بررسی شده‌اند." /></Card> : (
         <div className="stagger grid gap-4 xl:grid-cols-2">{rows.map((r) => (
           <Card key={r.id} title={<span className="flex items-center gap-2"><ProductImg pid={r.productId} size={36} /><button className="text-right hover:text-brand" onClick={() => nav(`/admin/catalog/${r.productId}`)}>{product(r.productId).title}</button></span>} actions={<StatusBadge s={r.status} />}>
             <div className="mb-2 flex flex-wrap items-center gap-2 text-12"><b>{customer(r.customerId).name}</b>{r.verified && <Badge tone="success" dot={false}>خریدار تأییدشده</Badge>}<span className="tnum flex items-center gap-0.5">{fa(r.rating)}<Star size={12} className="fill-[#ffc24b] text-[#ffc24b]" /></span><span className="text-t2">{rel(r.at)}</span>{r.ai !== 'سالم' && <Badge tone="danger">{r.ai}</Badge>}</div>
@@ -152,4 +155,12 @@ export function Reviews() {
       </Modal>
     </Page>
   )
+}
+
+/** نظرات آمازون: نظرهایی که از لینک آمازون هر کالا انتخاب شده و با همین برچسب در صفحهٔ کالا نمایش داده می‌شود */
+function AmazonTab() {
+  const d = useDB(); const nav = useNavigate(); const all = Object.entries(d.extReviews ?? {})
+  if (!all.length) return <Card><EmptyState title="هنوز نظر آمازونی اضافه نشده است." desc="در فرم کالا، گام «توضیحات»، لینک آمازون را بگذارید و نظرها را انتخاب کنید." /></Card>
+  return <div className="space-y-4">{all.map(([pid, list]) => <Card key={pid} title={<span className="flex items-center gap-2"><ProductImg pid={pid} size={32} /><button className="text-right hover:text-brand" onClick={() => nav(`/admin/catalog/${pid}`)}>{d.products.find((p) => p.id === pid)?.title}</button></span>} actions={<Badge dot={false}>نظرات آمازون</Badge>}>
+    <ul className="space-y-2">{list.map((r) => <li key={r.id} className={cx('rounded-xl border border-line p-3 text-13', !r.show && 'opacity-50')}><p className="flex items-center gap-2 text-12"><b className="ltr">{r.author}</b><span>{'★'.repeat(r.rating)}</span><span className="text-t3">{r.country}</span><span className="mr-auto"><Toggle on={r.show} label="نمایش در صفحهٔ کالا" onChange={(v) => mutate((x) => { x.extReviews[pid].find((y) => y.id === r.id)!.show = v }, { action: v ? 'نمایش نظر آمازون' : 'پنهان‌کردن نظر آمازون', target: pid })} /></span></p><p className="mt-1">{r.textFa}</p></li>)}</ul></Card>)}</div>
 }

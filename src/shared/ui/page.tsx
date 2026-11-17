@@ -8,6 +8,7 @@ import { Spark } from './charts'
 import { isZero, kpiAnim, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
 import { can, useSession } from '../lib/store'
 import { rel, signedPct } from '../lib/fa'
+import { KpiDetail } from './kpiDetail'
 
 /** قالب صفحه: عنوان و وضعیت → اقدام اصلی (فقط یکی) → محتوا. «منوی حالت‌ها» همین‌جا اعمال می‌شود (بخش ۱۸.۲). */
 export function Page({ title, sub, badge, actions, primary, children, module, empty, back, tabs }: {
@@ -50,9 +51,11 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
   const nav = useNavigate()
   // قانون طراحی غنیمت: هر روند کاهشی قرمز و هر روند افزایشی سبز است، مستقل از اینکه کاهش آن شاخص خوب باشد یا بد (goodDown فقط معنا را در راهنما نگه می‌دارد)
   const good = delta === undefined ? true : delta >= 0; void goodDown
-  return (
-    <div role={to ? 'link' : undefined} tabIndex={to ? 0 : undefined} onClick={() => to && nav(to)} onKeyDown={(e) => e.key === 'Enter' && to && nav(to)}
-      className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', to && 'lift cursor-pointer', to && !featured && 'hover:border-brand/40')}>
+  // قانون: هر کارت شاخص یک CTA است؛ با «to» به صفحهٔ منبع می‌رود، بدون آن جزئیات منبع و روش محاسبه باز می‌شود
+  const [info, setInfo] = useState(false); const go = () => (to ? nav(to) : setInfo(true))
+  return (<>
+    <div role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}
+      className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', 'lift cursor-pointer', !featured && 'hover:border-brand/40')}>
       {featured && <span className="pointer-events-none absolute -top-12 -left-12 size-36 rounded-full bg-white/10" />}
       <span aria-hidden className={cx('kpi-mark pointer-events-none absolute -bottom-5 -left-4 opacity-[0.07] transition-transform duration-700 group-hover:-translate-y-1 group-hover:rotate-[-8deg]', featured ? 'text-white opacity-[0.12]' : T.text)}>{kpiIcon(label, 96)}</span>
       {urgent && <span aria-hidden className={cx('absolute inset-y-3 right-0 w-1 rounded-l-full', t === 'danger' ? 'bg-danger' : 'bg-warning')} />}
@@ -60,7 +63,8 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
         <span className="flex min-w-0 items-center gap-2"><span className={cx('kpi-ico grid size-9 shrink-0 place-items-center rounded-xl', kpiAnim(label), featured ? 'bg-white/15 text-white' : T.bubble)}>{icon ?? kpiIcon(label)}</span><span className={cx('truncate text-13 font-medium', featured ? 'text-white/90' : urgent ? 'text-t1' : 'text-t2')}>{label}</span>{hint && !featured && <Hint k={hint} />}</span>
         <span className="flex items-center gap-1">
           <button title="چرا تغییر کرد؟" onClick={(e) => { e.stopPropagation(); askCopilot(`چرا «${label}» تغییر کرد؟`) }} className={cx('hidden opacity-0 sm:inline transition-opacity group-hover:opacity-100', featured ? 'text-white/80' : 'text-t3 hover:text-brand')}><Sparkles size={13} /></button>
-          {to && <span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}
+          <button aria-label={`این عدد از کجا آمده؟ ${label}`} title="این عدد از کجا آمده؟" onClick={(e) => { e.stopPropagation(); setInfo(true) }} className={cx('grid size-6 place-items-center rounded-full text-11 font-bold', featured ? 'text-white/80 hover:bg-white/15' : 'text-t3 hover:bg-neutral-bg hover:text-brand')}>؟</button>
+          {<span className={cx('grid size-7 place-items-center rounded-full border transition-colors', featured ? 'border-white/30 text-white' : 'border-line text-t2 group-hover:border-brand group-hover:text-brand')}><ArrowUpLeft size={14} /></span>}
         </span>
       </div>
       <div className="relative mt-3 flex items-center justify-between gap-2"><p className={cx('tnum min-w-0 truncate text-18 font-bold whitespace-nowrap sm:text-24', urgent && t === 'danger' && 'text-danger')} title={full}>{num !== undefined && fmt ? <CountUp value={num} format={fmt} /> : value}</p>{urgent && <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap', t === 'danger' ? 'bg-danger-solid text-white' : 'bg-warning-bg text-warning')}>{t === 'danger' ? 'نیاز به اقدام' : 'پیگیری'}</span>}</div>
@@ -74,7 +78,8 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
       </div>
       {note && delta !== undefined && <p className={cx('relative mt-1 text-11 leading-4', featured ? 'text-white/85' : 'text-t2')}>{note}</p>}
     </div>
-  )
+    <KpiDetail open={info} onClose={() => setInfo(false)} label={label} value={num !== undefined && fmt ? fmt(num) : value} delta={delta} spark={spark} note={note} to={to} />
+  </>)
 }
 
 export type TL = { at: string; who?: string; text: ReactNode; tone?: 'ok' | 'warn' | 'err' | 'ai' }

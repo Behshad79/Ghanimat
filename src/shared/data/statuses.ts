@@ -41,6 +41,7 @@ export const STATUS: Record<string, { label: string; tone: Tone }> = {
   'product.draft': { label: 'پیش‌نویس', tone: 'neutral' },
   'product.scheduled': { label: 'زمان‌بندی‌شده', tone: 'info' },
   'product.pending': { label: 'منتظر تأیید', tone: 'warning' },
+  'product.incoming': { label: 'در راه (پیش‌ساخت)', tone: 'info' },
   'product.rejected': { label: 'ردشده', tone: 'danger' },
   'product.needs_fix': { label: 'نیازمند اصلاح', tone: 'warning' },
   // مرجوعی

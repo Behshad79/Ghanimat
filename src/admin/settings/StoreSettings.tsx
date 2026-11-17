@@ -188,10 +188,8 @@ export function CheckoutRules() {
         </Sec>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Sec title={<span className="flex items-center gap-1.5"><Wallet size={15} />کیف پول و بازگشت وجه</span>}>
+        <Sec title={<span className="flex items-center gap-1.5"><Wallet size={15} />کش‌بک</span>} sub="حداقل برداشت، سقف شارژ و روش پیش‌فرض بازگشت وجه در «تنظیمات سایت و پنل مشتری ← کیف پول و برداشت» است.">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="حداقل موجودی قابل برداشت (تومان)" help={toman(v.walletMinWithdraw)}>{numIn('walletMinWithdraw')}</Field>
-            <Field label="سقف شارژ کیف پول (تومان)" help={toman(v.walletMaxCharge)}>{numIn('walletMaxCharge')}</Field>
             <Field label={`کش‌بک: ${pct(v.cashback)}`} help="۰ یعنی خاموش. بعد از پایان مهلت مرجوعی به کیف پول می‌نشیند."><input type="range" min={0} max={10} value={v.cashback} onChange={(e) => C.set({ cashback: +e.target.value })} className="w-full accent-[var(--brand)]" /></Field>
           </div>
         </Sec>

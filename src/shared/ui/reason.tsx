@@ -6,17 +6,10 @@ import { currentUser, mutate, useDB } from '../lib/store'
 import { rel } from '../lib/fa'
 
 /** دلیل‌های آماده هر نوع اقدام (طبق متن‌های فایل فیگما)؛ در «تنظیمات سایت و پنل مشتری» قابل ویرایش است */
-export const REASON_PRESETS: Record<string, string[]> = {
-  order: ['کالا ناموجود شد', 'درخواست مشتری', 'پرداخت تأیید نشد', 'شک به تقلب در سفارش', 'آدرس خارج از محدودهٔ ارسال', 'پایان مهلت تصمیم مشتری'],
-  return: ['آسیب فیزیکی پس از تحویل', 'کالا با برگهٔ QC مطابقت دارد', 'متعلقات یا جعبه ناقص است', 'پایان مهلت مرجوعی', 'سریال با واحد ارسالی مطابقت ندارد', 'تأیید بخشی: فقط بخشی از کالاها پذیرفته شد'],
-  warranty: ['ایراد ناشی از آسیب فیزیکی پس از تحویل است و شامل پوشش گارانتی نمی‌شود', 'آب‌خوردگی', 'مهر یا برچسب گارانتی دست‌کاری شده', 'مدت گارانتی تمام شده', 'مدارک ناقص است؛ تصویر کالا و برچسب جعبه را پیوست کنید'],
-  review: ['حاوی اطلاعات تماس یا لینک', 'توهین یا لحن نامناسب', 'نامرتبط با کالا', 'تبلیغ کالا یا فروشگاه دیگر', 'عکس نامرتبط یا نامناسب'],
-  legal: ['کد اقتصادی با شناسهٔ ملی شرکت مطابقت ندارد', 'تصویر آگهی روزنامهٔ رسمی خوانا نیست', 'شناسهٔ ملی باید ۱۱ رقم باشد', 'نشانی با روزنامهٔ رسمی مطابقت ندارد', 'اطلاعات بانکی شرکت ناقص است'],
-  withdrawal: ['شبا به نام کاربر نیست', 'کارت و شبا برای یک حساب نیستند', 'مبلغ بیشتر از موجودی قابل برداشت', 'استعلام بانکی انجام نشد'],
-  cancel: ['سفارش ارسال شده است', 'کالا آمادهٔ تحویل به پیک است', 'سفارش اقساطی؛ لغو از سرویس اقساطی انجام شود'],
-  ticket: ['مشکل حل شد', 'پاسخ ندادن مشتری در مهلت', 'تکراری', 'خارج از حوزهٔ پشتیبانی'],
-}
-export type ReasonKind = keyof typeof REASON_PRESETS
+export { REASON_PRESETS } from '../data/reasons'
+import { REASON_PRESETS } from '../data/reasons'
+export type { ReasonKind } from '../data/reasons'
+import type { ReasonKind } from '../data/reasons'
 
 type Ask = { kind: ReasonKind; ref: string; status: string; title: string; resolve: (r: string | null) => void }
 let pending: Ask | null = null; const subs = new Set<() => void>()
@@ -24,16 +17,16 @@ let pending: Ask | null = null; const subs = new Set<() => void>()
 export const askReason = (o: Omit<Ask, 'resolve'>) => new Promise<string | null>((resolve) => { pending = { ...o, resolve }; subs.forEach((f) => f()) })
 
 export function ReasonHost() {
-  const [, tick] = useState(0); const [text, setText] = useState(''); const [visible, setVisible] = useState(true)
+  const d = useDB(); const [, tick] = useState(0); const [text, setText] = useState(''); const [visible, setVisible] = useState(true)
   useEffect(() => { const f = () => { tick((x) => x + 1); setText(''); setVisible(true) }; subs.add(f); return () => { subs.delete(f) } }, [])
   const p = pending
   const close = (val: string | null) => { if (!p) return; if (val) mutate((x) => { x.reasons.unshift({ id: `rs${Date.now().toString(36)}`, kind: p.kind, ref: p.ref, status: p.status, reason: val, visible, by: currentUser()?.name ?? 'شما', at: new Date().toISOString() }) }); p.resolve(val); pending = null; tick((x) => x + 1) }
   return (
     <Modal open={!!p} onClose={() => close(null)} title={p?.title ?? ''} footer={<><Button variant="primary" disabled={text.trim().length < 3} onClick={() => close(text.trim())}>ثبت دلیل و ادامه</Button><Button variant="ghost" onClick={() => close(null)}>انصراف</Button></>}>
       {p && <div className="space-y-3">
-        <p className="text-12 text-t2">دلیل را بنویسید یا از گزینه‌های آماده انتخاب کنید. بعداً هم از «سوابق دلیل‌ها» قابل ویرایش است.</p>
-        <div className="flex flex-wrap gap-1.5">{(REASON_PRESETS[p.kind] ?? []).map((r) => <button key={r} type="button" onClick={() => setText(r)} className={cx('rounded-full border px-2.5 py-1 text-12', text === r ? 'border-transparent bg-brand-solid text-white' : 'border-line hover:border-brand')}>{r}</button>)}</div>
-        <Textarea aria-label="متن دلیل" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="مثلاً: بر اساس تصاویر ارسالی، ایراد ناشی از آسیب فیزیکی پس از تحویل است." />
+        <p className="text-12 text-t2">{d.reasonPresets?.[p.kind]?.other === false ? 'یکی از دلیل‌های آماده را انتخاب کنید (متن آزاد در تنظیمات خاموش است).' : 'دلیل را بنویسید یا از گزینه‌های آماده انتخاب کنید. بعداً هم از «سوابق دلیل‌ها» قابل ویرایش است.'}</p>
+        <div className="flex flex-wrap gap-1.5">{(d.reasonPresets?.[p.kind]?.items.filter((x) => x.on).map((x) => x.text) ?? REASON_PRESETS[p.kind] ?? []).map((r) => <button key={r} type="button" onClick={() => setText(r)} className={cx('rounded-full border px-2.5 py-1 text-12', text === r ? 'border-transparent bg-brand-solid text-white' : 'border-line hover:border-brand')}>{r}</button>)}</div>
+        <Textarea aria-label="متن دلیل" rows={3} value={text} readOnly={d.reasonPresets?.[p.kind]?.other === false} onChange={(e) => setText(e.target.value)} placeholder="مثلاً: بر اساس تصاویر ارسالی، ایراد ناشی از آسیب فیزیکی پس از تحویل است." />
         <label className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-13">نمایش این دلیل برای مشتری (پنل کاربری و پیامک)<Toggle on={visible} onChange={setVisible} label="نمایش برای مشتری" /></label>
       </div>}
     </Modal>

@@ -127,8 +127,8 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'sp-p4', page: 'iPhone 16 Pro', url: '/product/iphone-16-pro', title: 'خرید گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت | غنیمت', desc: '', score: 58 },
   ],
   branches: [
-    { id: 'bh1', name: 'شعبهٔ مرکزی تهران', address: 'تهران، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '021-00000002', pickup: true, test: true, active: true },
-    { id: 'bh2', name: 'شعبهٔ کرج', address: 'کرج، خیابان نمونه', hours: '—', phone: '026-00000000', pickup: false, test: false, active: false },
+    { id: 'bh1', name: 'شعبهٔ مرکزی تهران', address: 'تهران، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '021-00000002', status: 'باز', closedMsg: '', services: 'تست حضوری، دریافت حضوری، تحویل مرجوعی', pickup: true, test: true, active: true },
+    { id: 'bh2', name: 'شعبهٔ کرج', address: 'کرج، خیابان نمونه', hours: '—', phone: '026-00000000', status: 'بستهٔ موقت', closedMsg: 'شعبهٔ کرج به‌زودی افتتاح می‌شود؛ تا آن زمان از شعبهٔ مرکزی تهران تحویل بگیرید.', services: '', pickup: false, test: false, active: false },
   ],
   segments: [
     { id: 'sg1', name: 'VIP', rule: 'LTV > ۳۰۰ میلیون تومان', size: 1, active: true },

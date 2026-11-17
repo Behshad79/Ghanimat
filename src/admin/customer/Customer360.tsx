@@ -10,6 +10,7 @@ import { currentUser, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { compactToman, fa, mask, num, rel, toman } from '@/shared/lib/fa'
 import { Money, ProductImg, useTab } from '../pages/_shared'
 import { tierOf } from '@/shared/data/storeCfg'
+import { AccountExtras } from './AccountExtras'
 
 /** دستگاه و آی‌پی هر جلسه؛ در نسخهٔ واقعی از لاگ سرور خوانده می‌شود */
 const SESS_META = (s: string) => { const h = [...s].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0; const os = ['Android', 'iOS', 'Windows', 'macOS'][h % 4]; return { os, device: os === 'Android' || os === 'iOS' ? 'موبایل' : 'دسکتاپ', browser: os === 'iOS' ? 'Safari ' + (17 + (h % 2)) : ['Chrome 131', 'Chrome 130', 'Edge 131', 'Firefox 133'][h % 4], ip: `5.${120 + (h % 90)}.${h % 255}.${(h >> 8) % 255}`, city: ['تهران', 'تهران', 'کرج', 'اصفهان'][(h >> 3) % 4] } }
@@ -104,6 +105,7 @@ export function Customer360() {
           <Card title={<span className="flex items-center gap-2"><MessageSquare size={15} />ویجت پشتیبانی</span>}>{wc.length === 0 ? <EmptyState title="گفتگویی ندارد." /> : wc.map((w) => <p key={w.id} className="flex flex-wrap items-center gap-2 border-b border-line py-2 text-13 last:border-0"><span className="ltr font-mono text-12">{w.id}</span>{w.topic} · {w.agent}{w.offHours && <Badge tone="warning">خارج از ساعت</Badge>}<span className="mr-auto">{w.rating ? `${'★'.repeat(w.rating)}` : '—'}</span></p>)}</Card>
         </div>}
         {tab === 'account' && <div className="grid gap-4 lg:grid-cols-2">
+          <AccountExtras c={c} />
           <Card title={<span className="flex items-center gap-2"><KeyRound size={15} />ورود و رمز عبور</span>}><Row k="وضعیت">{J.passwords[c.id] ? 'رمز عبور تعیین شده' : 'فقط کد یکبارمصرف پیامکی'}</Row>
             <div className="mt-3 flex flex-wrap gap-2"><Button onClick={() => { sendSms(c.mobile, 'غنیمت: برای تعیین رمز تازه وارد این لینک شوید: ghanimat.example/reset', 'بازیابی رمز', c.id, c.id); toast('لینک تعیین رمز پیامک شد.') }}>ارسال لینک تعیین رمز</Button>{J.passwords[c.id] && <Button variant="danger" onClick={async () => { if (!(await askReason({ kind: 'ticket', ref: c.id, status: 'حذف رمز عبور', title: 'دلیل حذف رمز عبور مشتری' }))) return; mutate((x) => { x.journey.passwords[c.id] = false }, log('حذف رمز عبور مشتری')); toast('رمز حذف شد؛ مشتری از این پس با کد یکبارمصرف وارد می‌شود.') }}>حذف رمز عبور</Button>}</div></Card>
           <Card title="اعلان‌های این مشتری" pad={false}><table className="gh-table w-full text-13"><tbody>{d.cx.notifications.categories.map((k) => <tr key={k.id} className="border-b border-line last:border-0"><td className="px-5 py-2">{k.label}</td>{(['push', 'sms', 'email'] as const).map((ch) => <td key={ch} className="py-2 text-center"><span className="inline-flex"><Toggle on={prefs[k.id]?.[ch] ?? false} disabled={k.locked && ch !== 'email'} label={`${k.label} ${ch}`} onChange={(v) => mutate((x) => { x.journey.notifPrefs[c.id] = { ...prefs, [k.id]: { ...prefs[k.id], [ch]: v } } }, log('تغییر اعلان مشتری', `${k.label} ${ch}`))} /></span></td>)}</tr>)}</tbody></table></Card>

@@ -26,14 +26,16 @@ import { makeBlog } from './blog'
 import { makeTraffic } from './traffic'
 import { makeStoreCfg } from './storeCfg'
 import { makeQuestions, makeReviewMeta } from './qa'
+import { makeReasonPresets } from './reasons'
+import { makeAcct } from './acct'
 import { makeBank } from './bank'
 import { makeNewsletter, makePages, makeTheme } from './pages'
 import { makeHub } from './hub'
 import { makePromos } from './promos'
 import { makePickups } from './pickups'
 export type Att = { kind: 'image' | 'file' | 'voice' | 'video'; src: string; name?: string; size?: number; dur?: number }
-export type Msg = { from: string; text: string; at: string; atts?: Att[] }
-export type Ticket = { id: string; customerId: string; orderId: string; subject: string; channel: string; status: string; priority: string; sla: string; assignee: string; sentiment: string; messages: Msg[] }
+export type Msg = { from: string; text: string; at: string; atts?: Att[]; cta?: string }
+export type Ticket = { id: string; customerId: string; orderId: string; subject: string; channel: string; status: string; priority: string; sla: string; assignee: string; sentiment: string; messages: Msg[]; topic?: string; reason?: string; items?: string[]; csat?: 'yes' | 'no'; replyBy?: string; history?: { status: string; at: string }[] }
 export type Ret = { id: string; orderId: string; customerId: string; unitId: string; reason: string; note: string; status: string; amount: number; dest: string; createdAt: string; deadline: string; channel?: string; photos?: string[]; by?: string; productId?: string }
 export type War = { id: string; code: string; customerId: string; unitId: string; type: string; months: number; status: string; issue: string; owner: string; deadline: string; orderId?: string; channel?: string; photos?: string[]; by?: string; productId?: string }
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
@@ -110,11 +112,11 @@ const makeSeedBase = () => ({
       shipments: [{ id: 'GH-10444-1', warehouse: 'tehran', method: 'باربری', status: 'ship.pending', sla: inMin(60 * 30), items: [{ productId: 'p1', unitId: 'GU-20414', qty: 2, price: 129900000 }], courier: null, tracking: '', allocReason: 'بازبینی دستی لازم است.' }] },
   ] as Order[]),
   tickets: [
-    { id: 'TK-482106', customerId: 'c1', orderId: 'GH-10458', subject: 'کابل شارژ داخل جعبه نبود', channel: 'چت سایت', status: 'ticket.new', priority: 'فوری', sla: inMin(11), assignee: '', sentiment: 'ناراضی', messages: [{ from: 'customer', text: 'سلام. سفارش GH-10458 را تحویل گرفتم. هدست AirPods Max جعبه‌باز بود ولی کابل شارژ داخل جعبه نبود. در صفحهٔ کالا نوشته بود کابل دارد.', at: ago(19) }] },
-    { id: 'TK-482093', customerId: 'c2', orderId: 'GH-10478', subject: 'پیک کی می‌رسد؟', channel: 'پیامک', status: 'ticket.open', priority: 'عادی', sla: inMin(25), assignee: 'سارا', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'سفارشم را دو ساعت پیش ثبت کردم. پیک کجاست؟', at: ago(12) }] },
-    { id: 'TK-482071', customerId: 'c3', orderId: 'GH-10451', subject: 'وضعیت بازگشت وجه مرجوعی', channel: 'تیکت پنل', status: 'ticket.needs_info', priority: 'عادی', sla: inMin(60 * 3), assignee: 'سارا', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'کالا را سه روز پیش پس فرستادم. پول کی واریز می‌شود؟', at: ago(60 * 4) }, { from: 'agent', text: 'سلام. بسته به انبار رسیده و در حال بررسی است. شمارهٔ شبا را برای واریز تأیید می‌کنید؟', at: ago(60 * 3) }] },
-    { id: 'TK-482044', customerId: 'c7', orderId: 'GH-10479', subject: 'چرا سفارش من دو بسته شده است؟', channel: 'بله', status: 'ticket.answered', priority: 'کم', sla: inMin(60 * 8), assignee: 'نیما', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'در پنل نوشته دو مرسوله. یعنی چه؟', at: ago(60 * 2) }, { from: 'agent', text: 'یکی از کالاها از انبار تهران و دیگری از انبار مهاباد ارسال می‌شود. هر دو با پست پیشتاز می‌رسند و هزینهٔ اضافه‌ای ندارد.', at: ago(60) }] },
-    { id: 'TK-481980', customerId: 'c5', orderId: 'GH-10449', subject: 'اعتبار اقساطی رد شد', channel: 'تماس تلفنی', status: 'ticket.closed', priority: 'عادی', sla: ago(60 * 24), assignee: 'سارا', sentiment: 'ناراضی', messages: [{ from: 'customer', text: 'اعتبار تارا رد شد و سفارش لغو شد.', at: ago(60 * 24 * 6) }] },
+    { id: 'TK-482106', topic: 'سفارش و ارسال', reason: 'کسری اقلام', items: ['p2'], customerId: 'c1', orderId: 'GH-10458', subject: 'کابل شارژ داخل جعبه نبود', channel: 'چت سایت', status: 'ticket.new', priority: 'فوری', sla: inMin(11), assignee: '', sentiment: 'ناراضی', messages: [{ from: 'customer', text: 'سلام. سفارش GH-10458 را تحویل گرفتم. هدست AirPods Max جعبه‌باز بود ولی کابل شارژ داخل جعبه نبود. در صفحهٔ کالا نوشته بود کابل دارد.', at: ago(19) }] },
+    { id: 'TK-482093', topic: 'سفارش و ارسال', reason: 'تأخیر در ارسال', customerId: 'c2', orderId: 'GH-10478', subject: 'پیک کی می‌رسد؟', channel: 'پیامک', status: 'ticket.open', priority: 'عادی', sla: inMin(25), assignee: 'سارا', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'سفارشم را دو ساعت پیش ثبت کردم. پیک کجاست؟', at: ago(12) }] },
+    { id: 'TK-482071', topic: 'مرجوعی و گارانتی', reason: 'پیگیری مرجوعی', replyBy: new Date(Date.now() + 36e5 * 31).toISOString(), customerId: 'c3', orderId: 'GH-10451', subject: 'وضعیت بازگشت وجه مرجوعی', channel: 'تیکت پنل', status: 'ticket.needs_info', priority: 'عادی', sla: inMin(60 * 3), assignee: 'سارا', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'کالا را سه روز پیش پس فرستادم. پول کی واریز می‌شود؟', at: ago(60 * 4) }, { from: 'agent', text: 'سلام. بسته به انبار رسیده و در حال بررسی است. شمارهٔ شبا را برای واریز تأیید می‌کنید؟', at: ago(60 * 3) }] },
+    { id: 'TK-482044', topic: 'سفارش و ارسال', reason: 'سایر', customerId: 'c7', orderId: 'GH-10479', subject: 'چرا سفارش من دو بسته شده است؟', channel: 'بله', status: 'ticket.answered', priority: 'کم', sla: inMin(60 * 8), assignee: 'نیما', sentiment: 'خنثی', messages: [{ from: 'customer', text: 'در پنل نوشته دو مرسوله. یعنی چه؟', at: ago(60 * 2) }, { from: 'agent', text: 'یکی از کالاها از انبار تهران و دیگری از انبار مهاباد ارسال می‌شود. هر دو با پست پیشتاز می‌رسند و هزینهٔ اضافه‌ای ندارد.', at: ago(60) }] },
+    { id: 'TK-481980', topic: 'پرداخت و کیف پول', reason: 'اقساط', csat: 'yes', customerId: 'c5', orderId: 'GH-10449', subject: 'اعتبار اقساطی رد شد', channel: 'تماس تلفنی', status: 'ticket.closed', priority: 'عادی', sla: ago(60 * 24), assignee: 'سارا', sentiment: 'ناراضی', messages: [{ from: 'customer', text: 'اعتبار تارا رد شد و سفارش لغو شد.', at: ago(60 * 24 * 6) }] },
   ] as Ticket[],
   returns: [
     { id: 'RT-840552', orderId: 'GH-10451', customerId: 'c3', unitId: 'GU-20442', reason: 'مغایرت با صفحهٔ کالا', note: 'رنگ هدفون با عکس فرق دارد.', status: 'return.inspecting', amount: 21900000, dest: 'کارت بانکی', createdAt: ago(60 * 24 * 3), deadline: inMin(60 * 20) },
@@ -200,7 +202,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(),
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(),
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

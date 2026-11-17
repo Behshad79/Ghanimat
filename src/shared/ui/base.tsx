@@ -118,7 +118,8 @@ export function Select({ value, onChange, options, className, chips, placeholder
     </>
   )
   if (!showOther) return trigger
-  return <span className={cx('flex flex-col gap-1.5', withW(className))}>{trigger}<input autoFocus aria-label="توضیح گزینهٔ سایر" value={value.startsWith('سایر: ') ? value.slice(6) : ''} onChange={(e) => onChange('سایر: ' + e.target.value)} placeholder="منظورتان از «سایر» چیست؟ بنویسید…" className={cx('h-9 w-full rounded-md border bg-surface px-3 text-13 outline-none focus:border-brand', value.trim() === 'سایر:' || isOther(value) ? 'border-warning' : 'border-line')} /></span>
+  const wcls = (className ?? '').split(/\s+/).filter((c) => /^(\w+:)?(w-|min-w-|max-w-|flex-1|grow|shrink)/.test(c)).join(' ')
+  return <span className={cx('flex flex-col gap-1.5', wcls || 'w-full')}>{trigger}<input autoFocus aria-label="توضیح گزینهٔ سایر" value={value.startsWith('سایر: ') ? value.slice(6) : ''} onChange={(e) => onChange('سایر: ' + e.target.value)} placeholder="منظورتان از «سایر» چیست؟ بنویسید…" className={cx('ctl h-9 w-full rounded-md border bg-surface px-3 text-13 text-t1 outline-none placeholder:text-t3 focus:border-brand', value.trim() === 'سایر:' || isOther(value) ? 'border-warning' : 'border-line')} /></span>
 }
 /** آیا این گزینه «سایر» است؟ */
 export const isOther = (v: string) => /^سایر($|\s*\(|\s*…)/.test(v.trim())

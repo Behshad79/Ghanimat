@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ClipboardPaste, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -197,8 +197,8 @@ export function OrderDetail() {
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
                   <li key={k} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                    <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5">{product(it.productId).title}<VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
-                    <Money v={it.price * it.qty} />
+                    <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5"><button className="text-right hover:text-brand hover:underline" onClick={() => nav(`/admin/catalog/${it.productId}`)}>{product(it.productId).title}</button><VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
+                    <span className="flex items-center gap-2"><ProductLinks pid={it.productId} /><Money v={it.price * it.qty} /></span>
                   </li>) })}
               </ul>
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
@@ -264,4 +264,15 @@ export function OrderDetail() {
       </Modal>
     </Page>
   )
+}
+
+/** لینک‌های کالا در ردیف سفارش: صفحهٔ کالا در پنل و صفحهٔ عمومی در سایت (باز شدن یا کپی برای ارسال به مشتری) */
+function ProductLinks({ pid }: { pid: string }) {
+  const nav = useNavigate(); const p = getDB().products.find((x) => x.id === pid)
+  const url = `https://ghanimat.ir/product/${pid}/${(p?.en ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+  return <span className="no-print flex items-center gap-1">
+    <Button size="sm" variant="ghost" onClick={() => nav(`/admin/catalog/${pid}`)}>صفحهٔ کالا</Button>
+    <a href={url} target="_blank" rel="noopener noreferrer" aria-label="مشاهدهٔ کالا در سایت" title="مشاهده در سایت" className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand"><ExternalLink size={14} /></a>
+    <button aria-label="کپی لینک کالا در سایت" title="کپی لینک سایت برای ارسال به مشتری" className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand" onClick={() => { navigator.clipboard?.writeText(url).catch(() => {}); toast('لینک صفحهٔ کالا کپی شد.') }}><Link2 size={14} /></button>
+  </span>
 }

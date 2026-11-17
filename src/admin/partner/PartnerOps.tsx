@@ -4,10 +4,11 @@ import { Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Segmented, S
 import { KPI, Stepper } from '@/shared/ui/page'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
-import { mutate, notify, useDB } from '@/shared/lib/store'
+import { getDB, mutate, notify, useDB } from '@/shared/lib/store'
+import { ProductWizard } from '../catalog/Wizard'
 import { csv, download, fa, left, minsLeft, rel, toman } from '@/shared/lib/fa'
 import { CAPITAL, ledger, scorecard, type Capital, type PartnerT } from '@/shared/data/partners'
-import type { Order, Shipment } from '@/shared/data/seed'
+import type { Order, Product, Shipment } from '@/shared/data/seed'
 import { ProductImg } from '../pages/_shared'
 import { PackPhotos } from '../shared/PackPhotos'
 
@@ -126,7 +127,7 @@ const norm = (t: string) => t.toLowerCase().replace(/[\s\-_]+/g, '').replace(/ي
 export function PartnerStock({ P }: { P: PartnerT }) {
   const d = useDB(); const lots = d.lots.filter((l) => l.partnerId === P.id)
   const [qty, setQty] = useState<Record<string, string>>({}); const [pick, setPick] = useState({ pid: '', qty: '1', cost: '', price: '', capital: 'partner' as Capital })
-  const [nw, setNw] = useState({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' })
+  const [nw, setNw] = useState({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' }); const [full, setFull] = useState<string | null>(null)
   const today = P.stockCheckedAt && new Date(P.stockCheckedAt).toDateString() === new Date().toDateString()
   const upd = (fn: (x: PartnerT) => void, action: string, after?: string) => mutate((x) => fn(x.partners.find((y) => y.id === P.id)!), { action, target: P.name, after })
   const q = norm(`${nw.name}${nw.model}`); const ean = nw.ean.replace(/\D/g, '')
@@ -151,7 +152,19 @@ export function PartnerStock({ P }: { P: PartnerT }) {
       {dups.length > 0 ? <div className="mt-3 rounded-xl border border-warning/50 bg-warning-bg/50 p-3"><p className="mb-2 text-12 font-semibold text-warning">این کالا در غنیمت هست؛ به‌جای ساخت کالای تکراری، به موجودی خودتان اضافه کنید:</p><ul className="space-y-1.5">{dups.map((p) => <li key={p.id} className="flex items-center gap-2 text-13"><ProductImg pid={p.id} size={30} /><span className="min-w-0 flex-1 truncate">{p.title}</span><Button size="sm" onClick={() => { setPick({ pid: p.id, qty: nw.qty || '1', cost: nw.cost, price: String(p.price ?? p.priceNew), capital: 'partner' }); setNw({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' }); toast('در «افزودن از کاتالوگ غنیمت» انتخاب شد؛ تعداد و قیمت را تأیید کنید.') }}>همین است</Button></li>)}</ul></div>
         : (q.length >= 3 || ean.length >= 8) && <p className="mt-2 text-12 text-success">کالای مشابهی در غنیمت پیدا نشد.</p>}
       <div className="mt-3 grid gap-3 sm:grid-cols-3"><Field label="تعداد"><Input className="ltr text-left" inputMode="numeric" value={nw.qty} onChange={(e) => setNw({ ...nw, qty: e.target.value.replace(/\D/g, '') })} /></Field><Field label="قیمت خرید"><Input className="ltr text-left" inputMode="numeric" value={nw.cost} onChange={(e) => setNw({ ...nw, cost: e.target.value.replace(/\D/g, '') })} /></Field><Field label="قیمت فروش پیشنهادی"><Input className="ltr text-left" inputMode="numeric" value={nw.price} onChange={(e) => setNw({ ...nw, price: e.target.value.replace(/\D/g, '') })} /></Field></div>
-      <Button className="mt-3" variant="primary" disabled={!nw.name.trim() || dups.length > 0 || !+nw.qty || !+nw.price} onClick={() => { mutate((x) => { x.partnerQueue.unshift({ id: `PQ-${Date.now().toString(36).slice(-3).toUpperCase()}`, productId: x.products[0].id, kind: `کالای تازهٔ ${P.name}: ${nw.name.trim()}${nw.model ? ` (${nw.model})` : ''} · ${nw.qty} عدد · فقط از انبار ${P.city}`, status: 'product.pending', note: `قیمت پیشنهادی ${toman(+nw.price)}${nw.ean ? ` · بارکد ${nw.ean}` : ''} · بررسی تکراری: موردی نبود`, at: new Date().toISOString() }) }, { action: 'ثبت کالای تازهٔ شعبه برای تأیید', target: nw.name }); notify('کالای تازه از شعبه', `${P.name}: ${nw.name}`, '/admin/catalog?tab=partner', 'کاتالوگ'); setNw({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' }); toast('برای تأیید غنیمت رفت؛ بعد از تأیید فقط به موجودی شما اضافه می‌شود.') }}>ارسال برای تأیید غنیمت</Button>
+      <div className="mt-3 flex flex-wrap items-center gap-2"><Button variant="primary" disabled={!nw.name.trim() || dups.length > 0 || !+nw.qty || !+nw.price} onClick={() => { mutate((x) => { const pid = pendingProduct(x, P, nw); x.partnerQueue.unshift({ id: `PQ-${Date.now().toString(36).slice(-3).toUpperCase()}`, productId: pid, kind: `کالای تازهٔ ${P.name}: ${nw.name.trim()}${nw.model ? ` (${nw.model})` : ''} · ${nw.qty} عدد · فقط از انبار ${P.city}`, status: 'product.pending', note: `قیمت پیشنهادی ${toman(+nw.price)}${nw.ean ? ` · بارکد ${nw.ean}` : ''} · بررسی تکراری: موردی نبود`, at: new Date().toISOString() }) }, { action: 'ثبت کالای تازهٔ شعبه برای تأیید', target: nw.name }); notify('کالای تازه از شعبه', `${P.name}: ${nw.name}`, '/admin/catalog?tab=partner', 'کاتالوگ'); setNw({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' }); toast('برای تأیید غنیمت رفت؛ بعد از تأیید فقط به موجودی شما اضافه می‌شود.') }}>ارسال برای تأیید غنیمت</Button><Button disabled={dups.length > 0} onClick={() => setFull(nw.name.trim())}>ثبت کامل با همهٔ فیلدها</Button><span className="text-11 text-t2">عکس، مشخصات، توضیح، گارانتی، لینک آمازون و سئو را خودتان پر کنید.</span></div>
     </Card>}
+    {full !== null && <div className="fixed inset-0 z-[80] overflow-y-auto bg-bg p-3 md:p-6" role="dialog" aria-label="ثبت کامل کالای تازه">
+      <div className="mx-auto mb-3 flex max-w-6xl items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-12"><span className="text-t2">کالا با تأیید نهایی غنیمت روی سایت می‌رود و فقط از انبار {P.city} فروخته می‌شود. لینک آمازون در گام «توضیحات» است.</span><Button size="sm" variant="ghost" onClick={() => setFull(null)}>بازگشت به موجودی</Button></div>
+      <div className="mx-auto max-w-6xl"><ProductWizard partner={P} initialTitle={full} onDone={() => { setFull(null); setNw({ name: '', model: '', ean: '', qty: '1', cost: '', price: '' }) }} /></div>
+    </div>}
   </div>
+}
+
+/** کالای در انتظار تأیید با حداقل اطلاعات؛ تا تأیید غنیمت روی سایت نیست */
+export function pendingProduct(x: ReturnType<typeof getDB>, P: PartnerT, nw: { name: string; model: string; ean: string; qty: string; cost: string; price: string }) {
+  const pid = `p${Date.now().toString(36)}`
+  x.products.unshift({ id: pid, image: '', images: [], title: nw.name.trim(), en: nw.name.trim(), model: nw.model, ean: nw.ean.replace(/\D/g, ''), brand: '', category: 'سایر', status: 'product.pending', mode: 'qty', qty: { tehran: 0, mahabad: +nw.qty || 0 }, priceNew: +nw.price, price: +nw.price, cost: +nw.cost || undefined, rating: 0, reviews: 0, views: 0, cvr: 0, health: 20, fastEligible: false, seller: P.name, torob: false, partner: true } as Product)
+  x.lots.unshift({ id: `LT-${Date.now().toString(36).slice(-4).toUpperCase()}`, partnerId: P.id, productId: pid, capital: 'partner', qty: +nw.qty || 0, soldOnline: 0, soldStore: 0, unitCost: +nw.cost || 0, unitPrice: +nw.price, at: new Date().toISOString(), note: 'کالای تازهٔ شعبه' })
+  return pid
 }

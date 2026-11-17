@@ -158,9 +158,9 @@ export function Catalog() {
       {tab === 'partner' && (d.partnerQueue.length === 0 ? <Card><EmptyState title="صف تأیید خالی است." desc="کالاهای جدید و تغییرهای محتوایی شریک انبار پیش از انتشار اینجا می‌آیند." /></Card> : (
         <div className="grid gap-4 lg:grid-cols-2">{d.partnerQueue.map((q) => { const p = product(q.productId); return (
           <Card key={q.id} title={<>{q.kind}<StatusBadge s={q.status} /></>} actions={<span className="text-11 text-t2">{rel(q.at)}</span>}>
-            <div className="flex gap-3"><ProductImg pid={p.id} size={72} /><div className="grid flex-1 gap-2 sm:grid-cols-2"><div className="rounded-md bg-neutral-bg p-3 text-12"><p className="mb-1 text-11 text-t2">قبل</p>{q.kind === 'کالای جدید' ? 'در کاتالوگ نبود.' : p.title}</div><div className="rounded-md bg-success-bg p-3 text-12"><p className="mb-1 text-11 text-t2">بعد (پیشنهاد شریک)</p>{p.title}</div></div></div>
+            <div className="flex gap-3"><ProductImg pid={p.id} size={72} /><div className="grid flex-1 gap-2 sm:grid-cols-2"><div className="rounded-md bg-neutral-bg p-3 text-12"><p className="mb-1 text-11 text-t2">قبل</p>{/کالای (جدید|تازه)/.test(q.kind) ? 'در کاتالوگ نبود.' : p.title}</div><div className="rounded-md bg-success-bg p-3 text-12"><p className="mb-1 text-11 text-t2">بعد (پیشنهاد شریک)</p>{p.title}</div></div></div>
             <p className="mt-2 text-12 text-t2">{q.note}</p><div className="mt-2"><AITag confidence="بالا" source="بازبین محتوا" /></div>
-            <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" onClick={() => decide(q.id, true)}>تأیید و انتشار</Button><Button onClick={() => nav(`/admin/catalog/${p.id}/edit`)}>اصلاح و تأیید</Button><Button variant="danger" onClick={() => decide(q.id, false)}>رد کالا</Button></div>
+            <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" onClick={() => decide(q.id, true)}>تأیید و انتشار</Button><Button onClick={() => nav(`/admin/catalog/${p.id}/edit`)}>بررسی همهٔ فیلدها و اصلاح</Button><Button variant="danger" onClick={() => decide(q.id, false)}>رد کالا</Button></div>
           </Card>) })}</div>))}
       {tab === 'card' && <CardRules />}
       {tab === 'bulk' && <InlineTable />}

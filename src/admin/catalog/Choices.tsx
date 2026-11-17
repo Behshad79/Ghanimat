@@ -7,6 +7,7 @@ import { mutate, useDB } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
 import type { Options, Opt } from '@/shared/data/options'
 import type { Pdp } from '@/shared/data/seed'
+import { VariantMatrix } from './VariantMatrix'
 
 type ListKey = keyof Options
 const TITLES: Record<ListKey, string> = { source: 'منبع تأمین', condition: 'وضعیت کالا', grade: 'گرید ظاهری', importRoute: 'مبدأ و مسیر واردات', flawStatus: 'وضعیت بخش‌های ظاهری' }
@@ -73,6 +74,7 @@ export function VariantEditor({ pdp, onChange, selfId }: { pdp: Pdp; onChange: (
       <div className="flex flex-wrap gap-1.5">{d.axes.filter((a) => !(a.id in v)).map((a) => <Button key={a.id} size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setV({ ...v, [a.id]: a.values[0]?.v ?? '' })}>{a.name}</Button>)}<Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setNewAx({ name: '', kind: 'text' })}>ویژگی دلخواه (مثلا بافت یا ظرفیت باتری)</Button></div>
       {siblings.length > 0 && <div className="rounded-lg bg-neutral-bg p-2.5"><p className="mb-1.5 text-11 text-t2">پیش‌نمایش در صفحهٔ کالا: مشتری بین تنوع‌ها جابه‌جا می‌شود</p>
         <div className="flex flex-wrap gap-1.5">{siblings.map((s) => { const c = s.pdp?.variant?.color; const hex = c ? d.axes.find((a) => a.id === 'color')?.values.find((x) => x.v === c)?.hex : undefined; const me = s.id === selfId; return <button key={s.id} type="button" onClick={() => !me && nav(`/admin/catalog/${s.id}/edit?step=4`)} className={cx('flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-12', me ? 'border-brand bg-surface ring-1 ring-brand' : 'border-line bg-surface hover:border-brand/50')}>{hex && <span className="size-5 rounded-full ring-1 ring-black/15" style={{ background: hex }} />}{s.pdp?.variantLabel || s.title}{me && <span className="text-[10px] text-brand">(همین)</span>}</button> })}</div></div>}
+      <VariantMatrix selfId={selfId} draftGroup={pdp.variantGroup} onGroup={(g) => onChange({ ...pdp, variantGroup: g })} />
       <Modal open={!!newVal} onClose={() => setNewVal(null)} title="مقدار تازه" footer={<Button variant="primary" onClick={() => { if (!newVal?.l.trim()) return; const id = `x${Date.now().toString(36)}`; mutate((x) => { x.axes.find((a) => a.id === newVal.ax)!.values.push({ v: id, l: newVal.l.trim(), hex: newVal.hex }) }, { action: 'افزودن مقدار تنوع', target: newVal.l }); setV({ ...v, [newVal.ax]: id }); setNewVal(null) }}>افزودن</Button>}>
         {newVal && <div className="flex items-end gap-2"><Field label="نام"><Input value={newVal.l} onChange={(e) => setNewVal({ ...newVal, l: e.target.value })} placeholder="مثلا سبز زیتونی" /></Field>{d.axes.find((a) => a.id === newVal.ax)?.kind === 'color' && <Field label="رنگ"><input type="color" value={newVal.hex} onChange={(e) => setNewVal({ ...newVal, hex: e.target.value })} className="h-10 w-16 cursor-pointer rounded-lg border border-line" aria-label="انتخاب رنگ" /></Field>}</div>}
       </Modal>

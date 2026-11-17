@@ -197,7 +197,7 @@ export function OrderDetail() {
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
                   <li key={k} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                    <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5"><button className="text-right hover:text-brand hover:underline" onClick={() => nav(`/admin/catalog/${it.productId}`)}>{product(it.productId).title}</button><VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span> · گرید {g(u.grade)} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
+                    <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5"><button className="text-right hover:text-brand hover:underline" onClick={() => nav(`/admin/catalog/${it.productId}`)}>{product(it.productId).title}</button><VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span>{u.grade && u.condition !== 'sealed' && <> · گرید {g(u.grade)}</>} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
                     <span className="flex items-center gap-2"><ProductLinks pid={it.productId} /><Money v={it.price * it.qty} /></span>
                   </li>) })}
               </ul>

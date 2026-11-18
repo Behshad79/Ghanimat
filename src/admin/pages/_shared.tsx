@@ -4,7 +4,7 @@ import { cx } from '@/shared/ui/base'
 import { QuickText } from '@/shared/ui/quickview'
 import { useDB } from '@/shared/lib/store'
 import { compactToman, left, minsLeft, toman } from '@/shared/lib/fa'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 export function useLookup() {
   const d = useDB()
@@ -70,4 +70,18 @@ export function useQuickChips() {
       { label: 'وفادار', test: (v: string) => /وفادار|قهرمان/.test(d.customers.find((c) => c.id === v)?.segment ?? '') },
     ],
   }
+}
+
+/** نام مشتری قابل کلیک در همهٔ جدول‌ها و فهرست‌ها: پروندهٔ ۳۶۰ درجهٔ همان مشتری باز می‌شود (بدون باز کردن ردیف) */
+export function CustLink({ v, id, mobile }: { v: string; id?: string; mobile?: string }) {
+  const d = useDB(); const nav = useNavigate()
+  const cid = id ?? d.customers.find((c) => c.name === v.trim() || (!!mobile && c.mobile === mobile))?.id
+  if (!cid || !v) return <>{v || '—'}</>
+  return <button type="button" title={`پروندهٔ ${v}`} onClick={(e) => { e.stopPropagation(); nav(`/admin/customers/${cid}`) }} className="max-w-full truncate text-right font-medium text-t1 underline-offset-4 hover:text-brand hover:underline">{v}</button>
+}
+
+/** شمارهٔ سفارش قابل کلیک: جزئیات همان سفارش */
+export function OrderLink({ id }: { id: string }) {
+  const nav = useNavigate(); const oid = id.match(/GH-\d+/)?.[0] ?? id
+  return <button type="button" title={`سفارش ${oid}`} onClick={(e) => { e.stopPropagation(); nav(`/admin/orders/${oid}`) }} className="ltr font-mono text-12 text-t1 underline-offset-4 hover:text-brand hover:underline">{id}</button>
 }

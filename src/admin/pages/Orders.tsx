@@ -1,3 +1,4 @@
+import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
@@ -20,7 +21,7 @@ import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../or
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
-import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
+import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from './_shared'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
 const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
@@ -42,7 +43,7 @@ export function Orders() {
   const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
   const cols: Col<Order>[] = [
     { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
-    { key: 'customer', title: 'مشتری', render: (o) => <Cell a={customer(o.customerId).name} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
+    { key: 'customer', title: 'مشتری', render: (o) => <Cell a={<CustLink v={customer(o.customerId).name} id={o.customerId} />} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
     { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
     { key: 'pay', title: 'روش پرداخت', hideMobile: true, render: (o) => o.pay, text: (o) => o.pay },
@@ -247,7 +248,7 @@ export function OrderDetail() {
             <div className="my-1 border-t border-line" /><Row k={<b className="text-t1">مبلغ پرداختی</b>}><b><Money v={o.total} /></b></Row>
             <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row><Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>
             <p className="mt-2 mb-1 text-11 font-medium text-t3">تراکنش‌ها</p>
-            {d.txns.filter((t) => t.orderId === o.id).map((t) => <div key={t.id} className="flex items-center justify-between py-1 text-12"><span><CopyId v={t.ref} /> · {t.gateway}</span><StatusBadge s={t.status} /></div>)}
+            {d.txns.filter((t) => t.orderId === o.id).map((t) => <div key={t.id} className="flex items-center justify-between py-1 text-12"><span><CopyId v={t.ref} /> · <WithLogo name={t.gateway} /></span><StatusBadge s={t.status} /></div>)}
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>
         </div>

@@ -9,7 +9,7 @@ import { Modal } from '@/shared/ui/overlay'
 import { QuickText } from '@/shared/ui/quickview'
 import { useDB } from '@/shared/lib/store'
 import { fa, pct, rel } from '@/shared/lib/fa'
-import { ProductImg, useTab } from '../pages/_shared'
+import { ProductImg, useTab, CustLink } from '../pages/_shared'
 
 /** سوابق و آمار گفتگوهای مشتری با دستیار AI و ویجت پشتیبانی */
 export function Conversations() {
@@ -31,7 +31,7 @@ export function Conversations() {
           <KPI icon={<ThumbsDown size={17} />} label="خرید پس از گفتگو" value={pct(Math.round(rate(A.filter((a) => a.converted).length, A.length)))} />
         </div>
         <DataTable name="گفتگوهای دستیار" empty={{ title: "گفتگویی ثبت نشده است." }} rows={A} rowKey={(a) => a.id} onRow={(a) => setOpen(a.id)} search={(a) => `${a.id} ${name(a.customerId)} ${a.intent} ${a.messages.map((m) => m.text).join(' ')}`}
-          cols={[{ key: 'id', title: 'شناسه', render: (a) => <span className="ltr font-mono text-12">{a.id}</span> }, { key: 'c', title: 'مشتری', render: (a) => <QuickText v={name(a.customerId)} /> }, { key: 'q', title: 'اولین پیام', wrap: true, render: (a) => <span className="line-clamp-1">{a.messages[0].text}</span> }, { key: 'i', title: 'نیت', render: (a) => a.intent }, { key: 'f', title: 'نتیجه', render: (a) => <span className="flex gap-1">{a.resolved ? <Badge tone="success">حل شد</Badge> : <Badge tone="warning">حل نشد</Badge>}{a.handoff && <Badge tone="info">انتقال</Badge>}{a.feedback && <Badge tone={a.feedback === 'مثبت' ? 'success' : 'danger'}>{a.feedback}</Badge>}</span> }, { key: 'at', title: 'زمان', render: (a) => <span className="text-12 text-t2">{rel(a.at)}</span>, sort: (a) => a.at }]} />
+          cols={[{ key: 'id', title: 'شناسه', render: (a) => <span className="ltr font-mono text-12">{a.id}</span> }, { key: 'c', title: 'مشتری', render: (a) => <CustLink v={name(a.customerId)} id={a.customerId} /> }, { key: 'q', title: 'اولین پیام', wrap: true, render: (a) => <span className="line-clamp-1">{a.messages[0].text}</span> }, { key: 'i', title: 'نیت', render: (a) => a.intent }, { key: 'f', title: 'نتیجه', render: (a) => <span className="flex gap-1">{a.resolved ? <Badge tone="success">حل شد</Badge> : <Badge tone="warning">حل نشد</Badge>}{a.handoff && <Badge tone="info">انتقال</Badge>}{a.feedback && <Badge tone={a.feedback === 'مثبت' ? 'success' : 'danger'}>{a.feedback}</Badge>}</span> }, { key: 'at', title: 'زمان', render: (a) => <span className="text-12 text-t2">{rel(a.at)}</span>, sort: (a) => a.at }]} />
       </div>}
       {tab === 'widget' && <div className="space-y-4">
         <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -44,7 +44,7 @@ export function Conversations() {
           <Card title="به تفکیک کارشناس"><Bars data={Object.entries(live.reduce<Record<string, number>>((m, w) => { m[w.agent] = (m[w.agent] ?? 0) + 1; return m }, {})).map(([l, v]) => ({ label: l, value: v }))} /></Card>
           <Card title="دلیل رضایت یا نارضایتی">{W.map((w) => <p key={w.id} className="flex items-center justify-between gap-2 py-1 text-13"><span>{w.reason}</span><span className="text-t2">{w.rating ? '★'.repeat(w.rating) : '—'}</span></p>)}</Card>
         </div>
-        <DataTable name="گفتگوهای ویجت" empty={{ title: "گفتگویی ثبت نشده است." }} rows={W} rowKey={(w) => w.id} cols={[{ key: 'id', title: 'شناسه', render: (w) => <span className="ltr font-mono text-12">{w.id}</span> }, { key: 'c', title: 'مشتری', render: (w) => <QuickText v={name(w.customerId)} /> }, { key: 't', title: 'موضوع', render: (w) => w.topic }, { key: 'a', title: 'کارشناس', render: (w) => w.agent }, { key: 'w', title: 'انتظار', render: (w) => `${fa(w.waitSec)} ثانیه`, sort: (w) => w.waitSec }, { key: 'r', title: 'امتیاز', render: (w) => (w.rating ? '★'.repeat(w.rating) : '—'), sort: (w) => w.rating }, { key: 'o', title: 'ساعت کاری', render: (w) => (w.offHours ? <Badge tone="warning">خارج از ساعت</Badge> : <Badge tone="success">در ساعت</Badge>) }]} />
+        <DataTable name="گفتگوهای ویجت" empty={{ title: "گفتگویی ثبت نشده است." }} rows={W} rowKey={(w) => w.id} cols={[{ key: 'id', title: 'شناسه', render: (w) => <span className="ltr font-mono text-12">{w.id}</span> }, { key: 'c', title: 'مشتری', render: (w) => <CustLink v={name(w.customerId)} id={w.customerId} /> }, { key: 't', title: 'موضوع', render: (w) => w.topic }, { key: 'a', title: 'کارشناس', render: (w) => w.agent }, { key: 'w', title: 'انتظار', render: (w) => `${fa(w.waitSec)} ثانیه`, sort: (w) => w.waitSec }, { key: 'r', title: 'امتیاز', render: (w) => (w.rating ? '★'.repeat(w.rating) : '—'), sort: (w) => w.rating }, { key: 'o', title: 'ساعت کاری', render: (w) => (w.offHours ? <Badge tone="warning">خارج از ساعت</Badge> : <Badge tone="success">در ساعت</Badge>) }]} />
       </div>}
       {tab === 'insights' && <div className="grid gap-4 lg:grid-cols-2">
         <Card title="نیت مشتری‌ها در گفتگو"><Bars data={intents.map(([l, v]) => ({ label: l, value: v }))} /></Card>

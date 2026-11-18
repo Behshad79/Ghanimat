@@ -1,3 +1,4 @@
+import { CustLink, OrderLink } from '@/admin/pages/_shared'
 import { Attachments } from './chat'
 import { fileToImage } from '../lib/image'
 import type { Att } from '../data/seed'
@@ -65,7 +66,7 @@ export function EntityManager({ ek, kind, fields, titleKey = 'name', blockDelete
   }
   const dup = (r: Rec) => { const c = { ...r, id: newId(ek), [titleKey]: `${label(r)} (کپی)` }; mutate((x) => { x.entities[ek].unshift(c) }, { action: `کپی ${kind}`, target: label(r) }); toast(`از «${label(r)}» یک کپی ساخته شد.`, { undo: () => mutate((x) => { x.entities[ek] = x.entities[ek].filter((i) => i.id !== c.id) }) }) }
   const toggleActive = (r: Rec) => { if (!activeKey) return; const undo = snapshot(); mutate((x) => { const t = x.entities[ek].find((i) => i.id === r.id)!; t[activeKey] = !t[activeKey] }, { action: r[activeKey] ? `بایگانی ${kind}` : `فعال‌سازی ${kind}`, target: label(r) }); toast(r[activeKey] ? `«${label(r)}» غیرفعال شد.` : `«${label(r)}» فعال شد.`, { undo }) }
-  const cols: Col<Rec>[] = fields.filter((f) => f.table !== false).map((f) => ({ key: f.k, title: f.label, render: (r) => f.render ? f.render(r) : showVal(f, r[f.k]), sort: (r) => r[f.k] ?? '', text: (r) => String(r[f.k] ?? ''), align: f.type === 'money' || f.type === 'number' ? 'left' : undefined, wrap: f.type === 'textarea' }))
+  const cols: Col<Rec>[] = fields.filter((f) => f.table !== false).map((f) => ({ key: f.k, title: f.label, render: (r) => f.render ? f.render(r) : (f.label === 'مشتری' || (f.k === 'name' && f.label === 'نام')) && typeof r[f.k] === 'string' ? <CustLink v={r[f.k]} mobile={typeof r.mobile === 'string' ? r.mobile : undefined} /> : f.k === 'order' && /^GH-\d+/.test(String(r[f.k] ?? '')) ? <OrderLink id={String(r[f.k])} /> : showVal(f, r[f.k]), sort: (r) => r[f.k] ?? '', text: (r) => String(r[f.k] ?? ''), align: f.type === 'money' || f.type === 'number' ? 'left' : undefined, wrap: f.type === 'textarea' }))
   return (
     <>
       <DataTable name={kind} rows={rows} cols={cols} rowKey={(r) => r.id} onRow={(r) => (onOpen ? onOpen(r) : open(r))}

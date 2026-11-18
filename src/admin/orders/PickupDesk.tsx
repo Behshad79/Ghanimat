@@ -13,7 +13,7 @@ import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { fileToImage } from '@/shared/lib/image'
 import { fa, rel } from '@/shared/lib/fa'
 import type { Pickup } from '@/shared/data/pickups'
-import { ProductImg } from '../pages/_shared'
+import { ProductImg, CustLink } from '../pages/_shared'
 
 const COL: [Pickup['status'], string, string][] = [['preparing', 'در حال آماده‌سازی', 'bg-info-bg text-info'], ['ready', 'آماده تحویل (پیامک ارسال شد)', 'bg-warning-bg text-warning'], ['handed', 'تحویل‌شده با رسید', 'bg-success-bg text-success'], ['expired', 'مهلت تمام‌شده', 'bg-danger-bg text-danger']]
 
@@ -52,7 +52,7 @@ export function PickupDesk() {
       <h3 className="mb-2 mt-6 text-14 font-semibold">بایگانی رسیدهای تحویل حضوری</h3>
       <DateFilter r={dr} set={setDr} count={P.filter((p) => p.status === 'handed' && inRange(p.handedAt!, dr)).length} total={P.filter((p) => p.status === 'handed').length} noun="تحویل" />
       <DataTable name="بایگانی رسیدهای تحویل حضوری" noDate rows={P.filter((p) => p.status === 'handed' && inRange(p.handedAt!, dr))} rowKey={(p) => p.id} onRow={(p) => setView(p.id)} empty={{ title: 'هنوز تحویل حضوری ثبت نشده است.' }} search={(p) => `${p.orderId} ${name(p.customerId)} ${p.receiver} ${p.receiverId}`}
-        cols={[{ key: 'o', title: 'سفارش', render: (p) => <QuickText v={p.orderId} /> }, { key: 'c', title: 'مشتری', render: (p) => <QuickText v={name(p.customerId)} /> }, { key: 'r', title: 'تحویل‌گیرنده', render: (p) => `${p.receiver} · ${p.relation}` }, { key: 'id', title: 'کد ملی', render: (p) => <span className="ltr">{p.receiverId || '—'}</span> }, { key: 'b', title: 'شعبه', render: (p) => p.branch }, { key: 'by', title: 'تحویل‌دهنده', render: (p) => p.by ?? '—' }, { key: 'at', title: 'زمان تحویل', render: (p) => <span className="text-12 text-t2">{rel(p.handedAt!)}</span>, sort: (p) => p.handedAt ?? '' }, { key: 'rc', title: 'رسید', render: (p) => (p.receipt ? <Badge tone="success">عکس امضا</Badge> : <Badge>رسید کاغذی (بدون عکس)</Badge>) }]} />
+        cols={[{ key: 'o', title: 'سفارش', render: (p) => <QuickText v={p.orderId} /> }, { key: 'c', title: 'مشتری', render: (p) => <CustLink v={name(p.customerId)} id={p.customerId} /> }, { key: 'r', title: 'تحویل‌گیرنده', render: (p) => `${p.receiver} · ${p.relation}` }, { key: 'id', title: 'کد ملی', render: (p) => <span className="ltr">{p.receiverId || '—'}</span> }, { key: 'b', title: 'شعبه', render: (p) => p.branch }, { key: 'by', title: 'تحویل‌دهنده', render: (p) => p.by ?? '—' }, { key: 'at', title: 'زمان تحویل', render: (p) => <span className="text-12 text-t2">{rel(p.handedAt!)}</span>, sort: (p) => p.handedAt ?? '' }, { key: 'rc', title: 'رسید', render: (p) => (p.receipt ? <Badge tone="success">عکس امضا</Badge> : <Badge>رسید کاغذی (بدون عکس)</Badge>) }]} />
       <Modal open={!!hand} onClose={() => setHand(null)} title={hand ? `تحویل حضوری سفارش ${hand.orderId}` : ''} footer={<Button variant="primary" icon={<CheckCircle2 size={14} />} onClick={done}>ثبت تحویل و بایگانی رسید</Button>}>
         {hand && <div className="space-y-3">
           

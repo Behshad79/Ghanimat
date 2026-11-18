@@ -1,3 +1,4 @@
+import { BrandLogo } from './brandLogo'
 import { useNavigate } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 import { fa } from '../lib/fa'
@@ -44,7 +45,7 @@ export function Bars({ data, onPick, fmt = (n: number) => fa(n), color = 'var(--
       {data.map((d) => (
         <li key={d.label}>
           <button disabled={!clickable} title={clickable && !onPick ? `ریز موارد «${d.label}»` : undefined} onClick={() => drill(d.label)} className="group block w-full text-right disabled:cursor-default">
-            <div className="mb-1 flex justify-between text-12"><span className="text-t2 group-enabled:group-hover:text-brand">{d.label}</span><span className="tnum font-medium">{fmt(d.value)}</span></div>
+            <div className="mb-1 flex justify-between text-12"><span className="flex items-center gap-1.5 text-t2 group-enabled:group-hover:text-brand"><BrandLogo name={d.label} size={16} fallback={false} />{d.label}</span><span className="tnum font-medium">{fmt(d.value)}</span></div>
             <div className="h-2 rounded-full bg-neutral-bg"><div className="bar-grow-x h-full rounded-full" style={{ width: `${(d.value / max) * 100}%`, background: d.tone ?? color }} /></div>
           </button>
         </li>

@@ -8,6 +8,7 @@ export const CH_STYLE: Record<string, { bg: string; tint: string; fg: string }> 
   'حضوری در شعبه': { bg: '#0000ff', tint: '#eef0ff', fg: '#0000ff' },
 }
 export function ChannelLogo({ ch, size = 40 }: { ch: string; size?: number }) {
+  if (ch === 'بله') return <img src="./logos/bale.png" alt="" aria-hidden className="shrink-0 rounded-[28%] object-contain" style={{ width: size, height: size }} />
   const st = CH_STYLE[ch] ?? CH_STYLE['تلفنی']; const r = size * 0.28
   const glyph = (() => {
     switch (ch) {

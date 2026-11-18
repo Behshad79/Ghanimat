@@ -1,3 +1,4 @@
+import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, CloudRain, Lock, RotateCcw, Truck, Zap } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
@@ -91,7 +92,7 @@ export function FastCourier() {
               <Toggle on={f.autoSwitch} onChange={(v) => set((x) => { x.autoSwitch = v }, 'تغییر جابه‌جایی خودکار پیک')} text="در ساعت‌های گران، خودکار به پیک ارزان‌تر برو" />
               {f.autoSwitch && <label className="flex items-center gap-2">وقتی افزایش ساعت از <Input type="number" className="w-16" value={f.switchGap} onChange={(e) => set((x) => { x.switchGap = Number(e.target.value) }, 'تغییر آستانهٔ جابه‌جایی پیک')} /> درصد بیشتر شد</label>}
             </div>
-            <ul className="mt-3 space-y-1 border-t border-line pt-3">{f.couriers.map((c) => <li key={c.id} className="flex items-center justify-between gap-2 text-12"><span className="flex items-center gap-1.5">{c.name}{c.api ? <Badge tone="success">API</Badge> : <Badge>دستی</Badge>}</span><Toggle on={c.on} disabled={c.id === f.primary} onChange={(v) => set((x) => { x.couriers.find((y) => y.id === c.id)!.on = v; if (!v) x.fallback = x.fallback.filter((y) => y !== c.id) }, v ? 'فعال کردن پیک' : 'غیرفعال کردن پیک', c.name)} label={`فعال بودن ${c.name}`} /></li>)}</ul>
+            <ul className="mt-3 space-y-1 border-t border-line pt-3">{f.couriers.map((c) => <li key={c.id} className="flex items-center justify-between gap-2 text-12"><span className="flex items-center gap-1.5"><BrandLogo name={c.name} size={18} fallback={false} />{c.name}{c.api ? <Badge tone="success">API</Badge> : <Badge>دستی</Badge>}</span><Toggle on={c.on} disabled={c.id === f.primary} onChange={(v) => set((x) => { x.couriers.find((y) => y.id === c.id)!.on = v; if (!v) x.fallback = x.fallback.filter((y) => y !== c.id) }, v ? 'فعال کردن پیک' : 'غیرفعال کردن پیک', c.name)} label={`فعال بودن ${c.name}`} /></li>)}</ul>
           </Card>
 
           <Card title="قیمت پایه و سهم مشتری">

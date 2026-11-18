@@ -171,6 +171,8 @@ button:disabled { cursor: not-allowed; }
   .no-print { display: none !important; }
   .print-area { position: static !important; border: 0 !important; background: #fff !important; padding: 0 !important; overflow: visible !important; }
   .doc-sheet { box-shadow: none !important; margin: 0 !important; }
+  .print-break { break-after: page; page-break-after: always; }
+  .print-area.space-y-6 > * + * { margin-top: 0 !important; }
   aside, header, nav { display: none !important; }
   main { overflow: visible !important; }
 }

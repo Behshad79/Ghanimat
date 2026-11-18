@@ -10,6 +10,7 @@ import { fa, rel } from '@/shared/lib/fa'
 import { CourierLabel, Invoice, Manifest, PickList, PickupReceipt, PostLabel, QCSheet, ReturnForm, WarrantyCard, type DocOpts } from './docs'
 import { useQuickChips } from '../pages/_shared'
 import { EditableDoc } from './EditableDoc'
+import { BatchPrint } from './BatchPrint'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
@@ -52,11 +53,12 @@ export function PrintCenter() {
     mutate((x) => { const n = x.printLog.filter((y) => y.doc === doc.id && y.ref === ref).length; x.printLog.unshift({ id: `PL-${Date.now().toString(36).slice(-5).toUpperCase()}`, doc: doc.id, label: doc.label, ref, by: currentUser()?.name ?? 'کارشناس', at: new Date().toISOString(), copy: n + 1, paper }) }, { action: 'چاپ سند', target: `${doc.label} · ${ref}${again ? ' (نسخهٔ دوم)' : ''}` })
     try { window.print() } catch { toast('مرورگر اجازهٔ چاپ از این قاب را نمی‌دهد. پنل را در پنجرهٔ جدا باز کنید.', { tone: 'err' }) }
   }
+  if (sp.get('view') === 'batch') return <BatchPrint />
   if (doc.id === 'labels') { nav('/admin/labels', { replace: true }); return null }
   if (sp.get('view') === 'archive') return <Page title="بایگانی اسناد چاپی" module="print" back="/admin/print" sub="همهٔ اسناد قابل چاپ و سابقهٔ هر چاپ، در یک جدول قابل جست‌وجو" actions={<Button onClick={() => nav('/admin/print')}>مرکز چاپ</Button>}><PrintArchive /></Page>
   return (
     <Page title="چاپ و خروجی" module="print" back="/admin/orders" sub={doc.label}
-      actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button variant="ghost" onClick={() => nav('/admin/print?view=archive')}>بایگانی همهٔ اسناد</Button><Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
+      actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch')}>چاپ گروهی</Button><Button variant="ghost" onClick={() => nav('/admin/print?view=archive')}>بایگانی همهٔ اسناد</Button><Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
       primary={<Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc.label.split(' (')[0]}</Button>}>
       <div className="grid gap-4 lg:grid-cols-[290px_1fr]">
         <div className="no-print space-y-4">

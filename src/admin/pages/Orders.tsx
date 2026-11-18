@@ -59,7 +59,7 @@ export function Orders() {
     { key: 'age', title: 'ثبت', hideMobile: true, render: (o) => <span className="text-12 text-t3">{rel(o.createdAt)}</span>, sort: (o) => o.createdAt },
   ]
   return (
-    <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>}
+    <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>} actions={<Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch&range=today')}>چاپ گروهی</Button>}
       empty={{ title: 'هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های سایت و کانال‌های فروش اینجا نمایش داده می‌شوند. برای سفارش تلفنی یا حضوری، سفارش دستی ثبت کنید.', action: <Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button> }}
       tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : dated.filter(f).length }))} />}>
       {tab !== 'pickup' && <DateFilter r={dr} set={setDr} count={rows.length} total={d.orders.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).length} />}
@@ -72,6 +72,7 @@ export function Orders() {
         filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
         empty={{ title: 'سفارشی در این نما نیست.', desc: 'نمای دیگری را انتخاب کنید یا فیلتر انبار را بردارید.' }}
         bulk={(ids, clear) => <>
+          <span className="w-44"><Select label="چاپ گروهی" value="" placeholder={`چاپ گروهی ${fa(ids.length)} سفارش…`} other={false} onChange={(v) => { nav(`/admin/print?view=batch&orders=${ids.join(',')}&docs=${v}`); clear() }} options={[['invoice', 'چاپ فاکتورها'], ['post', 'چاپ برچسب و رسید پستی'], ['courier', 'چاپ برچسب پیک'], ['pickup', 'چاپ رسید تحویل حضوری'], ['pick', 'لیست جمع‌آوری تجمیعی انبار'], ['invoice,post,courier', 'فاکتور و برچسب ارسال با هم'], ['manifest', 'مانیفست تحویل به پست']]} /></span>
           <Button size="sm" icon={<Printer size={13} />} onClick={() => { nav(`/admin/print?orders=${ids.join(',')}`); clear() }}>چاپ بستهٔ کامل {fa(ids.length)} سفارش</Button>
           <Button size="sm" onClick={() => { const undo = snapshot(); mutate((x) => x.orders.filter((o) => ids.includes(o.id)).forEach((o) => (o.lockedBy = null, o.tags = [...new Set([...o.tags, 'تخصیص: نیما'])])), { action: 'تخصیص سفارش به انباردار', target: ids.join('، ') }); toast(`${fa(ids.length)} سفارش به نیما تخصیص یافت.`, { undo }); clear() }}>تخصیص به انباردار</Button>
         </>} />}

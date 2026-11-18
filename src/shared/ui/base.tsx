@@ -82,7 +82,7 @@ export function Select({ value, onChange, options, className, chips, placeholder
   const auto = other ?? (options.length >= 2 && options.every((o) => typeof o === 'string') && !options.some((o) => /^همه/.test(o as string)))
   const opts = [...options.map((o) => (Array.isArray(o) ? o : [o, o]) as [string, string]), ...(auto && !options.some((o) => isOther(Array.isArray(o) ? o[0] : o)) ? [['سایر', 'سایر'] as [string, string]] : [])]
   const [open, setOpen] = useState(false); const [q, setQ] = useState(''); const [chip, setChip] = useState(-1); const [hi, setHi] = useState(0)
-  const btn = useRef<HTMLButtonElement>(null); const [pos, setPos] = useState({ top: 0, left: 0, width: 0, up: false })
+  const btn = useRef<HTMLButtonElement>(null); const pop = useRef<HTMLDivElement>(null); const [pos, setPos] = useState({ top: 0, left: 0, width: 0, up: false })
   // گزینهٔ «سایر»: با انتخابش کادر توضیح باز می‌شود و مقدار به شکل «سایر: …» ذخیره می‌شود
   const otherOpt = opts.find(([v]) => isOther(v)); const custom = !!otherOpt && value.startsWith('سایر: ')
   const cur = opts.find(([v]) => v === value) ?? (custom ? [value, value] as [string, string] : undefined)
@@ -90,7 +90,11 @@ export function Select({ value, onChange, options, className, chips, placeholder
   const norm = (t: string) => t.toLowerCase().replace(/[ي]/g, 'ی').replace(/[ك]/g, 'ک').replace(/\u200c/g, ' ')
   const list = opts.filter(([v, l]) => (!q || norm(`${l} ${v}`).includes(norm(q))) && (chip < 0 || !chips || chips[chip].test(v, l)))
   const place = () => { const r = btn.current!.getBoundingClientRect(); const up = window.innerHeight - r.bottom < 300 && r.top > 300; setPos({ top: up ? r.top : r.bottom, left: r.left, width: Math.max(r.width, 220), up }) }
-  useEffect(() => { if (!open) return; const close = () => setOpen(false); window.addEventListener('scroll', close, true); window.addEventListener('resize', close); return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) } }, [open])
+  // اسکرول داخل خود منو نادیده گرفته می‌شود؛ با اسکرول صفحه منو همراه دکمه جابه‌جا می‌شود و اگر دکمه از دید خارج شد بسته می‌شود
+  useEffect(() => { if (!open) return
+    const follow = (e: Event) => { if (pop.current && e.target instanceof Node && pop.current.contains(e.target)) return; const r = btn.current?.getBoundingClientRect(); if (!r || r.bottom < 0 || r.top > window.innerHeight) return setOpen(false); place() }
+    const close = () => setOpen(false)
+    window.addEventListener('scroll', follow, true); window.addEventListener('resize', close); return () => { window.removeEventListener('scroll', follow, true); window.removeEventListener('resize', close) } }, [open])
   const pick = (v: string) => { onChange(isOther(v) ? 'سایر: ' : v); setOpen(false); setQ(''); if (!isOther(v)) btn.current?.focus() }
   const key = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(list.length - 1, h + 1)) }
@@ -109,10 +113,10 @@ export function Select({ value, onChange, options, className, chips, placeholder
       </button>
       {open && createPortal(<>
         <div className="fixed inset-0 z-[80]" onClick={() => setOpen(false)} />
-        <div role="listbox" className="anim-pop fixed z-[81] overflow-hidden rounded-xl border border-line bg-surface shadow-float" style={{ left: pos.left, width: pos.width, ...(pos.up ? { bottom: window.innerHeight - pos.top + 4 } : { top: pos.top + 4 }) }} onKeyDown={key}>
+        <div ref={pop} role="listbox" className="anim-pop fixed z-[81] overflow-hidden rounded-xl border border-line bg-surface shadow-float" style={{ left: pos.left, width: pos.width, ...(pos.up ? { bottom: window.innerHeight - pos.top + 4 } : { top: pos.top + 4 }) }} onKeyDown={key}>
           {searchable && <div className="border-b border-line p-2"><div className="relative"><Search size={14} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-t3" /><input autoFocus aria-label="جست‌وجو در گزینه‌ها" value={q} onChange={(e) => { setQ(e.target.value); setHi(0) }} placeholder="جست‌وجو…" className="h-9 w-full rounded-lg border border-line bg-surface-2 pr-8 pl-2 text-13 outline-none focus:border-brand" /></div>
             {chips && <div className="mt-2 flex flex-wrap gap-1">{chips.map((c, i) => <button key={c.label} type="button" onClick={() => { setChip(chip === i ? -1 : i); setHi(0) }} className={cx('rounded-full border px-2 py-0.5 text-11', chip === i ? 'border-transparent bg-brand-solid text-white' : 'border-line text-t2 hover:border-brand')}>{c.label}</button>)}</div>}</div>}
-          <ul className="max-h-64 overflow-y-auto p-1">{list.length === 0 ? <li className="px-3 py-3 text-center text-12 text-t3">موردی پیدا نشد.</li> : list.map(([v, l], i) => <li key={v}><button type="button" role="option" aria-selected={v === value} onMouseEnter={() => setHi(i)} onClick={() => pick(v)} className={cx('flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-right text-13', i === hi && 'bg-neutral-bg', v === value && 'font-semibold text-brand')}><span className="truncate">{l}</span>{v === value && <Check size={14} />}</button></li>)}</ul>
+          <ul className="max-h-64 overflow-y-auto overscroll-contain p-1">{list.length === 0 ? <li className="px-3 py-3 text-center text-12 text-t3">موردی پیدا نشد.</li> : list.map(([v, l], i) => <li key={v}><button type="button" role="option" aria-selected={v === value} onMouseEnter={() => setHi(i)} onClick={() => pick(v)} className={cx('flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-right text-13', i === hi && 'bg-neutral-bg', v === value && 'font-semibold text-brand')}><span className="truncate">{l}</span>{v === value && <Check size={14} />}</button></li>)}</ul>
           {searchable && <p className="border-t border-line px-3 py-1.5 text-11 text-t3">{list.length.toLocaleString('fa-IR')} از {opts.length.toLocaleString('fa-IR')} گزینه</p>}
         </div></>, document.body)}
     </>

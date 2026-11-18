@@ -60,6 +60,7 @@
 |---|---|
 | `npm run build` | نسخهٔ ایستا با HashRouter در `dist` (GitHub Pages) |
 | `VITE_ROUTER=memory npx vite build` | نسخهٔ قابل جاسازی بدون تغییر آدرس |
+| `VITE_REVIEW=off npm run build` | بدون دکمهٔ «ثبت نظر» (برای تولید) |
 
 ## نکات پیاده‌سازی تولید
 

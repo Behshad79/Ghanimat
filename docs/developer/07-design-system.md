@@ -128,6 +128,7 @@
 | `QuickHost` | `src/shared/ui/quickview.tsx` |
 | `ReasonHost` | `src/shared/ui/reason.tsx` |
 | `ReasonLog` | `src/shared/ui/reason.tsx` |
+| `ReviewWidget` | `src/shared/ui/review.tsx` |
 | `DataTable` | `src/shared/ui/table.tsx` |
 | `PresetBar` | `src/shared/ui/table.tsx` |
 | `OtherUpload` | `src/shared/ui/upload.tsx` |

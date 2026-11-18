@@ -7,7 +7,7 @@ routes=[...new Set(routes)].map(p=>p.startsWith('/')?p:'/admin/'+p);
 routes.unshift('/admin');
 const real=p=>p.replace(/(\w+)\/:id/,(m,k)=>k+'/'+(EX[':id'][k]||'x')).replace(':key',encodeURIComponent(EX[':key']));
 const slug=p=>p.replace(/^\/+|\/+$/g,'').replace(':id','id').replace(/[^a-z0-9]+/g,'-')||'root';
-(async()=>{const b=await chromium.launch();const c=await b.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});const p=await c.newPage();
+(async()=>{const b=await chromium.launch();const c=await b.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});await c.addInitScript(()=>{document.addEventListener('DOMContentLoaded',()=>{const s=document.createElement('style');s.textContent='[data-review-ui]{display:none!important}';document.head.appendChild(s)})});const p=await c.newPage();
  await p.goto(B+'/login');await p.screenshot({path:OUT+'/login.jpg',type:'jpeg',quality:62});
  await p.evaluate(()=>{localStorage.clear();localStorage.setItem('ghanimat-demo-session-v2',JSON.stringify({userId:'u1',theme:'light'}))});await p.reload();await p.waitForTimeout(600);
  const tall=async(pg,w,path,q)=>{const h=await pg.evaluate(()=>{let m=document.documentElement.scrollHeight;document.querySelectorAll('*').forEach(e=>{const cs=getComputedStyle(e);if(/(auto|scroll)/.test(cs.overflowY)&&e.scrollHeight>e.clientHeight+4){m=Math.max(m,e.scrollHeight+(e.getBoundingClientRect().top))}});return Math.ceil(m)});const H=Math.min(Math.max(h,900),7000);await pg.setViewportSize({width:w,height:H});await pg.waitForTimeout(250);await pg.screenshot({path,type:'jpeg',quality:q});await pg.setViewportSize({width:w,height:900})};

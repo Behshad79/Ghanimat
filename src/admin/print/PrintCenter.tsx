@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Download, FileText, Printer, RotateCcw, Settings2 } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
@@ -10,7 +10,8 @@ import { fa, rel } from '@/shared/lib/fa'
 import { CourierLabel, Invoice, Manifest, PickList, PickupReceipt, PostLabel, QCSheet, ReturnForm, WarrantyCard, type DocOpts } from './docs'
 import { useQuickChips } from '../pages/_shared'
 import { EditableDoc } from './EditableDoc'
-import { BatchPrint } from './BatchPrint'
+import { BatchPrint, pageEls } from './BatchPrint'
+import { PAPERS, paperKey, printPages, saveBlob, toPdf } from '@/shared/lib/printOut'
 
 export const DOCS: { id: string; label: string; src: 'order' | 'ship' | 'unit' | 'ret' | 'batch' | 'labels'; papers: string[]; fields: [string, string][] }[] = [
   { id: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', src: 'order', papers: ['A4'], fields: [['paymentInfo', 'اطلاعات پرداخت'], ['nid', 'کد ملی خریدار حقیقی (پوشیده)']] },
@@ -39,7 +40,7 @@ export function PrintCenter() {
   const ship = ships.find((s) => s.id === shipId) ?? ships[0]
   const unitId = sp.get('unit') || d.units.find((u) => u.status === 'unit.sold')?.id || d.units[0].id
   const retId = sp.get('ret') ?? d.returns[0]?.id
-  const [paper, setPaper] = useState(doc.papers[0]); const [bw, setBw] = useState(false); const [editor, setEditor] = useState(false)
+  const [paper, setPaper] = useState(() => (d.docSettings as Record<string, { paper?: string }>)[doc.id]?.paper ?? doc.papers[0]); useEffect(() => { setPaper((d.docSettings as Record<string, { paper?: string }>)[doc.id]?.paper ?? doc.papers[0]) }, [doc.id]); const [bw, setBw] = useState(false); const [editor, setEditor] = useState(false)
   const opts: DocOpts = { ...DEF, ...(d.docSettings[doc.id] ?? {}), hide: d.docSettings[doc.id]?.hide ?? [] }
   const setOpt = (patch: Partial<DocOpts>) => mutate((x) => { x.docSettings[doc.id] = { ...(x.docSettings[doc.id] ?? {}), ...patch } })
   const go = (patch: Record<string, string>) => { const n = new URLSearchParams(sp); Object.entries(patch).forEach(([k, v]) => n.set(k, v)); setSp(n, { replace: true }) }
@@ -51,15 +52,18 @@ export function PrintCenter() {
     const again = d.audit.some((a) => a.action === 'چاپ سند' && a.target.includes(`${doc.label} · ${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : unitId}`))
     const ref = doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : doc.src === 'ret' ? retId : `${batch.length} مرسوله`
     mutate((x) => { const n = x.printLog.filter((y) => y.doc === doc.id && y.ref === ref).length; x.printLog.unshift({ id: `PL-${Date.now().toString(36).slice(-5).toUpperCase()}`, doc: doc.id, label: doc.label, ref, by: currentUser()?.name ?? 'کارشناس', at: new Date().toISOString(), copy: n + 1, paper }) }, { action: 'چاپ سند', target: `${doc.label} · ${ref}${again ? ' (نسخهٔ دوم)' : ''}` })
-    try { window.print() } catch { toast('مرورگر اجازهٔ چاپ از این قاب را نمی‌دهد. پنل را در پنجرهٔ جدا باز کنید.', { tone: 'err' }) }
+    printPages(sheets()).then((ok) => { if (!ok) { try { window.print() } catch { toast('مرورگر پنجرهٔ چاپ را باز نکرد. «دانلود PDF» را بزنید و فایل را چاپ کنید.', { tone: 'err' }) } } })
   }
+  const sheets = () => pageEls(document, '.print-area .doc-sheet').map((el) => ({ el, paper: paperKey(doc.id === 'bundle' && el !== document.querySelector('.print-area .doc-sheet') ? 'A6' : paper) }))
+  const [busy, setBusy] = useState(false)
+  const pdf = async () => { if (cancelled) return toast('این مرسوله لغو شده است و برچسب برای آن چاپ نمی‌شود.', { tone: 'err' }); const els = sheets(); if (!els.length) return toast('سندی در پیش‌نمایش نیست.', { tone: 'err' }); setBusy(true); try { const blob = await toPdf(els); saveBlob(blob, `ghanimat-${doc.id}-${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : 'batch'}.pdf`); toast(`PDF در اندازهٔ ${PAPERS[paperKey(paper)]?.label ?? paper} ساخته شد.`) } catch (e) { toast(`ساخت PDF ناموفق بود: ${(e as Error).message}`, { tone: 'err' }) } finally { setBusy(false) } }
   if (sp.get('view') === 'batch') return <BatchPrint />
   if (doc.id === 'labels') { nav('/admin/labels', { replace: true }); return null }
   if (sp.get('view') === 'archive') return <Page title="بایگانی اسناد چاپی" module="print" back="/admin/print" sub="همهٔ اسناد قابل چاپ و سابقهٔ هر چاپ، در یک جدول قابل جست‌وجو" actions={<Button onClick={() => nav('/admin/print')}>مرکز چاپ</Button>}><PrintArchive /></Page>
   return (
     <Page title="چاپ و خروجی" module="print" back="/admin/orders" sub={doc.label}
       actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch')}>چاپ گروهی</Button><Button variant="ghost" onClick={() => nav('/admin/print?view=archive')}>بایگانی همهٔ اسناد</Button><Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
-      primary={<Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc.label.split(' (')[0]}</Button>}>
+      primary={<span className="flex gap-2"><Button icon={<Download size={14} />} loading={busy} onClick={pdf}>دانلود PDF</Button><Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc.label.split(' (')[0]}</Button></span>}>
       <div className="grid gap-4 lg:grid-cols-[290px_1fr]">
         <div className="no-print space-y-4">
           <Card title="سند"><ul className="space-y-0.5">{DOCS.map((x) => <li key={x.id}><button onClick={() => { if (x.id === 'labels') return nav('/admin/labels'); go({ doc: x.id }); setPaper(x.papers[0]) }} className={cx('flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-right text-13 transition-colors', x.id === doc.id ? 'bg-brand-tint font-semibold text-brand' : 'hover:bg-neutral-bg')}><FileText size={14} />{x.label}</button></li>)}</ul></Card>
@@ -69,7 +73,7 @@ export function PrintCenter() {
             {doc.src === 'unit' && <Field label="واحد"><Select value={unitId} onChange={(v) => go({ unit: v })} options={d.units.map((u) => [u.id, `${u.code} · ${d.products.find((p) => p.id === u.productId)?.en}`])} /></Field>}
             {doc.src === 'ret' && <Field label="مرجوعی"><Select value={retId} onChange={(v) => go({ ret: v })} options={d.returns.map((r) => [r.id, `${r.id} · ${r.reason}`])} /></Field>}
             {doc.src === 'batch' && <p className="text-12 text-t2">{fa(batch.length)} مرسوله {doc.id === 'pick' ? 'منتظر جمع‌آوری در انبار تهران' : 'پستی آمادهٔ تحویل'} در این سند می‌آید.</p>}
-            <Field label="اندازهٔ کاغذ"><Select value={paper} onChange={setPaper} options={doc.papers} /></Field>
+            <Field label="اندازهٔ کاغذ و خروجی"><Select value={paper} onChange={setPaper} other={false} options={[...new Set([...doc.papers, ...(doc.src === 'order' ? ['A4', 'A5', 'Letter'] : doc.src === 'ship' ? ['A6', 'A5 افقی', '100x150', '100x100', 'A5'] : doc.src === 'batch' ? ['A4', 'A4 افقی', 'A5'] : doc.id === 'pickup' ? ['80mm', '58mm', 'A6'] : ['A4', 'A5', 'A6'])])].map((k) => [k, PAPERS[paperKey(k)]?.label ?? k] as [string, string])} /></Field>
             {doc.id === 'warranty' && <label className="flex items-center gap-2 text-13"><Toggle on={bw} label="سیاه‌وسفید" onChange={setBw} />نسخهٔ چاپی سیاه‌وسفید</label>}
             {doc.src === 'order' && <Button className="w-full" onClick={() => go({ doc: 'bundle', orders: order.id })}>چاپ بستهٔ کامل سفارش</Button>}
           </div></Card>

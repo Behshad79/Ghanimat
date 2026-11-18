@@ -12,9 +12,11 @@ export function RowMenu({ items, label = 'اقدام‌های بیشتر', trigg
     if (!pos) return
     const close = (e: Event) => { if (!box.current?.contains(e.target as Node) && !btn.current?.contains(e.target as Node)) setPos(null) }
     const key = (e: KeyboardEvent) => e.key === 'Escape' && setPos(null)
-    document.addEventListener('mousedown', close); window.addEventListener('keydown', key); window.addEventListener('scroll', () => setPos(null), { once: true, capture: true })
-    return () => { document.removeEventListener('mousedown', close); window.removeEventListener('keydown', key) }
-  }, [pos])
+    // با اسکرول، منو همراه دکمه جابه‌جا می‌شود و فقط وقتی دکمه از دید خارج شد بسته می‌شود
+    const follow = () => { const r = btn.current?.getBoundingClientRect(); if (!r || r.bottom < 0 || r.top > window.innerHeight) return setPos(null); const h = items.length * 36 + 16; setPos({ top: r.bottom + h > window.innerHeight ? Math.max(8, r.top - h) : r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 228)) }) }
+    document.addEventListener('mousedown', close); window.addEventListener('keydown', key); window.addEventListener('scroll', follow, true); window.addEventListener('resize', follow)
+    return () => { document.removeEventListener('mousedown', close); window.removeEventListener('keydown', key); window.removeEventListener('scroll', follow, true); window.removeEventListener('resize', follow) }
+  }, [!!pos])
   const open = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (pos) return setPos(null)

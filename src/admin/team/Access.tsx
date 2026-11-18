@@ -39,6 +39,7 @@ export function RolesMatrix() {
   const d = useDB(); const nav = useNavigate(); const roles = d.roleDefs
   const [edit, setEdit] = useState<{ key: string | null; label: string; face: Face; desc: string; from: string; home: string } | null>(null)
   const count = (k: string) => d.team.filter((u) => u.role === k).length
+  const [move, setMove] = useState<{ from: string; to: string } | null>(null)
   const toggle = (k: string, m: string) => {
     const r = roles[k]; if (r.modules === '*') return toast('مدیر کل به همهٔ ماژول‌ها دسترسی دارد و قابل محدود کردن نیست.', { tone: 'err' })
     const on = r.modules.includes(m)
@@ -52,7 +53,7 @@ export function RolesMatrix() {
     setEdit(null)
   }
   const remove = async (k: string) => {
-    if (count(k)) return toast(`${fa(count(k))} عضو این نقش را دارند. اول نقش آن‌ها را عوض کنید.`, { tone: 'err' })
+    if (count(k)) return setMove({ from: k, to: Object.keys(roles).find((x) => x !== k && roles[x].modules !== '*') ?? '' })
     const why = await askReason({ kind: 'cancel', ref: roles[k].label, status: 'حذف نقش', title: `دلیل حذف نقش «${roles[k].label}»` }); if (!why) return
     mutate((x) => { delete x.roleDefs[k] }, { action: 'حذف نقش', target: roles[k].label, after: why }); toast('نقش حذف شد.')
   }
@@ -71,7 +72,7 @@ export function RolesMatrix() {
             {k !== 'super' && <button type="button" aria-label={`حذف نقش ${r.label}`} onClick={() => void remove(k)} className="grid size-7 place-items-center rounded-md text-t2 hover:bg-danger-bg hover:text-danger"><Trash2 size={13} /></button>}
           </span></div></Card>))}</div>
       <Card title="ماتریس نقش × ماژول" pad={false}><div className="overflow-x-auto"><table className="gh-table w-full text-12"><thead><tr className="bg-surface-2"><th className="sticky right-0 z-10 bg-surface-2 p-2 text-right font-medium">ماژول</th>{full.map(([k, r]) => <th key={k} className="p-2 font-medium whitespace-nowrap"><button className="hover:text-brand" title="پیش‌نمایش پنل از دید این نقش" onClick={() => { setSession({ viewAs: k === 'super' ? null : k }); nav(r.home) }}>{r.label}<Eye size={11} className="mr-1 inline" /></button></th>)}</tr></thead>
-        <tbody>{NAV.map((n) => <tr key={n.id} className="border-t border-line"><td className="sticky right-0 z-10 bg-surface p-2">{n.label}</td>{full.map(([k, r]) => { const on = roleHas(r, n.id); return <td key={k} className="p-1 text-center"><button type="button" aria-pressed={on} aria-label={`${n.label} برای ${r.label}: ${on ? 'دارد' : 'ندارد'}`} onClick={() => toggle(k, n.id)} className={cx('mx-auto grid size-7 place-items-center rounded-md transition-colors', on ? 'bg-success-bg text-success hover:bg-danger-bg hover:text-danger' : 'text-t3 hover:bg-success-bg hover:text-success', r.modules === '*' && 'cursor-not-allowed')}>{on ? <Check size={14} /> : <Minus size={14} />}</button></td> })}</tr>)}</tbody></table></div></Card>
+        <tbody>{NAV.map((n) => <tr key={n.id} className="border-t border-line"><td className="sticky right-0 z-10 bg-surface p-2">{n.label}</td>{full.map(([k, r]) => { const on = roleHas(r, n.id); return <td key={k} className="p-1 text-center"><button type="button" disabled={r.modules === '*'} title={r.modules === '*' ? 'مدیر کل همیشه به همهٔ بخش‌ها دسترسی دارد' : undefined} aria-pressed={on} aria-label={`${n.label} برای ${r.label}: ${on ? 'دارد' : 'ندارد'}`} onClick={() => toggle(k, n.id)} className={cx('mx-auto grid size-7 place-items-center rounded-md transition-colors', on ? 'bg-success-bg text-success hover:bg-danger-bg hover:text-danger' : 'text-t3 hover:bg-success-bg hover:text-success', r.modules === '*' && 'cursor-not-allowed')}>{on ? <Check size={14} /> : <Minus size={14} />}</button></td> })}</tr>)}</tbody></table></div></Card>
       <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.key ? 'ویرایش نقش' : 'ساخت نقش تازه'} footer={<><Button variant="primary" onClick={save}>{edit?.key ? 'ذخیره' : 'ساخت نقش'}</Button><Button variant="ghost" onClick={() => setEdit(null)}>انصراف</Button></>}>
         {edit && <div className="space-y-3">
           <Field label="نام نقش"><Input value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} placeholder="مثلاً کارشناس محتوا" /></Field>
@@ -81,7 +82,11 @@ export function RolesMatrix() {
           <Field label="توضیح برای تیم"><Textarea rows={2} value={edit.desc} onChange={(e) => setEdit({ ...edit, desc: e.target.value })} /></Field>
         </div>}
       </Modal>
-    </div>
+          {move && <Modal open onClose={() => setMove(null)} title={`حذف نقش «${roles[move.from].label}»`} footer={<><Button variant="danger" disabled={!move.to} onClick={async () => { const members = d.team.filter((u) => u.role === move.from); const why = await askReason({ kind: 'cancel', ref: roles[move.from].label, status: 'حذف نقش', title: `دلیل حذف نقش «${roles[move.from].label}»` }); if (!why) return; mutate((x) => { x.team.forEach((u) => { if (u.role === move.from) u.role = move.to as any }); delete x.roleDefs[move.from] }, { action: 'انتقال اعضا و حذف نقش', target: roles[move.from].label, after: `${members.map((m) => m.name).join('، ')} ← ${roles[move.to].label}` }); toast(`${fa(members.length)} عضو به نقش «${roles[move.to].label}» منتقل و نقش حذف شد.`); setMove(null) }}>انتقال اعضا و حذف نقش</Button><Button variant="ghost" onClick={() => setMove(null)}>انصراف</Button></>}>
+        <p className="mb-3 text-13 text-t2">{d.team.filter((u) => u.role === move.from).map((u) => u.name).join('، ')} این نقش را دارند. پیش از حذف، به کدام نقش منتقل شوند؟</p>
+        <Field label="نقش تازه"><Select value={move.to} onChange={(v) => setMove({ ...move, to: v })} options={Object.entries(roles).filter(([x]) => x !== move.from).map(([x, r]) => [x, r.label] as [string, string])} other={false} /></Field>
+      </Modal>}
+</div>
   )
 }
 

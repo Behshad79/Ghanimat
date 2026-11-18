@@ -62,6 +62,7 @@ export const makeSite = () => ({
     copyright: 'تمام حقوق این وبسایت متعلق به فروشگاه آنلاین غنیمت می‌باشد.',
   },
   card: {
+    icons: [] as { id: string; name: string; src: string; mono: boolean }[],
     interval: 2.6, cta: 'افزودن به سبد خرید', ratio: '1/1' as '1/1' | '4/5', colsDesktop: 4, colsMobile: 2,
     showTimer: true, showRating: true, showCompare: true, showFast: true, showGrade: true, showHot: true, showOutOfStock: true,
     lines: [

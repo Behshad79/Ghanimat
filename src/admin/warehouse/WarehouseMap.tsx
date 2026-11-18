@@ -76,7 +76,7 @@ export function WarehouseMap() {
 
       <Card title="گزارش فعالیت انبار" actions={<Segmented size="sm" value={logF} onChange={setLogF} options={[['all', 'همه'], ['unread', 'خوانده‌نشده'], ['ورود', 'ورود'], ['جابه‌جایی', 'جابه‌جایی'], ['خروج', 'خروج']]} />} pad={false}>
         {moves.length === 0 ? <div className="p-5"><EmptyState title="فعالیتی با این فیلتر نیست." /></div> : <ul className="divide-y divide-line">{moves.map((m) => (
-          <li key={m.id}><button onClick={() => { mutate((x) => { x.moves.find((y) => y.id === m.id)!.read = true }); if (m.unit) nav(`/admin/catalog/unit/${m.unit}`); else setBin(m.to) }} className="flex w-full items-center gap-3 px-5 py-3 text-right hover:bg-surface-2">
+          <li key={m.id}><button onClick={() => { mutate((x) => { x.moves.find((y) => y.id === m.id)!.read = true }); if (m.unit) nav(`/admin/catalog/unit/${m.unit}`); else if (allBins.some((b) => b.id === m.to)) setBin(m.to); else nav(`/admin/catalog/${m.product}`) }} title={m.unit ? 'صفحهٔ واحد' : allBins.some((b) => b.id === m.to) ? `خانهٔ ${m.to}` : 'صفحهٔ کالا'} className="flex w-full items-center gap-3 px-5 py-3 text-right hover:bg-surface-2">
             {!m.read && <span className="size-2 shrink-0 rounded-full bg-brand-solid" aria-label="خوانده‌نشده" />}
             <span className={cx('grid size-9 shrink-0 place-items-center rounded-full', m.kind === 'ورود' ? 'bg-success-bg text-success' : m.kind === 'خروج' ? 'bg-warning-bg text-warning' : 'bg-brand-tint text-brand')}>{m.kind === 'ورود' ? <LogIn size={15} /> : m.kind === 'خروج' ? <LogOut size={15} /> : <ArrowLeftRight size={15} />}</span>
             <ProductImg pid={m.product} size={36} />

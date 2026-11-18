@@ -36,7 +36,7 @@ export function Integrations() {
         <Card title={<span className="flex items-center gap-2"><Webhook size={15} />وب‌هوک تازه</span>}>
           <Field label="نشانی مقصد (n8n، Make، Slack، CRM…)"><Input className="ltr text-left" placeholder="https://" value={nh.url} onChange={(e) => setNh({ ...nh, url: e.target.value })} /></Field>
           <p className="mt-3 mb-1 text-12 font-semibold">رویدادها</p>
-          <div className="flex flex-wrap gap-1">{EVENTS.map((e) => <button key={e} onClick={() => setNh({ ...nh, events: nh.events.includes(e) ? nh.events.filter((x) => x !== e) : [...nh.events, e] })} className={cx('ltr rounded-full border px-2 py-0.5 text-11', nh.events.includes(e) ? 'border-transparent bg-brand-solid text-white' : 'border-line')}>{e}</button>)}</div>
+          <div className="flex flex-wrap gap-1">{EVENTS.map((e) => <button key={e} type="button" aria-pressed={nh.events.includes(e)} onClick={() => setNh({ ...nh, events: nh.events.includes(e) ? nh.events.filter((x) => x !== e) : [...nh.events, e] })} className={cx('ltr rounded-full border px-2 py-0.5 text-11', nh.events.includes(e) ? 'border-transparent bg-brand-solid text-white' : 'border-line')}>{e}</button>)}</div>
           <Button variant="primary" className="mt-3 w-full" icon={<Plus size={14} />} disabled={!/^https:\/\//.test(nh.url) || !nh.events.length} onClick={() => { mutate((x) => { x.hub.hooks.push({ id: `wh${Date.now().toString(36)}`, url: nh.url, events: nh.events, secret: `whsec_${Math.random().toString(36).slice(2, 6)}••`, active: true }) }, { action: 'افزودن وب‌هوک', target: nh.url }); setNh({ url: '', events: [] }); toast('وب‌هوک ساخته شد. امضای HMAC در سرآیند X-Ghanimat-Signature ارسال می‌شود.') }}>ساخت وب‌هوک</Button>
         </Card>
       </div>}

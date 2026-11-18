@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Download, FileText, Printer, RotateCcw, Settings2 } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
-import { Drawer, toast } from '@/shared/ui/overlay'
-import { mutate, useDB, useSession } from '@/shared/lib/store'
-import { fa } from '@/shared/lib/fa'
+import { confirm, Drawer, toast } from '@/shared/ui/overlay'
+import { DataTable } from '@/shared/ui/table'
+import { currentUser, mutate, useDB, useSession } from '@/shared/lib/store'
+import { fa, rel } from '@/shared/lib/fa'
 import { CourierLabel, Invoice, Manifest, PickList, PickupReceipt, PostLabel, QCSheet, ReturnForm, WarrantyCard, type DocOpts } from './docs'
 import { useQuickChips } from '../pages/_shared'
 import { EditableDoc } from './EditableDoc'
@@ -47,13 +48,15 @@ export function PrintCenter() {
     if (cancelled) return toast('این مرسوله لغو شده است و برچسب برای آن چاپ نمی‌شود.', { tone: 'err' })
     if (s0.simulate === 'fail') return toast('چاپگر در دسترس نیست. اتصال چاپگر را بررسی کنید یا «ذخیرهٔ PDF» را بزنید.', { tone: 'err' })
     const again = d.audit.some((a) => a.action === 'چاپ سند' && a.target.includes(`${doc.label} · ${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : unitId}`))
-    mutate(() => {}, { action: 'چاپ سند', target: `${doc.label} · ${doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : retId}${again ? ' (نسخهٔ دوم)' : ''}` })
+    const ref = doc.src === 'order' ? order.id : doc.src === 'ship' ? ship.id : doc.src === 'unit' ? unitId : doc.src === 'ret' ? retId : `${batch.length} مرسوله`
+    mutate((x) => { const n = x.printLog.filter((y) => y.doc === doc.id && y.ref === ref).length; x.printLog.unshift({ id: `PL-${Date.now().toString(36).slice(-5).toUpperCase()}`, doc: doc.id, label: doc.label, ref, by: currentUser()?.name ?? 'کارشناس', at: new Date().toISOString(), copy: n + 1, paper }) }, { action: 'چاپ سند', target: `${doc.label} · ${ref}${again ? ' (نسخهٔ دوم)' : ''}` })
     try { window.print() } catch { toast('مرورگر اجازهٔ چاپ از این قاب را نمی‌دهد. پنل را در پنجرهٔ جدا باز کنید.', { tone: 'err' }) }
   }
   if (doc.id === 'labels') { nav('/admin/labels', { replace: true }); return null }
+  if (sp.get('view') === 'archive') return <Page title="بایگانی اسناد چاپی" module="print" back="/admin/print" sub="همهٔ اسناد قابل چاپ و سابقهٔ هر چاپ، در یک جدول قابل جست‌وجو" actions={<Button onClick={() => nav('/admin/print')}>مرکز چاپ</Button>}><PrintArchive /></Page>
   return (
     <Page title="چاپ و خروجی" module="print" back="/admin/orders" sub={doc.label}
-      actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
+      actions={<>{doc.src === 'order' && <Button variant="ghost" icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${order.id}`)}>بازگشت به جزئیات سفارش</Button>}<Button variant="ghost" onClick={() => nav('/admin/print?view=archive')}>بایگانی همهٔ اسناد</Button><Button icon={<Settings2 size={14} />} onClick={() => setEditor(true)}>ویرایش قالب</Button><Button icon={<Download size={14} />} onClick={() => { toast('در پنجرهٔ چاپ، مقصد را «ذخیره به‌صورت PDF» انتخاب کنید.'); print() }}>ذخیرهٔ PDF</Button></>}
       primary={<Button variant="primary" icon={<Printer size={14} />} onClick={print}>چاپ {doc.label.split(' (')[0]}</Button>}>
       <div className="grid gap-4 lg:grid-cols-[290px_1fr]">
         <div className="no-print space-y-4">
@@ -88,12 +91,15 @@ export function PrintCenter() {
           </EditableDoc>
         </div>
       </div>
-      <Drawer open={editor} onClose={() => setEditor(false)} title={`ویرایش قالب: ${doc.label}`} footer={<><Button variant="primary" onClick={() => { setEditor(false); toast('قالب ذخیره شد و برای چاپ‌های بعدی هم اعمال می‌شود.') }}>ذخیرهٔ قالب</Button><Button variant="ghost" icon={<RotateCcw size={14} />} onClick={() => { mutate((x) => { delete x.docSettings[doc.id] }); toast('قالب به حالت پیش‌فرض برگشت.') }}>بازگشت به پیش‌فرض</Button></>}>
+      <Drawer open={editor} onClose={() => setEditor(false)} title={`ویرایش قالب: ${doc.label}`} footer={<><Button variant="primary" onClick={() => { mutate((x) => { (x.docVersions[doc.id] ??= []).unshift({ at: new Date().toISOString(), by: currentUser()?.name ?? 'مدیر', opts: { ...(x.docSettings[doc.id] ?? {}) } }); x.docVersions[doc.id] = x.docVersions[doc.id].slice(0, 10) }, { action: 'ذخیرهٔ قالب چاپ', target: doc.label }); setEditor(false); toast('قالب ذخیره شد؛ از همین لحظه همهٔ چاپ‌های این سند با این طرح است. نسخهٔ قبلی در «نسخه‌های قالب» می‌ماند.') }}>ذخیرهٔ قالب</Button><Button variant="ghost" onClick={async () => { if (!(await confirm({ title: 'این سبک روی همهٔ اسناد اعمال شود؟', body: 'سبک، رنگ، اندازهٔ قلم و حاشیهٔ همین قالب برای فاکتور، پیش‌فاکتور، برچسب‌ها، رسیدها و فرم‌ها هم تنظیم می‌شود.', confirm: 'اعمال روی همه' }))) return; mutate((x) => { DOCS.forEach((dd) => { x.docSettings[dd.id] = { ...(x.docSettings[dd.id] ?? {}), style: opts.style, accent: opts.accent, font: opts.font, margin: opts.margin } }) }, { action: 'اعمال سبک روی همهٔ اسناد', target: doc.label }); toast('سبک روی همهٔ اسناد چاپی اعمال شد.') }}>اعمال روی همهٔ اسناد</Button><Button variant="ghost" icon={<RotateCcw size={14} />} onClick={() => { mutate((x) => { delete x.docSettings[doc.id] }); toast('قالب به حالت پیش‌فرض برگشت.') }}>بازگشت به پیش‌فرض</Button></>}>
         <div className="space-y-4">
+          <Field label="سبک قالب"><Segmented value={opts.style ?? 'classic'} onChange={(v) => setOpt({ style: v as DocOpts['style'] })} options={[['classic', 'کلاسیک'], ['modern', 'مدرن'], ['minimal', 'مینیمال']]} /></Field>
+          <Field label="رنگ اصلی"><div className="flex flex-wrap items-center gap-1.5">{['#0000ff', '#10123d', '#16a34a', '#b45309', '#7c3aed', '#111111'].map((c) => <button key={c} type="button" aria-label={`رنگ ${c}`} aria-pressed={(opts.accent ?? '#0000ff') === c} onClick={() => setOpt({ accent: c })} className={cx('size-6 rounded-full border-2', (opts.accent ?? '#0000ff') === c ? 'border-t1' : 'border-transparent')} style={{ background: c }} />)}<input type="color" aria-label="رنگ دلخواه" value={opts.accent ?? '#0000ff'} onChange={(e) => setOpt({ accent: e.target.value })} className="size-7 cursor-pointer rounded" /></div></Field>
           <Field label="اندازهٔ قلم"><Segmented value={String(opts.font)} onChange={(v) => setOpt({ font: +v })} options={[['0.9', 'کوچک'], ['1', 'معمولی'], ['1.1', 'بزرگ']]} /></Field>
           <Field label="حاشیه (میلی‌متر)"><Input type="number" min={2} max={20} className="ltr w-24 text-center font-mono" value={opts.margin} onChange={(e) => setOpt({ margin: Math.min(20, Math.max(2, +e.target.value)) })} /></Field>
           {doc.id === 'invoice' && <label className="flex items-center gap-2 text-13"><Toggle on={opts.seal} label="مهر" onChange={(v) => setOpt({ seal: v })} />نمایش مهر فروشنده</label>}
           {doc.fields.length > 0 && <div><p className="mb-2 text-12 font-medium text-t2">فیلدهای نمایشی</p><div className="space-y-2">{doc.fields.map(([k, l]) => <label key={k} className="flex items-center gap-2 text-13"><Toggle on={!opts.hide.includes(k)} label={l} onChange={(v) => setOpt({ hide: v ? opts.hide.filter((h) => h !== k) : [...opts.hide, k] })} />{l}</label>)}</div></div>}
+          {(d.docVersions[doc.id] ?? []).length > 0 && <div><p className="mb-2 text-12 font-medium text-t2">نسخه‌های قالب</p><ul className="space-y-1.5">{(d.docVersions[doc.id] ?? []).map((v, i) => <li key={i} className="flex items-center justify-between gap-2 rounded-lg border border-line px-2.5 py-1.5 text-12"><span>{new Date(v.at).toLocaleString('fa-IR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {v.by}{i === 0 && <span className="mr-1 text-success">(فعلی)</span>}</span>{i > 0 && <Button size="sm" variant="ghost" onClick={() => { mutate((x) => { x.docSettings[doc.id] = { ...(v.opts as any) } }, { action: 'بازگردانی نسخهٔ قالب چاپ', target: doc.label }); toast('نسخهٔ انتخابی بازگردانی شد.') }}>بازگردانی</Button>}</li>)}</ul></div>}
           <Field label="متن پانویس"><Input value={opts.footer} onChange={(e) => setOpt({ footer: e.target.value })} placeholder="مثلاً: از خرید شما سپاسگزاریم." /></Field>
           <p className="rounded-md bg-neutral-bg px-3 py-2 text-12 text-t2">لوگوها، مهر، امضا و نشانی‌ها از «تنظیمات › فروشنده و انبارها» خوانده می‌شوند.</p>
           <Button variant="ghost" onClick={() => nav('/admin/settings?tab=seller')}>رفتن به فروشنده و انبارها</Button>
@@ -103,3 +109,24 @@ export function PrintCenter() {
   )
 }
 export { Badge }
+
+/** بایگانی اسناد: «همهٔ اسناد قابل چاپ» (فاکتور هر سفارش، برچسب هر مرسوله، برچسب و کارت هر واحد، فرم هر مرجوعی) و «سابقهٔ چاپ» با چاپ‌کننده و نسخه */
+function PrintArchive() {
+  const d = useDB(); const nav = useNavigate(); const [tab, setTab] = useState<'all' | 'log'>('all')
+  const printed = (doc: string, ref: string) => d.printLog.filter((x) => x.doc === doc && x.ref === ref)
+  type R = { id: string; doc: string; label: string; ref: string; who: string; at: string; to: string }
+  const all: R[] = [
+    ...d.orders.flatMap((o) => { const c = d.customers.find((y) => y.id === o.customerId)?.name ?? ''; return [{ id: `inv-${o.id}`, doc: 'invoice', label: 'فاکتور فروش', ref: o.id, who: c, at: o.createdAt, to: `/admin/print?doc=invoice&orders=${o.id}` }, ...(o.shipments.some((s) => /حضوری/.test(s.method)) ? [{ id: `pk-${o.id}`, doc: 'pickup', label: 'رسید دریافت حضوری', ref: o.id, who: c, at: o.createdAt, to: `/admin/print?doc=pickup&orders=${o.id}` }] : []), ...o.shipments.map((s) => ({ id: `sh-${s.id}`, doc: /پست|تیپاکس|باربری/.test(s.method) ? 'post' : 'courier', label: /پست|تیپاکس|باربری/.test(s.method) ? 'برچسب مرسولهٔ پستی' : 'برچسب مرسولهٔ پیک', ref: s.id, who: c, at: o.createdAt, to: `/admin/print?doc=${/پست|تیپاکس|باربری/.test(s.method) ? 'post' : 'courier'}&ship=${s.id}` }))] }),
+    ...d.units.flatMap((u) => [{ id: `qc-${u.id}`, doc: 'qc', label: 'برگهٔ کنترل کیفیت', ref: u.id, who: d.products.find((p) => p.id === u.productId)?.en ?? '', at: u.received, to: `/admin/print?doc=qc&unit=${u.id}` }, ...(u.status === 'unit.sold' ? [{ id: `wr-${u.id}`, doc: 'warranty', label: 'کارت گارانتی', ref: u.id, who: d.products.find((p) => p.id === u.productId)?.en ?? '', at: u.received, to: `/admin/print?doc=warranty&unit=${u.id}` }] : [])]),
+    ...d.returns.map((r) => ({ id: `rt-${r.id}`, doc: 'return', label: 'برچسب و فرم مرجوعی', ref: r.id, who: d.customers.find((y) => y.id === r.customerId)?.name ?? '', at: r.createdAt, to: `/admin/print?doc=return&ret=${r.id}` })),
+  ]
+  const kinds = [...new Set(all.map((r) => r.label))]
+  return <div className="space-y-3">
+    <Segmented value={tab} onChange={setTab} options={[['all', `همهٔ اسناد قابل چاپ (${fa(all.length)})`], ['log', `سابقهٔ چاپ (${fa(d.printLog.length)})`]]} />
+    {tab === 'all' ? <DataTable name="اسناد" rows={all} rowKey={(r) => r.id} onRow={(r) => nav(r.to)} search={(r) => `${r.ref} ${r.who} ${r.label}`} empty={{ title: 'سندی نیست.' }}
+      filters={<span className="text-11 text-t3">{kinds.join(' · ')}</span>}
+      cols={[{ key: 'label', title: 'نوع سند', render: (r) => r.label }, { key: 'ref', title: 'شماره', render: (r) => <span className="ltr font-mono">{r.ref}</span> }, { key: 'who', title: 'مشتری یا کالا', render: (r) => r.who }, { key: 'at', title: 'تاریخ', render: (r) => new Date(r.at).toLocaleDateString('fa-IR'), sort: (r) => +new Date(r.at) }, { key: 'pr', title: 'چاپ', render: (r) => { const n = printed(r.doc, r.ref); return n.length ? <Badge tone="success">{fa(n.length)} بار · {rel(n[0].at)}</Badge> : <Badge tone="neutral">چاپ نشده</Badge> }, text: (r) => (printed(r.doc, r.ref).length ? 'چاپ‌شده' : 'چاپ نشده') }, { key: 'go', title: '', render: () => <span className="text-11 text-brand">پیش‌نمایش و چاپ</span> }]} />
+      : <DataTable name="سابقهٔ چاپ" rows={d.printLog} rowKey={(r) => r.id} onRow={(r) => nav(r.doc === 'invoice' || r.doc === 'pickup' || r.doc === 'proforma' ? `/admin/print?doc=${r.doc}&orders=${r.ref}` : r.doc === 'post' || r.doc === 'courier' ? `/admin/print?doc=${r.doc}&ship=${r.ref}` : r.doc === 'return' ? `/admin/print?doc=return&ret=${r.ref}` : `/admin/print?doc=${r.doc}&unit=${r.ref}`)} search={(r) => `${r.ref} ${r.label} ${r.by}`} empty={{ title: 'هنوز چیزی چاپ نشده است.' }}
+        cols={[{ key: 'id', title: 'شناسه', render: (r) => <span className="ltr font-mono text-11">{r.id}</span> }, { key: 'label', title: 'سند', render: (r) => r.label }, { key: 'ref', title: 'شماره', render: (r) => <span className="ltr font-mono">{r.ref}</span> }, { key: 'copy', title: 'نسخه', render: (r) => (r.copy > 1 ? <Badge tone="warning">نسخهٔ {fa(r.copy)}</Badge> : 'اول'), sort: (r) => r.copy }, { key: 'paper', title: 'کاغذ', render: (r) => r.paper }, { key: 'by', title: 'چاپ‌کننده', render: (r) => r.by }, { key: 'at', title: 'زمان', render: (r) => rel(r.at), sort: (r) => +new Date(r.at) }]} />}
+  </div>
+}

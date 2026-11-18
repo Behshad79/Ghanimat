@@ -6,12 +6,14 @@ import { fa, num } from '@/shared/lib/fa'
 import { CONDITION } from '@/shared/data/statuses'
 import type { Order, Shipment } from '@/shared/data/seed'
 
-export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[]; carrier?: string; proforma?: boolean; validDays?: number }
+export type DocOpts = { font: number; margin: number; footer: string; seal: boolean; hide: string[]; accent?: string; style?: 'classic' | 'modern' | 'minimal'; carrier?: string; proforma?: boolean; validDays?: number }
 const show = (o: DocOpts, k: string) => !o.hide.includes(k)
 const jd = (iso?: string) => (iso ? new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(iso)) : '—')
 const rial = (toman: number) => num(toman * 10)
+/** سبک قالب روی همهٔ اسناد اعمال می‌شود: کلاسیک (خط‌دار)، مدرن (سرستون رنگی و نوار بالا) و مینیمال (بدون کادر) */
+const SHEET_CSS = `.doc-sheet[data-style="modern"]{border-top:3mm solid var(--doc-accent)}.doc-sheet[data-style="modern"] th{background:var(--doc-accent)!important;color:#fff!important;border-color:var(--doc-accent)!important}.doc-sheet[data-style="minimal"] th,.doc-sheet[data-style="minimal"] td{border-left:0!important;border-right:0!important;border-top:0!important;background:transparent!important}.doc-sheet[data-style="minimal"] th{border-bottom:2px solid var(--doc-accent)!important}`
 const Sheet = ({ w, h, o, children, className }: { w: string; h?: string; o: DocOpts; children: ReactNode; className?: string }) => (
-  <div className={cx('doc-sheet mx-auto bg-white text-black shadow-float', className)} style={{ width: w, minHeight: h, padding: `${o.margin}mm`, fontSize: `${o.font * 10}pt`, fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif", boxSizing: 'border-box' }}>{children}</div>
+  <div data-style={o.style ?? 'classic'} className={cx('doc-sheet mx-auto bg-white text-black shadow-float', className)} style={{ width: w, minHeight: h, padding: `${o.margin}mm`, fontSize: `${o.font * 10}pt`, fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif", boxSizing: 'border-box', ['--doc-accent' as string]: o.accent ?? '#0000ff' }}><style>{SHEET_CSS}</style>{children}</div>
 )
 const Logo = ({ h = 34 }: { h?: number }) => <img src="./brand/logo-full.png" alt="غنیمت" style={{ height: h }} />
 /** مهر پیش‌فرض فروشگاه، تا وقتی تصویر مهر واقعی در تنظیمات بارگذاری نشده است */

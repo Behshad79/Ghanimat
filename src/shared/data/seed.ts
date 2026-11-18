@@ -297,7 +297,9 @@ const makeSeedBase = () => ({
   settleDue: {} as Record<string, string>,
   settlements: { 'GH-10458': { amount: 29850000, at: '2026-10-26T10:00:00+03:30', ref: 'MLT-77120' }, 'GH-10412': { amount: 29205000, at: ago(60 * 24 * 27), ref: 'ZP-55021' } } as Record<string, { amount: number; at: string; ref: string }>,
   packagingCost: 25000,
-  docSettings: {} as Record<string, { paper?: string; font?: number; margin?: number; footer?: string; seal?: boolean; hide?: string[] }>,
+  docSettings: {} as Record<string, { paper?: string; font?: number; margin?: number; footer?: string; seal?: boolean; hide?: string[]; accent?: string; style?: 'classic' | 'modern' | 'minimal' }>,
+  docVersions: {} as Record<string, { at: string; by: string; opts: Record<string, unknown> }[]>,
+  printLog: [] as { id: string; doc: string; label: string; ref: string; by: string; at: string; copy: number; paper: string }[],
   codeFormat: { product: 'GH-P-', unit: 'GH-U-', pDigits: 6, uDigits: 7, nextProduct: 110, nextUnit: 20480 },
   trash: [] as TrashItem[],
   reasons: [
@@ -345,6 +347,8 @@ export const makeSeed = () => {
     set('GH-10493', 'لطفاً قبل از ارسال زنگ نزنید؛ پیامک بدهید. ساعت ۹ تا ۱۳ خانه نیستم.')
     set('GH-10479', 'کادوست؛ فاکتور قیمت داخل بسته نگذارید.')
     const o = s.orders.find((x) => x.id === 'GH-10481'); if (o) o.notes = [{ id: 'n1', at: new Date(Date.now() - 40 * 6e4).toISOString(), by: 'سارا', src: 'تماس تلفنی', text: 'مشتری تماس گرفت: رنگ قاب را مشکی کنید (به‌جای نقره‌ای)، اگر موجود است.', act: true }] }
+  // سابقهٔ چاپ نمونه برای بایگانی اسناد
+  { const who = ['سارا', 'نیما', 'پویا']; s.orders.slice(0, 14).forEach((o, i) => { s.printLog.push({ id: `PL-${900 + i * 3}`, doc: 'invoice', label: 'فاکتور فروش (حقیقی و حقوقی)', ref: o.id, by: who[i % 3], at: new Date(new Date(o.createdAt).getTime() + 25 * 6e4).toISOString(), copy: 1, paper: 'A4' }); o.shipments.forEach((sh, k) => { if (/پست|تیپاکس/.test(sh.method)) s.printLog.push({ id: `PL-${901 + i * 3 + k}`, doc: 'post', label: 'برچسب مرسولهٔ پستی (قانون پست: A5 افقی)', ref: sh.id, by: who[(i + 1) % 3], at: new Date(new Date(o.createdAt).getTime() + 70 * 6e4).toISOString(), copy: 1, paper: '100x150' }) }) }); s.printLog.sort((a, b) => b.at.localeCompare(a.at)) }
   // صفحهٔ از پیش ساخته‌شدهٔ کالای در راه (محمولهٔ آمازون)
   { const p1 = s.products.find((x) => x.id === 'p1')!
     s.products.push({ ...structuredClone(p1), id: 'pin1', title: 'هدفون بی‌سیم اپل AirPods Pro 2 با درگاه USB-C', en: 'AirPods Pro 2 USB-C', brand: 'اپل', category: 'هدفون', status: 'product.incoming', mode: 'qty', qty: { tehran: 0, mahabad: 0 }, priceNew: 14900000, price: 13900000, compareAt: undefined, rating: 0, reviews: 0, views: 0, cvr: 0, health: 70, seller: 'غنیمت', comingSoon: new Date(Date.now() + 20 * 864e5).toISOString(), incoming: 'IN-1405-08', ean: '', code: '', pdp: { ...(p1.pdp ?? {}), amazonUrl: 'https://www.amazon.com/dp/B0CHWRXH8B' } as any }) }

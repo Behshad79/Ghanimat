@@ -1,0 +1,1651 @@
+{
+ "products": {
+  "id": [
+   "string"
+  ],
+  "image": [
+   "string"
+  ],
+  "imagePos": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "en": [
+   "string"
+  ],
+  "brand": [
+   "string"
+  ],
+  "category": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "mode": [
+   "string"
+  ],
+  "priceNew": [
+   "number"
+  ],
+  "rating": [
+   "number"
+  ],
+  "reviews": [
+   "number"
+  ],
+  "views": [
+   "number"
+  ],
+  "cvr": [
+   "number"
+  ],
+  "health": [
+   "number"
+  ],
+  "fastEligible": [
+   "boolean"
+  ],
+  "seller": [
+   "string"
+  ],
+  "torob": [
+   "boolean"
+  ],
+  "code": [
+   "string"
+  ],
+  "warrantyType": [
+   "string"
+  ],
+  "warrantyMonths": [
+   "number"
+  ],
+  "supplier": [
+   "string"
+  ],
+  "source": [
+   "string"
+  ],
+  "short": [
+   "string"
+  ],
+  "long": [
+   "string"
+  ],
+  "keyFeatures": [
+   "string"
+  ],
+  "box": [
+   "string"
+  ],
+  "specs": [
+   "object"
+  ],
+  "pdp": [
+   "object"
+  ],
+  "compareAt": [
+   "number"
+  ],
+  "qty": [
+   "object"
+  ],
+  "price": [
+   "number"
+  ],
+  "cost": [
+   "number"
+  ],
+  "partner": [
+   "boolean"
+  ],
+  "comingSoon": [
+   "date-time"
+  ],
+  "incoming": [
+   "string"
+  ],
+  "ean": [
+   "string"
+  ]
+ },
+ "units": {
+  "id": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "serial": [
+   "string"
+  ],
+  "condition": [
+   "string"
+  ],
+  "grade": [
+   "string"
+  ],
+  "warehouse": [
+   "string"
+  ],
+  "source": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "cost": [
+   "number"
+  ],
+  "price": [
+   "number"
+  ],
+  "shelf": [
+   "string"
+  ],
+  "received": [
+   "date-time"
+  ],
+  "flaws": [
+   "array"
+  ],
+  "color": [
+   "string"
+  ],
+  "code": [
+   "string"
+  ],
+  "warrantyMonths": [
+   "number"
+  ]
+ },
+ "customers": {
+  "id": [
+   "string"
+  ],
+  "addr": [
+   "object"
+  ],
+  "name": [
+   "string"
+  ],
+  "mobile": [
+   "string"
+  ],
+  "referral": [
+   "string"
+  ],
+  "nid": [
+   "string"
+  ],
+  "email": [
+   "string"
+  ],
+  "city": [
+   "string"
+  ],
+  "orders": [
+   "number"
+  ],
+  "ltv": [
+   "number"
+  ],
+  "aov": [
+   "number"
+  ],
+  "lastOrder": [
+   "date-time"
+  ],
+  "segment": [
+   "string"
+  ],
+  "health": [
+   "number"
+  ],
+  "source": [
+   "string"
+  ],
+  "wallet": [
+   "number"
+  ],
+  "returnRate": [
+   "number"
+  ],
+  "churn": [
+   "number"
+  ],
+  "tags": [
+   "array"
+  ],
+  "blocked": [
+   "boolean"
+  ],
+  "legal": [
+   "object"
+  ]
+ },
+ "orders": {
+  "id": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "buyer": [
+   "string"
+  ],
+  "createdAt": [
+   "date-time"
+  ],
+  "deliveredAt": [
+   "date-time"
+  ],
+  "status": [
+   "string"
+  ],
+  "pay": [
+   "string"
+  ],
+  "total": [
+   "number"
+  ],
+  "discount": [
+   "number"
+  ],
+  "shippingFee": [
+   "number"
+  ],
+  "fee": [
+   "number"
+  ],
+  "margin": [
+   "number"
+  ],
+  "risk": [
+   "number"
+  ],
+  "channel": [
+   "string"
+  ],
+  "tags": [
+   "array"
+  ],
+  "lockedBy": [
+   "null",
+   "string"
+  ],
+  "shipments": [
+   "array"
+  ],
+  "customerNote": [
+   "string"
+  ],
+  "notes": [
+   "array"
+  ],
+  "legalId": [
+   "string"
+  ]
+ },
+ "tickets": {
+  "id": [
+   "string"
+  ],
+  "topic": [
+   "string"
+  ],
+  "reason": [
+   "string"
+  ],
+  "items": [
+   "array"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "subject": [
+   "string"
+  ],
+  "channel": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "priority": [
+   "string"
+  ],
+  "sla": [
+   "date-time"
+  ],
+  "assignee": [
+   "string"
+  ],
+  "sentiment": [
+   "string"
+  ],
+  "messages": [
+   "array"
+  ],
+  "replyBy": [
+   "date-time"
+  ],
+  "csat": [
+   "string"
+  ]
+ },
+ "returns": {
+  "id": [
+   "string"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "unitId": [
+   "string"
+  ],
+  "reason": [
+   "string"
+  ],
+  "note": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "amount": [
+   "number"
+  ],
+  "dest": [
+   "string"
+  ],
+  "createdAt": [
+   "date-time"
+  ],
+  "deadline": [
+   "date-time"
+  ]
+ },
+ "warranties": {
+  "id": [
+   "string"
+  ],
+  "code": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "unitId": [
+   "string"
+  ],
+  "type": [
+   "string"
+  ],
+  "months": [
+   "number"
+  ],
+  "status": [
+   "string"
+  ],
+  "issue": [
+   "string"
+  ],
+  "owner": [
+   "string"
+  ],
+  "deadline": [
+   "date-time"
+  ]
+ },
+ "txns": {
+  "id": [
+   "string"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "amount": [
+   "number"
+  ],
+  "gateway": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "approvals": {
+  "id": [
+   "string"
+  ],
+  "type": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ],
+  "amount": [
+   "number"
+  ],
+  "by": [
+   "string"
+  ],
+  "byRole": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "reviews": {
+  "id": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "rating": [
+   "number"
+  ],
+  "text": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "verified": [
+   "boolean"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "ai": [
+   "string"
+  ],
+  "media": [
+   "array"
+  ]
+ },
+ "codes": {
+  "id": [
+   "string"
+  ],
+  "type": [
+   "string"
+  ],
+  "value": [
+   "string"
+  ],
+  "used": [
+   "number"
+  ],
+  "limit": [
+   "number"
+  ],
+  "active": [
+   "boolean"
+  ],
+  "cond": [
+   "string"
+  ]
+ },
+ "providers": {
+  "id": [
+   "string"
+  ],
+  "family": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "share": [
+   "number"
+  ],
+  "installments": [
+   "number"
+  ],
+  "fee": [
+   "number"
+  ],
+  "settleDays": [
+   "number"
+  ],
+  "pending": [
+   "number"
+  ],
+  "isDefault": [
+   "boolean"
+  ],
+  "min": [
+   "number"
+  ],
+  "max": [
+   "number"
+  ],
+  "health": [
+   "number"
+  ],
+  "credit": [
+   "number"
+  ],
+  "burn": [
+   "number"
+  ]
+ },
+ "rules": {
+  "key": [
+   "string"
+  ],
+  "group": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "value": [
+   "number"
+  ],
+  "unit": [
+   "string"
+  ],
+  "desc": [
+   "string"
+  ],
+  "sensitive": [
+   "boolean"
+  ],
+  "usedIn": [
+   "array"
+  ],
+  "history": [
+   "array"
+  ]
+ },
+ "roleDefs": {
+  "super": "object",
+  "ops": "object",
+  "simple": "object",
+  "partner": "object",
+  "support": "object",
+  "finance": "object",
+  "growth": "object",
+  "qc": "object"
+ },
+ "people": {
+  "id": [
+   "string"
+  ],
+  "teamId": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "position": [
+   "string"
+  ],
+  "dept": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "nationalId": [
+   "string"
+  ],
+  "birth": [
+   "string"
+  ],
+  "father": [
+   "string"
+  ],
+  "phone": [
+   "string"
+  ],
+  "address": [
+   "string"
+  ],
+  "emergency": [
+   "string"
+  ],
+  "sheba": [
+   "string"
+  ],
+  "card": [
+   "string"
+  ],
+  "insuranceNo": [
+   "string"
+  ],
+  "start": [
+   "date-time"
+  ],
+  "contractType": [
+   "string"
+  ],
+  "salary": [
+   "object"
+  ],
+  "payDay": [
+   "number"
+  ],
+  "insured": [
+   "boolean"
+  ],
+  "contracts": [
+   "array"
+  ],
+  "pay": [
+   "array"
+  ],
+  "loans": [
+   "array"
+  ],
+  "notes": [
+   "array"
+  ],
+  "docs": [
+   "array"
+  ]
+ },
+ "peopleCfg": {
+  "insEmployee": "number",
+  "insEmployer": "number",
+  "taxFree": "number",
+  "taxRate": "number",
+  "minWage": "number",
+  "housing": "number",
+  "bon": "number",
+  "child": "number"
+ },
+ "vault": {
+  "id": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "cat": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "by": [
+   "string"
+  ],
+  "remind": [
+   "number"
+  ],
+  "tags": [
+   "array"
+  ],
+  "access": [
+   "string"
+  ],
+  "versions": [
+   "array"
+  ],
+  "fileName": [
+   "string"
+  ],
+  "expires": [
+   "date-time"
+  ],
+  "note": [
+   "string"
+  ]
+ },
+ "opts": {
+  "source": "array",
+  "condition": "array",
+  "grade": "array",
+  "importRoute": "array",
+  "flawStatus": "array"
+ },
+ "axes": {
+  "id": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "values": [
+   "array"
+  ]
+ },
+ "orderEvents": {
+  "id": [
+   "string"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "body": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "by": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "payload": [
+   "object"
+  ]
+ },
+ "contentQueue": {
+  "id": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "channel": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "due": [
+   "date-time"
+  ],
+  "owner": [
+   "string"
+  ],
+  "note": [
+   "string"
+  ]
+ },
+ "blog": {
+  "posts": "array",
+  "comments": "array",
+  "videos": "array",
+  "landing": "object",
+  "cats": "array",
+  "videoCats": "array"
+ },
+ "traffic": {
+  "searches": "array",
+  "synonyms": "array",
+  "sessions": "array",
+  "stories": "array"
+ },
+ "storeCfg": {
+  "identity": "object",
+  "media": "object",
+  "social": "object",
+  "loyalty": "object",
+  "checkout": "object",
+  "feeds": "object",
+  "apiKeys": "array"
+ },
+ "reviewMeta": {
+  "RV-1": "object",
+  "RV-2": "object",
+  "RV-3": "object",
+  "RV-4": "object"
+ },
+ "questions": {
+  "id": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "text": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "askedBuyers": [
+   "number"
+  ],
+  "answers": [
+   "array"
+  ]
+ },
+ "reasonPresets": {
+  "order": "object",
+  "return": "object",
+  "warranty": "object",
+  "review": "object",
+  "legal": "object",
+  "withdrawal": "object",
+  "cancel": "object",
+  "ticket": "object",
+  "ticketNeedInfo": "object",
+  "custCancel": "object",
+  "custReturn": "object",
+  "productReport": "object",
+  "orgType": "object",
+  "deleteAccount": "object",
+  "branchRequest": "object",
+  "account": "object",
+  "deleteReject": "object",
+  "addressError": "object"
+ },
+ "acct": {
+  "c1": "object",
+  "c2": "object",
+  "c3": "object",
+  "c5": "object",
+  "c6": "object"
+ },
+ "partners": {
+  "id": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "city": [
+   "string"
+  ],
+  "owner": [
+   "string"
+  ],
+  "userId": [
+   "string"
+  ],
+  "phone": [
+   "string"
+  ],
+  "warehouse": [
+   "string"
+  ],
+  "address": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "color": [
+   "string"
+  ],
+  "since": [
+   "date-time"
+  ],
+  "contract": [
+   "object"
+  ],
+  "fast": [
+   "object"
+  ],
+  "services": [
+   "object"
+  ],
+  "couriers": [
+   "array"
+  ],
+  "iban": [
+   "string"
+  ],
+  "reviews": [
+   "array"
+  ],
+  "penalties": [
+   "array"
+  ],
+  "metrics": [
+   "object"
+  ],
+  "checklist": [
+   "array"
+  ],
+  "payouts": [
+   "array"
+  ]
+ },
+ "network": {
+  "closed": "null",
+  "fastOff": "null",
+  "hq": "object",
+  "pausedBranches": "object",
+  "priority": "array",
+  "log": "array"
+ },
+ "lots": {
+  "id": [
+   "string"
+  ],
+  "partnerId": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "capital": [
+   "string"
+  ],
+  "qty": [
+   "number"
+  ],
+  "soldOnline": [
+   "number"
+  ],
+  "soldStore": [
+   "number"
+  ],
+  "unitCost": [
+   "number"
+  ],
+  "unitPrice": [
+   "number"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "note": [
+   "string"
+  ]
+ },
+ "nudges": {
+  "policies": "array",
+  "blasts": "array",
+  "smsPrice": "number",
+  "quiet": "object"
+ },
+ "calls": {
+  "provider": "object",
+  "ivr": "array",
+  "hours": "object",
+  "agents": "array",
+  "calls": "array"
+ },
+ "remote": {
+  "telegram": "object",
+  "sms": "object",
+  "events": "object",
+  "log": "array"
+ },
+ "incoming": {
+  "id": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "route": [
+   "string"
+  ],
+  "supplier": [
+   "string"
+  ],
+  "orderedAt": [
+   "date-time"
+  ],
+  "eta": [
+   "date-time"
+  ],
+  "stage": [
+   "string"
+  ],
+  "note": [
+   "string"
+  ],
+  "items": [
+   "array"
+  ]
+ },
+ "merch": {
+  "deals": "array",
+  "placements": "array"
+ },
+ "extReviews": {},
+ "access": {
+  "u5": "object"
+ },
+ "team": {
+  "id": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "role": [
+   "string"
+  ],
+  "phone": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "twoFA": [
+   "boolean"
+  ]
+ },
+ "perms": {
+  "u3": "object",
+  "u4": "object"
+ },
+ "audit": {
+  "at": [
+   "date-time"
+  ],
+  "who": [
+   "string"
+  ],
+  "before": [
+   "string"
+  ],
+  "after": [
+   "string"
+  ],
+  "ai": [
+   "boolean"
+  ],
+  "action": [
+   "string"
+  ],
+  "target": [
+   "string"
+  ]
+ },
+ "alerts": {
+  "id": [
+   "string"
+  ],
+  "cat": [
+   "string"
+  ],
+  "tone": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "body": [
+   "string"
+  ],
+  "to": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "read": [
+   "boolean"
+  ]
+ },
+ "partnerQueue": {
+  "id": [
+   "string"
+  ],
+  "productId": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "note": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "syncIssues": {
+  "id": [
+   "string"
+  ],
+  "product": [
+   "string"
+  ],
+  "ours": [
+   "number"
+  ],
+  "theirs": [
+   "number"
+  ],
+  "source": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "flags": {
+  "shopAssistant": "boolean",
+  "compare": "boolean",
+  "wallet": "boolean",
+  "storeFinder": "boolean",
+  "aiSummary": "boolean",
+  "referral": "boolean",
+  "sellerLink": "boolean",
+  "showSoon": "boolean",
+  "maintenance": "boolean",
+  "mahabadSales": "boolean"
+ },
+ "notifMatrix": {},
+ "cardBadges": {
+  "id": [
+   "string"
+  ],
+  "label": [
+   "string"
+  ],
+  "rule": [
+   "string"
+  ],
+  "on": [
+   "boolean"
+  ],
+  "rotate": [
+   "boolean"
+  ]
+ },
+ "simpleDay": {
+  "started": "boolean",
+  "done": "array"
+ },
+ "seller": {
+  "legalName": "string",
+  "brand": "string",
+  "nationalId": "string",
+  "regNo": "string",
+  "economicCode": "string",
+  "address": "string",
+  "postalCode": "string",
+  "phone": "string",
+  "website": "string",
+  "seal": "string",
+  "signature": "string",
+  "assumed": "boolean"
+ },
+ "warehouses": {
+  "id": [
+   "string"
+  ],
+  "name": [
+   "string"
+  ],
+  "owner": [
+   "string"
+  ],
+  "province": [
+   "string"
+  ],
+  "city": [
+   "string"
+  ],
+  "district": [
+   "string"
+  ],
+  "street": [
+   "string"
+  ],
+  "alley": [
+   "string"
+  ],
+  "plaque": [
+   "string"
+  ],
+  "postalCode": [
+   "string"
+  ],
+  "phone": [
+   "string"
+  ],
+  "manager": [
+   "string"
+  ],
+  "services": [
+   "string"
+  ],
+  "assumed": [
+   "boolean"
+  ]
+ },
+ "carrierLogos": {
+  "post": "string",
+  "tipax": "string"
+ },
+ "entities": {
+  "categories": "array",
+  "brands": "array",
+  "attrTemplates": "array",
+  "collections": "array",
+  "suppliers": "array",
+  "purchaseOrders": "array",
+  "inbound": "array",
+  "zones": "array",
+  "slots": "array",
+  "giftCards": "array",
+  "priceCampaigns": "array",
+  "templates": "array",
+  "campaigns": "array",
+  "automations": "array",
+  "homeBlocks": "array",
+  "articles": "array",
+  "faqs": "array",
+  "legal": "array",
+  "redirects": "array",
+  "seoPages": "array",
+  "branches": "array",
+  "segments": "array",
+  "experiments": "array",
+  "incidents": "array",
+  "shipMethods": "array",
+  "reports": "array",
+  "partnerSites": "array",
+  "notifRules": "array",
+  "contactMessages": "array",
+  "contactSubjects": "array",
+  "productReports": "array",
+  "reportReasons": "array",
+  "stockRequests": "array",
+  "notifyMe": "array",
+  "offerReminders": "array",
+  "branchInquiries": "array",
+  "withdrawals": "array",
+  "bankAccounts": "array",
+  "cancelRequests": "array",
+  "ticketTopics": "array",
+  "helpGuides": "array",
+  "tutorialVideos": "array",
+  "searchSynonyms": "array",
+  "searchSuggestions": "array",
+  "zeroResults": "array",
+  "assistantPrompts": "array",
+  "assistantFeedback": "array",
+  "staticPages": "array",
+  "errorPages": "array",
+  "blogCategories": "array",
+  "instagramPosts": "array",
+  "testimonials": "array",
+  "trustItems": "array",
+  "sourcingRoutes": "array",
+  "cartServices": "array",
+  "panelCards": "array"
+ },
+ "cx": {
+  "auth": "object",
+  "search": "object",
+  "support": "object",
+  "wallet": "object",
+  "referral": "object",
+  "reviews": "object",
+  "notifications": "object",
+  "checkout": "object",
+  "assistant": "object",
+  "newsletter": "object"
+ },
+ "journey": {
+  "events": "array",
+  "carts": "array",
+  "failedPayments": "array",
+  "addresses": "array",
+  "walletTx": "array",
+  "lists": "array",
+  "aiChats": "array",
+  "widgetChats": "array",
+  "notifPrefs": "object",
+  "passwords": "object"
+ },
+ "delivery": {
+  "openHour": "number",
+  "fastCutoff": "number",
+  "nightAfter": "number",
+  "fastHours": "number",
+  "closedDays": "array",
+  "slots": "array",
+  "booked": "object",
+  "pickup": "object",
+  "fast": "object",
+  "split": "object",
+  "templates": "object"
+ },
+ "bank": {
+  "cards": "array",
+  "credits": "array",
+  "receipts": "array"
+ },
+ "pages": {
+  "id": [
+   "string"
+  ],
+  "title": [
+   "string"
+  ],
+  "group": [
+   "string"
+  ],
+  "path": [
+   "string"
+  ],
+  "figma": [
+   "string"
+  ],
+  "sections": [
+   "array"
+  ],
+  "node": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ]
+ },
+ "pagesPublished": {},
+ "theme": {
+  "brand": "string",
+  "ink": "string",
+  "accent": "string",
+  "danger": "string",
+  "success": "string",
+  "bg": "string",
+  "surface": "string",
+  "radius": "number",
+  "logoHeight": "number",
+  "logoHeightMobile": "number",
+  "font": "string"
+ },
+ "hub": {
+  "adapters": "array",
+  "hooks": "array",
+  "deliveries": "array",
+  "serverEvents": "array"
+ },
+ "promos": {
+  "rules": "array",
+  "flash": "array",
+  "utm": "array"
+ },
+ "pickups": {
+  "id": [
+   "string"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "branch": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "window": [
+   "string"
+  ],
+  "code": [
+   "string"
+  ],
+  "readyAt": [
+   "date-time"
+  ],
+  "deadline": [
+   "date-time"
+  ],
+  "receiver": [
+   "string"
+  ],
+  "receiverId": [
+   "string"
+  ],
+  "relation": [
+   "string"
+  ],
+  "handedAt": [
+   "date-time"
+  ],
+  "by": [
+   "string"
+  ],
+  "receipt": [
+   "string"
+  ],
+  "items": [
+   "array"
+  ],
+  "note": [
+   "string"
+  ]
+ },
+ "docOverrides": {},
+ "newsletter": {
+  "id": [
+   "string"
+  ],
+  "contact": [
+   "string"
+  ],
+  "channel": [
+   "string"
+  ],
+  "interests": [
+   "array"
+  ],
+  "source": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "active": [
+   "boolean"
+  ]
+ },
+ "articleBlocks": {},
+ "smsLog": {
+  "id": [
+   "string"
+  ],
+  "to": [
+   "string"
+  ],
+  "customerId": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ],
+  "text": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "settleDue": {},
+ "settlements": {
+  "GH-10458": "object",
+  "GH-10412": "object"
+ },
+ "packagingCost": "number",
+ "docSettings": {},
+ "docVersions": {},
+ "printLog": {
+  "id": [
+   "string"
+  ],
+  "doc": [
+   "string"
+  ],
+  "label": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ],
+  "by": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "copy": [
+   "number"
+  ],
+  "paper": [
+   "string"
+  ]
+ },
+ "codeFormat": {
+  "product": "string",
+  "unit": "string",
+  "pDigits": "number",
+  "uDigits": "number",
+  "nextProduct": "number",
+  "nextUnit": "number"
+ },
+ "trash": {},
+ "reasons": {
+  "id": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "ref": [
+   "string"
+  ],
+  "status": [
+   "string"
+  ],
+  "reason": [
+   "string"
+  ],
+  "visible": [
+   "boolean"
+  ],
+  "by": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ]
+ },
+ "site": {
+  "theme": "object",
+  "announce": "object",
+  "header": "object",
+  "menu": "array",
+  "footer": "object",
+  "card": "object",
+  "listing": "object"
+ },
+ "sitePublished": {
+  "theme": "object",
+  "announce": "object",
+  "header": "object",
+  "menu": "array",
+  "footer": "object",
+  "card": "object",
+  "listing": "object"
+ },
+ "siteVersions": {
+  "id": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "by": [
+   "string"
+  ],
+  "note": [
+   "string"
+  ]
+ },
+ "layout": {
+  "tehran": "array",
+  "mahabad": "array"
+ },
+ "moves": {
+  "id": [
+   "string"
+  ],
+  "at": [
+   "date-time"
+  ],
+  "who": [
+   "string"
+  ],
+  "kind": [
+   "string"
+  ],
+  "unit": [
+   "string"
+  ],
+  "product": [
+   "string"
+  ],
+  "from": [
+   "string"
+  ],
+  "to": [
+   "string"
+  ],
+  "read": [
+   "boolean"
+  ],
+  "qty": [
+   "number"
+  ]
+ }
+}

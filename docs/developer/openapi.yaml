@@ -1,0 +1,1652 @@
+openapi: 3.0.3
+info:
+  title: Ghanimat Admin API
+  version: 1.0.0
+  description: Generated from the prototype data model (docs/developer/data-model.json). Each array collection is a REST resource; domain actions are listed in 06-api-contract.md.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+paths:
+  /auth/otp:
+    post:
+      summary: Send one-time login code by SMS
+      security: []
+      requestBody: {content: {application/json: {schema: {type: object, properties: {mobile: {type: string}}}}}}
+      responses: {"204": {description: sent}}
+  /auth/verify:
+    post:
+      summary: Verify code and return tokens
+      security: []
+      requestBody: {content: {application/json: {schema: {type: object, properties: {mobile: {type: string}, code: {type: string}}}}}}
+      responses: {"200": {description: tokens}}
+  /alerts:
+    get:
+      tags: [alerts]
+      summary: List alerts
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/alerts"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [alerts]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/alerts"}}}}
+      responses: {"201": {description: created}}
+  /alerts/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [alerts]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/alerts"}}}}}
+    patch:
+      tags: [alerts]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/alerts"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [alerts]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /approvals:
+    get:
+      tags: [approvals]
+      summary: List approvals
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/approvals"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [approvals]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/approvals"}}}}
+      responses: {"201": {description: created}}
+  /approvals/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [approvals]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/approvals"}}}}}
+    patch:
+      tags: [approvals]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/approvals"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [approvals]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /audit:
+    get:
+      tags: [audit]
+      summary: List audit
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/audit"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [audit]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/audit"}}}}
+      responses: {"201": {description: created}}
+  /audit/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [audit]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/audit"}}}}}
+    patch:
+      tags: [audit]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/audit"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [audit]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /axes:
+    get:
+      tags: [axes]
+      summary: List axes
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/axes"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [axes]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/axes"}}}}
+      responses: {"201": {description: created}}
+  /axes/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [axes]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/axes"}}}}}
+    patch:
+      tags: [axes]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/axes"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [axes]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /cardBadges:
+    get:
+      tags: [cardBadges]
+      summary: List cardBadges
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/cardBadges"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [cardBadges]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/cardBadges"}}}}
+      responses: {"201": {description: created}}
+  /cardBadges/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [cardBadges]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/cardBadges"}}}}}
+    patch:
+      tags: [cardBadges]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/cardBadges"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [cardBadges]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /codes:
+    get:
+      tags: [codes]
+      summary: List codes
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/codes"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [codes]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/codes"}}}}
+      responses: {"201": {description: created}}
+  /codes/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [codes]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/codes"}}}}}
+    patch:
+      tags: [codes]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/codes"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [codes]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /contentQueue:
+    get:
+      tags: [contentQueue]
+      summary: List contentQueue
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/contentQueue"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [contentQueue]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/contentQueue"}}}}
+      responses: {"201": {description: created}}
+  /contentQueue/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [contentQueue]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/contentQueue"}}}}}
+    patch:
+      tags: [contentQueue]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/contentQueue"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [contentQueue]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /customers:
+    get:
+      tags: [customers]
+      summary: List customers
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/customers"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [customers]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/customers"}}}}
+      responses: {"201": {description: created}}
+  /customers/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [customers]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/customers"}}}}}
+    patch:
+      tags: [customers]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/customers"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [customers]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /incoming:
+    get:
+      tags: [incoming]
+      summary: List incoming
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/incoming"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [incoming]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/incoming"}}}}
+      responses: {"201": {description: created}}
+  /incoming/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [incoming]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/incoming"}}}}}
+    patch:
+      tags: [incoming]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/incoming"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [incoming]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /lots:
+    get:
+      tags: [lots]
+      summary: List lots
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/lots"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [lots]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/lots"}}}}
+      responses: {"201": {description: created}}
+  /lots/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [lots]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/lots"}}}}}
+    patch:
+      tags: [lots]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/lots"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [lots]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /moves:
+    get:
+      tags: [moves]
+      summary: List moves
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/moves"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [moves]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/moves"}}}}
+      responses: {"201": {description: created}}
+  /moves/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [moves]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/moves"}}}}}
+    patch:
+      tags: [moves]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/moves"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [moves]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /newsletter:
+    get:
+      tags: [newsletter]
+      summary: List newsletter
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/newsletter"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [newsletter]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/newsletter"}}}}
+      responses: {"201": {description: created}}
+  /newsletter/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [newsletter]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/newsletter"}}}}}
+    patch:
+      tags: [newsletter]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/newsletter"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [newsletter]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /orderEvents:
+    get:
+      tags: [orderEvents]
+      summary: List orderEvents
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/orderEvents"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [orderEvents]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/orderEvents"}}}}
+      responses: {"201": {description: created}}
+  /orderEvents/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [orderEvents]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/orderEvents"}}}}}
+    patch:
+      tags: [orderEvents]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/orderEvents"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [orderEvents]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /orders:
+    get:
+      tags: [orders]
+      summary: List orders
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/orders"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [orders]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/orders"}}}}
+      responses: {"201": {description: created}}
+  /orders/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [orders]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/orders"}}}}}
+    patch:
+      tags: [orders]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/orders"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [orders]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /pages:
+    get:
+      tags: [pages]
+      summary: List pages
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/pages"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [pages]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pages"}}}}
+      responses: {"201": {description: created}}
+  /pages/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [pages]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/pages"}}}}}
+    patch:
+      tags: [pages]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pages"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [pages]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /pagesPublished:
+    get:
+      tags: [pagesPublished]
+      summary: List pagesPublished
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/pagesPublished"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [pagesPublished]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pagesPublished"}}}}
+      responses: {"201": {description: created}}
+  /pagesPublished/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [pagesPublished]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/pagesPublished"}}}}}
+    patch:
+      tags: [pagesPublished]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pagesPublished"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [pagesPublished]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /partnerQueue:
+    get:
+      tags: [partnerQueue]
+      summary: List partnerQueue
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/partnerQueue"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [partnerQueue]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/partnerQueue"}}}}
+      responses: {"201": {description: created}}
+  /partnerQueue/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [partnerQueue]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/partnerQueue"}}}}}
+    patch:
+      tags: [partnerQueue]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/partnerQueue"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [partnerQueue]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /partners:
+    get:
+      tags: [partners]
+      summary: List partners
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/partners"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [partners]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/partners"}}}}
+      responses: {"201": {description: created}}
+  /partners/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [partners]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/partners"}}}}}
+    patch:
+      tags: [partners]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/partners"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [partners]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /people:
+    get:
+      tags: [people]
+      summary: List people
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/people"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [people]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/people"}}}}
+      responses: {"201": {description: created}}
+  /people/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [people]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/people"}}}}}
+    patch:
+      tags: [people]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/people"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [people]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /pickups:
+    get:
+      tags: [pickups]
+      summary: List pickups
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/pickups"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [pickups]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pickups"}}}}
+      responses: {"201": {description: created}}
+  /pickups/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [pickups]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/pickups"}}}}}
+    patch:
+      tags: [pickups]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/pickups"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [pickups]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /printLog:
+    get:
+      tags: [printLog]
+      summary: List printLog
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/printLog"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [printLog]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/printLog"}}}}
+      responses: {"201": {description: created}}
+  /printLog/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [printLog]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/printLog"}}}}}
+    patch:
+      tags: [printLog]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/printLog"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [printLog]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /products:
+    get:
+      tags: [products]
+      summary: List products
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/products"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [products]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/products"}}}}
+      responses: {"201": {description: created}}
+  /products/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [products]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/products"}}}}}
+    patch:
+      tags: [products]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/products"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [products]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /providers:
+    get:
+      tags: [providers]
+      summary: List providers
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/providers"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [providers]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/providers"}}}}
+      responses: {"201": {description: created}}
+  /providers/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [providers]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/providers"}}}}}
+    patch:
+      tags: [providers]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/providers"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [providers]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /questions:
+    get:
+      tags: [questions]
+      summary: List questions
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/questions"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [questions]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/questions"}}}}
+      responses: {"201": {description: created}}
+  /questions/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [questions]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/questions"}}}}}
+    patch:
+      tags: [questions]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/questions"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [questions]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /reasons:
+    get:
+      tags: [reasons]
+      summary: List reasons
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/reasons"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [reasons]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/reasons"}}}}
+      responses: {"201": {description: created}}
+  /reasons/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [reasons]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/reasons"}}}}}
+    patch:
+      tags: [reasons]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/reasons"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [reasons]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /returns:
+    get:
+      tags: [returns]
+      summary: List returns
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/returns"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [returns]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/returns"}}}}
+      responses: {"201": {description: created}}
+  /returns/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [returns]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/returns"}}}}}
+    patch:
+      tags: [returns]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/returns"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [returns]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /reviews:
+    get:
+      tags: [reviews]
+      summary: List reviews
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/reviews"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [reviews]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/reviews"}}}}
+      responses: {"201": {description: created}}
+  /reviews/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [reviews]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/reviews"}}}}}
+    patch:
+      tags: [reviews]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/reviews"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [reviews]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /rules:
+    get:
+      tags: [rules]
+      summary: List rules
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/rules"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [rules]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/rules"}}}}
+      responses: {"201": {description: created}}
+  /rules/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [rules]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/rules"}}}}}
+    patch:
+      tags: [rules]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/rules"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [rules]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /siteVersions:
+    get:
+      tags: [siteVersions]
+      summary: List siteVersions
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/siteVersions"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [siteVersions]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/siteVersions"}}}}
+      responses: {"201": {description: created}}
+  /siteVersions/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [siteVersions]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/siteVersions"}}}}}
+    patch:
+      tags: [siteVersions]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/siteVersions"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [siteVersions]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /smsLog:
+    get:
+      tags: [smsLog]
+      summary: List smsLog
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/smsLog"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [smsLog]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/smsLog"}}}}
+      responses: {"201": {description: created}}
+  /smsLog/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [smsLog]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/smsLog"}}}}}
+    patch:
+      tags: [smsLog]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/smsLog"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [smsLog]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /syncIssues:
+    get:
+      tags: [syncIssues]
+      summary: List syncIssues
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/syncIssues"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [syncIssues]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/syncIssues"}}}}
+      responses: {"201": {description: created}}
+  /syncIssues/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [syncIssues]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/syncIssues"}}}}}
+    patch:
+      tags: [syncIssues]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/syncIssues"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [syncIssues]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /team:
+    get:
+      tags: [team]
+      summary: List team
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/team"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [team]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/team"}}}}
+      responses: {"201": {description: created}}
+  /team/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [team]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/team"}}}}}
+    patch:
+      tags: [team]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/team"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [team]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /tickets:
+    get:
+      tags: [tickets]
+      summary: List tickets
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/tickets"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [tickets]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/tickets"}}}}
+      responses: {"201": {description: created}}
+  /tickets/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [tickets]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/tickets"}}}}}
+    patch:
+      tags: [tickets]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/tickets"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [tickets]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /trash:
+    get:
+      tags: [trash]
+      summary: List trash
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/trash"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [trash]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/trash"}}}}
+      responses: {"201": {description: created}}
+  /trash/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [trash]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/trash"}}}}}
+    patch:
+      tags: [trash]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/trash"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [trash]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /txns:
+    get:
+      tags: [txns]
+      summary: List txns
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/txns"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [txns]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/txns"}}}}
+      responses: {"201": {description: created}}
+  /txns/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [txns]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/txns"}}}}}
+    patch:
+      tags: [txns]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/txns"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [txns]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /units:
+    get:
+      tags: [units]
+      summary: List units
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/units"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [units]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/units"}}}}
+      responses: {"201": {description: created}}
+  /units/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [units]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/units"}}}}}
+    patch:
+      tags: [units]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/units"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [units]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /vault:
+    get:
+      tags: [vault]
+      summary: List vault
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/vault"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [vault]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/vault"}}}}
+      responses: {"201": {description: created}}
+  /vault/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [vault]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/vault"}}}}}
+    patch:
+      tags: [vault]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/vault"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [vault]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /warehouses:
+    get:
+      tags: [warehouses]
+      summary: List warehouses
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/warehouses"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [warehouses]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/warehouses"}}}}
+      responses: {"201": {description: created}}
+  /warehouses/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [warehouses]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/warehouses"}}}}}
+    patch:
+      tags: [warehouses]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/warehouses"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [warehouses]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+  /warranties:
+    get:
+      tags: [warranties]
+      summary: List warranties
+      parameters:
+        - {name: page, in: query, schema: {type: integer}}
+        - {name: size, in: query, schema: {type: integer}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string}}
+      responses: {"200": {description: ok, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: "#/components/schemas/warranties"}}, total: {type: integer}}}}}}}
+    post:
+      tags: [warranties]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/warranties"}}}}
+      responses: {"201": {description: created}}
+  /warranties/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [warranties]
+      responses: {"200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/warranties"}}}}}
+    patch:
+      tags: [warranties]
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/warranties"}}}}
+      responses: {"200": {description: updated}}
+    delete:
+      tags: [warranties]
+      description: Soft delete to trash
+      responses: {"204": {description: moved to trash}}
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer, bearerFormat: JWT}
+  schemas:
+    alerts:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "cat": {"type": "string"}
+        "tone": {"type": "string"}
+        "title": {"type": "string"}
+        "body": {"type": "string"}
+        "to": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "read": {"type": "boolean"}
+    approvals:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "type": {"type": "string"}
+        "title": {"type": "string"}
+        "ref": {"type": "string"}
+        "amount": {"type": "number"}
+        "by": {"type": "string"}
+        "byRole": {"type": "string"}
+        "status": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    audit:
+      type: object
+      properties:
+        "at": {"type": "string", "format": "date-time"}
+        "who": {"type": "string"}
+        "before": {"type": "string"}
+        "after": {"type": "string"}
+        "ai": {"type": "boolean"}
+        "action": {"type": "string"}
+        "target": {"type": "string"}
+    axes:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "name": {"type": "string"}
+        "kind": {"type": "string"}
+        "values": {"type": "array", "items": {}}
+    cardBadges:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "label": {"type": "string"}
+        "rule": {"type": "string"}
+        "on": {"type": "boolean"}
+        "rotate": {"type": "boolean"}
+    codes:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "type": {"type": "string"}
+        "value": {"type": "string"}
+        "used": {"type": "number"}
+        "limit": {"type": "number"}
+        "active": {"type": "boolean"}
+        "cond": {"type": "string"}
+    contentQueue:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "productId": {"type": "string"}
+        "channel": {"type": "string"}
+        "kind": {"type": "string"}
+        "status": {"type": "string"}
+        "due": {"type": "string", "format": "date-time"}
+        "owner": {"type": "string"}
+        "note": {"type": "string"}
+    customers:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "addr": {"type": "object"}
+        "name": {"type": "string"}
+        "mobile": {"type": "string"}
+        "referral": {"type": "string"}
+        "nid": {"type": "string"}
+        "email": {"type": "string"}
+        "city": {"type": "string"}
+        "orders": {"type": "number"}
+        "ltv": {"type": "number"}
+        "aov": {"type": "number"}
+        "lastOrder": {"type": "string", "format": "date-time"}
+        "segment": {"type": "string"}
+        "health": {"type": "number"}
+        "source": {"type": "string"}
+        "wallet": {"type": "number"}
+        "returnRate": {"type": "number"}
+        "churn": {"type": "number"}
+        "tags": {"type": "array", "items": {}}
+        "blocked": {"type": "boolean"}
+        "legal": {"type": "object"}
+    incoming:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "title": {"type": "string"}
+        "route": {"type": "string"}
+        "supplier": {"type": "string"}
+        "orderedAt": {"type": "string", "format": "date-time"}
+        "eta": {"type": "string", "format": "date-time"}
+        "stage": {"type": "string"}
+        "note": {"type": "string"}
+        "items": {"type": "array", "items": {}}
+    lots:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "partnerId": {"type": "string"}
+        "productId": {"type": "string"}
+        "capital": {"type": "string"}
+        "qty": {"type": "number"}
+        "soldOnline": {"type": "number"}
+        "soldStore": {"type": "number"}
+        "unitCost": {"type": "number"}
+        "unitPrice": {"type": "number"}
+        "at": {"type": "string", "format": "date-time"}
+        "note": {"type": "string"}
+    moves:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "who": {"type": "string"}
+        "kind": {"type": "string"}
+        "unit": {"type": "string"}
+        "product": {"type": "string"}
+        "from": {"type": "string"}
+        "to": {"type": "string"}
+        "read": {"type": "boolean"}
+        "qty": {"type": "number"}
+    newsletter:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "contact": {"type": "string"}
+        "channel": {"type": "string"}
+        "interests": {"type": "array", "items": {}}
+        "source": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "active": {"type": "boolean"}
+    orderEvents:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "orderId": {"type": "string"}
+        "kind": {"type": "string"}
+        "title": {"type": "string"}
+        "body": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "by": {"type": "string"}
+        "status": {"type": "string"}
+        "payload": {"type": "object"}
+    orders:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "customerId": {"type": "string"}
+        "buyer": {"type": "string"}
+        "createdAt": {"type": "string", "format": "date-time"}
+        "deliveredAt": {"type": "string", "format": "date-time"}
+        "status": {"type": "string"}
+        "pay": {"type": "string"}
+        "total": {"type": "number"}
+        "discount": {"type": "number"}
+        "shippingFee": {"type": "number"}
+        "fee": {"type": "number"}
+        "margin": {"type": "number"}
+        "risk": {"type": "number"}
+        "channel": {"type": "string"}
+        "tags": {"type": "array", "items": {}}
+        "lockedBy": {"type": "string"}
+        "shipments": {"type": "array", "items": {}}
+        "customerNote": {"type": "string"}
+        "notes": {"type": "array", "items": {}}
+        "legalId": {"type": "string"}
+    pages:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "title": {"type": "string"}
+        "group": {"type": "string"}
+        "path": {"type": "string"}
+        "figma": {"type": "string"}
+        "sections": {"type": "array", "items": {}}
+        "node": {"type": "string"}
+        "ref": {"type": "string"}
+    pagesPublished:
+      type: object
+      properties:
+    partnerQueue:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "productId": {"type": "string"}
+        "kind": {"type": "string"}
+        "status": {"type": "string"}
+        "note": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    partners:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "name": {"type": "string"}
+        "city": {"type": "string"}
+        "owner": {"type": "string"}
+        "userId": {"type": "string"}
+        "phone": {"type": "string"}
+        "warehouse": {"type": "string"}
+        "address": {"type": "string"}
+        "status": {"type": "string"}
+        "color": {"type": "string"}
+        "since": {"type": "string", "format": "date-time"}
+        "contract": {"type": "object"}
+        "fast": {"type": "object"}
+        "services": {"type": "object"}
+        "couriers": {"type": "array", "items": {}}
+        "iban": {"type": "string"}
+        "reviews": {"type": "array", "items": {}}
+        "penalties": {"type": "array", "items": {}}
+        "metrics": {"type": "object"}
+        "checklist": {"type": "array", "items": {}}
+        "payouts": {"type": "array", "items": {}}
+    people:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "teamId": {"type": "string"}
+        "name": {"type": "string"}
+        "position": {"type": "string"}
+        "dept": {"type": "string"}
+        "status": {"type": "string"}
+        "nationalId": {"type": "string"}
+        "birth": {"type": "string"}
+        "father": {"type": "string"}
+        "phone": {"type": "string"}
+        "address": {"type": "string"}
+        "emergency": {"type": "string"}
+        "sheba": {"type": "string"}
+        "card": {"type": "string"}
+        "insuranceNo": {"type": "string"}
+        "start": {"type": "string", "format": "date-time"}
+        "contractType": {"type": "string"}
+        "salary": {"type": "object"}
+        "payDay": {"type": "number"}
+        "insured": {"type": "boolean"}
+        "contracts": {"type": "array", "items": {}}
+        "pay": {"type": "array", "items": {}}
+        "loans": {"type": "array", "items": {}}
+        "notes": {"type": "array", "items": {}}
+        "docs": {"type": "array", "items": {}}
+    pickups:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "orderId": {"type": "string"}
+        "customerId": {"type": "string"}
+        "branch": {"type": "string"}
+        "status": {"type": "string"}
+        "window": {"type": "string"}
+        "code": {"type": "string"}
+        "readyAt": {"type": "string", "format": "date-time"}
+        "deadline": {"type": "string", "format": "date-time"}
+        "receiver": {"type": "string"}
+        "receiverId": {"type": "string"}
+        "relation": {"type": "string"}
+        "handedAt": {"type": "string", "format": "date-time"}
+        "by": {"type": "string"}
+        "receipt": {"type": "string"}
+        "items": {"type": "array", "items": {}}
+        "note": {"type": "string"}
+    printLog:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "doc": {"type": "string"}
+        "label": {"type": "string"}
+        "ref": {"type": "string"}
+        "by": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "copy": {"type": "number"}
+        "paper": {"type": "string"}
+    products:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "image": {"type": "string"}
+        "imagePos": {"type": "string"}
+        "title": {"type": "string"}
+        "en": {"type": "string"}
+        "brand": {"type": "string"}
+        "category": {"type": "string"}
+        "status": {"type": "string"}
+        "mode": {"type": "string"}
+        "priceNew": {"type": "number"}
+        "rating": {"type": "number"}
+        "reviews": {"type": "number"}
+        "views": {"type": "number"}
+        "cvr": {"type": "number"}
+        "health": {"type": "number"}
+        "fastEligible": {"type": "boolean"}
+        "seller": {"type": "string"}
+        "torob": {"type": "boolean"}
+        "code": {"type": "string"}
+        "warrantyType": {"type": "string"}
+        "warrantyMonths": {"type": "number"}
+        "supplier": {"type": "string"}
+        "source": {"type": "string"}
+        "short": {"type": "string"}
+        "long": {"type": "string"}
+        "keyFeatures": {"type": "string"}
+        "box": {"type": "string"}
+        "specs": {"type": "object"}
+        "pdp": {"type": "object"}
+        "compareAt": {"type": "number"}
+        "qty": {"type": "object"}
+        "price": {"type": "number"}
+        "cost": {"type": "number"}
+        "partner": {"type": "boolean"}
+        "comingSoon": {"type": "string", "format": "date-time"}
+        "incoming": {"type": "string"}
+        "ean": {"type": "string"}
+    providers:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "family": {"type": "string"}
+        "name": {"type": "string"}
+        "status": {"type": "string"}
+        "share": {"type": "number"}
+        "installments": {"type": "number"}
+        "fee": {"type": "number"}
+        "settleDays": {"type": "number"}
+        "pending": {"type": "number"}
+        "isDefault": {"type": "boolean"}
+        "min": {"type": "number"}
+        "max": {"type": "number"}
+        "health": {"type": "number"}
+        "credit": {"type": "number"}
+        "burn": {"type": "number"}
+    questions:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "productId": {"type": "string"}
+        "customerId": {"type": "string"}
+        "text": {"type": "string"}
+        "status": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "askedBuyers": {"type": "number"}
+        "answers": {"type": "array", "items": {}}
+    reasons:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "kind": {"type": "string"}
+        "ref": {"type": "string"}
+        "status": {"type": "string"}
+        "reason": {"type": "string"}
+        "visible": {"type": "boolean"}
+        "by": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    returns:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "orderId": {"type": "string"}
+        "customerId": {"type": "string"}
+        "unitId": {"type": "string"}
+        "reason": {"type": "string"}
+        "note": {"type": "string"}
+        "status": {"type": "string"}
+        "amount": {"type": "number"}
+        "dest": {"type": "string"}
+        "createdAt": {"type": "string", "format": "date-time"}
+        "deadline": {"type": "string", "format": "date-time"}
+    reviews:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "productId": {"type": "string"}
+        "customerId": {"type": "string"}
+        "rating": {"type": "number"}
+        "text": {"type": "string"}
+        "status": {"type": "string"}
+        "verified": {"type": "boolean"}
+        "at": {"type": "string", "format": "date-time"}
+        "ai": {"type": "string"}
+        "media": {"type": "array", "items": {}}
+    rules:
+      type: object
+      properties:
+        "key": {"type": "string"}
+        "group": {"type": "string"}
+        "name": {"type": "string"}
+        "value": {"type": "number"}
+        "unit": {"type": "string"}
+        "desc": {"type": "string"}
+        "sensitive": {"type": "boolean"}
+        "usedIn": {"type": "array", "items": {}}
+        "history": {"type": "array", "items": {}}
+    siteVersions:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "by": {"type": "string"}
+        "note": {"type": "string"}
+    smsLog:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "to": {"type": "string"}
+        "customerId": {"type": "string"}
+        "kind": {"type": "string"}
+        "ref": {"type": "string"}
+        "text": {"type": "string"}
+        "status": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    syncIssues:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "product": {"type": "string"}
+        "ours": {"type": "number"}
+        "theirs": {"type": "number"}
+        "source": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    team:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "name": {"type": "string"}
+        "role": {"type": "string"}
+        "phone": {"type": "string"}
+        "status": {"type": "string"}
+        "twoFA": {"type": "boolean"}
+    tickets:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "topic": {"type": "string"}
+        "reason": {"type": "string"}
+        "items": {"type": "array", "items": {}}
+        "customerId": {"type": "string"}
+        "orderId": {"type": "string"}
+        "subject": {"type": "string"}
+        "channel": {"type": "string"}
+        "status": {"type": "string"}
+        "priority": {"type": "string"}
+        "sla": {"type": "string", "format": "date-time"}
+        "assignee": {"type": "string"}
+        "sentiment": {"type": "string"}
+        "messages": {"type": "array", "items": {}}
+        "replyBy": {"type": "string", "format": "date-time"}
+        "csat": {"type": "string"}
+    trash:
+      type: object
+      properties:
+    txns:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "orderId": {"type": "string"}
+        "amount": {"type": "number"}
+        "gateway": {"type": "string"}
+        "ref": {"type": "string"}
+        "status": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+    units:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "productId": {"type": "string"}
+        "serial": {"type": "string"}
+        "condition": {"type": "string"}
+        "grade": {"type": "string"}
+        "warehouse": {"type": "string"}
+        "source": {"type": "string"}
+        "status": {"type": "string"}
+        "cost": {"type": "number"}
+        "price": {"type": "number"}
+        "shelf": {"type": "string"}
+        "received": {"type": "string", "format": "date-time"}
+        "flaws": {"type": "array", "items": {}}
+        "color": {"type": "string"}
+        "code": {"type": "string"}
+        "warrantyMonths": {"type": "number"}
+    vault:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "title": {"type": "string"}
+        "cat": {"type": "string"}
+        "at": {"type": "string", "format": "date-time"}
+        "by": {"type": "string"}
+        "remind": {"type": "number"}
+        "tags": {"type": "array", "items": {}}
+        "access": {"type": "string"}
+        "versions": {"type": "array", "items": {}}
+        "fileName": {"type": "string"}
+        "expires": {"type": "string", "format": "date-time"}
+        "note": {"type": "string"}
+    warehouses:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "name": {"type": "string"}
+        "owner": {"type": "string"}
+        "province": {"type": "string"}
+        "city": {"type": "string"}
+        "district": {"type": "string"}
+        "street": {"type": "string"}
+        "alley": {"type": "string"}
+        "plaque": {"type": "string"}
+        "postalCode": {"type": "string"}
+        "phone": {"type": "string"}
+        "manager": {"type": "string"}
+        "services": {"type": "string"}
+        "assumed": {"type": "boolean"}
+    warranties:
+      type: object
+      properties:
+        "id": {"type": "string"}
+        "code": {"type": "string"}
+        "customerId": {"type": "string"}
+        "unitId": {"type": "string"}
+        "type": {"type": "string"}
+        "months": {"type": "number"}
+        "status": {"type": "string"}
+        "issue": {"type": "string"}
+        "owner": {"type": "string"}
+        "deadline": {"type": "string", "format": "date-time"}

@@ -1,0 +1,351 @@
+{
+ "$description": "Ghanimat design tokens (W3C DTCG). Import with Tokens Studio for Figma → Figma Variables (light/dark modes).",
+ "light": {
+  "brand": {
+   "$value": "متن، لینک، آیکون و حالت انتخاب. --brand-solid: پس‌زمینهٔ دکمه و سطح پر؛ متن روی آن همیشه سفید (۸٫۵۹ به ۱). */\n  --brand: #0000ff"
+  },
+  "brand-pressed": {
+   "$type": "color",
+   "$value": "#0000c4"
+  },
+  "brand-tint": {
+   "$type": "color",
+   "$value": "#eef0ff"
+  },
+  "brand-solid": {
+   "$type": "color",
+   "$value": "#0000ff"
+  },
+  "brand-solid-pressed": {
+   "$type": "color",
+   "$value": "#0000c4"
+  },
+  "on-brand": {
+   "$type": "color",
+   "$value": "#ffffff"
+  },
+  "success-solid": {
+   "$type": "color",
+   "$value": "#12733f"
+  },
+  "danger-solid": {
+   "$type": "color",
+   "$value": "#c42f2f"
+  },
+  "text-1": {
+   "$type": "color",
+   "$value": "#10123d"
+  },
+  "text-2": {
+   "$type": "color",
+   "$value": "#5a5e78"
+  },
+  "text-3": {
+   "$type": "color",
+   "$value": "#5f6479"
+  },
+  "bg": {
+   "$type": "color",
+   "$value": "#f5f6fa"
+  },
+  "surface": {
+   "$type": "color",
+   "$value": "#ffffff"
+  },
+  "surface-2": {
+   "$type": "color",
+   "$value": "#fafbfd"
+  },
+  "border": {
+   "$type": "color",
+   "$value": "#e6e8f0"
+  },
+  "success": {
+   "$type": "color",
+   "$value": "#12733f"
+  },
+  "success-bg": {
+   "$type": "color",
+   "$value": "#e8f7ee"
+  },
+  "warning": {
+   "$type": "color",
+   "$value": "#a64b07"
+  },
+  "warning-bg": {
+   "$type": "color",
+   "$value": "#fff3e8"
+  },
+  "danger": {
+   "$type": "color",
+   "$value": "#c42f2f"
+  },
+  "danger-bg": {
+   "$type": "color",
+   "$value": "#fef2f2"
+  },
+  "info": {
+   "$type": "color",
+   "$value": "#0e7490"
+  },
+  "info-bg": {
+   "$type": "color",
+   "$value": "#e6f4f7"
+  },
+  "purple": {
+   "$type": "color",
+   "$value": "#6d28d9"
+  },
+  "purple-bg": {
+   "$type": "color",
+   "$value": "#f3eeff"
+  },
+  "neutral-bg": {
+   "$type": "color",
+   "$value": "#eff0f5"
+  },
+  "shadow-float": {
+   "$type": "shadow",
+   "$value": "0 8px 28px rgba(16, 18, 61, 0.14), 0 1px 3px rgba(16, 18, 61, 0.08)"
+  },
+  "row-h": {
+   "$type": "dimension",
+   "$value": "44px"
+  },
+  "zebra": {
+   "$type": "color",
+   "$value": "#f6f7fa"
+  },
+  "row-hover": {
+   "$type": "color",
+   "$value": "#eef0fb"
+  },
+  "row-sel": {
+   "$type": "color",
+   "$value": "#e4e8ff"
+  },
+  "th-bg": {
+   "$type": "color",
+   "$value": "#f1f2f7"
+  },
+  "row-line": {
+   "$type": "color",
+   "$value": "#eceef4"
+  },
+  "sidebar-w": {
+   "$type": "dimension",
+   "$value": "264px"
+  }
+ },
+ "dark": {
+  "brand": {
+   "$type": "color",
+   "$value": "#8c9bff"
+  },
+  "brand-pressed": {
+   "$type": "color",
+   "$value": "#a9b4ff"
+  },
+  "brand-tint": {
+   "$type": "color",
+   "$value": "#1c1f4a"
+  },
+  "brand-solid": {
+   "$type": "color",
+   "$value": "#0000ff"
+  },
+  "brand-solid-pressed": {
+   "$type": "color",
+   "$value": "#2b2bff"
+  },
+  "on-brand": {
+   "$type": "color",
+   "$value": "#ffffff"
+  },
+  "success-solid": {
+   "$type": "color",
+   "$value": "#12733f"
+  },
+  "danger-solid": {
+   "$type": "color",
+   "$value": "#c42f2f"
+  },
+  "text-1": {
+   "$type": "color",
+   "$value": "#eceefa"
+  },
+  "text-2": {
+   "$type": "color",
+   "$value": "#b1b6cd"
+  },
+  "text-3": {
+   "$type": "color",
+   "$value": "#9196b0"
+  },
+  "bg": {
+   "$type": "color",
+   "$value": "#0c0d1a"
+  },
+  "surface": {
+   "$type": "color",
+   "$value": "#15172a"
+  },
+  "surface-2": {
+   "$type": "color",
+   "$value": "#1a1c33"
+  },
+  "zebra": {
+   "$type": "color",
+   "$value": "#181a2f"
+  },
+  "row-hover": {
+   "$type": "color",
+   "$value": "#1f2240"
+  },
+  "row-sel": {
+   "$type": "color",
+   "$value": "#232867"
+  },
+  "th-bg": {
+   "$type": "color",
+   "$value": "#1b1d35"
+  },
+  "row-line": {
+   "$type": "color",
+   "$value": "#22253f"
+  },
+  "border": {
+   "$type": "color",
+   "$value": "#282b47"
+  },
+  "success": {
+   "$type": "color",
+   "$value": "#4ade80"
+  },
+  "success-bg": {
+   "$type": "color",
+   "$value": "#10291c"
+  },
+  "warning": {
+   "$type": "color",
+   "$value": "#fbbf24"
+  },
+  "warning-bg": {
+   "$type": "color",
+   "$value": "#2e2110"
+  },
+  "danger": {
+   "$type": "color",
+   "$value": "#f87171"
+  },
+  "danger-bg": {
+   "$type": "color",
+   "$value": "#331616"
+  },
+  "info": {
+   "$type": "color",
+   "$value": "#38bdf8"
+  },
+  "info-bg": {
+   "$type": "color",
+   "$value": "#0d2a33"
+  },
+  "purple": {
+   "$type": "color",
+   "$value": "#b79cff"
+  },
+  "purple-bg": {
+   "$type": "color",
+   "$value": "#251a45"
+  },
+  "neutral-bg": {
+   "$type": "color",
+   "$value": "#23263f"
+  },
+  "shadow-float": {
+   "$type": "shadow",
+   "$value": "0 8px 28px rgba(0, 0, 0, 0.55)"
+  },
+  "row-h": {
+   "$type": "dimension",
+   "$value": "36px"
+  }
+ },
+ "typography": {
+  "font-family": {
+   "$type": "fontFamily",
+   "$value": [
+    "Peyda",
+    "Vazirmatn",
+    "system-ui",
+    "sans-serif"
+   ]
+  },
+  "text-11": {
+   "$type": "dimension",
+   "$value": "11px"
+  },
+  "text-12": {
+   "$type": "dimension",
+   "$value": "12px"
+  },
+  "text-13": {
+   "$type": "dimension",
+   "$value": "13px"
+  },
+  "text-14": {
+   "$type": "dimension",
+   "$value": "14px"
+  },
+  "text-15": {
+   "$type": "dimension",
+   "$value": "15px"
+  },
+  "text-16": {
+   "$type": "dimension",
+   "$value": "16px"
+  },
+  "text-18": {
+   "$type": "dimension",
+   "$value": "18px"
+  },
+  "text-22": {
+   "$type": "dimension",
+   "$value": "22px"
+  },
+  "text-20": {
+   "$type": "dimension",
+   "$value": "20px"
+  },
+  "text-24": {
+   "$type": "dimension",
+   "$value": "24px"
+  },
+  "text-32": {
+   "$type": "dimension",
+   "$value": "32px"
+  }
+ },
+ "radius": {
+  "sm": {
+   "$type": "dimension",
+   "$value": "6px"
+  },
+  "md": {
+   "$type": "dimension",
+   "$value": "8px"
+  },
+  "lg": {
+   "$type": "dimension",
+   "$value": "12px"
+  },
+  "xl": {
+   "$type": "dimension",
+   "$value": "16px"
+  },
+  "2xl": {
+   "$type": "dimension",
+   "$value": "20px"
+  }
+ }
+}

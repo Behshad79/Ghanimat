@@ -4,6 +4,23 @@
 
 این نسخه محصول نهایی نیست؛ مرجع دقیق طراحی و توسعه است. بک‌اند ندارد و همه‌چیز در مرورگر اجرا می‌شود.
 
+## پیش‌نمایش زنده
+
+- **GitHub Pages**: https://behshad79.github.io/Ghanimat/ (با هر انتشار روی `main` خودکار به‌روز می‌شود)
+- کد ورود برای همهٔ حساب‌ها: `111111`
+
+## برای تیم توسعه
+
+| | |
+|---|---|
+| نقطهٔ شروع | [`docs/developer/README.md`](docs/developer/README.md) |
+| همهٔ صفحه‌ها با تصویر | [`docs/developer/03-screens-and-routes.md`](docs/developer/03-screens-and-routes.md) |
+| مدل داده و دادهٔ نمونه | [`04-data-model.md`](docs/developer/04-data-model.md) · [`sample-db.json`](docs/developer/sample-db.json) |
+| قرارداد API | [`06-api-contract.md`](docs/developer/06-api-contract.md) · [`openapi.yaml`](docs/developer/openapi.yaml) |
+| توکن‌های طراحی | [`design-tokens.json`](docs/developer/design-tokens.json) |
+| فیگما بدون دوباره‌کشیدن | [`11-figma-workflow.md`](docs/developer/11-figma-workflow.md) |
+| تغییرات هر نسخه | [`CHANGELOG.md`](CHANGELOG.md) · [`docs/releases/`](docs/releases) |
+
 ## اجرا
 
 ```bash

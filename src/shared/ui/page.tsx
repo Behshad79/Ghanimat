@@ -64,7 +64,7 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
     nav(`/admin/insight/${encodeURIComponent(label)}?from=${encodeURIComponent(here)}${v ? `&v=${encodeURIComponent(v)}` : ''}${to ? `&to=${encodeURIComponent(to)}` : ''}`)
   }
   return (<>
-    <div role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}
+    <div data-kpi role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}
       className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', 'lift cursor-pointer', !featured && 'hover:border-brand/40')}>
       {featured && <span className="pointer-events-none absolute -top-12 -left-12 size-36 rounded-full bg-white/10" />}
       <span aria-hidden className={cx('kpi-mark pointer-events-none absolute -bottom-5 -left-4 opacity-[0.07] transition-transform duration-700 group-hover:-translate-y-1 group-hover:rotate-[-8deg]', featured ? 'text-white opacity-[0.12]' : T.text)}>{kpiIcon(label, 96)}</span>

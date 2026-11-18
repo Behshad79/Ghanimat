@@ -219,3 +219,6 @@ button:disabled { cursor: not-allowed; }
 .kpi-beat { --kpi-a: kpi-beat } .kpi-spin { --kpi-a: kpi-spin } .kpi-chat { --kpi-a: kpi-chat } .kpi-float { --kpi-a: kpi-float }
 .kpi-ico { perspective: 120px; }
 @media (prefers-reduced-motion: reduce) { .kpi-ico > svg, .group:hover .kpi-ico > svg { animation: none !important; } }
+
+/* کارت‌های شاخص داخل پنجره و کشو: ستون‌ها بر اساس عرض خود پنجره، نه عرض صفحه؛ هر کارت دست‌کم ۲۶۰ پیکسل تا عنوان کامل دیده شود */
+[data-dialog-body] .grid:has(> [data-kpi]) { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }

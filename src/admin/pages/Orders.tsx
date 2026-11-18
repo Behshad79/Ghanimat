@@ -2,7 +2,7 @@ import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
-import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText } from '@/shared/ui/base'
+import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
@@ -17,6 +17,7 @@ import { ShipChips, SplitBanner } from '../orders/Split'
 import { OrderAlerts, openEvents } from '../orders/OrderEvents'
 import { PackPhotos } from '../shared/PackPhotos'
 import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
+import { DecisionPanel } from '../orders/Decision'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
@@ -30,6 +31,7 @@ const TABS: [string, string, (o: Order) => boolean][] = [
   ['all', 'همه', () => true],
   ['action', 'نیازمند اقدام', (o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || evOpen.has(o.id)],
   ['decision', 'نیازمند تصمیم مشتری', (o) => o.status === 'order.needs_decision'],
+  ['unpaid', 'در انتظار پرداخت یا اعتبار', (o) => ['order.awaiting_payment', 'order.awaiting_credit'].includes(o.status)],
   ['preparing', 'آماده‌سازی', (o) => ['order.paid', 'order.preparing'].includes(o.status)],
   ['shipped', 'ارسال‌شده', (o) => o.status === 'order.shipped'],
   ['delivered', 'تحویل‌شده', (o) => o.status === 'order.delivered'],
@@ -145,7 +147,7 @@ export function OrderDetail() {
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
   const c = customer(o.customerId)
-  const step = ({ 'order.awaiting_payment': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
+  const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
   const advance = (sid: string, to: string, label: string) => { const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const cancelShip = async (sid: string, total: number) => {
@@ -177,15 +179,7 @@ export function OrderDetail() {
         <div className="space-y-4">
           <NoteBanner o={o} />
           <OrderAlerts key={o.id} o={o} />
-          {o.status === 'order.needs_decision' && (
-            <Card className="border-warning/50" title="کمبود تأمین: نیازمند تصمیم مشتری" actions={<SlaChip at={o.shipments[0].sla} />}>
-              <p className="mb-3 text-13 text-t2">شریک انبار اعلام «ندارم» کرده است. سه گزینه برای مشتری ارسال شده و اگر تا پایان مهلت {fa(rule('decision_hours'))} ساعته پاسخ ندهد، قلم خودکار لغو و وجه بازگردانده می‌شود.</p>
-              <div className="flex flex-wrap gap-2">
-                {['مشتری کالای جایگزین را پذیرفت', 'مشتری همین قلم را لغو کرد', 'مشتری کل سفارش را لغو کرد'].map((l, i) => <Button key={l} onClick={() => { mutate((db) => { db.orders.find((x) => x.id === o.id)!.status = i === 0 ? 'order.preparing' : 'order.cancelled' }, { action: 'ثبت نتیجهٔ تصمیم مشتری', target: o.id, after: l }); toast(i === 0 ? 'نتیجه ثبت شد و سفارش به آماده‌سازی رفت.' : `سفارش لغو شد و ${toman(o.total)} بازگردانده می‌شود.`) }}>{l}</Button>)}
-                <Button variant="ghost" icon={<Phone size={14} />} onClick={() => callTo(c.mobile, c.name)}>پیگیری تلفنی</Button>
-              </div>
-            </Card>
-          )}
+          <DecisionPanel o={o} />
           {o.status === 'order.suspicious' && (
             <Card className="border-danger/50" title={<>سفارش مشکوک · امتیاز ریسک {fa(o.risk)}<Hint k="risk" /></>}>
               <p className="text-13 text-t2">دلایل: دو واحد گران‌قیمت در یک سفارش، نرخ مرجوعی ۴۰٪ مشتری، نشانی تازه. ارسال تا بازبینی متوقف است.</p><AITag confidence="متوسط" />
@@ -200,9 +194,9 @@ export function OrderDetail() {
               <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-12 text-t2"><span className="flex items-center gap-1"><MapPin size={13} />ارسال از {WAREHOUSE[s.warehouse]}</span><span className="flex items-center gap-1"><Truck size={13} />{s.method}</span><span>دلیل تخصیص: {s.allocReason}</span></div>
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
-                  <li key={k} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <li key={k} className={cx('flex flex-wrap items-center justify-between gap-2 px-3 py-2', it.cancelled && 'bg-neutral-bg/60 opacity-70')}>
                     <Cell pid={it.productId} size={48} a={<span className="flex flex-wrap items-center gap-1.5"><button className="text-right hover:text-brand hover:underline" onClick={() => nav(`/admin/catalog/${it.productId}`)}>{product(it.productId).title}</button><VariantChips pid={it.productId} /></span>} b={u ? <>واحد <span className="ltr font-mono">{u.id}</span> · سریال <span className="ltr font-mono">{u.serial}</span>{u.grade && u.condition !== 'sealed' && <> · گرید {g(u.grade)}</>} · قفسه {u.shelf}</> : `موجودی تعدادی · ${fa(it.qty)} عدد`} />
-                    <span className="flex items-center gap-2"><ProductLinks pid={it.productId} /><Money v={it.price * it.qty} /></span>
+                    <span className="flex items-center gap-2">{it.cancelled && <Badge tone="danger" dot={false}>لغو شد{it.cancelBy ? ` · ${it.cancelBy}` : ''}</Badge>}<ProductLinks pid={it.productId} /><Money v={it.price * it.qty} /></span>
                   </li>) })}
               </ul>
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}

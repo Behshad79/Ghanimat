@@ -30,6 +30,7 @@ import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
 import { ReturnCase, WarrantyCase } from './admin/returns/Case'
+import { ReviewWidget } from './shared/ui/review'
 import { Partner } from './admin/partner/Partner'
 import { Insight } from './admin/insight/Insight'
 import { Merch } from './admin/merch/Merch'
@@ -124,6 +125,7 @@ export function App() {
       <ConfirmHost />
       <ReasonHost />
       <QuickHost />
+      {import.meta.env.VITE_REVIEW !== 'off' && <ReviewWidget />}
     </>
   )
 }

@@ -9,6 +9,7 @@ import { fa, num } from '@/shared/lib/fa'
 import type { Product, Unit } from '@/shared/data/seed'
 import type { Site } from '@/shared/data/site'
 import { MagicIcon } from '@/shared/ui/MagicIcon'
+import { priceRange } from '@/shared/lib/variants'
 
 const pad = (n: number) => fa(String(Math.max(0, n)).padStart(2, '0'))
 function useCountdown(end?: string) {
@@ -29,7 +30,8 @@ export function ProductCard({ p, u, mini, hover, out, skeleton, cfg: cfgIn, flui
   const isOut = out || stock === 0
   const unit = u ?? d.units.find((x) => x.productId === p.id && x.status === 'unit.published')
   const deal = liveDeal(d, p.id)
-  const price = deal ? deal.price : unit?.price || p.price || 0
+  const range = p.kind === 'variable' && p.variations?.length ? priceRange(p.variations, p.price ?? 0) : null
+  const price = deal ? deal.price : range ? range[0] : unit?.price || p.price || 0
   const before = deal ? deal.regular : p.compareAt && p.compareAt > price ? p.compareAt : 0
   const off = before ? Math.round((1 - price / before) * 100) : 0
   const bnpl = d.providers.find((x) => x.family === 'bnpl' && x.isDefault && x.status === 'prov.active')
@@ -75,7 +77,7 @@ export function ProductCard({ p, u, mini, hover, out, skeleton, cfg: cfgIn, flui
         ) : (
           <div className="space-y-0.5">
             {show('showCompare') && before > 0 && <div className="flex items-center justify-between"><span className="tnum text-13 text-[#5a5e78] line-through">{num(before)}</span><span className="tnum rounded-md bg-[#c42f2f] px-1.5 py-0.5 text-12 font-bold text-white">{fa(off)}٪</span></div>}
-            <p className="tnum flex items-baseline gap-1 font-bold"><span className={mini ? 'text-16' : 'text-20'}>{num(price)}</span><span className="text-11 font-medium">تومان</span></p>
+            <p className="tnum flex items-baseline gap-1 font-bold">{range && range[0] !== range[1] && <span className="text-11 font-medium">از</span>}<span className={mini ? 'text-16' : 'text-20'}>{num(price)}</span><span className="text-11 font-medium">تومان</span></p>
           </div>
         )}
       </div>

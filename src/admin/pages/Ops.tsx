@@ -23,9 +23,15 @@ import { ManualReturn } from '../orders/ReturnTools'
 import { cardState, COVERED, EXCLUDED, inQueue, METHODS, QUEUES, retStage, warStage, type Stage } from '../returns/flow'
 import { SplitRules } from '../orders/Split'
 import { ZoneMap } from '../logistics/ZoneMap'
+import { VariantStockTable } from '../catalog/VariableEditor'
 
 // ───────── انبار و موجودی ─────────
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
+/** موجودی تنوع‌ها (کالای متغیر): هر رنگ یا حافظه با کد، موجودی هر انبار و هشدار کمبود */
+function VariantStockCard() {
+  const nav = useNavigate(); const [low, setLow] = useState(false)
+  return <Card title="موجودی تنوع‌های کالاهای متغیر" actions={<Toggle on={low} onChange={setLow} text="فقط کمبود و ناموجود" />}><VariantStockTable onlyLow={low} onEdit={(pid) => nav(`/admin/catalog/${pid}?tab=units`)} /></Card>
+}
 export function Warehouse() {
   const { d, product } = useLookup(); const s = useSession(); const nav = useNavigate(); const [tab, setTab] = useTab('stock'); const [whD, setWhD] = useState<string | null>(null)
   const [scan, setScan] = useState<string | null>(null)
@@ -66,7 +72,8 @@ export function Warehouse() {
           <KPI label="موجودی راکد (بیش از ۳۰ روز)" value={fa(d.units.filter((u) => u.status === 'unit.published' && Date.now() - new Date(u.received).getTime() > 30 * 864e5).length)} note="پیشنهاد AI: کاهش پلکانی قیمت" to="/admin/pricing" /><KPI label="زمان ورود تا انتشار" value={`${fa(1.8)} روز`} delta={-12} goodDown />
         </div>
         <div className="grid gap-4 md:grid-cols-2"><Card title="موجودی به تفکیک انبار" actions={<span className="text-11 text-t2">روی هر انبار بزنید</span>}><Bars onPick={(l) => setWhD(Object.keys(WAREHOUSE).find((k) => WAREHOUSE[k] === l) ?? null)} data={Object.keys(WAREHOUSE).map((w) => ({ label: WAREHOUSE[w], value: d.units.filter((u) => u.warehouse === w && u.status === 'unit.published').length + d.products.reduce((a, p) => a + (p.qty?.[w as 'tehran'] ?? 0), 0) }))} fmt={(n) => `${fa(n)} عدد`} /></Card>
-          <Card title="موجودی به تفکیک چرخهٔ عمر"><Bars onPick={() => nav('/admin/catalog?tab=units')} data={['unit.qc', 'unit.photo', 'unit.ready', 'unit.published', 'unit.reserved', 'unit.sold'].map((k) => ({ label: k.replace('unit.', '').replace('qc', 'در انتظار QC').replace('photo', 'در انتظار عکاسی').replace('ready', 'آمادهٔ انتشار').replace('published', 'منتشرشده').replace('reserved', 'رزروشده').replace('sold', 'فروخته‌شده'), value: d.units.filter((u) => u.status === k).length }))} /></Card></div></div>}
+          <Card title="موجودی به تفکیک چرخهٔ عمر"><Bars onPick={() => nav('/admin/catalog?tab=units')} data={['unit.qc', 'unit.photo', 'unit.ready', 'unit.published', 'unit.reserved', 'unit.sold'].map((k) => ({ label: k.replace('unit.', '').replace('qc', 'در انتظار QC').replace('photo', 'در انتظار عکاسی').replace('ready', 'آمادهٔ انتشار').replace('published', 'منتشرشده').replace('reserved', 'رزروشده').replace('sold', 'فروخته‌شده'), value: d.units.filter((u) => u.status === k).length }))} /></Card></div>  <VariantStockCard />
+      </div>}
       {tab === 'sync' && <div className="space-y-4">
         <Card title={<>سلامت همگام‌سازی موجودی انبار مهاباد<Hint k="buffer" /></>} actions={<div className="flex items-center gap-2 text-12"><span>فروش از انبار شریک</span><Toggle on={d.flags.mahabadSales} label="کلید توقف" onChange={async (v) => { if (!v && !(await confirm({ title: 'توقف فروش از انبار مهاباد؟', body: 'همهٔ کالاهای این انبار موقتاً در سایت ناموجود می‌شوند. سفارش‌های ثبت‌شده ادامه پیدا می‌کنند. هر زمان بخواهید دوباره روشن می‌شود.', confirm: 'توقف فروش', danger: true }))) return; mutate((x) => { x.flags.mahabadSales = v }, { action: v ? 'ازسرگیری فروش انبار شریک' : 'توقف فروش انبار شریک', target: 'انبار مهاباد' }) }} /></div>}>
           <div className="grid gap-3 sm:grid-cols-3">{[['به‌روزرسانی دستی شریک', '۵ ساعت پیش', 'ok'], ['اتصال مستقیم سایت اول', '۲ دقیقه پیش', 'ok'], ['خزش دوره‌ای سایت دوم', '۷۵ دقیقه پیش · قدیمی', 'warn']].map(([l, v, t]) => <div key={l} className={cx('rounded-md p-3 text-12', t === 'ok' ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning')}><p className="font-medium">{l}</p><p>{v}</p></div>)}</div>

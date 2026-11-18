@@ -73,6 +73,7 @@ export function ThemeTab() {
 /** دسته‌ها: افزودن، حذف، ترتیب، آیکون Magicoon یا عکس */
 export function CategoriesTab() {
   const d = useDB(); const cats = d.entities.categories ?? []
+  const [mv, setMv] = useState<{ name: string; to: string } | null>(null)
   const set = (i: number, p: Record<string, unknown>, log?: string) => mutate((x) => { Object.assign(x.entities.categories[i], p) }, log ? { action: log, target: cats[i].name } : undefined)
   const DEF: Record<string, string> = { 'گوشی موبایل': 'mobile', هدفون: 'shopping-cart', 'لپ‌تاپ': 'laptop', 'ساعت هوشمند': 'watch', تبلت: 'tablet', 'کتاب‌خوان': 'tablet', 'لوازم جانبی': 'plug' }
   return (
@@ -83,9 +84,13 @@ export function CategoriesTab() {
         <IconPicker value={c.icon ?? DEF[c.name]} onChange={(v) => set(i, { icon: v }, 'تغییر آیکون دسته')} />
         <label className="flex items-center gap-1.5 text-12">در خانه<Toggle on={c.onHome !== false} label="نمایش در خانه" onChange={(v) => set(i, { onHome: v })} /></label>
         <label className="flex items-center gap-1.5 text-12">فعال<Toggle on={!!c.active} label="فعال" onChange={(v) => set(i, { active: v }, v ? 'فعال کردن دسته' : 'غیرفعال کردن دسته')} /></label>
-        <button aria-label="حذف دسته" className="text-danger" onClick={async () => { const n = d.products.filter((p) => p.category === c.name).length; if (n) return toast(`${fa(n)} کالا در این دسته است؛ اول کالاها را جابه‌جا کنید.`, { tone: 'err' }); if (await confirm({ title: `دستهٔ «${c.name}» حذف شود؟`, body: 'از منو و صفحهٔ خانه برداشته می‌شود.', danger: true, confirm: 'حذف' })) mutate((x) => { x.entities.categories.splice(i, 1) }, { action: 'حذف دسته', target: c.name }) }}><Trash2 size={15} /></button>
+        <button aria-label="حذف دسته" className="text-danger" onClick={async () => { const n = d.products.filter((p) => p.category === c.name).length; if (n) return setMv({ name: c.name, to: (d.entities.categories ?? []).find((y: any) => y.name !== c.name)?.name ?? '' }); if (await confirm({ title: `دستهٔ «${c.name}» حذف شود؟`, body: 'از منو و صفحهٔ خانه برداشته می‌شود.', danger: true, confirm: 'حذف' })) mutate((x) => { x.entities.categories.splice(i, 1) }, { action: 'حذف دسته', target: c.name }) }}><Trash2 size={15} /></button>
       </li>)}</ul>
-    </Card>
+    {mv && <Modal open onClose={() => setMv(null)} title={`حذف دستهٔ «${mv.name}»`} footer={<><Button variant="danger" disabled={!mv.to} onClick={() => { const n = d.products.filter((p) => p.category === mv.name).length; mutate((x) => { x.products.forEach((p) => { if (p.category === mv.name) p.category = mv.to }); x.entities.categories = x.entities.categories.filter((y: any) => y.name !== mv.name) }, { action: 'انتقال کالاها و حذف دسته', target: mv.name, after: mv.to }); toast(`${fa(n)} کالا به «${mv.to}» منتقل و دسته حذف شد.`); setMv(null) }}>انتقال کالاها و حذف</Button><Button variant="ghost" onClick={() => setMv(null)}>انصراف</Button></>}>
+        <p className="mb-3 text-13 text-t2">{fa(d.products.filter((p) => p.category === mv.name).length)} کالا در این دسته است. پیش از حذف، به کدام دسته منتقل شوند؟</p>
+        <Field label="دستهٔ مقصد"><Select value={mv.to} onChange={(v) => setMv({ ...mv, to: v })} options={(d.entities.categories ?? []).map((y: any) => y.name).filter((x: string) => x !== mv.name)} other={false} /></Field>
+      </Modal>}
+</Card>
   )
 }
 

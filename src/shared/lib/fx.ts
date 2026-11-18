@@ -21,7 +21,7 @@ export async function fetchRate(cur: FxCur): Promise<FxResult> {
   if (fx.api.mode === 'demo') {
     // حالت نمایشی: نوسان کوچک روزانه روی نرخ ذخیره‌شده، تا رفتار واقعی صفحه دیده شود
     const day = Math.floor(Date.now() / 864e5); const w = Math.sin(day * 1.3 + cur.length) * 0.012
-    return { rate: Math.round((fx.rates[cur] * (1 + w)) / 10) * 10, at: new Date().toISOString(), source: 'demo' }
+    const r = fx.rates[cur] * (1 + w); return { rate: r >= 1000 ? Math.round(r / 10) * 10 : Math.round(r * 10) / 10, at: new Date().toISOString(), source: 'demo' }
   }
   if (!fx.api.url.trim()) return { ...saved, error: 'نشانی API ثبت نشده است.' }
   try {

@@ -19,7 +19,7 @@ import { KIND_DEFAULT, LINE_COLORS, LINE_ICONS, LineIcon, readIcon, WEIGHT } fro
 import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
-import { logPrice, QcLayers, RouteEditor } from './PdpExtras'
+import { FxRevalue, logPrice, QcLayers, RouteEditor } from './PdpExtras'
 import { fetchRate, FX_CURS, type FxCur, type FxResult } from '@/shared/lib/fx'
 import { EditableChoice, VariantEditor } from './Choices'
 import { ProductLabel } from '../print/ProductLabel'
@@ -229,7 +229,8 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
         <div className="flex justify-between py-1 text-13"><span className="text-t2">قیمت نهایی فروش</span><span className="tnum">{toman(finalPrice)}</span></div>
         <div className={cx('mt-2 rounded-lg p-3 text-center', profit >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}><p className="text-11">سود هر واحد</p><p className="tnum text-20 font-bold">{toman(profit)}</p><p className="tnum text-12">{landed ? pct(marginPct, 1) : 'قیمت خرید ثبت نشده'}</p></div>
         {landed > 0 && marginPct < floor && profit >= 0 && <p className="mt-2 text-11 text-warning">حاشیه زیر کف {pct(floor)} است؛ انتشار به تأیید مدیر نیاز دارد مگر مجوز شما اجازه بدهد.</p>}
-      </Card></div></div>,
+      </Card></div>
+      {editing?.currency && editing.currency !== 'تومان' && <FxRevalue pid={editing.id} />}</div>,
     7: <div className="grid gap-4 sm:grid-cols-2">
       <Field label="وزن (گرم)"><Input type="number" className="ltr text-left font-mono" value={f.weight || ''} onChange={(e) => set({ weight: +e.target.value })} /></Field>
       <Field label="ابعاد (سانتی‌متر)"><Input className="ltr text-left font-mono" value={f.dims} onChange={(e) => set({ dims: e.target.value })} placeholder="20 × 18 × 9" /></Field>

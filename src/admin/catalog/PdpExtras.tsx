@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, FileCheck2, Plane, ShieldCheck, Warehouse } from 'lucide-react'
 import { Badge, Button, cx, Field, Input, Segmented, Toggle } from '@/shared/ui/base'
 import { Area } from '@/shared/ui/charts'
-import { toast } from '@/shared/ui/overlay'
+import { confirm, toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
-import { fa, toman } from '@/shared/lib/fa'
+import { fa, num, toman } from '@/shared/lib/fa'
+import { fetchRate, FX_CURS, type FxCur, type FxResult } from '@/shared/lib/fx'
 import type { ImportRoute, Pdp, PricePoint } from '@/shared/data/seed'
 
 const day = (s?: string) => (s ? s.slice(0, 10) : '')
@@ -97,6 +98,47 @@ export function RouteSummary({ pdp, sealed }: { pdp?: Pdp; sealed: boolean }) {
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="rounded-xl border border-line p-3 text-12"><p className="mb-1 flex items-center gap-1.5 font-semibold"><Plane size={14} />مبدأ و مسیر واردات</p>{r ? <><p>{r.origin === 'amazon' ? 'آمازون' : 'فروشگاه خارجی'}: <b className="ltr">{r.store}</b> · فروشنده: <span className="ltr">{r.seller}</span></p><p className="mt-1 text-t2">{routeSteps(r).map(([t, at]) => `${t}${at ? ` (${faDate(at)})` : ''}`).join(' ← ')}</p><p className="mt-1">فاکتور خرید: {r.invoice ? (r.invoiceOk ? <Badge tone="success">تأییدشده</Badge> : <Badge tone="warning">منتظر تأیید</Badge>) : <Badge>بارگذاری نشده</Badge>}</p></> : <p className="text-t2">ثبت نشده؛ بخش در صفحهٔ کالا پنهان است.</p>}</div>
       <div className="rounded-xl border border-line p-3 text-12"><p className="mb-1 flex items-center gap-1.5 font-semibold"><ShieldCheck size={14} />کنترل کیفیت دو لایه</p><p>{done ? <Badge tone="success">از هر دو لایه عبور کرده</Badge> : <Badge tone="warning">{fa(qcItems(sealed).filter((x) => pdp.qc?.[x]).length)} از {fa(qcItems(sealed).length)} مورد</Badge>}</p><p className="mt-1 text-t2">ویدیوی تست غنیمت: {pdp.videos.some((v) => v.kind === 'ویدیوی تست غنیمت') ? 'دارد' : 'ندارد'}</p></div>
+    </div>
+  )
+}
+
+/** قیمت تمام‌شده با نرخ ارز امروز در برابر نرخ روز خرید؛ قیمت سایت فقط با تأیید ما عوض می‌شود */
+export function FxRevalue({ pid }: { pid: string }) {
+  const d = useDB(); const p = d.products.find((x) => x.id === pid)!
+  const cur = p.currency as FxCur | undefined
+  const [now, setNow] = useState<FxResult | null>(null); const [busy, setBusy] = useState(false)
+  const load = async () => { if (!cur) return; setBusy(true); setNow(await fetchRate(cur)); setBusy(false) }
+  useEffect(() => { load() }, [pid, cur])
+  if (!cur || !FX_CURS.includes(cur) || !p.costFx || !p.rate) return <p className="rounded-xl bg-neutral-bg px-3 py-2 text-12 text-t2">این کالا با تومان خریده شده یا مبلغ و نرخ ارز خرید در فرم کالا ثبت نشده است؛ مقایسه با نرخ روز ممکن نیست.</p>
+  const units = d.units.filter((u) => u.productId === pid && ['unit.published', 'unit.ready'].includes(u.status))
+  const price = p.price ?? units[0]?.price ?? 0; const extra = p.extraCost ?? 0
+  const then = Math.round(p.costFx * p.rate + extra); const rateNow = now?.rate ?? p.rate; const costNow = Math.round(p.costFx * rateNow + extra)
+  const dCost = then ? ((costNow - then) / then) * 100 : 0; const marginThen = price ? (price - then) / price : 0
+  const suggested = marginThen < 1 ? Math.round(costNow / (1 - marginThen) / 100000) * 100000 : price
+  const profitNow = price - costNow
+  const apply = async () => {
+    const ok = await confirm({ title: 'به‌روزرسانی قیمت فروش', body: `قیمت فروش «${p.title}» از ${toman(price)} به ${toman(suggested)} تغییر می‌کند و همین الان روی سایت و فیدها (ترب، ایمالز) اعمال می‌شود. سفارش‌های ثبت‌شده تغییری نمی‌کنند.`, confirm: 'اعمال قیمت تازه' })
+    if (!ok) return
+    mutate((x) => { const t = x.products.find((y) => y.id === pid)!; if (t.mode === 'qty' || t.price) t.price = suggested; x.units.filter((u) => u.productId === pid && ['unit.published', 'unit.ready'].includes(u.status)).forEach((u) => { u.price = suggested }); logPrice(x, pid, suggested, 'به‌روزرسانی با نرخ روز') }, { action: 'به‌روزرسانی قیمت با نرخ روز ارز', target: p.title, before: toman(price), after: toman(suggested) })
+    toast(`قیمت «${p.title}» ${toman(suggested)} شد.`)
+  }
+  const Cell = ({ k, v, sub, tone }: { k: string; v: string; sub?: string; tone?: 'up' | 'down' }) => <div className="rounded-xl bg-neutral-bg p-3"><p className="text-11 text-t2">{k}</p><p className={cx('tnum text-14 font-bold', tone === 'up' && 'text-danger', tone === 'down' && 'text-success')}>{v}</p>{sub && <p className="text-11 text-t2">{sub}</p>}</div>
+  return (
+    <div className="space-y-3 rounded-2xl border border-line p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-13 font-semibold">قیمت تمام‌شده با نرخ {cur} امروز</p><span className="flex items-center gap-2 text-11 text-t2">{busy ? 'در حال استعلام…' : now ? (now.source === 'api' ? `از API · ${new Date(now.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}` : now.source === 'demo' ? 'نرخ نمایشی' : 'آخرین نرخ ذخیره‌شده') : ''}<button type="button" className="text-brand" onClick={load}>استعلام دوباره</button></span></div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Cell k="خرید" v={`${num(p.costFx)} ${cur}`} sub={`نرخ روز خرید: ${toman(p.rate)}`} />
+        <Cell k={`نرخ ${cur} امروز`} v={toman(rateNow)} sub={`${rateNow >= p.rate ? '+' : ''}${fa((((rateNow - p.rate) / p.rate) * 100).toFixed(1))}٪ نسبت به روز خرید`} tone={rateNow > p.rate ? 'up' : rateNow < p.rate ? 'down' : undefined} />
+        <Cell k="هزینه‌های جانبی" v={toman(extra)} sub="حمل، ترخیص، QC (بدون تغییر)" />
+        <Cell k="قیمت تمام‌شده روز خرید" v={toman(then)} />
+        <Cell k="قیمت تمام‌شده با نرخ امروز" v={toman(costNow)} tone={costNow > then ? 'up' : costNow < then ? 'down' : undefined} sub={`${costNow >= then ? '+' : ''}${toman(costNow - then)} (${dCost >= 0 ? '+' : ''}${fa(dCost.toFixed(1))}٪)`} />
+        <Cell k="سود با قیمت فعلی و نرخ امروز" v={toman(profitNow)} sub={price ? `${fa(((profitNow / price) * 100).toFixed(1))}٪ (روز خرید ${fa((marginThen * 100).toFixed(1))}٪)` : undefined} tone={profitNow < price - then ? 'up' : undefined} />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-brand-tint/50 px-3 py-2 text-12">
+        <span>قیمت پیشنهادی برای حفظ همان حاشیهٔ سود: <b className="tnum">{toman(suggested)}</b> <span className="text-t2">(فعلی {toman(price)})</span></span>
+        <Button size="sm" variant="primary" disabled={!price || suggested === price} onClick={apply}>اعمال قیمت پیشنهادی</Button>
+      </div>
+      <p className="text-11 text-t2">قیمت سایت با تغییر نرخ ارز خودکار عوض نمی‌شود؛ فقط با زدن «اعمال قیمت پیشنهادی» یا ویرایش دستی قیمت تغییر می‌کند. قیمت تمام‌شدهٔ ثبت‌شده در حسابداری (روز خرید) هم دست نمی‌خورد.</p>
     </div>
   )
 }

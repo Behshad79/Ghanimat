@@ -4,13 +4,14 @@ import { Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Segmented, S
 import { KPI, Stepper } from '@/shared/ui/page'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
-import { getDB, mutate, notify, useDB } from '@/shared/lib/store'
+import { getDB, mutate, notify, sendSms, useDB } from '@/shared/lib/store'
 import { ProductWizard } from '../catalog/Wizard'
 import { csv, download, fa, left, minsLeft, rel, toman } from '@/shared/lib/fa'
 import { CAPITAL, ledger, scorecard, type Capital, type PartnerT } from '@/shared/data/partners'
 import type { Order, Product, Shipment } from '@/shared/data/seed'
 import { ProductImg } from '../pages/_shared'
 import { PackPhotos } from '../shared/PackPhotos'
+import { NoteBanner } from '../orders/OrderNotes'
 
 type Row = Shipment & { order: Order }
 const kind = (s: Shipment) => /حضوری/.test(s.method) ? 'pickup' : /سریع|پیک/.test(s.method) ? 'fast' : 'post'
@@ -47,13 +48,14 @@ export function PartnerOrders({ P }: { P: PartnerT }) {
       const cur = ({ 'ship.partner_confirm': 0, 'ship.picking': 1, 'ship.packed': 2, 'ship.in_transit': 3, 'ship.delivered': k === 'pickup' ? 3 : 4 } as Record<string, number>)[x.status] ?? 0
       return <Card key={x.id} className={cx(open(x) && m < 20 && 'ring-2 ring-danger')} title={<span className="flex flex-wrap items-center gap-2"><CopyId v={x.order.id} /><Badge tone={k === 'fast' ? 'brand' : 'neutral'} dot={false}><I size={11} className="ml-1 inline" />{l}</Badge><StatusBadge s={x.status} /></span>} actions={open(x) && <Badge tone={m < 20 ? 'danger' : m < 45 ? 'warning' : 'info'}>{m < 20 ? 'لحظهٔ آخر · ' : ''}{left(x.sla)}</Badge>}>
         {x.status !== 'ship.cancelled' && <div className="mb-3"><Stepper current={cur} steps={steps} /></div>}
+        <div className="mb-2"><NoteBanner o={x.order} compact /></div>
         <ul className="space-y-1.5">{x.items.map((i, j) => { const u = d.units.find((y) => y.id === i.unitId); return <li key={j} className="flex items-center gap-2 text-13"><ProductImg pid={i.productId} size={36} /><span className="min-w-0 flex-1 truncate">{d.products.find((p) => p.id === i.productId)?.title}</span>{u && <span className="ltr rounded-md bg-neutral-bg px-1.5 font-mono text-11">قفسه {u.shelf}</span>}<b className="tnum">{toman(i.price)}</b></li> })}</ul>
         <p className="mt-2 text-12 text-t2">{c?.name} · {c?.city}{k !== 'pickup' && '، نشانی کامل روی برچسب'} · موبایل پوشیده؛ تماس از مرکز تماس غنیمت</p>
         {x.courier && <p className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-12"><Bike size={14} /><b>{x.courier.company ?? 'پیک شعبه'}</b>{x.courier.name} · <span className="ltr">{x.courier.phone}</span>{x.courier.code && <CopyId v={x.courier.code} />}</p>}
         {open(x) && <div className="mt-3 flex flex-wrap gap-2">
           {x.status === 'ship.partner_confirm' && <><Button variant="primary" onClick={() => { setSt(x, 'ship.picking', 'تأیید موجودی'); toast('موجودی تأیید شد. کالا را از قفسه بردارید و بسته‌بندی کنید.') }}>دارم؛ تأیید موجودی</Button><Button variant="danger" onClick={async () => { const why = await askReason({ kind: 'cancel', ref: x.id, status: 'ندارم', title: 'چرا کالا موجود نیست؟ (جریمهٔ قرارداد اعمال می‌شود)' }); if (!why) return; setSt(x, 'ship.cancelled', 'اعلام ندارم', (_s, o) => { o.status = 'order.needs_decision' }); mutate((y) => { y.partners.find((z) => z.id === P.id)!.penalties.unshift({ id: `PN-${Date.now().toString(36).slice(-3)}`, at: new Date().toISOString(), reason: 'اعلام «ندارم» پس از فروش', amount: P.contract.noStockPenalty, orderId: x.order.id }) }); notify('شعبه «ندارم» اعلام کرد', `${P.name}: ${x.order.id}`, `/admin/orders/${x.order.id}`, 'عملیات', 'danger'); toast(`ثبت شد. جریمهٔ ${toman(P.contract.noStockPenalty)} در دفتر حساب آمد.`) }}>ندارم</Button></>}
           {x.status === 'ship.picking' && <div className="w-full"><PackPhotos orderId={x.order.id} shipId={x.id} big /></div>}
-          {x.status === 'ship.picking' && <Button variant="primary" icon={<PackageCheck size={14} />} disabled={!(x.packPhotos?.length)} title={x.packPhotos?.length ? undefined : 'اول از کالا و بستهٔ باز عکس بگیرید'} onClick={() => { setSt(x, 'ship.packed', 'بسته‌بندی'); if (k === 'pickup') toast('پیامک «سفارش آماده است» برای مشتری رفت.'); else toast('عکس‌ها بایگانی و بسته‌بندی ثبت شد.') }}>بسته‌بندی شد (کالا، برگهٔ کنترل کیفیت، کارت گارانتی)</Button>}
+          {x.status === 'ship.picking' && <Button variant="primary" icon={<PackageCheck size={14} />} disabled={!(x.packPhotos?.length)} title={x.packPhotos?.length ? undefined : 'اول از کالا و بستهٔ باز عکس بگیرید'} onClick={() => { setSt(x, 'ship.packed', 'بسته‌بندی'); if (k === 'pickup') { const c = d.customers.find((y) => y.id === x.order.customerId); if (c) sendSms(c.mobile, `غنیمت: سفارش ${x.order.id} در ${P.name} آمادهٔ تحویل است.`, 'آمادهٔ تحویل حضوری', x.order.id, c.id); toast('پیامک «سفارش آماده است» برای مشتری رفت و در گزارش پیامک‌ها ثبت شد.') } else toast('عکس‌ها بایگانی و بسته‌بندی ثبت شد.') }}>بسته‌بندی شد (کالا، برگهٔ کنترل کیفیت، کارت گارانتی)</Button>}
           {x.status === 'ship.packed' && k === 'post' && <><Button icon={<Printer size={14} />} onClick={() => { toast(`برچسب پستی با نشانی فرستندهٔ ${P.name} آماده شد.`); window.print() }}>چاپ برچسب پستی</Button><Button variant="primary" onClick={() => setTrack(x)}>ثبت کد رهگیری و تحویل به پست</Button></>}
           {x.status === 'ship.packed' && k === 'fast' && <Button variant="primary" icon={<Bike size={14} />} onClick={() => setCour({ row: x, mode: P.couriers.some((c) => c.active) ? 'own' : 'app', who: P.couriers.find((c) => c.active)?.name ?? '', link: '', app: 'اسنپ‌باکس' })}>تعیین پیک</Button>}
           {x.status === 'ship.in_transit' && k === 'fast' && <Button variant="primary" icon={<CheckCircle2 size={14} />} onClick={() => setDeliver({ row: x, code: '' })}>تحویل شد</Button>}

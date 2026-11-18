@@ -63,7 +63,7 @@ export function Composer({ onSend, placeholder = 'پاسخ را بنویسید',
         <label className="grid size-8 cursor-pointer place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand" title="فایل (PDF، فاکتور، اکسل…)"><Paperclip size={16} /><input type="file" multiple className="sr-only" aria-label="افزودن فایل" onChange={(e) => { if (e.target.files) void add(e.target.files); e.target.value = '' }} /></label>
         <button type="button" onClick={() => void record()} title={rec ? 'پایان ضبط' : 'ضبط پیام صوتی'} aria-label={rec ? 'پایان ضبط' : 'ضبط پیام صوتی'} className={cx('flex h-8 items-center gap-1 rounded-lg px-2 text-12', rec ? 'bg-danger-solid text-white' : 'text-t2 hover:bg-neutral-bg hover:text-brand')}>{rec ? <><Square size={13} /><span className="tnum">{mmss(sec)}</span></> : <Mic size={16} />}</button>
         {atts.length > 0 && <button type="button" onClick={() => setAtts([])} className="flex h-8 items-center gap-1 rounded-lg px-2 text-11 text-t2 hover:text-danger"><Trash2 size={12} />حذف پیوست‌ها</button>}
-        <span className="mr-auto flex flex-wrap gap-2"><Button variant="primary" icon={<Send size={14} />} disabled={disabled} onClick={send}>{primary}</Button>{extra?.(text, atts, reset)}</span>
+        <span className="mr-auto flex flex-wrap gap-2"><Button variant="primary" icon={<Send size={14} />} disabled={disabled || (!text.trim() && !atts.length)} onClick={send}>{primary}</Button>{extra?.(text, atts, reset)}</span>
       </div>
     </div>
   )

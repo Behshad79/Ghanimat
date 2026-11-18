@@ -1,3 +1,4 @@
+import { sendSms } from '@/shared/lib/store'
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { WarehouseDetail } from '../warehouse/WarehouseDetail'
 import { useEffect, useState } from 'react'
@@ -124,9 +125,7 @@ export function Shipping() {
       {tab === 'sms' && <SmsLog />}
       {tab === 'zones' && <div className="space-y-6"><ZoneMap /><div><h2 className="mb-2 text-14 font-semibold">مناطق ارسال</h2><EntityManager ek="zones" kind="منطقه" fields={[{ k: 'name', label: 'نام منطقه', required: true }, { k: 'cities', label: 'شهرها و محدوده', type: 'textarea' }, { k: 'methods', label: 'روش‌های مجاز' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div><div><h2 className="mb-2 text-14 font-semibold">بازه‌های زمانی تحویل</h2><EntityManager ek="slots" kind="بازه" fields={[{ k: 'name', label: 'بازه', required: true }, { k: 'capacity', label: 'ظرفیت', type: 'number' }, { k: 'days', label: 'روزها' }, { k: 'active', label: 'فعال', type: 'toggle' }]} /></div></div>}
       {tab === 'carriers' && <Providers family="carrier" title="شرکت حمل" list={carriers} />}
-      <Modal open={file} onClose={() => setFile(false)} title="تطبیق فایل باجهٔ پست" footer={<><Button variant="primary" onClick={() => { setFile(false); toast('۲ کد رهگیری ثبت شد و مشتریان خبردار شدند. ۱ مورد بدون تطبیق ماند.') }}>تأیید ۲ مورد مطمئن</Button><Button variant="ghost" onClick={() => setFile(false)}>انصراف</Button></>}>
-        <ul className="space-y-2">{[['GH-10479-1', 'نام و کد پستی یکی است', 'success', 'مطمئن'], ['GH-10470-1', 'شمارهٔ سفارش در فایل هست', 'success', 'مطمئن'], ['GH-10444-1', 'دو ردیف با همین نام', 'warning', 'مشکوک'], ['ردیف ۷ فایل', 'سفارشی پیدا نشد', 'danger', 'بدون تطبیق']].map(([a, b, t, l]) => <li key={a} className="flex items-center justify-between rounded-md border border-line px-3 py-2"><span><span className="ltr font-mono text-12">{a}</span><span className="mr-2 text-12 text-t2">{b}</span></span><Badge tone={t as any}>{l}</Badge></li>)}</ul>
-      </Modal>
+      {file && <PostFile onClose={() => setFile(false)} />}
     </Page>
   )
 }
@@ -263,5 +262,34 @@ function BatchScan({ onClose }: { onClose: () => void }) {
     <form onSubmit={(e) => { e.preventDefault(); take(v); setV('') }} className="flex gap-2"><Input autoFocus aria-label="ورودی اسکن" className="ltr flex-1 text-left font-mono" value={v} onChange={(e) => setV(e.target.value)} placeholder={cur ? `بارکد پست برای ${cur}` : 'برچسب مرسوله را اسکن کنید'} /><Button variant="primary" type="submit" disabled={!v.trim()}>ثبت</Button></form>
     {cur && <p className="mt-2 rounded-lg bg-info-bg px-3 py-2 text-12 text-info">مرسولهٔ {cur} انتخاب شد؛ حالا بارکد پست را اسکن کنید.</p>}
     <ul className="mt-3 max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line text-12">{log.length === 0 ? <li className="p-3 text-t3">هنوز اسکنی انجام نشده است.</li> : log.map((x, i) => <li key={i} className={cx('flex items-center gap-2 px-3 py-2', x.ok ? '' : 'bg-danger-bg/40')}>{x.ok ? <Check size={13} className="text-success" /> : <X size={13} className="text-danger" />}<span className="ltr font-mono">{x.ship}</span>{x.code && <span className="ltr font-mono text-t2">{x.code}</span>}<span className="flex-1 text-t2">{x.msg}</span></li>)}</ul>
+  </Modal>
+}
+
+/** تطبیق فایل باجهٔ پست (CSV یا خروجی Excel): هر ردیف «شمارهٔ مرسوله یا سفارش، کد رهگیری، نام گیرنده»؛ موارد مطمئن ثبت و به مشتری پیامک می‌شود */
+function PostFile({ onClose }: { onClose: () => void }) {
+  const d = useDB(); const [rows, setRows] = useState<{ ref: string; code: string; name: string }[] | null>(null)
+  const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, order: o, cust: d.customers.find((c) => c.id === o.customerId) })))
+  const SAMPLE = [{ ref: 'GH-10479-1', code: '120459870001245789631001', name: 'الهام کریمی' }, { ref: 'GH-10470', code: '120459870001245789631002', name: 'شرکت آرین‌پردازان' }, { ref: 'GH-10444-1', code: '120459870001245789631003', name: '' }, { ref: 'GH-99999', code: '120459870001245789631004', name: 'نامشخص' }]
+  const parse = (t: string) => t.split(/\r?\n/).map((l) => l.split(/[,;\t]/).map((x) => x.trim().replace(/^"|"$/g, ''))).filter((c) => c.length >= 2 && /GH-?\d+/i.test(c[0])).map((c) => ({ ref: c[0].toUpperCase().replace(/^GH(?=\d)/, 'GH-'), code: c[1].replace(/\D/g, ''), name: c[2] ?? '' }))
+  const judge = (r: { ref: string; code: string; name: string }) => {
+    const hits = ships.filter((s) => s.id === r.ref || (s.order.id === r.ref && /پست|تیپاکس/.test(s.method)))
+    if (!hits.length) return { tone: 'danger' as const, label: 'بدون تطبیق', why: 'مرسوله یا سفارشی با این شماره نیست', ship: null }
+    if (hits.length > 1) return { tone: 'warning' as const, label: 'مشکوک', why: `${fa(hits.length)} مرسولهٔ پستی در این سفارش؛ مرسوله را مشخص کنید`, ship: null }
+    if (!/^\d{11,26}$/.test(r.code)) return { tone: 'danger' as const, label: 'کد نامعتبر', why: 'کد رهگیری باید ۱۱ تا ۲۶ رقم باشد', ship: null }
+    if (ships.some((s) => s.tracking === r.code)) return { tone: 'neutral' as const, label: 'تکراری', why: 'این کد قبلاً ثبت شده است', ship: null }
+    return { tone: 'success' as const, label: 'مطمئن', why: hits[0].tracking ? `کد قبلی ${hits[0].tracking} جایگزین می‌شود` : `${hits[0].cust?.name ?? ''} · ${hits[0].method}`, ship: hits[0] }
+  }
+  const judged = (rows ?? []).map((r) => ({ r, j: judge(r) })); const ok = judged.filter((x) => x.j.ship)
+  const apply = () => {
+    mutate((x) => { ok.forEach(({ r, j }) => { const s = x.orders.flatMap((o) => o.shipments).find((y) => y.id === j.ship!.id)!; s.tracking = r.code; s.trackingCarrier = /تیپاکس/.test(s.method) ? 'تیپاکس' : 'پست'; if (['ship.packed', 'ship.handed'].includes(s.status)) s.status = 'ship.in_transit' }) }, { action: 'ثبت کد رهگیری از فایل باجه', target: `${ok.length} مرسوله` })
+    ok.forEach(({ r, j }) => j.ship!.cust && sendSms(j.ship!.cust.mobile, `غنیمت: سفارش ${j.ship!.order.id} تحویل پست شد. کد رهگیری: ${r.code}`, 'کد رهگیری پست', j.ship!.order.id, j.ship!.cust.id))
+    toast(`${fa(ok.length)} کد رهگیری ثبت و برای مشتریان پیامک شد${judged.length - ok.length ? `؛ ${fa(judged.length - ok.length)} ردیف بررسی دستی می‌خواهد` : ''}.`); onClose()
+  }
+  return <Modal open onClose={onClose} wide title="تطبیق فایل باجهٔ پست" footer={<><Button variant="primary" disabled={!ok.length} onClick={apply}>ثبت {ok.length ? fa(ok.length) : ''} مورد مطمئن</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
+    {!rows ? <div className="space-y-3">
+      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-line p-6 text-center text-13 hover:border-brand"><b>فایل CSV یا خروجی Excel باجه را انتخاب کنید</b><span className="text-12 text-t2">ستون‌ها: شمارهٔ مرسوله یا سفارش، کد رهگیری، نام گیرنده</span>
+        <input type="file" accept=".csv,.txt,.tsv" className="sr-only" aria-label="فایل باجهٔ پست" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const r = parse(await f.text()); if (!r.length) return toast('ردیف قابل خواندنی پیدا نشد. ستون اول باید شمارهٔ مرسوله یا سفارش باشد.', { tone: 'err' }); setRows(r) }} /></label>
+      <Button variant="ghost" onClick={() => setRows(SAMPLE)}>استفاده از فایل نمونهٔ امروز باجه</Button>
+    </div> : <ul className="space-y-2">{judged.map(({ r, j }, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-12"><span className="flex flex-wrap items-center gap-2"><span className="ltr font-mono">{r.ref}</span><span className="ltr font-mono text-t2">{r.code}</span><span className="text-t2">{j.why}</span></span><Badge tone={j.tone}>{j.label}</Badge></li>)}</ul>}
   </Modal>
 }

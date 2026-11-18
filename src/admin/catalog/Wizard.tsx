@@ -4,7 +4,7 @@ import { suggestBins } from '../warehouse/PutAway'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Camera, Check, CircleAlert, GripVertical, ImagePlus, Plus, RefreshCw, Sparkles, Star, Trash2 } from 'lucide-react'
-import { AITag, Badge, Button, Card, cx, Field, Input, Segmented, Select, Textarea, Toggle } from '@/shared/ui/base'
+import { AITag, Badge, Button, Card, cx, EmptyState, Field, Input, Segmented, Select, Textarea, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { Hint, Modal, toast } from '@/shared/ui/overlay'
 import { Barcode, QR } from '@/shared/ui/codes'
@@ -52,6 +52,7 @@ const MoneyIn = ({ value, onChange, placeholder }: { value: number; onChange: (n
 export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?: boolean; onDone?: (id: string) => void; partner?: PartnerT; initialTitle?: string }) {
   const d = useDB(); const nav = useNavigate(); const { id } = useParams(); const [sp] = useSearchParams()
   const editing = id ? d.products.find((p) => p.id === id) : undefined
+  const missing0 = !!id && !editing
   const incoming = editing?.status === 'product.incoming'; const batch = incoming ? d.incoming.find((b) => b.id === editing?.incoming) : undefined
   const draftKey = editing ? `edit-${editing.id}` : partner ? `partner-${partner.id}` : quick ? 'quick' : 'new'
   const saved = (d as any).drafts?.[draftKey] as Draft | undefined
@@ -254,6 +255,7 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
         <div><p className="mb-1 text-center text-11 text-t2">موبایل</p><ProductCard mini p={{ ...(editing ?? {}), id: f.id ?? 'preview', image: f.images[0] ?? '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: 'product.published', mode: 'qty', qty: { tehran: f.qtyTehran, mahabad: f.qtyMahabad }, priceNew: f.priceNew, price: finalPrice, compareAt: f.discount ? f.price : undefined, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, fastEligible: f.fastEligible && tehranStock, seller: 'غنیمت', torob: f.torob, source: f.source } as Product} /></div></div></div>,
   }
   const last = pos === order.length - 1
+  if (missing0) return <Page title="کالا پیدا نشد" back="/admin/catalog"><Card><EmptyState title="کالایی با این شناسه برای ویرایش نیست." desc="ممکن است حذف شده یا به سطل بازیافت رفته باشد." action={<Button onClick={() => nav('/admin/catalog')}>فهرست کالاها</Button>} /></Card></Page>
   return (
     <Page title={partner ? 'ثبت کامل کالای تازه' : editing ? `ویرایش «${editing.title}»` : quick ? 'افزودن سریع کالا' : 'افزودن کالا'} module={quick || partner ? undefined : 'catalog'} back={partner ? undefined : editing ? `/admin/catalog/${editing.id}` : quick ? undefined : '/admin/catalog'}
       badge={savedAt ? <Badge tone="success">پیش‌نویس ذخیره شد</Badge> : undefined}

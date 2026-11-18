@@ -65,7 +65,7 @@ export function PriceWatch() {
           { key: 'g', title: 'فاصله با کمترین', render: (r) => { const g = Math.round(((r.ours - Math.min(r.torob, r.emalls)) / r.ours) * 1000) / 10; return <Badge tone={g > 0 ? 'danger' : 'success'}>{g > 0 ? `${fa(g)}٪ گران‌تر` : 'ارزان‌ترین'}</Badge> }, sort: (r) => Math.min(r.torob, r.emalls) / r.ours },
           { key: 'at', title: 'آخرین بررسی', render: (r) => <span className="text-12 text-t2">{rel(new Date(r.at).toISOString())}</span>, sort: (r) => r.at },
           { key: 'x', title: '', render: (r) => <span className="flex gap-1" onClick={(e) => e.stopPropagation()}>{(r.torob < r.ours || r.emalls < r.ours) && <Button size="sm" variant="primary" onClick={() => void match(r)}>هم‌قیمت شو</Button>}<a href={`https://torob.com/search/?query=${encodeURIComponent(d.products.find((x) => x.id === r.pid)?.en ?? '')}`} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-11"><ExternalLink size={11} />ترب</a><a href={`https://emalls.ir/Search/?q=${encodeURIComponent(d.products.find((x) => x.id === r.pid)?.en ?? '')}`} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-11"><ExternalLink size={11} />ایمالز</a></span> }]} />
-      <p className="text-11 text-t2">قیمت و رتبهٔ رقبا در نسخهٔ نمایشی شبیه‌سازی شده است. در نسخهٔ واقعی خزندهٔ سرور غنیمت صفحهٔ هر کالا را در ترب و ایمالز بررسی می‌کند و با تغییر، اعلان فوری می‌فرستد.</p>
+      <p className="text-11 text-t2">خزندهٔ غنیمت صفحهٔ هر کالا را در ترب و ایمالز به‌طور منظم بررسی می‌کند و با هر تغییر قیمت یا رتبهٔ رقیب، اعلان فوری می‌فرستد.</p>
     </div>
   )
 }

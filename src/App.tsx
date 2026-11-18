@@ -33,6 +33,7 @@ import { Partner } from './admin/partner/Partner'
 import { Insight } from './admin/insight/Insight'
 import { Merch } from './admin/merch/Merch'
 import { Network } from './admin/partner/Network'
+import { NotFound } from './admin/shell/NotFound'
 import { PartnersAdmin } from './admin/partner/PartnersAdmin'
 import { Messaging } from './admin/cx/Messaging'
 import { Calls } from './admin/cx/Calls'
@@ -70,6 +71,7 @@ export function App() {
               <Route path="insight/:key" element={<Insight />} />
               <Route path="merch" element={<Merch />} />
               <Route path="network" element={<Network />} />
+              <Route path="*" element={<NotFound />} />
               <Route path="warehouse" element={<Warehouse />} />
               <Route path="shipping" element={<Shipping />} />
               <Route path="print" element={<PrintCenter />} />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Minus, Plus, Scissors, Trash2, UserPlus } from 'lucide-react'
 import { Badge, Button, cx, Field, Input, Segmented, Select, Textarea } from '@/shared/ui/base'
 import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
-import { getDB, mutate, snapshot, useDB } from '@/shared/lib/store'
+import { getDB, mutate, snapshot, useDB, currentUser } from '@/shared/lib/store'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
 import { ProductImg, useQuickChips } from '../pages/_shared'
@@ -18,7 +18,7 @@ export const CHANNELS = ['سفارش دستی', 'اینستاگرام دایرک
 export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی' }: { open: boolean; onClose: () => void; channel?: string }) {
   const d = useDB(); const nav = useNavigate(); const qc = useQuickChips()
   const [cid, setCid] = useState('c1'); const [isNew, setIsNew] = useState(false); const [nc, setNc] = useState({ name: '', mobile: '', city: 'تهران', street: '', alley: '', plaque: '', postal: '' })
-  const [lines, setLines] = useState<Line[]>([]); const [method, setMethod] = useState<string>('پست پیشتاز'); const [pay, setPay] = useState('link'); const [discount, setDiscount] = useState(0); const [note, setNote] = useState(''); const [channel, setChannel] = useState(ch0); const [handle, setHandle] = useState(''); const [rcpt, setRcpt] = useState({ last4: '', ref: '', time: '' })
+  const [lines, setLines] = useState<Line[]>([]); const [method, setMethod] = useState<string>('پست پیشتاز'); const [pay, setPay] = useState('link'); const [discount, setDiscount] = useState(0); const [cnote, setCnote] = useState(''); const [note, setNote] = useState(''); const [channel, setChannel] = useState(ch0); const [handle, setHandle] = useState(''); const [rcpt, setRcpt] = useState({ last4: '', ref: '', time: '' })
   const opts = useMemo(available, [d.units, d.products])
   const sub = lines.reduce((a, l) => a + l.price * l.qty, 0); const ship = METHODS.find((m) => m[0] === method)?.[1] ?? 0; const total = Math.max(0, sub + ship - discount)
   const submit = () => {
@@ -29,7 +29,7 @@ export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی
     mutate((x) => {
       if (isNew) x.customers.unshift({ ...x.customers[1], id: custId, name: nc.name, mobile: nc.mobile, email: '', city: nc.city, orders: 0, ltv: 0, aov: 0, segment: 'جدید', source: 'سفارش دستی', wallet: 0, tags: [], addr: { province: nc.city, city: nc.city, district: '', street: nc.street, sub: '', alley: nc.alley, plaque: nc.plaque, floor: '', unit: '', postal: nc.postal } } as any)
       x.orders.unshift({ id, customerId: custId, createdAt: new Date().toISOString(), status: pay === 'link' || pay === 'c2c' ? 'order.awaiting_payment' : 'order.paid', pay: PAYS[pay] ?? pay, total, discount, shippingFee: ship, fee: 0, margin: 15, risk: 5, channel, tags: [channel, ...(handle ? [`شناسه: ${handle}`] : []), ...(note ? ['یادداشت'] : [])], lockedBy: null,
-        shipments: [...byWh.entries()].map(([w, ls], i) => ({ id: `${id}-${i + 1}`, warehouse: w, method: w === 'mahabad' && /تحویل سریع|پیک/.test(method) ? 'پست پیشتاز' : method, shipFee: i === 0 ? ship : 0, status: 'ship.pending', sla: new Date(Date.now() + (/سریع/.test(method) ? 2 : 48) * 36e5).toISOString(), items: ls.map((l) => ({ productId: l.pid, unitId: l.uid, qty: l.qty, price: l.price })), courier: null, tracking: '', allocReason: w === 'mahabad' ? 'فقط در انبار مهاباد موجود بود.' : 'موجودی تهران کافی بود.' })) })
+        shipments: [...byWh.entries()].map(([w, ls], i) => ({ id: `${id}-${i + 1}`, warehouse: w, method: w === 'mahabad' && /تحویل سریع|پیک/.test(method) ? 'پست پیشتاز' : method, shipFee: i === 0 ? ship : 0, status: 'ship.pending', sla: new Date(Date.now() + (/سریع/.test(method) ? 2 : 48) * 36e5).toISOString(), items: ls.map((l) => ({ productId: l.pid, unitId: l.uid, qty: l.qty, price: l.price })), courier: null, tracking: '', allocReason: w === 'mahabad' ? 'فقط در انبار مهاباد موجود بود.' : 'موجودی تهران کافی بود.' })) }); { const oo = x.orders.find((y) => y.id === id)!; if (cnote.trim()) oo.customerNote = cnote.trim(); if (note.trim()) oo.notes = [{ id: `n${Date.now().toString(36)}`, at: new Date().toISOString(), by: currentUser()?.name ?? 'کارشناس', src: 'داخلی', text: note.trim() }] }
       // ثبت هم‌زمان در مالی: تراکنش و (برای کارت به کارت) رسید در صف تطبیق
       x.txns.unshift({ id: `TX-${Date.now().toString(36).slice(-6).toUpperCase()}`, orderId: id, amount: total, gateway: PAYS[pay] ?? pay, ref: pay === 'c2c' ? rcpt.ref : '', status: pay === 'pos' || pay === 'wallet' || pay === 'cod' ? 'pay.success' : 'pay.unknown', at: new Date().toISOString() } as any)
       if (pay === 'c2c') x.bank.receipts.unshift({ id: `RC-${Date.now().toString(36).slice(-5).toUpperCase()}`, orderId: id, customer: isNew ? nc.name : x.customers.find((c) => c.id === cid)?.name ?? '', amount: total, last4: rcpt.last4, ref: rcpt.ref, time: rcpt.time, channel, status: 'در انتظار تطبیق', note: '', at: new Date().toISOString() })
@@ -55,6 +55,7 @@ export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی
           <Field label="روش پرداخت"><Select value={pay} onChange={setPay} options={Object.entries(PAYS)} /></Field>
           {pay === 'c2c' && <div className="grid grid-cols-3 gap-2 sm:col-span-2"><Field label="۴ رقم آخر کارت مبدأ"><Input className="ltr text-left" maxLength={4} value={rcpt.last4} onChange={(e) => setRcpt({ ...rcpt, last4: e.target.value.replace(/\D/g, '') })} /></Field><Field label="شمارهٔ پیگیری رسید"><Input className="ltr text-left" value={rcpt.ref} onChange={(e) => setRcpt({ ...rcpt, ref: e.target.value })} /></Field><Field label="ساعت واریز"><Input type="time" className="ltr" value={rcpt.time} onChange={(e) => setRcpt({ ...rcpt, time: e.target.value })} /></Field></div>}
           <Field label="تخفیف دستی (تومان)"><Input className="ltr text-left font-mono" value={discount ? discount.toLocaleString('en-US') : ''} onChange={(e) => setDiscount(Number(e.target.value.replace(/\D/g, '')))} /></Field>
+          <Field label="درخواست مشتری برای این سفارش" help="روی سفارش، برگهٔ جمع‌آوری و پرتال شعبه نمایش داده می‌شود."><Input value={cnote} onChange={(e) => setCnote(e.target.value)} placeholder="مثلاً کادو شود، فاکتور داخل بسته نباشد" /></Field>
           <Field label="یادداشت داخلی"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
         </div>
         <div className="flex justify-between rounded-lg bg-neutral-bg px-4 py-3 text-13"><span>کالاها {toman(sub)} + ارسال {toman(ship)} − تخفیف {toman(discount)}</span><b className="tnum">{toman(total)}</b></div>
@@ -131,4 +132,10 @@ export function MessageModal({ to, draft, onClose }: { to: { name: string; mobil
   )
 }
 /** تماس: روی موبایل شماره‌گیر باز می‌شود؛ شماره هم نمایش داده می‌شود */
-export const callTo = (mobile: string, name: string) => { mutate(() => {}, { action: 'تماس تلفنی', target: name }); try { window.location.href = `tel:${mobile}` } catch { /* */ } toast(`تماس با ${name}: ${fa(mobile)}`) }
+/** تماس خروجی از تلفن ابری: در سابقهٔ تماس‌ها ثبت می‌شود (با مشتری و کارشناس) و روی دستگاه، شماره‌گیر باز می‌شود */
+export const callTo = (mobile: string, name: string) => {
+  const by = currentUser()?.name ?? 'کارشناس'
+  mutate((x) => { const c = x.customers.find((y) => y.mobile === mobile); (x.calls?.calls as any[])?.unshift({ id: `CL-${Date.now().toString(36).slice(-4).toUpperCase()}`, dir: 'out', number: mobile, customerId: c?.id, agent: by, queue: 'تماس خروجی', status: 'پاسخ‌داده', waitSec: 0, durSec: 0, at: new Date().toISOString(), recording: true, note: `تماس از پنل با ${name}` }) }, { action: 'تماس تلفنی', target: name })
+  try { window.location.href = `tel:${mobile}` } catch { /* */ }
+  toast(`در حال تماس با ${name} (${fa(mobile)})؛ تماس در «تلفن و تماس‌ها» ثبت شد و ضبط می‌شود.`)
+}

@@ -16,6 +16,7 @@ import { VariantChips } from '../catalog/Choices'
 import { ShipChips, SplitBanner } from '../orders/Split'
 import { OrderAlerts, openEvents } from '../orders/OrderEvents'
 import { PackPhotos } from '../shared/PackPhotos'
+import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
@@ -42,7 +43,7 @@ export function Orders() {
   const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr))
   const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
   const cols: Col<Order>[] = [
-    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
+    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openNotes(o) > 0 && <span title={`${openNotes(o)} درخواست مشتری انجام‌نشده`} className="rounded-full bg-warning-bg px-1.5 text-[10px] font-semibold text-warning">یادداشت</span>}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={<CustLink v={customer(o.customerId).name} id={o.customerId} />} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
     { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
@@ -174,6 +175,7 @@ export function OrderDetail() {
       <Card className="mb-4"><Stepper current={step} steps={o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} /></Card>
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="space-y-4">
+          <NoteBanner o={o} />
           <OrderAlerts key={o.id} o={o} />
           {o.status === 'order.needs_decision' && (
             <Card className="border-warning/50" title="کمبود تأمین: نیازمند تصمیم مشتری" actions={<SlaChip at={o.shipments[0].sla} />}>
@@ -191,6 +193,7 @@ export function OrderDetail() {
             </Card>
           )}
           {o.shipments.length > 1 && <SplitBanner o={o} />}
+          <OrderNotes o={o} />
           {o.shipments.length === 0 && <Card><p className="py-6 text-center text-13 text-t2">این سفارش مرسوله‌ای ندارد؛ پیش از تخصیص انبار لغو شده است.</p></Card>}
           {o.shipments.map((s, i) => { const total = s.items.reduce((a, x) => a + x.price * x.qty, 0); const dead = ['ship.cancelled', 'ship.delivered'].includes(s.status); const post = /پست|تیپاکس|باربری/.test(s.method); return (
             <Card key={s.id} title={<span className="flex flex-wrap items-center gap-2">مرسولهٔ {fa(i + 1)}<CopyId v={s.id} /><StatusBadge s={s.status} /></span>} actions={<SlaChip at={s.sla} done={dead} />}>

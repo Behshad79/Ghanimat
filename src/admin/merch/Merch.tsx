@@ -61,7 +61,7 @@ function Deals() {
 function Timeline({ rows, now, onPick }: { rows: { x: Deal; st: string; p?: Product }[]; now: number; onPick: (x: Deal) => void }) {
   const [days, setDays] = useState<'3' | '7'>('3'); const from = now - 6 * 36e5; const to = now + +days * 864e5; const W = to - from
   const pos = (iso: string) => Math.min(100, Math.max(0, ((new Date(iso).getTime() - from) / W) * 100))
-  const ticks = Array.from({ length: +days + 1 }, (_, i) => { const t = new Date(now); t.setHours(0, 0, 0, 0); return t.getTime() + i * 864e5 }).filter((t) => t > from && t < to)
+  const ticks = Array.from({ length: +days + 1 }, (_, i) => { const t = new Date(now); t.setHours(0, 0, 0, 0); return t.getTime() + i * 864e5 }).filter((t) => t > from + W * 0.05 && t < to - W * 0.05)
   return <Card title={<span className="flex items-center gap-2"><CalendarClock size={16} />تقویم غنی‌آف</span>} actions={<Segmented size="sm" value={days} onChange={setDays} options={[['3', '۳ روز'], ['7', '۷ روز']]} />}>
     {rows.length === 0 ? <EmptyState title="در این بازه غنی‌آفی نیست." desc="با «زمان‌بندی غنی‌آف» اولین مورد را در صف بگذارید." /> :
       <div className="relative">

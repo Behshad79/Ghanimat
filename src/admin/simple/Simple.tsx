@@ -1,3 +1,4 @@
+import { NoteBanner } from '../orders/OrderNotes'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, BookOpen, Boxes, MapPin, Camera, Check, CheckCircle2, ClipboardCheck, HelpCircle, LayoutDashboard, MessageCircle, Package, PackagePlus, PhoneCall, Printer, RotateCcw, Search, Send, Star, Truck, Video, WifiOff, Zap } from 'lucide-react'
@@ -119,6 +120,7 @@ function OrdersFlow({ done }: { done: () => void }) {
     <div className="page-enter">
       <Steps n={STEPS.length} i={step} /><p className="mb-1 text-13 text-t2">{STEPS[step]} · گام {fa(step + 1)} از {fa(STEPS.length)}</p>
       <h2 className="mb-3 text-20 font-bold"><span className="ltr font-mono">{o.id}</span> · {c.name}</h2>
+      <div className="mb-3"><NoteBanner o={o} /></div>
       {step === 0 && <><div className="mb-3 space-y-2">{o.shipments.map((s) => <div key={s.id} className="rounded-xl border border-line bg-surface p-3"><p className="mb-2 text-13 text-t2">{WAREHOUSE[s.warehouse]} · {s.method}</p>{s.items.map((it, k) => <div key={k} className="flex items-center gap-3 py-1"><ProductImg pid={it.productId} size={48} /><span className="flex-1 text-14">{d.products.find((p) => p.id === it.productId)?.title}</span><b className="tnum text-14">{toman(it.price)}</b></div>)}</div>)}</div>
         <p className="mb-4 rounded-xl bg-neutral-bg p-3 text-14">پرداخت: <b>{o.pay}</b> · مبلغ: <b>{toman(o.total)}</b>{o.risk > 70 && <span className="mt-1 block text-danger">امتیاز ریسک این سفارش بالاست؛ پیش از تأیید با مشتری تماس بگیرید.</span>}</p>
         <Big onClick={() => { if (!ask('تأیید سفارش', `تأیید سفارش ${o.id}`)) return; mutate((x) => { x.orders.find((y) => y.id === o.id)!.status = 'order.preparing' }, { action: 'تأیید سفارش (حالت سریع)', target: o.id }); notify('سفارش تأیید شد', `${me.name} سفارش ${o.id} را تأیید کرد.`, `/admin/orders/${o.id}`); setStep(1) }}><Check size={20} />تأیید سفارش و شروع آماده‌سازی</Big>

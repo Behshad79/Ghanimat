@@ -58,6 +58,8 @@ export const STATUS: Record<string, { label: string; tone: Tone }> = {
   'return.approved_deducted': { label: 'تأیید با کسر هزینهٔ ارسال', tone: 'success' },
   'return.cancelled': { label: 'لغو توسط مشتری', tone: 'neutral' },
   'return.expired': { label: 'مهلت ارسال تمام شد', tone: 'danger' },
+  'return.pickup_scheduled': { label: 'پیک غنیمت در راه دریافت', tone: 'purple' },
+  'return.sent_back': { label: 'کالا به مشتری بازگردانده شد', tone: 'neutral' },
   // گارانتی
   'warranty.pending': { label: 'در انتظار بررسی', tone: 'warning' },
   'warranty.repairing': { label: 'در حال تعمیر', tone: 'purple' },
@@ -67,6 +69,10 @@ export const STATUS: Record<string, { label: string; tone: Tone }> = {
   'warranty.approved': { label: 'تأیید شد، منتظر ارسال کالا', tone: 'info' },
   'warranty.in_transit': { label: 'کالا در راه غنیمت', tone: 'purple' },
   'warranty.refunded': { label: 'مبلغ بازگشت داده شد', tone: 'success' },
+  'warranty.received': { label: 'دریافت شد، در حال عیب‌یابی', tone: 'purple' },
+  'warranty.external': { label: 'نزد مرکز خدمات شرکت', tone: 'purple' },
+  'warranty.ready': { label: 'آمادهٔ ارسال به مشتری', tone: 'info' },
+  'warranty.shipping_back': { label: 'در راه مشتری', tone: 'info' },
   // تیکت
   'ticket.new': { label: 'جدید', tone: 'brand' },
   'ticket.open': { label: 'در حال پیگیری', tone: 'info' },

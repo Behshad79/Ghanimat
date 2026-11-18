@@ -62,7 +62,7 @@ export function QuickHost() {
         <Button variant="primary" onClick={() => go(`/admin/catalog/unit/${u.id}`)}>جزئیات واحد</Button></> }
     if (hit.kind === 'return') { const r = d.returns.find((x) => x.id === hit.id)!
       return <><StatusBadge s={r.status} /><Row k="سفارش"><QuickText v={r.orderId} /></Row><Row k="مشتری"><QuickText v={d.customers.find((c) => c.id === r.customerId)?.name ?? ''} /></Row><Row k="دلیل">{r.reason}</Row><Row k="مبلغ">{toman(r.amount)}</Row>
-        {reasons('return', r.id).map((x) => <p key={x.id} className="rounded-lg bg-neutral-bg px-2 py-1 text-12">{x.status}: {x.reason}</p>)}<Button variant="primary" onClick={() => go('/admin/returns')}>رفتن به مرجوعی‌ها</Button></> }
+        {reasons('return', r.id).map((x) => <p key={x.id} className="rounded-lg bg-neutral-bg px-2 py-1 text-12">{x.status}: {x.reason}</p>)}<Button variant="primary" onClick={() => go(`/admin/returns/${r.id}`)}>باز کردن پرونده</Button></> }
     if (hit.kind === 'ticket') { const t = d.tickets.find((x) => x.id === hit.id)!
       return <><StatusBadge s={t.status} /><Row k="موضوع">{t.subject}</Row><Row k="مشتری"><QuickText v={d.customers.find((c) => c.id === t.customerId)?.name ?? ''} /></Row><Row k="کانال">{t.channel}</Row><Row k="اولویت">{t.priority}</Row><Button variant="primary" onClick={() => go(`/admin/support?t=${t.id}`)}>باز کردن تیکت</Button></> }
     if (hit.kind === 'warranty') { const w = d.warranties.find((x) => x.id === hit.id)!

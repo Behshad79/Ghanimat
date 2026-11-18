@@ -20,7 +20,7 @@ import { WarehouseMap } from '../warehouse/WarehouseMap'
 import { PickupRules, SlotsEngine, SmsLog } from '../logistics/Slots'
 import { FastCourier } from '../logistics/FastCourier'
 import { ManualReturn } from '../orders/ReturnTools'
-import { inQueue, QUEUES, retStage, warStage, type Stage } from '../returns/flow'
+import { cardState, COVERED, EXCLUDED, inQueue, METHODS, QUEUES, retStage, warStage, type Stage } from '../returns/flow'
 import { SplitRules } from '../orders/Split'
 import { ZoneMap } from '../logistics/ZoneMap'
 
@@ -174,49 +174,80 @@ export function Providers({ family, title, list }: { family: string; title: stri
 export function Returns() {
   const { d, customer, rule } = useLookup(); const [tab, setTab] = useTab('returns'); const nav = useNavigate()
   const [manual, setManual] = useState<null | 'return' | 'warranty'>(null); const [q, setQ] = useState('all')
-  const setW = async (id: string, status: string, label: string, needReason = false) => { if (needReason && !(await askReason({ kind: 'warranty', ref: id, status: label, title: `دلیل «${label}» برای ${id}` }))) return; mutate((db) => { const w = db.warranties.find((y) => y.id === id)!; w.status = status; (w.events ??= []).push({ at: new Date().toISOString(), by: 'کاربر فعلی', text: `وضعیت از فهرست: ${label}`, who: 'ما' }) }, { action: `گارانتی: ${label}`, target: id }); toast(`وضعیت ${id}: ${label}. مشتری با پیامک و اعلان خبردار شد.`) }
   const rs = d.returns.map((r) => ({ r, s: retStage(r) })); const ws = d.warranties.map((w) => ({ w, s: warStage(w) }))
   const cnt = (list: { s: Stage }[]) => Object.fromEntries(QUEUES.map(([k]) => [k, list.filter((x) => inQueue(k, x.s)).length]))
   const rc = cnt(rs); const wc = cnt(ws); const cur = tab === 'warranty' ? wc : rc
   const nextCol = { key: 'n', title: 'قدم بعد', hideMobile: true, render: (x: { s: Stage }) => <span className="flex flex-col"><span className="line-clamp-1 text-13">{x.s.next}</span>{x.s.who !== '—' && <span className={cx('text-12', x.s.who === 'ما' ? 'font-semibold text-warning' : 'text-t3')}>اقدام با: {x.s.who}</span>}</span> }
   return (
-    <Page title="مرجوعی و گارانتی" module="returns" sub={`مهلت مرجوعی ${fa(rule('return_days'))} روز · مهلت بازرسی ${fa(rule('inspection_hours'))} ساعت · هر ردیف را باز کنید تا پرونده مرحله‌به‌مرحله جلو برود`}
-      primary={<Button variant="primary" onClick={() => setManual(tab === 'warranty' ? 'warranty' : 'return')}>{tab === 'warranty' ? 'ثبت دستی گارانتی' : 'ثبت دستی مرجوعی'}</Button>}
+    <Page title="مرجوعی و گارانتی" module="returns" sub={`مهلت مرجوعی ${fa(rule('return_days'))} روز پس از تحویل · مهلت بازرسی ${fa(rule('inspection_hours'))} ساعت · هر ردیف را باز کنید تا پرونده مرحله‌به‌مرحله جلو برود`}
+      primary={<Button variant="primary" onClick={() => setManual(tab === 'warranty' || tab === 'wcards' ? 'warranty' : 'return')}>{tab === 'warranty' || tab === 'wcards' ? 'ثبت دستی درخواست گارانتی' : 'ثبت دستی مرجوعی'}</Button>}
       empty={{ title: 'هنوز مرجوعی‌ای ثبت نشده است.', desc: 'درخواست‌های مرجوعی مشتریان اینجا نمایش داده می‌شود.', action: <Button onClick={() => nav('/admin/rules')}>مشاهدهٔ قوانین مرجوعی</Button> }}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'returns', label: 'مرجوعی‌ها', count: d.returns.length }, { id: 'warranty', label: 'گارانتی', count: d.warranties.length }, { id: 'flow', label: 'روند کار' }, { id: 'stats', label: 'تحلیل' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'returns', label: 'مرجوعی‌ها', count: d.returns.length }, { id: 'warranty', label: 'درخواست‌های گارانتی', count: d.warranties.length }, { id: 'wcards', label: 'گارانتی‌ها و استعلام', count: d.wcards.length }, { id: 'flow', label: 'روند کار' }, { id: 'stats', label: 'تحلیل' }]} />}>
       {(tab === 'returns' || tab === 'warranty') && <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="صف‌ها">{QUEUES.map(([k, l]) => <button key={k} type="button" aria-pressed={q === k} onClick={() => setQ(k)} className={cx('flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-13', q === k ? 'border-brand-solid bg-brand-tint font-semibold text-brand' : 'border-line bg-surface text-t2 hover:border-brand/40')}>{l}<span className={cx('rounded-full px-1.5 text-11', k === 'us' && cur[k] ? 'bg-warning text-white' : 'bg-neutral-bg')}>{fa(cur[k])}</span></button>)}</div>}
       {tab === 'returns' && <DataTable name="مرجوعی‌ها" rows={rs.filter((x) => inQueue(q, x.s))} rowKey={(x) => x.r.id} onRow={(x) => nav(`/admin/returns/${x.r.id}`)} search={(x) => `${x.r.id} ${x.r.orderId} ${customer(x.r.customerId).name}`} empty={{ title: q === 'all' ? 'هنوز مرجوعی‌ای ثبت نشده است.' : 'در این صف پرونده‌ای نیست.' }}
-        cols={[{ key: 'id', title: 'شماره', render: (x) => <CopyId v={x.r.id} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={<CustLink v={customer(x.r.customerId).name} id={x.r.customerId} />} b={x.r.orderId} /> }, { key: 'r', title: 'دلیل', hideMobile: true, render: (x) => x.r.reason, sort: (x) => x.r.reason }, { key: 'a', title: 'مبلغ', align: 'left', render: (x) => x.r.amount ? <Money v={x.r.amount} /> : '—', sort: (x) => x.r.amount }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.r.status} />, sort: (x) => x.s.step }, nextCol, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.r.deadline} done={x.s.step === 6} /> }]} />}
-      {tab === 'warranty' && <DataTable name="گارانتی" rows={ws.filter((x) => inQueue(q, x.s))} rowKey={(x) => x.w.id} search={(x) => `${x.w.code} ${x.w.id} ${d.units.find((u) => u.id === x.w.unitId)?.serial ?? ''}`} empty={{ title: q === 'all' ? 'درخواست گارانتی‌ای نیست.' : 'در این صف پرونده‌ای نیست.', desc: 'گارانتی با تحویل سفارش خودکار صادر می‌شود و درخواست‌های خدمات اینجا می‌آیند.' }}
-        cols={[{ key: 'code', title: 'کد گارانتی', render: (x) => <CopyId v={x.w.code} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={<CustLink v={customer(x.w.customerId).name} id={x.w.customerId} />} b={x.w.issue} /> }, { key: 't', title: 'نوع', hideMobile: true, render: (x) => `${x.w.type} · ${fa(x.w.months)} ماه` }, { key: 'o', title: 'مسئول هزینه', hideMobile: true, render: (x) => x.w.owner }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.w.status} />, sort: (x) => x.s.step }, nextCol, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.w.deadline} done={x.s.step === 6} /> }]}
-        onRow={(x) => nav(`/admin/returns/w/${x.w.id}`)}
-        actions={(x) => [
-          { label: 'باز کردن پرونده', onClick: () => nav(`/admin/returns/w/${x.w.id}`) },
-          'sep',
-          { label: 'پذیرش و ارسال برچسب', onClick: () => setW(x.w.id, 'warranty.approved', 'تأیید شد، منتظر ارسال کالا'), disabled: x.w.status !== 'warranty.pending' },
-          { label: 'کالا در راه غنیمت', onClick: () => setW(x.w.id, 'warranty.in_transit', 'کالا در راه غنیمت') },
-          { label: 'در حال تعمیر', onClick: () => setW(x.w.id, 'warranty.repairing', 'در حال تعمیر') },
-          { label: 'تعویض شد', onClick: () => setW(x.w.id, 'warranty.replaced', 'کالا تعویض شد') },
-          { label: 'بازگشت مبلغ', onClick: () => setW(x.w.id, 'warranty.refunded', 'مبلغ بازگشت داده شد', true) },
-          { label: 'خدمت تکمیل شد', onClick: () => setW(x.w.id, 'warranty.done', 'خدمت تکمیل شد') },
-          'sep',
-          { label: 'درخواست اصلاح یا مدارک', onClick: () => setW(x.w.id, 'warranty.pending', 'نیازمند اصلاح یا مدارک', true) },
-          { label: 'رد با ذکر دلیل', danger: true, onClick: () => setW(x.w.id, 'warranty.rejected', 'رد درخواست', true) },
-        ]} />}
+        cols={[{ key: 'id', title: 'شماره', render: (x) => <CopyId v={x.r.id} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={<CustLink v={customer(x.r.customerId).name} id={x.r.customerId} />} b={x.r.orderId} /> }, { key: 'r', title: 'دلیل', hideMobile: true, render: (x) => x.r.reason, sort: (x) => x.r.reason }, { key: 'm', title: 'روش ارسال', hideMobile: true, render: (x) => METHODS[x.r.method ?? 'post']?.short }, { key: 'a', title: 'مبلغ', align: 'left', render: (x) => <Money v={x.r.refund?.amount ?? x.r.amount} />, sort: (x) => x.r.amount }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.r.status} />, sort: (x) => x.s.step }, nextCol, { key: 'd', title: 'مهلت ارسال', render: (x) => <SlaChip at={x.r.deadline} done={x.s.step >= 2 || x.s.who === '—'} /> }]} />}
+      {tab === 'warranty' && <DataTable name="درخواست‌های گارانتی" rows={ws.filter((x) => inQueue(q, x.s))} rowKey={(x) => x.w.id} search={(x) => `${x.w.code} ${x.w.id} ${d.units.find((u) => u.id === x.w.unitId)?.serial ?? ''}`} empty={{ title: q === 'all' ? 'درخواست گارانتی‌ای نیست.' : 'در این صف پرونده‌ای نیست.', desc: 'مشتری از «گارانتی‌های من» در پنل کاربری درخواست مرجوعی گارانتی ثبت می‌کند.' }}
+        cols={[{ key: 'id', title: 'درخواست', render: (x) => <CopyId v={x.w.id} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={<CustLink v={customer(x.w.customerId).name} id={x.w.customerId} />} b={x.w.code} /> }, { key: 'k', title: 'دلیل مشکل', hideMobile: true, render: (x) => x.w.reasonKind ?? '—' }, { key: 't', title: 'گارانتی', hideMobile: true, render: (x) => `${x.w.type} · ${fa(x.w.months)} ماه` }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.w.status} />, sort: (x) => x.s.step }, nextCol, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.w.deadline} done={x.s.who === '—'} /> }]}
+        onRow={(x) => nav(`/admin/returns/w/${x.w.id}`)} />}
+      {tab === 'wcards' && <WarrantyCards onRequest={() => setManual('warranty')} />}
       {tab === 'flow' && <FlowGuide />}
-      {tab === 'stats' && <div className="grid gap-4 md:grid-cols-2"><Card title="دلایل مرجوعی"><Bars data={[{ label: 'مغایرت با صفحهٔ کالا', value: 40 }, { label: 'انصراف از خرید', value: 33 }, { label: 'خرابی کالا', value: 19 }, { label: 'سایر', value: 8 }]} fmt={pct} color="var(--purple)" /><div className="mt-3"><AITag confidence="متوسط" /></div><p className="mt-1 text-12 text-t2">۴۰٪ مرجوعی‌های هدفون به‌خاطر مغایرت رنگ در عکس است. پیشنهاد: بازبینی نور عکاسی این دسته.</p></Card>
+      {tab === 'stats' && <div className="grid gap-4 md:grid-cols-2"><Card title="دلایل مرجوعی"><Bars data={[{ label: 'مغایرت با صفحهٔ کالا', value: 40 }, { label: 'انصراف از خرید', value: 33 }, { label: 'ایراد کارکردی', value: 19 }, { label: 'سایر', value: 8 }]} fmt={pct} color="var(--purple)" /><div className="mt-3"><AITag confidence="متوسط" /></div><p className="mt-1 text-12 text-t2">۴۰٪ مرجوعی‌های هدفون به‌خاطر مغایرت رنگ در عکس است. پیشنهاد: بازبینی نور عکاسی این دسته.</p></Card>
         <Card title="نرخ خرابی در گارانتی به تفکیک تأمین"><Bars data={[{ label: 'انبارگردانی آمازون', value: 2.1 }, { label: 'خرید مستقیم اقلیم کردستان', value: 3.4 }, { label: 'شریک انبار مهاباد', value: 4.0 }]} fmt={(n) => pct(n, 1)} color="var(--warning)" /></Card></div>}
       <ManualReturn open={!!manual} defaultKind={manual ?? 'return'} key={manual ?? 'x'} onClose={() => setManual(null)} />
     </Page>
   )
 }
 
-/** راهنمای روند: هر مرحله چه کسی، چه کاری و چه پیامکی */
+/** گارانتی‌های صادرشده: همان «گارانتی‌های من» و «استعلام گارانتی» پنل مشتری، از دید مدیریت */
+function WarrantyCards({ onRequest }: { onRequest: () => void }) {
+  const { d, customer, product } = useLookup(); const nav = useNavigate()
+  const [qq, setQq] = useState(''); const [st, setSt] = useState<'all' | 'active' | 'expired' | 'invalid'>('all'); const [open, setOpen] = useState<string | null>(null)
+  const rows = d.wcards.map((c) => ({ c, s: cardState(c), u: d.units.find((u) => u.id === c.unitId) }))
+  const hit = qq.trim() ? rows.find((r) => r.c.code.toLowerCase() === qq.trim().toLowerCase() || r.u?.serial.toLowerCase() === qq.trim().toLowerCase()) : undefined
+  const sel = rows.find((r) => r.c.code === open)
+  const reqs = sel ? d.warranties.filter((w) => w.code === sel.c.code) : []
+  const lbl = { active: 'فعال', expired: 'منقضی‌شده', invalid: 'نامعتبر' } as const
+  return <div className="space-y-4">
+    <Card title="استعلام گارانتی" hint={<span className="text-12 font-normal text-t2">با کد گارانتی یا شماره سریال</span>}>
+      <div className="flex flex-wrap gap-2"><Input className="ltr max-w-xs" value={qq} onChange={(e) => setQq(e.target.value)} placeholder="GW-31877 یا سریال" aria-label="کد گارانتی یا شماره سریال" /></div>
+      {qq.trim() && (hit ? <div className={cx('mt-3 rounded-md p-3 text-13', hit.s.status === 'active' ? 'bg-success-bg' : 'bg-danger-bg')}><p className="font-semibold">{hit.s.status === 'active' ? 'این گارانتی معتبر و فعال است' : hit.s.status === 'expired' ? 'مهلت این گارانتی تمام شده است' : 'این گارانتی معتبر نیست و خدمات گارانتی به آن تعلق نمی‌گیرد'}</p><p className="mt-1 text-12">{product(hit.c.productId)?.title} · سریال {hit.u?.serial} · {customer(hit.c.customerId).name} · {hit.s.status === 'active' ? `${fa(hit.s.daysLeft)} روز مانده تا پایان (${hit.s.end.toLocaleDateString('fa-IR')})` : hit.c.invalidReason ?? ''}</p><Button size="sm" className="mt-2" onClick={() => setOpen(hit.c.code)}>مشاهدهٔ جزئیات گارانتی</Button></div> : <p className="mt-3 text-12 text-t2">گارانتی‌ای با این کد یا سریال پیدا نشد.</p>)}
+    </Card>
+    <div className="flex flex-wrap gap-1.5">{(['all', 'active', 'expired', 'invalid'] as const).map((k) => <button key={k} type="button" aria-pressed={st === k} onClick={() => setSt(k)} className={cx('min-h-9 rounded-full border px-3 text-13', st === k ? 'border-brand-solid bg-brand-tint font-semibold text-brand' : 'border-line bg-surface text-t2')}>{k === 'all' ? 'همه' : lbl[k]} <span className="text-11">{fa(k === 'all' ? rows.length : rows.filter((r) => r.s.status === k).length)}</span></button>)}</div>
+    <DataTable name="گارانتی‌ها" empty={{ title: "گارانتی‌ای با این فیلتر نیست." }} rows={rows.filter((r) => st === 'all' || r.s.status === st)} rowKey={(r) => r.c.code} onRow={(r) => setOpen(r.c.code)} search={(r) => `${r.c.code} ${r.u?.serial ?? ''} ${product(r.c.productId)?.title ?? ''} ${customer(r.c.customerId).name}`}
+      cols={[{ key: 'code', title: 'کد گارانتی', render: (r) => <CopyId v={r.c.code} /> }, { key: 'p', title: 'کالا', render: (r) => <Cell a={product(r.c.productId)?.title ?? r.c.productId} b={r.u ? `سریال ${r.u.serial}` : ''} /> }, { key: 'c', title: 'مشتری', hideMobile: true, render: (r) => <CustLink v={customer(r.c.customerId).name} id={r.c.customerId} /> }, { key: 't', title: 'نوع و مدت', hideMobile: true, render: (r) => `${r.c.type} · ${fa(r.c.months)} ماه` }, { key: 'e', title: 'تاریخ پایان', render: (r) => r.s.status === 'invalid' ? '—' : r.s.end.toLocaleDateString('fa-IR'), sort: (r) => r.s.end.getTime() }, { key: 's', title: 'وضعیت', render: (r) => <Badge tone={r.s.status === 'active' ? 'success' : r.s.status === 'expired' ? 'neutral' : 'danger'}>{lbl[r.s.status]}</Badge> }]} />
+    <Drawer open={!!sel} onClose={() => setOpen(null)} width={520} title={sel ? <span className="flex items-center gap-2">جزئیات گارانتی <CopyId v={sel.c.code} /></span> : ''}>
+      {sel && <div className="space-y-4 text-13">
+        <div className="space-y-2"><Row k="کالا">{product(sel.c.productId)?.title}</Row><Row k="سریال"><span className="ltr font-mono">{sel.u?.serial}</span></Row><Row k="سفارش">{sel.c.orderId}</Row><Row k="مشتری"><CustLink v={customer(sel.c.customerId).name} id={sel.c.customerId} /></Row><Row k="نوع گارانتی">{sel.c.type}</Row><Row k="مدت گارانتی">{fa(sel.c.months)} ماه</Row><Row k="ارائه‌دهنده (گارانتی‌کننده)">{sel.c.provider}</Row><Row k="تاریخ شروع (تحویل)">{new Date(sel.c.start).toLocaleDateString('fa-IR')}</Row><Row k="تاریخ پایان">{sel.s.end.toLocaleDateString('fa-IR')}</Row><Row k="وضعیت"><Badge tone={sel.s.status === 'active' ? 'success' : sel.s.status === 'expired' ? 'neutral' : 'danger'}>{lbl[sel.s.status]}</Badge></Row>{sel.c.invalidReason && <Row k="علت نامعتبر بودن">{sel.c.invalidReason}</Row>}</div>
+        <div><p className="mb-1 font-semibold">شرایط پوشش این گارانتی</p><p className="text-12"><b className="text-success">تحت پوشش:</b> {COVERED.join('، ')}</p><p className="text-12"><b className="text-danger">خارج از پوشش:</b> {EXCLUDED.join('، ')}</p>{sel.c.notes.map((n) => <p key={n} className="text-12 text-t2">تبصرهٔ این کالا: {n}</p>)}</div>
+        <div><p className="mb-1 font-semibold">سوابق خدمات و درخواست‌ها</p>{reqs.length ? <ul className="space-y-1">{reqs.map((w) => <li key={w.id}><button type="button" className="flex w-full items-center justify-between rounded-md border border-line px-3 py-2 text-start hover:border-brand/40" onClick={() => nav(`/admin/returns/w/${w.id}`)}><span className="ltr font-mono">{w.id}</span><StatusBadge s={w.status} /></button></li>)}</ul> : <p className="text-12 text-t2">هنوز درخواستی برای این گارانتی ثبت نشده است.</p>}</div>
+        <div className="flex flex-wrap gap-2">
+          {sel.s.status === 'active' && <Button size="sm" onClick={onRequest}>ثبت درخواست گارانتی</Button>}
+          {sel.s.status !== 'invalid' && <Button size="sm" variant="danger" onClick={async () => { const w = await askReason({ kind: 'warranty', ref: sel.c.code, status: 'نامعتبر کردن گارانتی', title: `علت نامعتبر کردن ${sel.c.code}` }); if (w) { mutate((x) => { const c = x.wcards.find((y) => y.code === sel.c.code); if (c) { c.status = 'invalid'; c.invalidReason = w } }, { action: 'نامعتبر کردن گارانتی', target: sel.c.code, after: w }); toast('گارانتی نامعتبر شد؛ مشتری در تب «نامعتبر» می‌بیند.') } }}>نامعتبر کردن با دلیل</Button>}
+          {sel.s.status === 'invalid' && <Button size="sm" onClick={() => { mutate((x) => { const c = x.wcards.find((y) => y.code === sel.c.code); if (c) { c.status = 'active'; c.invalidReason = undefined } }, { action: 'معتبر کردن دوبارهٔ گارانتی', target: sel.c.code }); toast('گارانتی دوباره معتبر شد.') }}>معتبر کردن دوباره</Button>}
+        </div>
+      </div>}
+    </Drawer>
+  </div>
+}
+
+/** راهنمای روند: همان مراحل فیگمای پنل کاربری و اینکه هر مرحله با کیست */
 function FlowGuide() {
-  const R: [string, string, string][] = [['ثبت درخواست', 'مشتری', 'از پنل کاربری یا ثبت دستی توسط پشتیبانی؛ دلیل و عکس (برای مغایرت الزامی).'], ['بررسی درخواست', 'ما', 'مهلت، عکس و دلیل بررسی می‌شود؛ تأیید با تعیین روش بازگشت (پیک غنیمت، پست با برچسب، تحویل حضوری) یا رد با دلیل.'], ['بازگشت کالا', 'مشتری / پیک', 'مشتری می‌فرستد و کد رهگیری ثبت می‌کند، یا پیک غنیمت تحویل می‌گیرد؛ یادآوری و بستن پرونده در پایان مهلت.'], ['دریافت در انبار', 'ما', 'رسید دریافت: تطبیق سریال، پلمپ، متعلقات و عکس دریافت؛ رسید برای مشتری پیامک می‌شود.'], ['بازرسی و تصمیم', 'ما', `چک‌لیست، سرنوشت واحد، تأیید کامل، بخشی یا با کسر پس‌کرایه، یا رد. بالای سقف، تأیید نفر دوم لازم است.`], ['واریز یا بازگرداندن', 'مالی / ما', 'واریز به کیف پول، شبا یا برگشت درگاه با شمارهٔ پیگیری؛ در صورت رد، کالا با کد رهگیری به مشتری برمی‌گردد.'], ['بسته شد', '—', 'همهٔ قدم‌ها در تاریخچه و لاگ ممیزی می‌ماند.']]
-  const W: [string, string, string][] = [['ثبت درخواست', 'مشتری', 'با کد گارانتی یا سریال؛ شرح مشکل و عکس.'], ['بررسی اولیه', 'ما', 'فعال بودن گارانتی، تطبیق سریال، موارد خارج از پوشش (ضربه، مایعات، دستکاری)؛ پذیرش با روش ارسال یا رد با دلیل.'], ['دریافت کالا', 'مشتری / پیک', 'کد رهگیری یا تحویل پیک؛ رسید دریافت با عکس.'], ['عیب‌یابی', 'ما', 'تشخیص فنی که برای مشتری پیامک می‌شود؛ انتخاب راه‌حل.'], ['تعمیر، تعویض یا بازگشت مبلغ', 'ما / مرکز خدمات', 'تعمیر داخلی، ارسال به مرکز خدمات برند، تعویض با واحد مشابه (رزرو خودکار)، بازگشت مبلغ یا «عیبی یافت نشد».'], ['ارسال به مشتری', 'ما', 'روش و کد رهگیری ثبت و پیامک می‌شود.'], ['بسته شد', '—', 'تحویل ثبت می‌شود و نظرسنجی رضایت پیامک می‌شود.']]
+  const R: [string, string, string][] = [
+    ['ثبت درخواست', 'مشتری', 'از «سفارش‌های تحویل‌شده»: انتخاب کالا (فقط کالاهایی که مهلت ۷ روزه‌شان باز است)، دلیل (ایراد کارکردی، مغایرت با صفحهٔ کالا، کالای غیراصل، آسیب‌دیدگی حین حمل، انصراف از خرید)، توضیح و عکس (برای همه به‌جز انصراف دست‌کم یک عکس)، روش ارسال (تحویل حضوری، پست پس‌کرایه، پیک پس‌کرایه) و مقصد بازگشت وجه (کیف پول یا کارت بانکی به نام خود). درخواست مستقیم به «در انتظار ارسال کالا» می‌رود.'],
+    ['ارسال کالا به غنیمت', 'مشتری', 'مشتری تا پایان مهلت کالا را می‌فرستد و ارسال را اعلام می‌کند (کد رهگیری اختیاری). ما می‌توانیم به نیابت از مشتری اعلام کنیم، یادآوری بفرستیم، یا با پایان مهلت پرونده را ببندیم. تا پیش از ارسال، مشتری می‌تواند لغو کند.'],
+    ['بررسی کالا', 'ما', 'ثبت دریافت در انبار مرجوعی یا شعبه (سریال، پلمب، متعلقات، عکس)، سپس بررسی پلمب، ظاهر، کارکرد و متعلقات در مرکز کنترل کیفیت و تصمیم برای هر کالا جداگانه.'],
+    ['نتیجه و بازگشت وجه', 'مالی / ما', 'تأیید کامل (بهای کالا، به‌علاوهٔ هزینهٔ ارسال خرید اگر همهٔ کالاهای سفارش برگردد)، تأیید با کسر هزینهٔ ارسال (انصراف)، تأیید بخشی، یا رد. واریز به همان مقصدی که مشتری انتخاب کرده با شمارهٔ پیگیری. کالای ردشده تا ۲۴ ساعت با مرسولهٔ تازه در همان سفارش دوباره ارسال می‌شود.'],
+  ]
+  const W: [string, string, string][] = [
+    ['ثبت درخواست', 'مشتری', 'از «گارانتی‌های من»: دلیل مشکل (ایراد کارکردی یا عملکرد، تردید در اصالت، سایر)، شرح مشکل، عکس یا ویدیو، شمارهٔ تماس و پذیرش شرایط پوشش.'],
+    ['بررسی غنیمت', 'ما', '«شروع بررسی» وضعیت را از «در انتظار بررسی» به «در حال بررسی» می‌برد. مدارک و شرایط پوشش بررسی می‌شود.'],
+    ['تأیید', 'ما', 'تأیید با تعیین مهلت ارسال کالا، یا رد با ذکر دلیل (مثلاً آسیب فیزیکی پس از تحویل).'],
+    ['ارسال کالا', 'مشتری', 'مشتری روش را انتخاب می‌کند (تحویل حضوری، پست پیشتاز پس‌کرایه، پیک) و ارسال را اعلام می‌کند. بدون ارسال تا پایان مهلت، درخواست بسته می‌شود.'],
+    ['انجام خدمت', 'ما', 'دریافت و بررسی کالا، ثبت ایراد تأییدشده و نوع خدمت. تعمیر؛ اگر ممکن نبود تعویض با کالای سالم (سریال جدید)؛ اگر آن هم ممکن نبود بازگشت مبلغ به کیف پول.'],
+    ['تکمیل', 'ما', 'ارسال کالای تعمیرشده یا جایگزین با کد رهگیری و ثبت تحویل، یا واریز مبلغ و بستن درخواست.'],
+  ]
   const T = ({ title, rows }: { title: string; rows: [string, string, string][] }) => <Card title={title}><ol className="space-y-3">{rows.map(([a, b, c], i) => <li key={a} className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-tint text-12 font-bold text-brand">{fa(i + 1)}</span><div className="text-13"><p className="font-semibold">{a} <span className="text-12 font-normal text-t3">· اقدام با {b}</span></p><p className="text-t2">{c}</p></div></li>)}</ol></Card>
-  return <div className="grid gap-4 lg:grid-cols-2"><T title="مرجوعی" rows={R} /><T title="گارانتی" rows={W} /></div>
+  return <div className="space-y-3"><p className="text-12 text-t2">این مراحل عیناً از فیگمای پنل کاربری (سفارش‌های مرجوعی و گارانتی‌ها) گرفته شده است؛ هر اقدام این‌جا همان وضعیتی را به مشتری نشان می‌دهد که در فیگما طراحی شده.</p><div className="grid gap-4 lg:grid-cols-2"><T title="مرجوعی" rows={R} /><T title="گارانتی" rows={W} /></div></div>
 }
 
 /** ماشین‌حساب هزینهٔ ارسال: با وزن و مبلغ سبد، هزینهٔ هر روش همان‌طور که مشتری می‌بیند */

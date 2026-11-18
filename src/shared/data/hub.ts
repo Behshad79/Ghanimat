@@ -12,7 +12,7 @@ export const makeHub = () => ({
     { id: 'ad-ga4', family: 'آنالیتیکس', name: 'Google Analytics 4', key: 'G-••••XK2', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-clarity', family: 'آنالیتیکس', name: 'Microsoft Clarity', key: 'cl_••••9', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-metabase', family: 'داشبورد داده', name: 'Metabase', key: '', status: 'وصل نشده', env: '—' },
-    { id: 'ad-gsc', family: 'سئو', name: 'Google Search Console', key: 'sc-domain:ghanimat.example', status: 'متصل', env: 'عملیاتی' },
+    { id: 'ad-gsc', family: 'سئو', name: 'Google Search Console', key: 'sc-domain:ghanimat.ir', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-sepidar', family: 'حسابداری', name: 'سپیدار', key: '', status: 'وصل نشده', env: '—' },
     { id: 'ad-holoo', family: 'حسابداری', name: 'هلو', key: '', status: 'وصل نشده', env: '—' },
     { id: 'ad-post', family: 'حمل', name: 'پست پیشتاز (API)', key: 'post_••••1', status: 'متصل', env: 'عملیاتی' },
@@ -23,7 +23,7 @@ export const makeHub = () => ({
     { id: 'ad-n8n', family: 'اتوماسیون', name: 'n8n / Make', key: '', status: 'از راه وب‌هوک', env: '—' },
   ],
   hooks: [
-    { id: 'wh1', url: 'https://n8n.ghanimat.example/webhook/orders', events: ['order.created', 'order.paid'], secret: 'whsec_••••91', active: true },
+    { id: 'wh1', url: 'https://n8n.ghanimat.ir/webhook/orders', events: ['order.created', 'order.paid'], secret: 'whsec_••••91', active: true },
     { id: 'wh2', url: 'https://hooks.slack.com/services/••••', events: ['stock.low', 'c2c.receipt.suspicious', 'payment.failed'], secret: 'whsec_••••12', active: true },
   ],
   deliveries: [

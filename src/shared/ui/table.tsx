@@ -1,5 +1,6 @@
 import { QuickText } from './quickview'
 import { isValidElement, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Filter, Maximize2, Minimize2, Printer, Search, SearchX, X } from 'lucide-react'
 import { Badge, Button, cx, EmptyState, Input } from './base'
 import { DateFilter, inRange, rangeActive, rangeLabel, type DateRange } from './datefilter'
@@ -39,6 +40,10 @@ const R0: DateRange = { range: 'all', from: '', to: '', days: [], h1: 0, h2: 24 
 /** جدول داده: جست‌وجو، مرتب‌سازی، انتخاب گروهی (Shift برای بازه)، انتخاب ستون، خروجی همین نما، چاپ، کارت موبایل */
 export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters, bulk, empty, pageSize = 12, flashId, actions, noDate }: Props<R>) {
   const [q, setQ] = useState('')
+  // فیلتر آمده از کارت‌ها: ?st=مقدار۱|مقدار۲&fl=برچسب (&tb=نام جدول برای صفحه‌های چندجدولی)
+  const [sp, setSp] = useSearchParams(); const nav = useNavigate()
+  const stRaw = sp.get('st'); const tb = sp.get('tb'); const preset = stRaw && (!tb || tb === name) ? stRaw.split('|').filter(Boolean) : null; const fl = sp.get('fl') ?? ''
+  const clearPreset = () => { const n = new URLSearchParams(sp); ['st', 'fl', 'tb'].forEach((k) => n.delete(k)); setSp(n, { replace: true }); setPage(0) }
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
   const [sel, setSel] = useState<string[]>([])
   const [last, setLast] = useState<number | null>(null)
@@ -69,6 +74,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   const view = useMemo(() => {
     const qq = latin(q.trim().toLowerCase())
     let v = rows.filter((r) => {
+      if (preset) { const raw = JSON.stringify(r) + ' ' + Object.values(cellText.get(r)!).join(' '); if (!preset.some((x) => raw.includes(x))) return false }
       if (qq && !latin(((search ? search(r) + ' ' : '') + Object.values(cellText.get(r)!).join(' ')).toLowerCase()).includes(qq)) return false
       if (dateKey && rangeActive(dr)) { const iso = (r as Record<string, unknown>)[dateKey]; if (!isIso(iso) || !inRange(iso as string, dr)) return false }
       for (const [k, list] of Object.entries(vals)) if (list.length && !list.includes(cellText.get(r)![k])) return false
@@ -77,7 +83,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
     })
     if (sort) { const c = cols.find((x) => x.key === sort.key); if (c) { const key = (r: R): number | string => { if (c.sort) return c.sort(r); const t = cellText.get(r)![c.key]; const n = asNum(t); return n ?? t } ; v = [...v].sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'fa')) * sort.dir }) } }
     return v
-  }, [rows, q, sort, cols, search, cellText, dateKey, dr, vals, nums])
+  }, [rows, q, sort, cols, search, cellText, dateKey, dr, vals, nums, stRaw, tb])
   const shown = cols.filter((c) => !hidden.includes(c.key))
   const ps = max ? Math.max(pageSize, 50) : pageSize
   const pages = Math.ceil(view.length / ps)
@@ -96,7 +102,8 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
     toast(`خروجی ${fa(src.length)} ردیف ساخته شد. دادهٔ حساس در خروجی پوشیده است.`)
   }
 
-  return (
+  return (<>
+    {preset && <PresetBar label={fl || preset.join('، ')} shown={view.length} total={rows.length} noun={name} onAll={clearPreset} />}
     <div className={cx('overflow-hidden border border-line bg-surface', max ? 'fixed inset-2 z-50 flex flex-col rounded-2xl shadow-float md:inset-4' : 'rounded-2xl')} role={max ? 'dialog' : undefined} aria-label={max ? `${name} در حالت تمام‌صفحه` : undefined}>
       <div className="no-print flex flex-wrap items-center gap-2 border-b border-line p-2">
         <div className="relative min-w-40 flex-1 sm:max-w-xs">
@@ -106,10 +113,10 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
         {(dateKey || facets.length > 0) && <Button size="sm" variant={fOpen || active ? 'primary' : 'secondary'} icon={<Filter size={13} />} aria-expanded={fOpen} onClick={() => setFOpen(!fOpen)}>فیلتر{active ? ` (${fa(active)})` : ''}</Button>}
         {filters}
         <div className="relative mr-auto flex items-center gap-1">
-          <Button variant="ghost" size="sm" icon={max ? <Minimize2 size={14} /> : <Maximize2 size={14} />} onClick={() => { setMax(!max); setPage(0) }} title={max ? 'خروج از تمام‌صفحه (Esc)' : 'نمایش تمام‌صفحه'}><span className="hidden sm:inline">{max ? 'کوچک کردن' : 'تمام‌صفحه'}</span></Button>
-          <Button variant="ghost" size="sm" icon={<Columns3 size={14} />} onClick={() => setColMenu(!colMenu)}><span className="hidden sm:inline">ستون‌ها</span></Button>
-          <Button variant="ghost" size="sm" icon={<Download size={14} />} onClick={() => setExpOpen(true)}><span className="hidden sm:inline">خروجی</span></Button><ExportDialog open={expOpen} onClose={() => setExpOpen(false)} name={name} single period={false} columns={shown.map((c) => (typeof c.title === 'string' ? c.title : c.key))} sections={[{ id: 'view', label: `همین نما با فیلتر و جست‌وجوی فعلی (${fa(view.length)} ردیف)`, build: () => tableOf(view) }, ...(sel.length ? [{ id: 'sel', label: `فقط ردیف‌های انتخاب‌شده (${fa(sel.length)})`, build: () => tableOf(view.filter((r) => sel.includes(rowKey(r)))) }] : []), { id: 'all', label: `همهٔ ردیف‌ها بدون فیلتر (${fa(rows.length)})`, build: () => tableOf(rows) }]} />
-          <Button variant="ghost" size="sm" icon={<Printer size={14} />} onClick={() => window.print()}><span className="hidden sm:inline">چاپ</span></Button>
+          <Button variant="ghost" size="sm" icon={max ? <Minimize2 size={14} /> : <Maximize2 size={14} />} onClick={() => { setMax(!max); setPage(0) }} aria-label={max ? 'خروج از تمام‌صفحه' : 'نمایش تمام‌صفحه'} title={max ? 'خروج از تمام‌صفحه (Esc)' : 'نمایش تمام‌صفحه'}><span className="hidden sm:inline">{max ? 'کوچک کردن' : 'تمام‌صفحه'}</span></Button>
+          <Button variant="ghost" size="sm" icon={<Columns3 size={14} />} aria-label="ستون‌ها" onClick={() => setColMenu(!colMenu)}><span className="hidden sm:inline">ستون‌ها</span></Button>
+          <Button variant="ghost" size="sm" icon={<Download size={14} />} aria-label="خروجی" onClick={() => setExpOpen(true)}><span className="hidden sm:inline">خروجی</span></Button><ExportDialog open={expOpen} onClose={() => setExpOpen(false)} name={name} single period={false} columns={shown.map((c) => (typeof c.title === 'string' ? c.title : c.key))} sections={[{ id: 'view', label: `همین نما با فیلتر و جست‌وجوی فعلی (${fa(view.length)} ردیف)`, build: () => tableOf(view) }, ...(sel.length ? [{ id: 'sel', label: `فقط ردیف‌های انتخاب‌شده (${fa(sel.length)})`, build: () => tableOf(view.filter((r) => sel.includes(rowKey(r)))) }] : []), { id: 'all', label: `همهٔ ردیف‌ها بدون فیلتر (${fa(rows.length)})`, build: () => tableOf(rows) }]} />
+          <Button variant="ghost" size="sm" icon={<Printer size={14} />} aria-label="چاپ" onClick={() => window.print()}><span className="hidden sm:inline">چاپ</span></Button>
           {colMenu && (
             <div className="anim-pop absolute top-8 left-0 z-20 w-48 rounded-md border border-line bg-surface p-2 shadow-float">
               {cols.map((c) => (
@@ -201,7 +208,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
           <button className="text-12 text-white/70 hover:text-white" onClick={() => setSel([])}>لغو انتخاب</button>
         </div>
       )}
-    </div>
+    </div></>
   )
 }
 
@@ -244,4 +251,14 @@ function RangePick({ title, v, onChange }: { title: ReactNode; v: [string, strin
       </>}
     </div>
   )
+}
+
+/** نوار «از کارت آمدید»: برچسب فیلتر، تعداد، بازگشت به صفحهٔ قبل و نمایش همه */
+export function PresetBar({ label, shown, total, noun, onAll }: { label: string; shown: number; total: number; noun: string; onAll: () => void }) {
+  const nav = useNavigate()
+  return <div className="no-print mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-brand/30 bg-brand-tint/40 px-3 py-2 text-12" role="status">
+    <span className="flex-1"><b className="text-brand">{label}</b> · {fa(shown)} مورد از {fa(total)} {noun}</span>
+    <Button size="sm" variant="ghost" onClick={() => (window.history.length > 1 ? nav(-1) : nav('/admin'))}>بازگشت</Button>
+    <Button size="sm" onClick={onAll}>نمایش همهٔ {noun} ({fa(total)})</Button>
+  </div>
 }

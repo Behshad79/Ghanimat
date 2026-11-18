@@ -1,18 +1,18 @@
 import { useState } from 'react'
 import { ChevronDown, Copy, KeyRound, Plus, Rss } from 'lucide-react'
-import { Badge, Button, Card, cx, Field, Input, Toggle } from '@/shared/ui/base'
+import { Badge, Button, Card, cx, Field, Input, Toggle, copyText } from '@/shared/ui/base'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 
-const BASE = 'https://ghanimat.example/api'
-const copy = (t: string) => { navigator.clipboard?.writeText(t).catch(() => {}); toast('کپی شد.') }
+const BASE = 'https://ghanimat.ir/api'
+const copy = (t: string) => { copyText(t); toast('کپی شد.') }
 const SCOPES: [string, string][] = [['products:read', 'خواندن کالاها'], ['units:read', 'خواندن واحدها و موجودی'], ['units:write', 'تغییر وضعیت واحد'], ['orders:read', 'خواندن سفارش‌ها'], ['orders:write', 'ثبت رهگیری و وضعیت ارسال']]
 
 type Doc = { t: string; m: 'GET' | 'POST' | 'PATCH'; ep: string; scope: string; params: [string, string, boolean, string][]; body: string }
 const DOCS: [string, Doc[]][] = [
   ['کالاها', [
-    { t: 'فهرست کالاها', m: 'GET', ep: '/v1/products', scope: 'products:read', params: [['page', 'integer', false, 'شمارهٔ صفحه'], ['per_page', 'integer', false, 'تعداد در هر صفحه (پیش‌فرض ۵۰، حداکثر ۲۰۰)'], ['status', 'string', false, 'published یا draft'], ['in_stock', 'boolean', false, 'فقط کالاهای دارای واحد قابل فروش']], body: `{\n  "success": true,\n  "data": [{\n    "id": "p12",\n    "title": "iPhone 15 Pro 256GB",\n    "brand": "Apple",\n    "category": "گوشی موبایل",\n    "condition": "نو",\n    "min_price": 61900000,\n    "units_available": 3,\n    "url": "https://ghanimat.example/p/p12"\n  }],\n  "meta": { "page": 1, "per_page": 50, "total": 128 }\n}` },
+    { t: 'فهرست کالاها', m: 'GET', ep: '/v1/products', scope: 'products:read', params: [['page', 'integer', false, 'شمارهٔ صفحه'], ['per_page', 'integer', false, 'تعداد در هر صفحه (پیش‌فرض ۵۰، حداکثر ۲۰۰)'], ['status', 'string', false, 'published یا draft'], ['in_stock', 'boolean', false, 'فقط کالاهای دارای واحد قابل فروش']], body: `{\n  "success": true,\n  "data": [{\n    "id": "p12",\n    "title": "iPhone 15 Pro 256GB",\n    "brand": "Apple",\n    "category": "گوشی موبایل",\n    "condition": "نو",\n    "min_price": 61900000,\n    "units_available": 3,\n    "url": "https://ghanimat.ir/p/p12"\n  }],\n  "meta": { "page": 1, "per_page": 50, "total": 128 }\n}` },
     { t: 'جزئیات یک کالا', m: 'GET', ep: '/v1/products/{id}', scope: 'products:read', params: [['id', 'string', true, 'شناسهٔ کالا']], body: `{\n  "success": true,\n  "data": { "id": "p12", "title": "iPhone 15 Pro 256GB", "specs": { "storage": "256GB" }, "warranty": "ضمانت اصالت غنیمت", "import_route": "آمازون خاورمیانه" }\n}` },
   ]],
   ['واحدها و موجودی', [

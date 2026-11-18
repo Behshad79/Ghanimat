@@ -31,7 +31,7 @@ export function Attachments({ list, mine }: { list?: Att[]; mine?: boolean }) {
   if (!list?.length) return null
   return (
     <div className="mt-2 space-y-1.5">
-      {list.some((a) => a.kind === 'image') && <div className="flex flex-wrap gap-1.5">{list.filter((a) => a.kind === 'image').map((a, i) => <button key={i} type="button" onClick={() => setZoom(a.src)} className="overflow-hidden rounded-lg border border-line"><img src={a.src} alt={a.name ?? 'عکس'} className="size-24 object-cover" /></button>)}</div>}
+      {list.some((a) => a.kind === 'image') && <div className="flex flex-wrap gap-1.5">{list.filter((a) => a.kind === 'image').map((a, i) => <button key={i} type="button" aria-label={`بزرگ‌نمایی ${a.name ?? "تصویر پیوست"}`} onClick={() => setZoom(a.src)} className="overflow-hidden rounded-lg border border-line"><img src={a.src} alt={a.name ?? 'عکس'} className="size-24 object-cover" /></button>)}</div>}
       {list.filter((a) => a.kind === 'video').map((a, i) => <video key={i} src={a.src} controls className="max-h-48 rounded-lg" />)}
       {list.filter((a) => a.kind === 'voice').map((a, i) => <Voice key={i} a={a} mine={mine} />)}
       {list.filter((a) => a.kind === 'file').map((a, i) => <a key={i} href={a.src || undefined} download={a.name} className="flex w-fit items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-12 hover:border-brand/50"><FileText size={16} className="text-brand" /><span className="max-w-48 truncate">{a.name}</span><span className="text-11 text-t2">{kb(a.size)}</span></a>)}

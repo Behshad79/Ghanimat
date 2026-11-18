@@ -134,11 +134,11 @@ export function Toggle({ on, onChange, label, disabled, text }: { on: boolean; o
 }
 export function Segmented<T extends string>({ value, onChange, options, size = 'md' }: { value: T; onChange: (v: T) => void; options: [T, ReactNode][]; size?: 'sm' | 'md' }) {
   const other = options.find(([v]) => isOther(v))
-  if (other && (value === other[0] || String(value).startsWith('سایر: '))) return <span className="inline-flex flex-col gap-1.5"><span className="inline-flex rounded-md bg-neutral-bg p-0.5">{options.map(([v, l]) => <button key={v} onClick={() => onChange(v)} className={cx('rounded-sm px-2.5 font-medium transition-colors', size === 'sm' ? 'h-6 text-11' : 'h-8 text-12', v === other[0] ? 'bg-surface text-t1 shadow-sm' : 'text-t2 hover:text-t1')}>{l}</button>)}</span><input autoFocus aria-label="توضیح گزینهٔ سایر" value={String(value).startsWith('سایر: ') ? String(value).slice(6) : ''} onChange={(e) => onChange(('سایر: ' + e.target.value) as T)} placeholder="منظورتان از «سایر» چیست؟" className="h-9 rounded-md border border-line bg-surface px-3 text-13 outline-none focus:border-brand" /></span>
+  if (other && (value === other[0] || String(value).startsWith('سایر: '))) return <span className="inline-flex flex-col gap-1.5"><span className="inline-flex rounded-md bg-neutral-bg p-0.5">{options.map(([v, l]) => <button key={v} type="button" aria-pressed={v === value} aria-label={typeof l === 'string' ? l : undefined} onClick={() => onChange(v)} className={cx('rounded-sm px-2.5 font-medium transition-colors', size === 'sm' ? 'h-6 text-11' : 'h-8 text-12', v === other[0] ? 'bg-surface text-t1 shadow-sm' : 'text-t2 hover:text-t1')}>{l}</button>)}</span><input autoFocus aria-label="توضیح گزینهٔ سایر" value={String(value).startsWith('سایر: ') ? String(value).slice(6) : ''} onChange={(e) => onChange(('سایر: ' + e.target.value) as T)} placeholder="منظورتان از «سایر» چیست؟" className="h-9 rounded-md border border-line bg-surface px-3 text-13 outline-none focus:border-brand" /></span>
   return (
     <div className="inline-flex rounded-md bg-neutral-bg p-0.5">
       {options.map(([v, l]) => (
-        <button key={v} onClick={() => onChange(v)} className={cx('rounded-sm px-2.5 font-medium transition-colors', size === 'sm' ? 'h-6 text-11' : 'h-8 text-12', v === value ? 'bg-surface text-t1 shadow-sm' : 'text-t2 hover:text-t1')}>{l}</button>
+        <button key={v} type="button" aria-pressed={v === value} aria-label={typeof l === 'string' ? l : undefined} onClick={() => onChange(v)} className={cx('rounded-sm px-2.5 font-medium transition-colors', size === 'sm' ? 'h-6 text-11' : 'h-8 text-12', v === value ? 'bg-surface text-t1 shadow-sm' : 'text-t2 hover:text-t1')}>{l}</button>
       ))}
     </div>
   )
@@ -174,6 +174,13 @@ export function EmptyState({ title, desc, action, icon }: { title: string; desc?
     </div>
   )
 }
+/** کپی امن: اگر مرورگر اجازهٔ کلیپ‌بورد نداد، از روش جایگزین استفاده می‌شود و خطا به کاربر نمی‌رسد */
+export function copyText(t: string): boolean {
+  const fallback = () => { try { const a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok } catch { return false } }
+  try { const pr = navigator.clipboard?.writeText(t); if (pr) { pr.catch(fallback); return true } } catch { /* مجوز داده نشد */ }
+  return fallback()
+}
+
 export function ErrorState({ title = 'داده‌ها بارگذاری نشد.', desc = 'سرور پاسخ نداد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید. اگر ادامه داشت، وضعیت سیستم را ببینید.', onRetry }: { title?: string; desc?: string; onRetry?: () => void }) {
   return (
     <EmptyState icon={<TriangleAlert size={22} className="text-danger" />} title={title} desc={desc}
@@ -198,7 +205,7 @@ export function CopyId({ v }: { v: string }) {
   const [ok, setOk] = useState(false)
   // کلیک روی شناسه: نمای سریع همان مورد (اگر شناخته شود)؛ کلیک روی آیکون: کپی
   const open = (e: React.MouseEvent) => { const ev = new CustomEvent('quickview', { detail: { ref: v, handled: false } }); window.dispatchEvent(ev); if ((ev.detail as { handled: boolean }).handled) e.stopPropagation(); else copy(e) }
-  const copy = (e: React.MouseEvent) => { e.stopPropagation(); navigator.clipboard?.writeText(v); setOk(true); setTimeout(() => setOk(false), 1200) }
+  const copy = (e: React.MouseEvent) => { e.stopPropagation(); copyText(v); setOk(true); setTimeout(() => setOk(false), 1200) }
   return (
     <span className="ltr group inline-flex items-center gap-1 font-mono text-12 text-t1">
       <button type="button" title="جزئیات" onClick={open} className="hover:text-brand hover:underline">{v}</button>

@@ -47,7 +47,7 @@ export const makeSite = () => ({
       { id: 'f3', title: 'مرکز راهنما', links: <Link[]>[{ id: 'f3a', label: 'سؤالات متداول', to: '/faq' }, { id: 'f3b', label: 'روش‌های خرید', to: '/help/how-to-order' }, { id: 'f3c', label: 'راهنمای خرید', to: '/help/before-buying' }, { id: 'f3d', label: 'شرایط و رویه‌های مرجوعی', to: '/help/return-policy' }, { id: 'f3e', label: 'شیوه‌ها و هزینهٔ ارسال کالا', to: '/help/shipping' }] },
       { id: 'f4', title: 'غنیمت', links: <Link[]>[{ id: 'f4a', label: 'فروشگاه', to: '/stores' }, { id: 'f4b', label: 'اعتماد به غنیمت', to: '/trust' }, { id: 'f4c', label: 'دربارهٔ غنیمت', to: '/about' }, { id: 'f4d', label: 'تماس با ما', to: '/contact' }, { id: 'f4e', label: 'بلاگ', to: '/blog' }, { id: 'f4f', label: 'به‌زودی', to: '/coming-soon' }, { id: 'f4g', label: 'فروشنده شوید', to: '/become-seller', hidden: true }] },
     ],
-    phone: '021-61887700', email: 'support@ghanimat.example', hours: '۷ روز هفته، ۲۴ ساعته', address: 'تهران، خیابان ولیعصر، پلاک ۰',
+    phone: '021-61887700', email: 'support@ghanimat.ir', hours: '۷ روز هفته، ۲۴ ساعته', address: 'تهران، خیابان ولیعصر، پلاک ۰',
     socials: [
       { id: 's1', kind: 'اینستاگرام', url: 'instagram.com/ghanimat', on: true },
       { id: 's2', kind: 'تلگرام', url: 't.me/ghanimat', on: true },

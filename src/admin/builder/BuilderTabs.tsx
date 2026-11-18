@@ -143,7 +143,7 @@ export function _OldBlogTab() {
 
 /** مشترکان خبرنامه، علاقه‌مندی‌هایشان و ارسال هدفمند */
 export function NewsletterTab() {
-  const d = useDB(); const N = d.newsletter; const [interest, setInterest] = useState('all'); const [msg, setMsg] = useState(false); const [text, setText] = useState('غنیمت: کالاهای تازهٔ استوک این هفته رسید. ghanimat.example/stock')
+  const d = useDB(); const N = d.newsletter; const [interest, setInterest] = useState('all'); const [msg, setMsg] = useState(false); const [text, setText] = useState('غنیمت: کالاهای تازهٔ استوک این هفته رسید. ghanimat.ir/stock')
   const interests = [...new Set(N.flatMap((n) => n.interests))]
   const target = N.filter((n) => n.active && (interest === 'all' || n.interests.includes(interest)))
   return (

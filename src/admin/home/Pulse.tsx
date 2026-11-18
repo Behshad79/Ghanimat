@@ -20,11 +20,11 @@ export function WelcomeHero({ items }: { items: WaitItem[] }) {
       <span aria-hidden className="pointer-events-none absolute -top-16 -left-10 size-56 rounded-full bg-white/10" /><span aria-hidden className="pointer-events-none absolute -bottom-20 left-40 size-48 rounded-full bg-[#ffc24b]/20" />
       <p className="relative text-16 font-bold">{total ? `${fa(total)} مورد منتظر بررسی و تصمیم شماست` : 'همه‌چیز مرتب است؛ موردی منتظر شما نیست.'}</p>
       {open.length > 0 && <div className="relative mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">{open.map((x) => { const I = x.icon; return (
-        <button key={x.label} type="button" onClick={() => nav(x.to)} className="lift flex items-center gap-2.5 rounded-2xl bg-white p-3 text-right text-[#10123d]">
+        <button key={x.label} type="button" onClick={() => nav(/[?&]fl=/.test(x.to) ? x.to : `${x.to}${x.to.includes('?') ? '&' : '?'}fl=${encodeURIComponent(x.label)}`)} className="lift flex items-center gap-2.5 rounded-2xl bg-white p-3 text-right text-[#10123d]">
           <span className={cx('grid size-10 shrink-0 place-items-center rounded-xl', x.urgent ? 'bg-danger-bg text-danger' : 'bg-brand-tint text-brand')}><I size={18} /></span>
           <span className="min-w-0"><b className={cx('tnum block text-22 leading-none', x.urgent && 'text-danger')}>{fa(x.count)}</b><span className="mt-1 block truncate text-11 text-t2">{x.label}</span></span>
         </button>) })}</div>}
-      {clear.length > 0 && <p className="relative mt-3 flex flex-wrap items-center gap-1.5 text-11 text-white/80"><span>بدون مورد:</span>{clear.map((x) => <button key={x.label} type="button" onClick={() => nav(x.to)} className="rounded-full bg-white/10 px-2 py-0.5 hover:bg-white/20">{x.label}</button>)}</p>}
+      {clear.length > 0 && <p className="relative mt-3 flex flex-wrap items-center gap-1.5 text-11 text-white/80"><span>بدون مورد:</span>{clear.map((x) => <button key={x.label} type="button" onClick={() => nav(/[?&]fl=/.test(x.to) ? x.to : `${x.to}${x.to.includes('?') ? '&' : '?'}fl=${encodeURIComponent(x.label)}`)} className="rounded-full bg-white/10 px-2 py-0.5 hover:bg-white/20">{x.label}</button>)}</p>}
     </div>
   )
 }

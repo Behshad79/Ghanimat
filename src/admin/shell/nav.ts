@@ -1,4 +1,4 @@
-import { PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -25,6 +25,7 @@ export const NAV: NavItem[] = [
   { id: 'reviews', label: 'دیدگاه‌ها و پرسش‌ها', icon: MessageSquareText, path: '/admin/reviews', group: 'مشتری و پشتیبانی', count: (d) => d.reviews.filter((r) => r.status === 'review.pending').length },
   { id: 'conversations', label: 'گفتگوها و دستیار خرید', icon: MessagesSquare, path: '/admin/conversations', group: 'مشتری و پشتیبانی' },
   { id: 'customers', label: 'مشتریان', icon: Users, path: '/admin/customers', group: 'مشتری و پشتیبانی' },
+  { id: 'merch', label: 'ویترین و غنی‌آف', icon: Flame, path: '/admin/merch', group: 'فروش و درآمد', count: (d) => (d.merch?.deals ?? []).filter((x) => !x.endedAt && x.sold < x.cap && !x.paused && +new Date(x.start) <= Date.now() && +new Date(x.end) > Date.now() && +new Date(x.end) - Date.now() < 2 * 36e5).length },
   { id: 'pricing', label: 'قیمت‌گذاری و تخفیف‌ها', icon: Tags, path: '/admin/pricing', group: 'فروش و درآمد' },
   { id: 'promotions', label: 'موتور پروموشن و کمپین', icon: BadgePercent, path: '/admin/promotions', group: 'فروش و درآمد' },
   { id: 'channels', label: 'کانال‌های فروش', icon: Share2, path: '/admin/channels', group: 'فروش و درآمد' },

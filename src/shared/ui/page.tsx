@@ -18,6 +18,7 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   const s = useSession()
   const nav = useNavigate(); const loc = useLocation()
   const denied = (module && !can(module, s)) || s.viewState === 'noaccess'
+  const qs = new URLSearchParams(loc.search); const fromCard = qs.get('fl'); const hasSt = qs.has('st')
   return (
     <div key={typeof title === 'string' ? title : undefined} className="page-enter mx-auto w-full max-w-[1600px] p-4 md:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -32,10 +33,11 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
         <div role="status" className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><WifiOff size={14} />اتصال اینترنت قطع است. تغییرها روی همین دستگاه نگه داشته می‌شود و با برگشت اتصال ارسال می‌شود.</div>
       )}
       {!denied && tabs && <div className="mb-4">{tabs}</div>}
+      {!denied && fromCard && !hasSt && <div className="no-print mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand/30 bg-brand-tint/40 px-3 py-2 text-12" role="status"><span className="flex-1">نمای فیلترشده برای <b className="text-brand">{fromCard}</b></span><Button size="sm" variant="ghost" onClick={() => (loc.key !== 'default' ? nav(-1) : nav('/admin'))}>بازگشت</Button><Button size="sm" onClick={() => nav(loc.pathname, { replace: true })}>نمایش همهٔ این بخش</Button></div>}
       {denied ? <Card><NoAccess what={typeof title === 'string' ? `«${title}»` : 'این صفحه'} /></Card>
         : s.viewState === 'loading' ? <SkeletonPage />
         : s.viewState === 'error' ? <Card><ErrorState /></Card>
-        : s.viewState === 'empty' && empty ? <Card><EmptyState {...empty} /></Card>
+        : s.viewState === 'empty' ? <Card><EmptyState {...(empty ?? { title: `${typeof title === 'string' ? `«${title}»` : 'این بخش'} هنوز داده‌ای ندارد.`, desc: 'با ثبت اولین مورد، اینجا پر می‌شود. اگر انتظار داده داشتید، بازهٔ زمانی یا فیلترها را بررسی کنید.' })} /></Card>
         : children}
     </div>
   )
@@ -52,7 +54,15 @@ export function KPI({ label, value, full, delta, spark, hint, note, to, goodDown
   // قانون طراحی غنیمت: هر روند کاهشی قرمز و هر روند افزایشی سبز است، مستقل از اینکه کاهش آن شاخص خوب باشد یا بد (goodDown فقط معنا را در راهنما نگه می‌دارد)
   const good = delta === undefined ? true : delta >= 0; void goodDown
   // قانون: هر کارت شاخص یک CTA است؛ با «to» به صفحهٔ منبع می‌رود، بدون آن جزئیات منبع و روش محاسبه باز می‌شود
-  const [info, setInfo] = useState(false); const go = () => (to ? nav(to) : setInfo(true))
+  const [info, setInfo] = useState(false)
+  // هر کارت به صفحهٔ جزئیات می‌رود: «to» دقیق (با تب یا فیلتر) مستقیم؛ بقیه به صفحهٔ ریز موارد همان عدد
+  const go = () => {
+    const here = window.location.hash.replace(/^#/, '') || window.location.pathname
+    if (/^\/(partner|simple)/.test(here)) return to ? nav(to) : setInfo(true)
+    if (to && to.includes('?')) return nav(/[?&]fl=/.test(to) ? to : `${to}&fl=${encodeURIComponent(label)}`)
+    const v = typeof value === 'string' ? value : num !== undefined && fmt ? fmt(num) : ''
+    nav(`/admin/insight/${encodeURIComponent(label)}?from=${encodeURIComponent(here)}${v ? `&v=${encodeURIComponent(v)}` : ''}${to ? `&to=${encodeURIComponent(to)}` : ''}`)
+  }
   return (<>
     <div role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}
       className={cx('group relative overflow-hidden rounded-2xl border p-4 text-right', featured ? 'border-transparent bg-brand-solid text-white' : urgent ? cx(T.ring, 'bg-linear-to-bl to-surface to-60%', T.wash) : 'border-line bg-surface', 'lift cursor-pointer', !featured && 'hover:border-brand/40')}>

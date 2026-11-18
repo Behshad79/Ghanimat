@@ -95,7 +95,7 @@ export function OrderProfitCard({ o }: { o: Order }) {
 
 /** سود من: «چقدر سود کردم؟» به تفکیک دوره، کالا، دسته، انبار، منبع، کانال و روش پرداخت */
 export function MyProfit() {
-  const d = useDB(); const nav = useNavigate(); const [period, setPeriod] = useState('month'); const [by, setBy] = useState('product'); const [ex, setEx] = useState(false)
+  const d = useDB(); const nav = useNavigate(); const [period, setPeriod] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] ?? window.location.search).get('p') ?? 'month'); const [by, setBy] = useState('product'); const [ex, setEx] = useState(false)
   const since = { today: 1, week: 7, month: 30, all: 3650 }[period as 'today']!
   const orders = d.orders.filter(counted).filter((o) => Date.now() - new Date(o.createdAt).getTime() < since * 864e5)
   const calc = useMemo(() => orders.map((o) => ({ o, ...orderProfit(d, o) })), [orders.length, d])

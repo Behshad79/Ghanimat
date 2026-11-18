@@ -6,7 +6,7 @@ import { toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, num, rel } from '@/shared/lib/fa'
 
-const SITE = 'ghanimat.example'
+const SITE = 'ghanimat.ir'
 /** پیش‌نمایش زندهٔ نتیجهٔ گوگل (موبایل و دسکتاپ) و کارت اشتراک‌گذاری (Open Graph) */
 export function SerpPreview() {
   const d = useDB(); const [pid, setPid] = useState(d.products[0].id); const p = d.products.find((x) => x.id === pid)!

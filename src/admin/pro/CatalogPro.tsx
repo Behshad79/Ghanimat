@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImagePlus, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react'
-import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
+import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle, copyText } from '@/shared/ui/base'
 import { Bars } from '@/shared/ui/charts'
-import { toast } from '@/shared/ui/overlay'
+import { Modal, toast } from '@/shared/ui/overlay'
+import { fileToImage } from '@/shared/lib/image'
 import { currentUser, mutate, useDB } from '@/shared/lib/store'
 import { fa, num } from '@/shared/lib/fa'
 import type { Product } from '@/shared/data/seed'
@@ -89,7 +90,7 @@ export function MediaLibrary() {
   const d = useDB(); const [who, setWho] = useState<'all' | 'mine' | 'others'>('all'); const [fs, setFs] = useState<'all' | 'noalt' | 'raw'>('all'); const me = currentUser()?.name ?? 'بهشاد'
   const by = (i: number) => (i % 3 === 1 ? 'نیما' : me)
   const P = (d.products as PX[]).filter((p) => p.image).filter((_, i) => who === 'all' || (who === 'mine' ? by(i) === me : by(i) !== me)).filter((p) => fs === 'all' || (fs === 'noalt' ? !p.alt : !p.webp))
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(false); const [up, setUp] = useState<string[] | null>(null); const [target, setTarget] = useState('')
   const run = async () => { setBusy(true); await new Promise((r) => setTimeout(r, 700)); mutate((x) => (x.products as PX[]).forEach((p) => { if (p.image) { p.webp = true; p.alt = p.alt || `${p.title}، عکس واقعی همین کالا در انبار غنیمت` } }), { action: 'اجرای پایپ‌لاین رسانه', target: `${P.length} تصویر` }); setBusy(false); toast('تصویرها به WebP تبدیل، در ۳ اندازه برش و Alt پیشنهادی ساخته شد.') }
   return (
     <div className="space-y-3">
@@ -98,10 +99,15 @@ export function MediaLibrary() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{P.map((p, i) => <Card key={p.id}><div className="flex gap-3"><img src={p.image} alt={p.alt ?? ''} className="size-24 rounded-xl object-cover" style={{ objectPosition: p.imagePos }} /><div className="min-w-0 flex-1 space-y-1 text-12"><p className="truncate font-bold">{p.en}</p><p>{p.webp ? <Badge tone="success">WebP · ۳ اندازه</Badge> : <Badge tone="warning">پردازش‌نشده</Badge>}</p>
         <Field label="متن Alt"><Input className="h-8 text-12" value={p.alt ?? ''} placeholder="Alt ندارد" onChange={(e) => mutate((x) => { (x.products.find((y) => y.id === p.id)! as PX).alt = e.target.value })} /></Field>
         <dl className="grid grid-cols-2 gap-x-2 text-11 text-t2"><dt>شناسهٔ فایل</dt><dd className="tnum text-left text-t1">{fa(270 + i)}</dd><dt>نام فایل</dt><dd className="ltr truncate text-left font-mono text-t1">{p.id}-500.webp</dd><dt>حجم</dt><dd className="tnum text-left text-t1">{fa(((p.id.charCodeAt(1) * 7) % 40 + 6) / 100)} مگابایت</dd><dt>بارگذاری توسط</dt><dd className="text-left text-t1">{by(i)}</dd></dl>
-        <div className="flex gap-1.5"><Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard?.writeText(new URL(p.image, location.href).href); toast('نشانی فایل کپی شد.') }}>کپی نشانی</Button><a href={p.image} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg">مشاهده در تب جدید</a></div>
+        <div className="flex gap-1.5"><Button size="sm" variant="ghost" onClick={() => { copyText(new URL(p.image, location.href).href); toast('نشانی فایل کپی شد.') }}>کپی نشانی</Button><a href={p.image} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg">مشاهده در تب جدید</a></div>
         <Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => mutate((x) => { (x.products.find((y) => y.id === p.id)! as PX).alt = `${p.title}، ${p.category}، عکس واقعی همین واحد` }, { action: 'ساخت Alt با AI', target: p.title })}>Alt با AI</Button></div></div></Card>)}
-        <Card><button className="flex h-full w-full flex-col items-center justify-center gap-2 py-6 text-12 text-t2" onClick={() => toast('در فرم کالا گام «تصاویر» آپلود کنید؛ همین پایپ‌لاین خودکار اجرا می‌شود.')}><ImagePlus size={22} />آپلود تصویر تازه</button></Card>
+        <Card><label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 py-6 text-12 text-t2 hover:text-brand"><ImagePlus size={22} />آپلود تصویر تازه<span className="text-11 text-t3">بعد از انتخاب، کالای مقصد را مشخص کنید</span><input type="file" accept="image/*" multiple className="sr-only" aria-label="آپلود تصویر تازه" onChange={async (e) => { const fl = [...(e.target.files ?? [])]; if (!fl.length) return; try { const imgs = await Promise.all(fl.slice(0, 10).map((x) => fileToImage(x))); setUp(imgs) } catch (er) { toast((er as Error).message, { tone: 'err' }) } e.target.value = '' }} /></label></Card>
       </div>
+    
+      {up && <Modal open onClose={() => setUp(null)} title={`افزودن ${fa(up.length)} تصویر به کالا`} footer={<><Button variant="primary" disabled={!target} onClick={() => { mutate((x) => { const p = x.products.find((y) => y.id === target)!; p.images = [...(p.images ?? [p.image].filter(Boolean)), ...up]; if (!p.image) p.image = up[0] }, { action: 'افزودن تصویر از کتابخانهٔ رسانه', target }); toast('تصویرها به گالری کالا اضافه شد؛ نسخهٔ WebP و Alt خودکار ساخته می‌شود.'); setUp(null); setTarget('') }}>افزودن به گالری</Button><Button variant="ghost" onClick={() => setUp(null)}>انصراف</Button></>}>
+        <div className="mb-3 flex flex-wrap gap-2">{up.map((src, n) => <img key={n} src={src} alt="" className="size-20 rounded-lg border border-line object-cover" />)}</div>
+        <Field label="کالای مقصد"><Select value={target} onChange={setTarget} placeholder="جست‌وجوی نام کالا…" options={d.products.map((p) => [p.id, p.title] as [string, string])} other={false} /></Field>
+      </Modal>}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Flame, Plus, Trash2, Zap } from 'lucide-react'
-import { Badge, Button, Card, cx, Field, Input, Select, Tabs, Toggle } from '@/shared/ui/base'
+import { Badge, Button, Card, cx, Field, Input, Select, Tabs, Toggle, copyText } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
 import { Bars } from '@/shared/ui/charts'
 import { DataTable } from '@/shared/ui/table'
@@ -46,7 +46,7 @@ export function Promotions() {
         <Card title="درآمد هر منبع"><Bars data={M.utm.map((u) => ({ label: `${u.source}/${u.medium}`, value: u.revenue }))} fmt={compactToman} /></Card>
         <DataTable name="کمپین‌ها" rows={M.utm} rowKey={(u) => u.id} empty={{ title: 'کمپینی ثبت نشده است.' }}
           cols={[{ key: 's', title: 'منبع / رسانه', render: (u) => <span className="ltr text-12">{u.source} / {u.medium}</span> }, { key: 'c', title: 'کمپین', render: (u) => <span className="ltr text-12">{u.campaign}</span> }, { key: 'k', title: 'کد تخفیف', render: (u) => u.code || '—' }, { key: 'sp', title: 'هزینه', align: 'left', render: (u) => compactToman(u.spend), sort: (u) => u.spend }, { key: 'o', title: 'سفارش', align: 'left', render: (u) => fa(u.orders), sort: (u) => u.orders }, { key: 'r', title: 'درآمد', align: 'left', render: (u) => compactToman(u.revenue), sort: (u) => u.revenue }, { key: 'roas', title: 'ROAS', align: 'left', render: (u) => (u.spend ? <b className={u.revenue / u.spend >= 10 ? 'text-success' : u.revenue / u.spend < 5 ? 'text-danger' : ''}>{fa((u.revenue / u.spend).toFixed(1))}×</b> : 'ارگانیک'), sort: (u) => (u.spend ? u.revenue / u.spend : 999) }, { key: 'cac', title: 'CAC', align: 'left', render: (u) => (u.spend ? compactToman(u.spend / Math.max(1, u.newCustomers)) : '—') }]}
-          actions={(u) => [{ label: 'ساخت لینک UTM', onClick: () => { navigator.clipboard?.writeText(`https://ghanimat.example/?utm_source=${u.source}&utm_medium=${u.medium}&utm_campaign=${u.campaign}`); toast('لینک UTM کپی شد.') } }]} />
+          actions={(u) => [{ label: 'ساخت لینک UTM', onClick: () => { copyText(`https://ghanimat.ir/?utm_source=${u.source}&utm_medium=${u.medium}&utm_campaign=${u.campaign}`); toast('لینک UTM کپی شد.') } }]} />
       </div>}
     </Page>
   )

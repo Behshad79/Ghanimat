@@ -68,7 +68,7 @@ export function Remote() {
             </Card>
             <Card title={<span className="flex items-center gap-2"><Smartphone size={15} />پیامک · خط {R.sms.line}</span>} actions={<Button size="sm" icon={<Send size={13} />} onClick={smsSend}>ارسال پیامک سفارش</Button>}>
               <div className="min-h-52 space-y-2 rounded-2xl bg-surface-2 p-3">{thread.length === 0 ? <p className="py-10 text-center text-12 text-t2">پیامک سفارش را بفرستید و با عدد پاسخ دهید.</p> : thread.map((m, i) => <div key={i} className={cx('max-w-[85%] rounded-2xl px-3 py-2 text-13 leading-6', m.me ? 'mr-auto bg-brand-solid text-white' : 'bg-white')}>{m.text}</div>)}</div>
-              <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (sms.trim()) smsReply() }}><Input className="flex-1" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="مثلاً ۱ یا «۵ ۱۲۳۴»" /><Button variant="primary">ارسال</Button></form>
+              <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (sms.trim()) smsReply() }}><Input className="flex-1" value={sms} onChange={(e) => setSms(e.target.value)} placeholder="مثلاً ۱ یا «۵ ۱۲۳۴»" /><Button variant="primary" disabled={!sms.trim()}>ارسال</Button></form>
               <p className="mt-2 text-11 text-t2">{SMS_MENU.map(([k, l]) => `${fa(k)}: ${l}`).join(' · ')}</p>
             </Card>
           </div>

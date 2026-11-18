@@ -71,7 +71,7 @@ export function StoreIdentity() {
         </Sec>
         <Card title="پیش‌نمایش در نتیجهٔ گوگل">
           <div className="rounded-2xl border border-line bg-white p-4 text-right text-[#202124]">
-            <p className="flex items-center gap-2 text-12"><img src={md.v.favicon} alt="" className="size-6 rounded-full border border-[#e6e8f0] object-contain p-0.5" /><span><b className="block text-[13px]">{id.v.short}</b><span className="ltr block text-[11px] text-[#4d5156]">https://ghanimat.example</span></span></p>
+            <p className="flex items-center gap-2 text-12"><img src={md.v.favicon} alt="" className="size-6 rounded-full border border-[#e6e8f0] object-contain p-0.5" /><span><b className="block text-[13px]">{id.v.short}</b><span className="ltr block text-[11px] text-[#4d5156]">https://ghanimat.ir</span></span></p>
             <p className="mt-2 text-[18px] leading-6 text-[#1a0dab]">{id.v.full} | {id.v.h1}</p>
             <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-[#4d5156]">{id.v.desc}</p>
           </div>

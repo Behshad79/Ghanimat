@@ -95,7 +95,7 @@ export function Warehouse() {
 
 // ───────── ارسال و لجستیک ─────────
 export function Shipping() {
-  const { d, rule } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('methods'); const [file, setFile] = useState(false)
+  const { d, rule } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('methods'); const [file, setFile] = useState(false); const [scan, setScan] = useState(false)
   const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, orderId: o.id })))
   const carriers = d.providers.filter((p) => p.family === 'carrier')
   const methods = [[`تحویل ${fa(rule('fast_delivery_hours'))} ساعته`, 'انبار تهران · محدودهٔ تهران و کرج · تا ساعت قطع سفارش', 185000], ['تحویل سریع در بازهٔ انتخابی', 'انبار تهران · تهران و کرج · برای فردا یا روزهای بعد', 185000], ['پست پیشتاز', 'هر دو انبار · سراسر کشور', 95000], ['تیپاکس', 'هر دو انبار · مراکز استان', 140000], ['باربری کالای سنگین', 'انبار تهران · کلاس سنگین', 450000], ['دریافت حضوری از شعبه', 'شعبهٔ مرکزی', 0]] as const
@@ -110,10 +110,11 @@ export function Shipping() {
       {tab === 'trips' && <DataTable name="سفرهای پیک" rows={ships.filter((s) => s.courier)} rowKey={(s) => s.id} onRow={(s) => nav(`/admin/orders/${s.orderId}`)} empty={{ title: 'هنوز سفری ثبت نشده است.', desc: 'با چسباندن لینک سفر در کارت مرسوله، سفر اینجا ثبت می‌شود.' }}
         cols={[{ key: 'c', title: 'کد سفر', render: (s) => <CopyId v={s.courier!.code} /> }, { key: 'n', title: 'پیک', render: (s) => <Cell a={s.courier!.name} b={`${s.courier!.vehicle} · ${s.courier!.plate}`} /> }, { key: 'o', title: 'مرسوله', render: (s) => <CopyId v={s.id} /> }, { key: 'cost', title: 'هزینه', align: 'left', render: (s) => <Money v={s.courier!.cost} />, sort: (s) => s.courier!.cost, text: (s) => s.courier!.cost }, { key: 's', title: 'وضعیت', render: (s) => <StatusBadge s={s.status} /> }]} />}
       {tab === 'track' && <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-4">{[['تکی', 'چسباندن یا اسکن کد در کارت مرسوله', () => nav('/admin/orders/GH-10479')], ['اسکن پشت‌سرهم', 'برچسب مرسوله، سپس بارکد پست', () => toast('حالت اسکن پشت‌سرهم: دوربین در نسخهٔ نمایشی در دسترس نیست.')], ['فایل باجه', 'بارگذاری Excel یا CSV و تطبیق خودکار', () => setFile(true)], ['عکس رسید', 'استخراج کدها از عکس (OCR)', () => setFile(true)]].map(([t, desc, fn]) => <button key={t as string} onClick={fn as () => void} className="rounded-lg border border-line bg-surface p-4 text-right hover:border-brand"><p className="text-13 font-semibold">{t as string}</p><p className="mt-1 text-12 text-t2">{desc as string}</p></button>)}</div>
+        <div className="grid gap-3 md:grid-cols-4">{[['تکی', 'چسباندن یا اسکن کد در کارت مرسوله', () => nav('/admin/orders/GH-10479')], ['اسکن پشت‌سرهم', 'برچسب مرسوله، سپس بارکد پست', () => setScan(true)], ['فایل باجه', 'بارگذاری Excel یا CSV و تطبیق خودکار', () => setFile(true)], ['عکس رسید', 'استخراج کدها از عکس (OCR)', () => setFile(true)]].map(([t, desc, fn]) => <button key={t as string} onClick={fn as () => void} className="rounded-lg border border-line bg-surface p-4 text-right hover:border-brand"><p className="text-13 font-semibold">{t as string}</p><p className="mt-1 text-12 text-t2">{desc as string}</p></button>)}</div>
         <DataTable name="مرسوله‌های پستی" rows={ships.filter((s) => /پست|تیپاکس|باربری/.test(s.method))} rowKey={(s) => s.id} onRow={(s) => nav(`/admin/orders/${s.orderId}`)} empty={{ title: 'مرسولهٔ پستی‌ای نیست.' }}
           cols={[{ key: 'id', title: 'مرسوله', render: (s) => <CopyId v={s.id} /> }, { key: 'w', title: 'انبار', render: (s) => WAREHOUSE[s.warehouse] }, { key: 'm', title: 'روش', render: (s) => s.method }, { key: 't', title: 'کد رهگیری', render: (s) => s.tracking ? <CopyId v={s.tracking} /> : <Badge tone="warning">ثبت نشده</Badge> }, { key: 's', title: 'وضعیت', render: (s) => <StatusBadge s={s.status} /> }, { key: 'sla', title: 'مهلت', render: (s) => <SlaChip at={s.sla} done={['ship.delivered', 'ship.cancelled'].includes(s.status)} /> }]}
-          bulk={(ids, clear) => <Button size="sm" icon={<Printer size={13} />} onClick={() => { nav(`/admin/print?ship=${ids[0]}&doc=manifest`); clear() }}>مانیفست تحویل {fa(ids.length)} مرسوله</Button>} /></div>}
+          bulk={(ids, clear) => <Button size="sm" icon={<Printer size={13} />} onClick={() => { nav(`/admin/print?ship=${ids[0]}&doc=manifest`); clear() }}>مانیفست تحویل {fa(ids.length)} مرسوله</Button>} />
+        {scan && <BatchScan onClose={() => setScan(false)} />}</div>}
       {tab === 'photos' && <DataTable name="بایگانی عکس ارسال" rows={ships.filter((x) => !['ship.cancelled'].includes(x.status))} rowKey={(x) => x.id} onRow={(x) => nav(`/admin/orders/${x.orderId}`)} search={(x) => `${x.id} ${x.orderId}`} empty={{ title: 'هنوز عکسی بایگانی نشده است.' }}
         cols={[{ key: 'id', title: 'مرسوله', render: (x) => <Cell pid={x.items[0]?.productId} a={<span className="ltr font-mono">{x.id}</span>} b={x.method} /> }, { key: 'st', title: 'وضعیت', render: (x) => <StatusBadge s={x.status} /> }, { key: 'ph', title: 'عکس پیش از ارسال', render: (x) => <PackPhotos orderId={x.orderId} shipId={x.id} readOnly /> , wrap: true }]} />}
       {tab === 'fast' && <FastCourier />}
@@ -239,4 +240,27 @@ function ShipCalc() {
   return <Card className="mt-3" title="ماشین‌حساب هزینهٔ ارسال"><div className="mb-3 flex flex-wrap gap-3"><Field label="وزن مرسوله (کیلوگرم)"><Input className="ltr w-28 text-left" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value.replace(/[^\d.]/g, ''))} /></Field><Field label="مبلغ سبد (تومان)"><Input className="ltr w-40 text-left" inputMode="numeric" value={cart} onChange={(e) => setCart(e.target.value.replace(/\D/g, ''))} /></Field></div>
     <ul className="divide-y divide-line text-13">{(d.entities.shipMethods ?? []).filter((m) => m.active).map((m) => { const max = Number(m.maxKg) || 0; const over = max > 0 && w > max; const fee = Number(m.price) + Math.max(0, Math.ceil(w - 1)) * (Number(m.perKg) || 0); const isFree = free > 0 && c >= free && Number(m.price) > 0; return <li key={String(m.id)} className="flex items-center justify-between gap-2 py-2"><span>{String(m.name).replace('{مدت_تحویل_سریع}', fa(d.rules[0].value))}<span className="block text-11 text-t2">{String(m.timeText ?? '').replace('{مدت_تحویل_سریع}', fa(d.rules[0].value))}</span></span>{over ? <span className="text-12 text-t3">نمایش داده نمی‌شود (بیش از {fa(max)} کیلو)</span> : isFree ? <span className="text-12 font-semibold text-success">رایگان <s className="font-normal text-t3">{toman(fee)}</s></span> : <b className="tnum">{fee ? toman(fee) : 'رایگان'}</b>}</li> })}</ul>
     <p className="mt-2 text-11 text-t2">آستانهٔ ارسال رایگان ({toman(free)}) از «قوانین کسب‌وکار» خوانده می‌شود.</p></Card>
+}
+
+/** اسکن پشت‌سرهم: اسکنر بارکد مثل صفحه‌کلید تایپ می‌کند؛ اول برچسب مرسوله، بعد بارکد پست. هر جفت فوراً الحاق می‌شود */
+function BatchScan({ onClose }: { onClose: () => void }) {
+  const d = useDB(); const [v, setV] = useState(''); const [cur, setCur] = useState<string | null>(null); const [log, setLog] = useState<{ ship: string; code?: string; ok: boolean; msg: string }[]>([])
+  const ships = d.orders.flatMap((o) => o.shipments.map((s) => ({ ...s, orderId: o.id })))
+  const take = (raw: string) => {
+    const t = raw.trim().replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).toUpperCase(); if (!t) return
+    const sh = ships.find((s) => s.id === t || s.id === t.replace(/^GH/, 'GH-'))
+    if (sh) { setCur(sh.id); setLog((l) => [{ ship: sh.id, ok: true, msg: sh.tracking ? `قبلاً کد ${sh.tracking} داشت؛ بارکد تازه جایگزین می‌شود` : 'منتظر بارکد پست…' }, ...l]); return }
+    if (!cur) { setLog((l) => [{ ship: '—', code: t, ok: false, msg: 'اول برچسب مرسوله را اسکن کنید.' }, ...l]); return }
+    if (!/^\d{10,26}$/.test(t)) { setLog((l) => [{ ship: cur, code: t, ok: false, msg: 'بارکد پست باید ۱۰ تا ۲۶ رقم باشد.' }, ...l]); return }
+    if (ships.some((s) => s.tracking === t && s.id !== cur)) { setLog((l) => [{ ship: cur, code: t, ok: false, msg: 'این کد رهگیری روی مرسولهٔ دیگری ثبت است.' }, ...l]); return }
+    mutate((x) => { const s = x.orders.flatMap((o) => o.shipments).find((y) => y.id === cur)!; s.tracking = t; s.trackingCarrier = 'پست'; if (['ship.packed', 'ship.picking', 'ship.pending'].includes(s.status)) s.status = 'ship.handed' }, { action: 'الحاق کد رهگیری با اسکن', target: cur, after: t })
+    setLog((l) => [{ ship: cur, code: t, ok: true, msg: 'الحاق شد و مرسوله «تحویل پست» شد.' }, ...l]); setCur(null)
+  }
+  const done = log.filter((x) => x.ok && x.code).length
+  return <Modal open onClose={onClose} wide title="اسکن پشت‌سرهم برچسب و بارکد پست" footer={<><Button variant="primary" onClick={onClose}>پایان ({fa(done)} الحاق)</Button></>}>
+    <p className="mb-3 text-12 text-t2">اسکنر بارکد را به کامپیوتر وصل کنید یا کد را تایپ کنید و Enter بزنید. ترتیب: <b>برچسب مرسوله</b> (مثلاً GH-10479-1) سپس <b>بارکد پست</b>. خطاها همان لحظه نشان داده می‌شود.</p>
+    <form onSubmit={(e) => { e.preventDefault(); take(v); setV('') }} className="flex gap-2"><Input autoFocus aria-label="ورودی اسکن" className="ltr flex-1 text-left font-mono" value={v} onChange={(e) => setV(e.target.value)} placeholder={cur ? `بارکد پست برای ${cur}` : 'برچسب مرسوله را اسکن کنید'} /><Button variant="primary" type="submit" disabled={!v.trim()}>ثبت</Button></form>
+    {cur && <p className="mt-2 rounded-lg bg-info-bg px-3 py-2 text-12 text-info">مرسولهٔ {cur} انتخاب شد؛ حالا بارکد پست را اسکن کنید.</p>}
+    <ul className="mt-3 max-h-72 divide-y divide-line overflow-y-auto rounded-lg border border-line text-12">{log.length === 0 ? <li className="p-3 text-t3">هنوز اسکنی انجام نشده است.</li> : log.map((x, i) => <li key={i} className={cx('flex items-center gap-2 px-3 py-2', x.ok ? '' : 'bg-danger-bg/40')}>{x.ok ? <Check size={13} className="text-success" /> : <X size={13} className="text-danger" />}<span className="ltr font-mono">{x.ship}</span>{x.code && <span className="ltr font-mono text-t2">{x.code}</span>}<span className="flex-1 text-t2">{x.msg}</span></li>)}</ul>
+  </Modal>
 }

@@ -23,7 +23,7 @@ export function ProductLabel({ p, u, size = '50x30', bg = 'white', qty }: { p: P
         </div>
         <div className="flex shrink-0 items-start gap-[0.6mm]">
           {u && <span className="grid place-items-center rounded-[0.6mm] bg-black font-bold text-white" style={{ width: small ? '3.6mm' : '4.4mm', height: small ? '3.6mm' : '4.4mm', fontSize: small ? '2.2mm' : '2.6mm' }}>{u.grade.replace('+', '')}</span>}
-          <QR value={`https://ghanimat.example/u/${code}`} size={small ? 30 : 38} className="block" />
+          <QR value={`https://ghanimat.ir/u/${code}`} size={small ? 30 : 38} className="block" />
         </div>
       </div>
       <div className="mt-auto"><Barcode value={code} height={small ? 22 : 30} module={1.4} className="block h-auto w-full" /></div>

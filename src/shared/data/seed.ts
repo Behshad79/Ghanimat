@@ -23,6 +23,7 @@ import { makeAxes, makeOptions } from './options'
 import { makeOrderEvents } from './orderEvents'
 import { makeContentQueue } from './contentQueue'
 import { makeIncoming } from './incoming'
+import { makeMerch } from './merch'
 import { makeBlog } from './blog'
 import { makeTraffic } from './traffic'
 import { makeStoreCfg } from './storeCfg'
@@ -211,7 +212,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), remote: makeRemote(), incoming: makeIncoming(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), remote: makeRemote(), incoming: makeIncoming(), merch: makeMerch(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [
@@ -266,7 +267,7 @@ const makeSeedBase = () => ({
   // اطلاعات فروشنده و انبارها: منبع همهٔ اسناد چاپی (فاکتور، برچسب پستی، کارت گارانتی). مقدارها فرضی‌اند و از «تنظیمات › فروشنده و انبارها» عوض می‌شوند.
   seller: {
     legalName: 'شرکت غنیمت تجارت نوین (سهامی خاص)', brand: 'غنیمت', nationalId: '14000000000', regNo: '600000', economicCode: '411100000000',
-    address: 'تهران، خیابان ولیعصر، خیابان نمونه، پلاک ۰، واحد ۰', postalCode: '1500000000', phone: '021-00000000', website: 'ghanimat.example',
+    address: 'تهران، خیابان ولیعصر، خیابان نمونه، پلاک ۰، واحد ۰', postalCode: '1500000000', phone: '021-00000000', website: 'ghanimat.ir',
     seal: '' as string, signature: '' as string, assumed: true,
   },
   warehouses: [
@@ -289,7 +290,7 @@ const makeSeedBase = () => ({
   newsletter: makeNewsletter(),
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [
-    { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.example/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
+    { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.ir/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
     { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹.', status: 'تحویل شد', at: ago(60 * 5) },
     { id: 'sm3', to: '09120000003', customerId: 'c3', kind: 'کد ورود', ref: '', text: 'کد ورود شما به غنیمت: 52817', status: 'ارسال‌نشده (خطای اپراتور)', at: ago(60 * 9) },
   ] as { id: string; to: string; customerId?: string; kind: string; ref: string; text: string; status: string; at: string }[],

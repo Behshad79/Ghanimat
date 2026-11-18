@@ -30,6 +30,8 @@ import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
 import { Partner } from './admin/partner/Partner'
+import { Insight } from './admin/insight/Insight'
+import { Merch } from './admin/merch/Merch'
 import { PartnersAdmin } from './admin/partner/PartnersAdmin'
 import { Messaging } from './admin/cx/Messaging'
 import { Calls } from './admin/cx/Calls'
@@ -64,6 +66,8 @@ export function App() {
               <Route path="catalog/unit/:id" element={<UnitDetail />} />
               <Route path="catalog/:id" element={<ProductDetail />} />
               <Route path="supply" element={<Supply />} />
+              <Route path="insight/:key" element={<Insight />} />
+              <Route path="merch" element={<Merch />} />
               <Route path="warehouse" element={<Warehouse />} />
               <Route path="shipping" element={<Shipping />} />
               <Route path="print" element={<PrintCenter />} />

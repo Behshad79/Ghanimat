@@ -27,7 +27,7 @@ export function Drawer({ open, onClose, title, children, footer, width = 480 }: 
   if (!open) return null
   return createPortal(
     <div className="anim-fade fixed inset-0 z-40 bg-[#10123d]/30" onMouseDown={onClose}>
-      <aside onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: width }} className="anim-slide absolute inset-y-0 left-0 flex w-full flex-col bg-surface shadow-float">
+      <aside role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: width }} className="anim-slide absolute inset-y-0 left-0 flex w-full flex-col bg-surface shadow-float">
         <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3"><div className="min-w-0 text-14 font-semibold">{title}</div><button aria-label="بستن" onClick={onClose} className="text-t3 hover:text-t1"><X size={18} /></button></header>
         <div className="flex-1 overflow-y-auto p-4">{children}</div>
         {footer && <footer className="flex gap-2 border-t border-line px-4 py-3">{footer}</footer>}

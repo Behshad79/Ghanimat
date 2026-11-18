@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Bot, Clock, Headphones, MessageSquare, Sparkles, Star, ThumbsDown, Users } from 'lucide-react'
 import { Badge, Card, cx, Tabs } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
@@ -12,7 +13,7 @@ import { ProductImg, useTab } from '../pages/_shared'
 
 /** سوابق و آمار گفتگوهای مشتری با دستیار AI و ویجت پشتیبانی */
 export function Conversations() {
-  const d = useDB(); const [tab, setTab] = useTab('ai'); const [open, setOpen] = useState<string | null>(null)
+  const d = useDB(); const [tab, setTab] = useTab('ai'); const [sp0] = useSearchParams(); const [open, setOpen] = useState<string | null>(sp0.get('open'))
   const A = d.journey.aiChats; const W = d.journey.widgetChats; const name = (id: string) => d.customers.find((c) => c.id === id)?.name ?? id
   const rate = (n: number, t: number) => (t ? (n / t) * 100 : 0)
   const intents = Object.entries(A.reduce<Record<string, number>>((m, a) => { m[a.intent] = (m[a.intent] ?? 0) + 1; return m }, {}))

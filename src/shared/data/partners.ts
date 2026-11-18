@@ -21,7 +21,7 @@ export type PartnerT = {
   reviews: { id: string; orderId: string; customer: string; rating: number; text: string; tags: string[]; at: string; reply?: string }[]
   penalties: { id: string; at: string; reason: string; amount: number; orderId?: string }[]
   metrics: { ontime: number; noStock: number; cancel: number; prepMin: number }; stockCheckedAt?: string
-  checklist: { t: string; done: boolean }[]; payouts: { id: string; at: string; amount: number; status: 'پرداخت شد' | 'در انتظار تأیید' | 'ردشده'; note?: string }[]
+  checklist: { t: string; done: boolean }[]; payouts: { id: string; at: string; amount: number; status: 'پرداخت شد' | 'در انتظار تأیید' | 'ردشده' | 'در انتظار واریز شعبه' | 'واریز شد'; note?: string }[]
 }
 
 const CHECK = ['قرارداد و ودیعه امضا شد', 'انبار بازدید و تأیید شد', 'کاربر پرتال و دسترسی‌ها ساخته شد', 'آموزش ثبت رهگیری و بسته‌بندی', 'محدودهٔ ارسال سریع و پیک تعیین شد', 'اولین محمولهٔ امانی تحویل شد', 'آزمون سفارش واقعی']

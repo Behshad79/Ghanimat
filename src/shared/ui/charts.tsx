@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useState, type ReactNode } from 'react'
 import { fa } from '../lib/fa'
 import { cx, EmptyState } from './base'
@@ -32,13 +33,17 @@ export function LineChart({ series, labels, h = 200, events }: { series: { name:
     </figure>
   )
 }
-export function Bars({ data, onPick, fmt = (n: number) => fa(n), color = 'var(--brand)' }: { data: { label: string; value: number; tone?: string }[]; onPick?: (label: string) => void; fmt?: (n: number) => ReactNode; color?: string }) {
+export function Bars({ data, onPick, fmt = (n: number) => fa(n), color = 'var(--brand)', title }: { data: { label: string; value: number; tone?: string }[]; onPick?: (label: string) => void; fmt?: (n: number) => ReactNode; color?: string; title?: string }) {
   const max = Math.max(...data.map((d) => d.value), 1)
+  // قانون: هر میله قابل کلیک است؛ اگر رفتار خاصی تعریف نشده، ریز موارد همان برچسب در صفحهٔ جزئیات باز می‌شود
+  const nav = useNavigate()
+  const drill = (label: string) => { if (onPick) return onPick(label); const here = window.location.hash.replace(/^#/, '') || window.location.pathname; if (/^\/(partner|simple)/.test(here) || here.startsWith('/admin/insight')) return; nav(`/admin/insight/${encodeURIComponent(title || label)}?from=${encodeURIComponent(here)}&q=${encodeURIComponent(label.replace(/[\d۰-۹٫,٪%]+.*$/, '').trim() || label)}`) }
+  const clickable = !!onPick || !(window.location.hash || window.location.pathname).replace(/^#/, '').match(/^\/(partner|simple)|^\/admin\/insight/)
   return (
     <ul className="space-y-2">
       {data.map((d) => (
         <li key={d.label}>
-          <button disabled={!onPick} onClick={() => onPick?.(d.label)} className="group block w-full text-right disabled:cursor-default">
+          <button disabled={!clickable} title={clickable && !onPick ? `ریز موارد «${d.label}»` : undefined} onClick={() => drill(d.label)} className="group block w-full text-right disabled:cursor-default">
             <div className="mb-1 flex justify-between text-12"><span className="text-t2 group-enabled:group-hover:text-brand">{d.label}</span><span className="tnum font-medium">{fmt(d.value)}</span></div>
             <div className="h-2 rounded-full bg-neutral-bg"><div className="bar-grow-x h-full rounded-full" style={{ width: `${(d.value / max) * 100}%`, background: d.tone ?? color }} /></div>
           </button>

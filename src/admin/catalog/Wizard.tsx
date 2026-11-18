@@ -14,6 +14,8 @@ import { ean13Check, isEan13 } from '@/shared/lib/barcode'
 import { compactToman, fa, num, pct, toman } from '@/shared/lib/fa'
 import type { Product, Unit, Pdp } from '@/shared/data/seed'
 import type { PartnerT } from '@/shared/data/partners'
+import { dealStatus, DEAL_LABEL, type Deal } from '@/shared/data/merch'
+import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
 import { EditableChoice, VariantEditor } from './Choices'
@@ -30,6 +32,7 @@ export type Draft = {
   weight: number; dims: string; shipClass: string; fastEligible: boolean; insurance: boolean; install: boolean
   warrantyType: string; warrantyMonths: number; warrantyTerms: string
   site: boolean; torob: boolean; metaTitle: string; metaDesc: string; slug: string; scheduledAt: string
+  places?: Record<string, 'pin' | 'excl'>; dealDraft?: Omit<Deal, 'id' | 'pid'>
 }
 const RATES: Record<string, number> = { تومان: 1, دلار: 61500, درهم: 16700, دینار: 47 }
 const STEPS = ['نوع و دسته', 'مشخصات', 'تصاویر و ویدیو', 'توضیحات', 'وضعیت و منبع', 'موجودی', 'قیمت و سود', 'ارسال و خدمات', 'گارانتی', 'کانال‌ها و سئو', 'بارکد و برچسب', 'مرور و انتشار']
@@ -109,6 +112,8 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
       if (!isNew) x.units.filter((u) => u.productId === pid && ['unit.published', 'unit.ready'].includes(u.status)).forEach((u) => { u.price = finalPrice; const r = f.units.find((q) => q.serial === u.serial); if (r) { u.color = r.color; u.shelf = r.shelf || u.shelf; u.warehouse = r.warehouse; u.grade = r.grade } })
       delete ((x as any).drafts ?? {})[draftKey]
       if (status === 'product.published') x.partnerQueue = x.partnerQueue.filter((q) => q.productId !== pid)
+      if (f.places) x.merch.placements.forEach((pl) => { pl.pins = pl.pins.filter((y) => y !== pid); pl.excl = pl.excl.filter((y) => y !== pid); if (f.places![pl.id] === 'pin') pl.pins.push(pid); if (f.places![pl.id] === 'excl') pl.excl.push(pid) })
+      if (f.dealDraft && !x.merch.deals.some((y) => y.pid === pid && y.start === f.dealDraft!.start)) x.merch.deals.unshift({ ...f.dealDraft, id: `dl${Date.now().toString(36)}`, pid, regular: f.dealDraft.regular || finalPrice })
       if (partner && status === 'product.pending') {
         const n = f.mode === 'qty' ? f.qtyTehran + f.qtyMahabad : f.units.length
         x.partnerQueue = x.partnerQueue.filter((q) => q.productId !== pid)
@@ -223,19 +228,20 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
       <Field label="پوشش داده نمی‌شود"><Textarea rows={2} value={f.pdp.notCovered} onChange={(e) => set({ pdp: { ...f.pdp, notCovered: e.target.value } })} /></Field>
       <div className="sm:col-span-2"><Field label="شرایط" help="روی کارت گارانتی چاپی خلاصه می‌شود."><Textarea rows={3} value={f.warrantyTerms} onChange={(e) => set({ warrantyTerms: e.target.value })} /></Field></div></div>,
     9: <div className="space-y-4">
+      <WherePlaced f={f} set={set} />
       <div className="flex flex-wrap gap-6 rounded-xl bg-surface-2 p-3 text-13"><Toggle on={!!f.pdp.featured} onChange={(v) => set({ pdp: { ...f.pdp, featured: v } })} text="کالای ویژه (در بخش «پیشنهاد غنیمت»)" /><Toggle on={f.pdp.showQA ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showQA: v } })} text="نمایش پرسش و پاسخ" /><Toggle on={f.pdp.showReviews ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showReviews: v } })} text="نمایش دیدگاه‌ها" /></div>
       <div className="flex flex-wrap gap-6"><label className="flex items-center gap-2 text-13"><Toggle on={f.site} label="سایت" onChange={(v) => set({ site: v })} />نمایش در سایت</label><label className="flex items-center gap-2 text-13"><Toggle on={f.torob} label="ترب" onChange={(v) => set({ torob: v })} />نمایش در ترب</label></div>
       <Field label="عنوان متا" help={`${fa((f.metaTitle || `خرید ${f.title} | غنیمت`).length)} نویسه؛ هدف زیر ۶۰`}><Input value={f.metaTitle} onChange={(e) => set({ metaTitle: e.target.value })} placeholder={`خرید ${f.title || '…'} | غنیمت`} /></Field>
       <Field label="توضیح متا" help={`${fa(f.metaDesc.length)} نویسه؛ هدف ۱۲۰ تا ۱۶۰`}><Textarea rows={2} value={f.metaDesc} onChange={(e) => set({ metaDesc: e.target.value })} /></Field>
       <Field label="نشانی صفحه"><Input className="ltr text-left font-mono" value={f.slug} onChange={(e) => set({ slug: e.target.value.replace(/\s+/g, '-').toLowerCase() })} placeholder={(f.en || 'product').toLowerCase().replace(/\s+/g, '-')} /></Field>
-      <div className="rounded-lg border border-line p-3"><p className="ltr text-left text-11 text-success">ghanimat.example › product › {f.slug || (f.en || 'product').toLowerCase().replace(/\s+/g, '-')}</p><p className="text-14 text-brand">{f.metaTitle || `خرید ${f.title || '…'} | غنیمت`}</p><p className="text-12 text-t2">{f.metaDesc || f.short || 'توضیح متا هنوز نوشته نشده است.'}</p></div>
+      <div className="rounded-lg border border-line p-3"><p className="ltr text-left text-11 text-success">ghanimat.ir › product › {f.slug || (f.en || 'product').toLowerCase().replace(/\s+/g, '-')}</p><p className="text-14 text-brand">{f.metaTitle || `خرید ${f.title || '…'} | غنیمت`}</p><p className="text-12 text-t2">{f.metaDesc || f.short || 'توضیح متا هنوز نوشته نشده است.'}</p></div>
       <Field label="کد سفارشی Head (اختیاری)" help="برای اسکیمای اختصاصی یا متاتگ تأیید؛ بدون نیاز معمولاً خالی بماند."><textarea rows={4} value={f.pdp.headCode ?? ''} onChange={(e) => set({ pdp: { ...f.pdp, headCode: e.target.value } })} spellCheck={false} placeholder={'<script type="application/ld+json">…</script>'} className="ltr w-full rounded-xl border border-line bg-[#10123d] p-3 text-left font-mono text-12 text-[#cfd3ff] outline-none focus:border-brand" /></Field>
       <ul className="grid gap-2 text-12 sm:grid-cols-2">{['اسکیمای محصول با قیمت، موجودی و امتیاز برای گوگل', 'افزودن به sitemap.xml پس از انتشار', 'پیش‌نمایش اشتراک در شبکه‌های اجتماعی (OG)', 'تگ canonical و متاتگ‌های ضروری'].map((t) => <li key={t} className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-success-bg text-success"><Check size={11} /></span>{t}<span className="text-t3">(خودکار)</span></li>)}</ul></div>,
     10: <div className="grid gap-5 lg:grid-cols-2">
       <div className="space-y-3"><p className="text-13">کد داخلی: <b className="ltr font-mono">{f.code || `${d.codeFormat.product}… (هنگام ثبت)`}</b></p>
         {f.code && <Barcode value={f.code} className="h-20 w-full max-w-sm rounded border border-line" />}
         {f.ean && isEan13(f.ean) && <><p className="text-13">بارکد کارخانه</p><Barcode value={f.ean} type="ean13" className="h-20 w-full max-w-sm rounded border border-line" /></>}
-        {f.code && <div className="flex items-center gap-3"><QR value={`https://ghanimat.example/p/${f.code}`} size={88} /><p className="text-12 text-t2">QR به صفحهٔ کالا در پنل و سایت می‌رود. اسکن هر کد در جست‌وجو، دریافت، جمع‌آوری، بسته‌بندی و مرجوعی همین کالا را باز می‌کند.</p></div>}
+        {f.code && <div className="flex items-center gap-3"><QR value={`https://ghanimat.ir/p/${f.code}`} size={88} /><p className="text-12 text-t2">QR به صفحهٔ کالا در پنل و سایت می‌رود. اسکن هر کد در جست‌وجو، دریافت، جمع‌آوری، بسته‌بندی و مرجوعی همین کالا را باز می‌کند.</p></div>}
         {!f.code && <Button icon={<RefreshCw size={14} />} onClick={() => set({ code: takeCode('product') })}>ساخت کد داخلی الان</Button>}</div>
       <div><p className="mb-2 text-13 font-medium">پیش‌نمایش برچسب کالا (۵۰×۳۰)</p><div className="inline-block rounded-lg bg-neutral-bg p-4"><ProductLabel p={{ ...blank(), id: 'x', image: '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: '', mode: f.mode, priceNew: 0, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, seller: '', code: f.code || 'GH-P-000000', model: f.model } as unknown as Product} qty={f.mode === 'qty' ? f.qtyTehran + f.qtyMahabad : undefined} /></div><p className="mt-2 text-11 text-t2">برچسب واحدها پس از ثبت از فهرست واحدها یا صفحهٔ هر واحد چاپ می‌شود (تکی یا گروهی).</p></div></div>,
     11: <div className="grid gap-5 xl:grid-cols-[1fr_auto]">
@@ -279,3 +285,24 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
   )
 }
 export { STEPS as WIZARD_STEPS, Star }
+
+/** کجای سایت نمایش داده شود: برای هر جایگاه ویترین «خودکار، سنجاق یا پنهان» و زمان‌بندی غنی‌آف؛ هم هنگام ساخت کالا، هم بعداً */
+function WherePlaced({ f, set }: { f: Draft; set: (p: Partial<Draft>) => void }) {
+  const d = useDB(); const [deal, setDeal] = useState<Partial<Deal> | null>(null)
+  const cur = f.places ?? Object.fromEntries(d.merch.placements.flatMap((pl): [string, 'pin' | 'excl'][] => (f.id && pl.pins.includes(f.id) ? [[pl.id, 'pin']] : f.id && pl.excl.includes(f.id) ? [[pl.id, 'excl']] : []))) as Record<string, 'pin' | 'excl'>
+  const setPl = (id: string, v: 'auto' | 'pin' | 'excl') => { const n = { ...cur }; if (v === 'auto') delete n[id]; else n[id] = v; set({ places: n }) }
+  const deals = f.id ? d.merch.deals.filter((x) => x.pid === f.id && ['live', 'scheduled', 'paused'].includes(dealStatus(x))) : []
+  return <div className="space-y-3 rounded-xl border border-line p-3">
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-13 font-semibold">کجای سایت نمایش داده شود</p><span className="text-11 text-t2">«خودکار» یعنی طبق قانون همان بخش؛ «سنجاق» یعنی حتماً و اول؛ «پنهان» یعنی هرگز</span></div>
+    <div className="grid gap-2 sm:grid-cols-2">{d.merch.placements.filter((pl) => pl.id !== 'amazing').map((pl) => { const v = cur[pl.id] ?? 'auto'; return (
+      <div key={pl.id} className="flex items-center justify-between gap-2 rounded-lg bg-neutral-bg/60 px-2.5 py-1.5 text-12"><span className="min-w-0"><b className="block truncate">{pl.name}</b><span className="text-11 text-t3">{pl.page}</span></span>
+        <Segmented size="sm" value={v} onChange={(x) => setPl(pl.id, x)} options={[['auto', 'خودکار'], ['pin', 'سنجاق'], ['excl', 'پنهان']]} /></div>) })}</div>
+    <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-12"><b>غنی‌آف:</b>
+      {deals.map((x) => <span key={x.id} className="flex items-center gap-1.5 rounded-full border border-line px-2 py-1"><Badge tone={DEAL_LABEL[dealStatus(x)][1]}>{DEAL_LABEL[dealStatus(x)][0]}</Badge>{toman(x.price)} · {new Date(x.start).toLocaleString('fa-IR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}<button className="text-brand" onClick={() => setDeal(x)}>ویرایش</button></span>)}
+      {f.dealDraft && <span className="flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-tint/40 px-2 py-1">با ذخیره ثبت می‌شود: {toman(f.dealDraft.price)} از {new Date(f.dealDraft.start).toLocaleString('fa-IR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}<button className="text-danger" onClick={() => set({ dealDraft: undefined })}>حذف</button></span>}
+      {!deals.length && !f.dealDraft && <span className="text-t2">ندارد</span>}
+      <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setDeal({ pid: f.id, regular: Math.round(f.price * (1 - f.discount / 100)) || f.priceNew })}>زمان‌بندی غنی‌آف</Button>
+    </div>
+    {deal && (f.id ? <DealForm init={deal} lockPid onClose={() => setDeal(null)} /> : <DealForm init={deal} lockPid onClose={() => setDeal(null)} onDraft={(x) => set({ dealDraft: { ...x, sold: 0 } as any })} />)}
+  </div>
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
-import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs } from '@/shared/ui/base'
+import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
@@ -273,6 +273,6 @@ function ProductLinks({ pid }: { pid: string }) {
   return <span className="no-print flex items-center gap-1">
     <Button size="sm" variant="ghost" onClick={() => nav(`/admin/catalog/${pid}`)}>صفحهٔ کالا</Button>
     <a href={url} target="_blank" rel="noopener noreferrer" aria-label="مشاهدهٔ کالا در سایت" title="مشاهده در سایت" className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand"><ExternalLink size={14} /></a>
-    <button aria-label="کپی لینک کالا در سایت" title="کپی لینک سایت برای ارسال به مشتری" className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand" onClick={() => { navigator.clipboard?.writeText(url).catch(() => {}); toast('لینک صفحهٔ کالا کپی شد.') }}><Link2 size={14} /></button>
+    <button aria-label="کپی لینک کالا در سایت" title="کپی لینک سایت برای ارسال به مشتری" className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-neutral-bg hover:text-brand" onClick={() => { copyText(url); toast('لینک صفحهٔ کالا کپی شد.') }}><Link2 size={14} /></button>
   </span>
 }

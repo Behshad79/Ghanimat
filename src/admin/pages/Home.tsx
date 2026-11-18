@@ -52,19 +52,19 @@ export function Home() {
       <div className="space-y-4">
         <WelcomeHero items={[
           { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', icon: ShoppingBag, urgent: true },
-          { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns', icon: CircleDollarSign, urgent: true },
+          { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns&st=pay.unknown&fl=تراکنش‌های نامشخص', icon: CircleDollarSign, urgent: true },
           { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc', icon: Package },
-          { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns', icon: RotateCcw },
-          { label: 'تیکت باز', count: cnt('support'), to: '/admin/support', icon: Headphones },
-          { label: 'دیدگاه و پرسش منتظر تأیید', count: cnt('reviews') + d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length + d.blog.comments.filter((c) => c.status === 'pending').length, to: '/admin/reviews', icon: MessageSquare },
-          { label: 'مقالهٔ منتظر انتشار', count: d.blog.posts.filter((p) => p.status === 'در بازبینی').length, to: '/admin/blog', icon: FileText },
+          { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns?st=return.inspecting|warranty.pending&fl=مرجوعی و گارانتی منتظر بررسی', icon: RotateCcw },
+          { label: 'تیکت باز', count: cnt('support'), to: '/admin/support?fl=تیکت‌های باز', icon: Headphones },
+          { label: 'دیدگاه و پرسش منتظر تأیید', count: cnt('reviews') + d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length + d.blog.comments.filter((c) => c.status === 'pending').length, to: '/admin/reviews?tab=pending&fl=دیدگاه‌ها و پرسش‌های منتظر تأیید', icon: MessageSquare },
+          { label: 'مقالهٔ منتظر انتشار', count: d.blog.posts.filter((p) => p.status === 'در بازبینی').length, to: '/admin/blog?tab=posts&st=در بازبینی&fl=مقاله‌های منتظر انتشار', icon: FileText },
           { label: 'کالای شریک منتظر تأیید', count: d.partnerQueue.length, to: '/admin/catalog?tab=partner', icon: Store },
           { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals', icon: CheckCheck },
         ]} />
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note={`هدف روزانه: ${compactToman(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 0))}`} />
-          <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit" />
-          <KPI icon={<Package size={17} />} label="تعداد سفارش" num={today.length} fmt={(n) => fa(Math.round(n))} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
+          <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit&p=today" />
+          <KPI icon={<Package size={17} />} label="تعداد سفارش امروز" num={today.length} fmt={(n) => fa(Math.round(n))} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
           <KPI icon={<Percent size={17} />} label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" />
           <KPI icon={<Receipt size={17} />} label="AOV" hint="aov" num={gmv / Math.max(1, today.length)} fmt={compactToman} delta={3.9} to="/admin/analytics" />
           <KPI icon={<Boxes size={17} />} label="موجودی قابل فروش" num={published.length} fmt={(n) => `${fa(Math.round(n))} واحد`} note={`ارزش: ${compactToman(published.reduce((a, u) => a + u.price, 0))}`} to="/admin/warehouse?tab=stock" />

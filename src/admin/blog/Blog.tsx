@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Check, Clapperboard, Eye, FileText, MessageSquare, 
 import { Badge, Button, Card, cx, Field, Input, Select, Tabs, Textarea, Toggle } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
-import { Drawer, toast } from '@/shared/ui/overlay'
+import { Drawer, Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fileToImage } from '@/shared/lib/image'
@@ -16,7 +16,7 @@ const ST: Record<Post['status'], 'success' | 'info' | 'warning' | 'neutral'> = {
 
 /** وبلاگ و ویدیوها: بخش اختصاصی برای مقاله‌ها، ویدیوها، چیدمان صفحهٔ وبلاگ، دیدگاه‌ها و دسته‌ها */
 export function Blog() {
-  const d = useDB(); const B = d.blog; const nav = useNavigate(); const [tab, setTab] = useTab('posts'); const [vid, setVid] = useState<Video | null>(null); const [nc, setNc] = useState(''); const [reply, setReply] = useState<Record<string, string>>({})
+  const d = useDB(); const B = d.blog; const nav = useNavigate(); const [tab, setTab] = useTab('posts'); const [vid, setVid] = useState<Video | null>(null); const [nc, setNc] = useState(''); const [mv, setMv] = useState<{ k: 'cats' | 'videoCats'; c: string; to: string } | null>(null); const [reply, setReply] = useState<Record<string, string>>({})
   const newPost = () => { const id = `ar${Date.now().toString(36)}`; mutate((x) => { x.blog.posts.unshift({ id, title: '', slug: id, excerpt: '', cover: '', category: x.blog.cats[0], tags: [], author: 'تحریریهٔ غنیمت', status: 'پیش‌نویس', publishAt: new Date().toISOString(), views: 0, helpful: [0, 0], seo: { title: '', desc: '' }, related: [], blocks: [{ id: `h${id}`, t: 'h2', v: '' }, { id: `p${id}`, t: 'p', html: '' }] }) }, { action: 'ساخت مقالهٔ تازه', target: id }); nav(`/admin/blog/${id}`) }
   const pending = B.comments.filter((c) => c.status === 'pending')
   const L = B.landing
@@ -68,7 +68,7 @@ export function Blog() {
             <Input className="h-8 min-w-48 flex-1" placeholder="پاسخ تحریریه…" value={reply[c.id] ?? ''} onChange={(e) => setReply({ ...reply, [c.id]: e.target.value })} /><Button size="sm" disabled={!reply[c.id]?.trim()} onClick={() => { mutate((x) => { const y = x.blog.comments.find((z) => z.id === c.id)!; y.reply = reply[c.id]; y.status = 'approved' }, { action: 'پاسخ به دیدگاه وبلاگ', target: c.id }); setReply({ ...reply, [c.id]: '' }); toast('پاسخ منتشر شد.') }}>ثبت پاسخ</Button></div>
         </li>) })}</ul></Card>}
       {tab === 'cats' && <div className="grid gap-4 lg:grid-cols-2">{([['cats', 'دسته‌های مقاله', B.cats, (c: string) => B.posts.filter((p) => p.category === c).length], ['videoCats', 'دسته‌های ویدیو', B.videoCats, (c: string) => B.videos.filter((v) => v.cat === c).length]] as const).map(([k, t, list, cnt]) => <Card key={k} title={t}>
-        <ul className="space-y-1.5">{list.map((c, i) => <li key={c} className="flex items-center gap-2"><Input value={c} onChange={(e) => mutate((x) => { const old = x.blog[k][i]; x.blog[k][i] = e.target.value; if (k === 'cats') x.blog.posts.forEach((p) => { if (p.category === old) p.category = e.target.value }); else x.blog.videos.forEach((v) => { if (v.cat === old) v.cat = e.target.value }) })} /><Badge dot={false}>{fa(cnt(c))}</Badge><button type="button" aria-label={`حذف ${c}`} onClick={() => { if (cnt(c)) return toast('این دسته محتوا دارد؛ اول آن‌ها را جابه‌جا کنید.', { tone: 'err' }); mutate((x) => { x.blog[k].splice(i, 1) }, { action: 'حذف دسته', target: c }) }} className="text-t2 hover:text-danger"><Trash2 size={14} /></button></li>)}</ul>
+        <ul className="space-y-1.5">{list.map((c, i) => <li key={c} className="flex items-center gap-2"><Input value={c} onChange={(e) => mutate((x) => { const old = x.blog[k][i]; x.blog[k][i] = e.target.value; if (k === 'cats') x.blog.posts.forEach((p) => { if (p.category === old) p.category = e.target.value }); else x.blog.videos.forEach((v) => { if (v.cat === old) v.cat = e.target.value }) })} /><Badge dot={false}>{fa(cnt(c))}</Badge><button type="button" aria-label={`حذف ${c}`} onClick={() => { if (cnt(c)) return setMv({ k, c, to: list.find((y) => y !== c) ?? '' }); mutate((x) => { x.blog[k].splice(i, 1) }, { action: 'حذف دسته', target: c }) }} className="text-t2 hover:text-danger"><Trash2 size={14} /></button></li>)}</ul>
         <div className="mt-3 flex gap-2"><Input placeholder="دستهٔ تازه" value={nc} onChange={(e) => setNc(e.target.value)} /><Button onClick={() => { if (!nc.trim()) return; mutate((x) => { x.blog[k].push(nc.trim()) }, { action: 'افزودن دسته', target: nc }); setNc('') }}>افزودن</Button></div>
       </Card>)}</div>}
       <Drawer open={!!vid} onClose={() => setVid(null)} width={520} title={vid && B.videos.some((v) => v.id === vid.id) ? 'ویرایش ویدیو' : 'ویدیوی تازه'} footer={<div className="flex w-full gap-2"><Button variant="primary" onClick={() => { if (!vid?.title.trim()) return toast('عنوان را بنویسید.', { tone: 'err' }); mutate((x) => { const i = x.blog.videos.findIndex((v) => v.id === vid.id); if (i >= 0) x.blog.videos[i] = vid; else x.blog.videos.unshift(vid) }, { action: 'ذخیرهٔ ویدیو', target: vid.title }); setVid(null); toast('ویدیو ذخیره شد.') }}>ذخیره</Button>{vid && B.videos.some((v) => v.id === vid.id) && <Button variant="danger" className="mr-auto" onClick={() => { mutate((x) => { x.blog.videos = x.blog.videos.filter((v) => v.id !== vid.id) }, { action: 'حذف ویدیو', target: vid.title }); setVid(null) }}>حذف</Button>}</div>}>
@@ -83,6 +83,10 @@ export function Blog() {
           <p className={cx('text-11 text-t2')}>ویدیوی دارای کالا در صفحهٔ همان کالا هم نمایش داده می‌شود و در ویرایشگر مقاله با بلوک «ویدیو» قابل درج است.</p>
         </div>}
       </Drawer>
+      {mv && <Modal open onClose={() => setMv(null)} title={`حذف دستهٔ «${mv.c}»`} footer={<><Button variant="danger" disabled={!mv.to} onClick={() => { mutate((x) => { if (mv.k === 'cats') x.blog.posts.forEach((p) => { if (p.category === mv.c) p.category = mv.to }); else x.blog.videos.forEach((v) => { if (v.cat === mv.c) v.cat = mv.to }); x.blog[mv.k] = x.blog[mv.k].filter((y) => y !== mv.c) }, { action: 'انتقال محتوا و حذف دسته', target: mv.c, after: mv.to }); toast(`محتوای «${mv.c}» به «${mv.to}» منتقل و دسته حذف شد.`); setMv(null) }}>انتقال و حذف</Button><Button variant="ghost" onClick={() => setMv(null)}>انصراف</Button></>}>
+        <p className="mb-3 text-13 text-t2">این دسته {fa(mv.k === 'cats' ? B.posts.filter((p) => p.category === mv.c).length : B.videos.filter((v) => v.cat === mv.c).length)} محتوا دارد. پیش از حذف، آن‌ها به کدام دسته بروند؟</p>
+        <Field label="انتقال به"><Select value={mv.to} onChange={(v) => setMv({ ...mv, to: v })} options={B[mv.k].filter((y) => y !== mv.c)} other={false} /></Field>
+      </Modal>}
     </Page>
   )
 }

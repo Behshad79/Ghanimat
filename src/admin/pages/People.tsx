@@ -14,7 +14,7 @@ import { Play, Send, Sparkles, Star } from 'lucide-react'
 import { AIButton, AITag, Avatar, Badge, Button, Card, CopyId, cx, EmptyState, Field, Input, Masked, Progress, Row, StatusBadge, Tabs, Textarea } from '@/shared/ui/base'
 import { Modal } from '@/shared/ui/overlay'
 import { Page, Timeline } from '@/shared/ui/page'
-import { DataTable } from '@/shared/ui/table'
+import { DataTable, PresetBar } from '@/shared/ui/table'
 import { confirm, Drawer, Hint, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { EntityManager } from '@/shared/ui/entity'
@@ -23,7 +23,7 @@ import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { Cell, Money, ProductImg, SlaChip, useLookup, useTab } from './_shared'
 
 export function Customers() {
-  const { d } = useLookup(); const nav = useNavigate(); const [sp, setSp] = useSearchParams(); const [tab, setTab] = useTab('list'); const [amt, setAmt] = useState(''); const [imp, setImp] = useState<string | null>(null)
+  const { d } = useLookup(); const nav = useNavigate(); const [sp, setSp] = useSearchParams(); const [doc, setDoc] = useState<string | null>(null); const [tab, setTab] = useTab('list'); const [amt, setAmt] = useState(''); const [imp, setImp] = useState<string | null>(null)
   const c = d.customers.find((x) => x.id === sp.get('c'))
   const close = () => { const n = new URLSearchParams(sp); n.delete('c'); setSp(n) }
   const charge = async () => { const n = Number(amt.replace(/\D/g, '')); if (!c || !n) return; if (!(await confirm({ title: `شارژ کیف پول ${c.name}؟`, body: <>{toman(n)} به کیف پول اضافه می‌شود. این تعدیل در دفتر کیف پول و لاگ ممیزی ثبت می‌شود.</>, confirm: `شارژ ${toman(n)}` }))) return; mutate((x) => { x.customers.find((y) => y.id === c.id)!.wallet += n }, { action: 'شارژ کیف پول', target: c.name, after: toman(n) }); setAmt(''); toast(`${toman(n)} به کیف پول ${c.name} واریز شد.`) }
@@ -45,7 +45,7 @@ export function Customers() {
           const checks: [string, boolean][] = [['شناسهٔ ملی ۱۱ رقمی است', /^\d{11}$/.test(nid)], ['کد اقتصادی با شناسهٔ ملی مطابقت دارد', !!eco && (eco === nid || eco.length === 12)], ['شمارهٔ ثبت وارد شده', !!L.regNo], ['نشانی مطابق روزنامهٔ رسمی', !!L.address], ['آگهی روزنامهٔ رسمی بارگذاری شده', L.docs !== false], ['اطلاعات بانکی شرکت (برای بازگشت وجه)', !!L.iban || true]]
           return <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">بررسی خودکار اطلاعات</p><ul className="space-y-1 text-12">{checks.map(([k, ok]) => <li key={k} className={ok ? 'text-success' : 'text-danger'}>{ok ? '✓' : '✗'} {k}</li>)}</ul></div>
-            <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">مدارک ارسالی</p><ul className="space-y-1 text-12">{['آگهی-روزنامه-رسمی.pdf', 'کارت-شناسایی-نماینده.jpg', 'معرفی‌نامهٔ نماینده.pdf', ...((L.extraDocs ?? []) as string[])].map((f) => <li key={f} className="flex items-center justify-between"><span className="ltr">{f}</span><button className="text-brand" onClick={() => toast(`پیش‌نمایش «${f}» در نسخهٔ واقعی از فضای ذخیره‌سازی باز می‌شود.`)}>مشاهده</button></li>)}</ul><div className="mt-2"><OtherUpload label="افزودن مدرک دیگر" onFile={(fl, t) => { mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.extraDocs = [...(l.extraDocs ?? []), `${t} (${fl.name})`] }, { action: 'افزودن مدرک حقوقی', target: c.name, after: t }); toast(`«${t}» به مدارک اضافه شد.`) }} /></div><p className="mt-2 text-11 text-t2">تا زمان تأیید، فاکتور سفارش‌های حقوقی موقت صادر می‌شود. زمان بررسی: تا ۲ روز کاری.</p></div>
+            <div className="rounded-xl border border-line p-3"><p className="mb-2 text-12 font-semibold">مدارک ارسالی</p><ul className="space-y-1 text-12">{['آگهی-روزنامه-رسمی.pdf', 'کارت-شناسایی-نماینده.jpg', 'معرفی‌نامهٔ نماینده.pdf', ...((L.extraDocs ?? []) as string[])].map((f) => <li key={f} className="flex items-center justify-between"><span className="ltr">{f}</span><button className="text-brand" onClick={() => setDoc(f)}>مشاهده</button></li>)}</ul><div className="mt-2"><OtherUpload label="افزودن مدرک دیگر" onFile={(fl, t) => { mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.extraDocs = [...(l.extraDocs ?? []), `${t} (${fl.name})`] }, { action: 'افزودن مدرک حقوقی', target: c.name, after: t }); toast(`«${t}» به مدارک اضافه شد.`) }} /></div><p className="mt-2 text-11 text-t2">تا زمان تأیید، فاکتور سفارش‌های حقوقی موقت صادر می‌شود. زمان بررسی: تا ۲ روز کاری.</p></div>
           </div> })()}
         <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" disabled={c.legal!.verified} onClick={() => { mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = true; l.status = 'verified' }, { action: 'تأیید حساب حقوقی', target: c.name }); toast('حساب حقوقی تأیید شد و مشتری با پیامک خبردار شد.') }}>تأیید حساب حقوقی</Button><Button onClick={async () => { if (!(await askReason({ kind: 'legal', ref: c.id, status: 'نیاز به تکمیل', title: `چه چیزی باید تکمیل شود؟ (${c.name})` }))) return; mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = false; l.status = 'needs_docs' }, { action: 'درخواست تکمیل مدارک حقوقی', target: c.name }); toast('درخواست بارگذاری دوبارهٔ روزنامهٔ رسمی برای مشتری ارسال شد.') }}>درخواست تکمیل مدارک</Button><Button variant="danger" onClick={async () => { if (!(await askReason({ kind: 'legal', ref: c.id, status: 'ردشده', title: `علت رد حساب حقوقی ${c.name}` }))) return; mutate((x) => { const l: any = x.customers.find((y) => y.id === c.id)!.legal; l.verified = false; l.status = 'rejected' }, { action: 'رد حساب حقوقی', target: c.name }); toast('حساب حقوقی رد شد و علت برای مشتری نمایش داده می‌شود.') }}>رد با ذکر علت</Button></div>
         <div className="mt-4"><ReasonLog kind="legal" refId={c.id} /></div>
@@ -79,6 +79,7 @@ export function Customers() {
           <div className="flex flex-wrap gap-2"><Button onClick={() => { const code = `GIFT-${c.id.toUpperCase()}${Date.now().toString(36).slice(-3).toUpperCase()}`; mutate((x) => { x.codes.unshift({ id: code, type: 'مبلغی', value: '۵۰۰٬۰۰۰ تومان', used: 0, limit: 1, active: true, cond: `فقط ${c.name}` }) }, { action: 'اهدای کد تخفیف', target: c.name, after: code }); toast(`کد ${code} ساخته و برای ${c.name} پیامک شد.`) }}>اهدای کد تخفیف</Button><Button onClick={() => { mutate(() => {}, { action: 'ورود به‌جای مشتری (فقط مشاهده)', target: c.name }); setImp(c.id) }}>ورود به‌جای مشتری</Button><Button variant="primary" onClick={() => nav(`/admin/customers/${c.id}`)}>پروندهٔ کامل مشتری</Button><Button variant="danger" onClick={async () => { if (await confirm({ title: `مسدودسازی ${c.name}؟`, body: 'مشتری دیگر نمی‌تواند سفارش ثبت کند. سفارش‌های باز او ادامه پیدا می‌کنند. بعداً قابل برداشتن است.', confirm: 'مسدودسازی مشتری', danger: true })) { mutate((x) => { x.customers.find((y) => y.id === c.id)!.blocked = true }, { action: 'مسدودسازی مشتری', target: c.name }); toast('مشتری مسدود شد.') } }}>مسدودسازی</Button></div>
         </div>}
       </Drawer>
+      {doc && <DocPreview name={doc} owner={c?.name ?? ''} onClose={() => setDoc(null)} />}
     </Page>
   )
 }
@@ -94,6 +95,7 @@ export function Support() {
   const draft = () => { if (!t) return; const o = d.orders.find((x) => x.id === t.orderId); setText(`سلام ${customer(t.customerId).name.split(' ')[0]} عزیز. دربارهٔ سفارش ${t.orderId}${o ? ` (${o.shipments[0]?.method ?? ''})` : ''} بررسی کردم. ${/پیک/.test(t.subject) ? 'پیک در مسیر است و حدود ۱۴ دقیقهٔ دیگر می‌رسد.' : /شارژر|نبود/.test(t.subject) ? 'حق با شماست؛ کابل باید داخل جعبه می‌بود. همین امروز رایگان برای شما ارسال می‌کنیم.' : 'نتیجه را تا یک ساعت دیگر اطلاع می‌دهم.'}`) }
   return (
     <Page title="پشتیبانی" module="support" sub="صندوق ورودی یکپارچه: چت سایت، تیکت، تماس و پیام‌رسان‌ها" empty={{ title: 'صندوق ورودی خالی است.', desc: 'پیام‌های مشتریان از همهٔ کانال‌ها اینجا می‌آید.' }}>
+      {sp.get('fl') && <PresetBar label={sp.get('fl')!} shown={listed.length} total={d.tickets.length} noun="تیکت" onAll={() => { setTf('all'); setSp({}) }} />}
       <SupportCsat />
       {!t ? <Card><EmptyState title="همهٔ گفت‌وگوها پاسخ داده شده است." desc="پیام تازه که برسد، کارشناس کشیک طبق زنجیرهٔ کانال‌ها خبردار می‌شود." /></Card> : (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
@@ -120,7 +122,7 @@ export function Support() {
 }
 
 export function Reviews() {
-  const { d, customer, product, rule } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('pending'); const [zoom, setZoom] = useState<{ rid: string; mid: string } | null>(null)
+  const { d, customer, product, rule } = useLookup(); const nav = useNavigate(); const [rsp, setRsp] = useSearchParams(); const [tab, setTab] = useTab('pending'); const [zoom, setZoom] = useState<{ rid: string; mid: string } | null>(null)
   // خریدار یا فقط بازدیدکننده: سفارشی از همین مشتری که همین کالا را داشته
   const buyOrder = (r: (typeof d.reviews)[number]) => d.orders.filter((o) => o.customerId === r.customerId && o.shipments.some((s) => s.items.some((i) => i.productId === r.productId))).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
   const rows = d.reviews.filter((r) => (tab === 'reported' ? (d.reviewMeta[r.id]?.reports.length ?? 0) > 0 : tab === 'pending' ? r.status === 'review.pending' : tab === 'media' ? r.media?.length : tab === 'buyers' ? !!buyOrder(r) : tab === 'visitors' ? !buyOrder(r) : true))
@@ -130,6 +132,7 @@ export function Reviews() {
   return (
     <Page title="دیدگاه‌ها و پرسش‌ها" module="reviews" sub={`هدیهٔ دیدگاه ${toman(rule('review_gift'))} پس از پایان مهلت مرجوعی؛ هدیهٔ عکس جدا محاسبه می‌شود.`} empty={{ title: 'هنوز دیدگاهی ثبت نشده است.', desc: 'دیدگاه‌ها و عکس‌های خریداران پیش از نمایش در سایت اینجا تأیید می‌شوند.' }}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'pending', label: 'منتظر تأیید', count: d.reviews.filter((r) => r.status === 'review.pending').length }, { id: 'media', label: 'دارای عکس یا ویدیو', count: d.reviews.filter((r) => r.media?.length).length }, { id: 'buyers', label: 'خریداران', count: d.reviews.filter((r) => buyOrder(r)).length }, { id: 'visitors', label: 'غیرخریدار', count: d.reviews.filter((r) => !buyOrder(r)).length }, { id: 'reported', label: 'گزارش‌شده', count: d.reviews.filter((r) => (d.reviewMeta[r.id]?.reports.length ?? 0) > 0).length }, { id: 'all', label: 'همه', count: d.reviews.length }, { id: 'amazon', label: 'نظرات آمازون', count: Object.values(d.extReviews ?? {}).flat().length }, { id: 'questions', label: 'پرسش و پاسخ', count: d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length }]} />}>
+      {rsp.get('fl') && <PresetBar label={rsp.get('fl')!} shown={rows.length} total={d.reviews.length} noun="دیدگاه" onAll={() => { setRsp({}); setTab('all') }} />}
       {tab === 'amazon' ? <AmazonTab /> : tab === 'questions' ? <QuestionsTab /> : rows.length === 0 ? <Card><EmptyState title="موردی در این بخش نیست." desc="همهٔ دیدگاه‌ها بررسی شده‌اند." /></Card> : (
         <div className="stagger grid gap-4 xl:grid-cols-2">{rows.map((r) => (
           <Card key={r.id} title={<span className="flex items-center gap-2"><ProductImg pid={r.productId} size={36} /><button className="text-right hover:text-brand" onClick={() => nav(`/admin/catalog/${r.productId}`)}>{product(r.productId).title}</button></span>} actions={<StatusBadge s={r.status} />}>
@@ -139,7 +142,7 @@ export function Reviews() {
             <ReviewMetaBlock rid={r.id} />
             {r.media?.length > 0 && <div className="mt-3"><p className="mb-1.5 text-11 font-medium text-t2">رسانه‌های خریدار · هرکدام جدا تأیید می‌شود</p><ul className="flex flex-wrap gap-2">{r.media.map((m) => (
               <li key={m.id} className="w-28">
-                <button onClick={() => setZoom({ rid: r.id, mid: m.id })} className={cx('relative block aspect-square w-full overflow-hidden rounded-lg border-2', m.status === 'approved' ? 'border-success' : m.status === 'rejected' ? 'border-danger opacity-60' : 'border-line')}>
+                <button aria-label="بزرگ‌نمایی رسانهٔ دیدگاه" onClick={() => setZoom({ rid: r.id, mid: m.id })} className={cx('relative block aspect-square w-full overflow-hidden rounded-lg border-2', m.status === 'approved' ? 'border-success' : m.status === 'rejected' ? 'border-danger opacity-60' : 'border-line')}>
                   <img src={m.src} alt="عکس خریدار" className="size-full object-cover" />
                   {m.type === 'video' && <span className="absolute inset-0 grid place-items-center bg-black/30 text-white"><Play size={22} /></span>}
                   {m.flag && <span className="absolute inset-x-0 top-0 bg-danger-solid px-1 text-[10px] text-white">{m.flag}</span>}
@@ -163,4 +166,17 @@ function AmazonTab() {
   if (!all.length) return <Card><EmptyState title="هنوز نظر آمازونی اضافه نشده است." desc="در فرم کالا، گام «توضیحات»، لینک آمازون را بگذارید و نظرها را انتخاب کنید." /></Card>
   return <div className="space-y-4">{all.map(([pid, list]) => <Card key={pid} title={<span className="flex items-center gap-2"><ProductImg pid={pid} size={32} /><button className="text-right hover:text-brand" onClick={() => nav(`/admin/catalog/${pid}`)}>{d.products.find((p) => p.id === pid)?.title}</button></span>} actions={<Badge dot={false}>نظرات آمازون</Badge>}>
     <ul className="space-y-2">{list.map((r) => <li key={r.id} className={cx('rounded-xl border border-line p-3 text-13', !r.show && 'opacity-50')}><p className="flex items-center gap-2 text-12"><b className="ltr">{r.author}</b><span>{'★'.repeat(r.rating)}</span><span className="text-t3">{r.country}</span><span className="mr-auto"><Toggle on={r.show} label="نمایش در صفحهٔ کالا" onChange={(v) => mutate((x) => { x.extReviews[pid].find((y) => y.id === r.id)!.show = v }, { action: v ? 'نمایش نظر آمازون' : 'پنهان‌کردن نظر آمازون', target: pid })} /></span></p><p className="mt-1">{r.textFa}</p></li>)}</ul></Card>)}</div>
+}
+
+/** پیش‌نمایش مدرک بارگذاری‌شده: تصویر یا صفحهٔ PDF، مشخصات فایل، بارگیری و درخواست بارگذاری دوباره */
+function DocPreview({ name, owner, onClose }: { name: string; owner: string; onClose: () => void }) {
+  const img = /\.(jpe?g|png|webp)$/i.test(name); const size = 180 + (name.length * 37) % 900
+  const at = new Date(Date.now() - ((name.length * 7) % 9 + 1) * 864e5)
+  const svg = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="420" height="560"><rect width="420" height="560" fill="#fff"/><rect x="30" y="30" width="360" height="40" rx="6" fill="#eef0ff"/><text x="390" y="57" font-family="Tahoma" font-size="16" text-anchor="end" fill="#10123d">${name.replace(/\.[a-z]+$/i, '').replace(/-/g, ' ')}</text>${Array.from({ length: 14 }, (_, i) => `<rect x="${i % 3 ? 60 : 30}" y="${100 + i * 30}" width="${i % 4 ? 330 : 240}" height="10" rx="5" fill="#e5e7eb"/>`).join('')}<circle cx="320" cy="500" r="34" fill="none" stroke="#0000ff" stroke-width="3" opacity=".5"/></svg>`)}`
+  return <Modal open onClose={onClose} title={name} footer={<><a href={svg} download={name.replace(/\.[a-z]+$/i, '.svg')} className="inline-flex h-9 items-center rounded-lg bg-brand-solid px-4 text-13 font-medium text-white">بارگیری</a><Button onClick={() => { mutate((x) => { notify('درخواست بارگذاری دوبارهٔ مدرک', `${owner}: ${name}`, '/admin/customers', 'مشتری', 'info'); void x }, { action: 'درخواست بارگذاری دوبارهٔ مدرک', target: name }); toast(`پیامک درخواست بارگذاری دوبارهٔ «${name}» برای ${owner} رفت.`); onClose() }}>درخواست بارگذاری دوباره</Button><Button variant="ghost" onClick={onClose}>بستن</Button></>}>
+    <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
+      <div className="overflow-hidden rounded-xl border border-line bg-neutral-bg">{img ? <div className="grid aspect-[3/2] place-items-center text-12 text-t2"><img src={svg} alt={`پیش‌نمایش ${name}`} className="max-h-80" /></div> : <img src={svg} alt={`پیش‌نمایش ${name}`} className="mx-auto max-h-96" />}</div>
+      <dl className="space-y-2 text-12"><div><dt className="text-t3">نوع</dt><dd>{img ? 'تصویر' : 'PDF'}</dd></div><div><dt className="text-t3">حجم</dt><dd>{fa(size)} کیلوبایت</dd></div><div><dt className="text-t3">بارگذاری</dt><dd>{at.toLocaleDateString('fa-IR')} · {owner}</dd></div><div><dt className="text-t3">بررسی خودکار</dt><dd className="text-success">خوانا، بدون برش</dd></div></dl>
+    </div>
+  </Modal>
 }

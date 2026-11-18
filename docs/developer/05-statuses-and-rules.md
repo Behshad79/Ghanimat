@@ -80,6 +80,8 @@
 | `return.approved_deducted` | تأیید با کسر هزینهٔ ارسال | `success` |
 | `return.cancelled` | لغو توسط مشتری | `neutral` |
 | `return.expired` | مهلت ارسال تمام شد | `danger` |
+| `return.pickup_scheduled` | پیک غنیمت در راه دریافت | `purple` |
+| `return.sent_back` | کالا به مشتری بازگردانده شد | `neutral` |
 
 ### `warranty`
 
@@ -93,6 +95,10 @@
 | `warranty.approved` | تأیید شد، منتظر ارسال کالا | `info` |
 | `warranty.in_transit` | کالا در راه غنیمت | `purple` |
 | `warranty.refunded` | مبلغ بازگشت داده شد | `success` |
+| `warranty.received` | دریافت شد، در حال عیب‌یابی | `purple` |
+| `warranty.external` | نزد مرکز خدمات شرکت | `purple` |
+| `warranty.ready` | آمادهٔ ارسال به مشتری | `info` |
+| `warranty.shipping_back` | در راه مشتری | `info` |
 
 ### `ticket`
 

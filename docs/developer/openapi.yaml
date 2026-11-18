@@ -1493,6 +1493,12 @@ components:
         "dest": {"type": "string"}
         "createdAt": {"type": "string", "format": "date-time"}
         "deadline": {"type": "string", "format": "date-time"}
+        "method": {"type": "string"}
+        "tracking": {"type": "string"}
+        "receipt": {"type": "object"}
+        "events": {"type": "array", "items": {}}
+        "photos": {"type": "array", "items": {}}
+        "courierName": {"type": "string"}
     reviews:
       type: object
       properties:
@@ -1650,3 +1656,10 @@ components:
         "issue": {"type": "string"}
         "owner": {"type": "string"}
         "deadline": {"type": "string", "format": "date-time"}
+        "method": {"type": "string"}
+        "diagnosis": {"type": "string"}
+        "resolution": {"type": "string"}
+        "receipt": {"type": "object"}
+        "events": {"type": "array", "items": {}}
+        "orderId": {"type": "string"}
+        "back": {"type": "object"}

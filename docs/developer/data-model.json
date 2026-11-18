@@ -373,6 +373,24 @@
   ],
   "deadline": [
    "date-time"
+  ],
+  "method": [
+   "string"
+  ],
+  "tracking": [
+   "string"
+  ],
+  "receipt": [
+   "object"
+  ],
+  "events": [
+   "array"
+  ],
+  "photos": [
+   "array"
+  ],
+  "courierName": [
+   "string"
   ]
  },
  "warranties": {
@@ -405,6 +423,27 @@
   ],
   "deadline": [
    "date-time"
+  ],
+  "method": [
+   "string"
+  ],
+  "diagnosis": [
+   "string"
+  ],
+  "resolution": [
+   "string"
+  ],
+  "receipt": [
+   "object"
+  ],
+  "events": [
+   "array"
+  ],
+  "orderId": [
+   "string"
+  ],
+  "back": [
+   "object"
   ]
  },
  "txns": {

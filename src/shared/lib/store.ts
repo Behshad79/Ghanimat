@@ -4,8 +4,8 @@ import { BASE_ROLES, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v46'
-const S_KEY = 'ghanimat-demo-session-v1'
+const DB_KEY = 'ghanimat-demo-db-v47'
+const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* فقط در حافظه */ } }
@@ -60,9 +60,9 @@ export type Session = {
 }
 const defaults: Session = { userId: null, viewAs: null, theme: 'light', density: 'normal', collapsed: false, hints: 'hover', askAI: true, google: true, level: 'معمولی', viewState: 'normal', simulate: 'success', scope: 'all', revealed: [], pinned: ['orders', 'warehouse'] }
 // تم پیش‌فرض از ترجیح سیستم‌عامل خوانده می‌شود؛ از لحظه‌ای که کاربر تم را عوض کند، انتخاب او منبع حقیقت است.
-const systemTheme = (): Session['theme'] => { try { return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' } catch { return 'light' } }
 const stored = read<Session>(S_KEY)
-let session: Session = { ...defaults, theme: systemTheme(), ...(stored ?? {}), viewState: 'normal' }
+/** تم پیش‌فرض همیشه روشن است و از تم سیستم پیروی نمی‌کند؛ تیره فقط با انتخاب کاربر */
+let session: Session = { ...defaults, ...(stored ?? {}), viewState: 'normal' }
 const sSubs = new Set<() => void>()
 const subS = (f: () => void) => { sSubs.add(f); return () => sSubs.delete(f) }
 export const getSession = () => session

@@ -6,10 +6,10 @@ const pages=['/admin','/admin/live','/admin/orders','/admin/orders/GH-10481','/a
 (async()=>{const b=await chromium.launch();const fails={};let checked=0;
 for(const os of ['light','dark'])for(const theme of ['light','dark']){
  const c=await b.newContext({viewport:{width:1440,height:900},colorScheme:os});const p=await c.newPage();
- await p.goto(B+'/login');await p.evaluate((t)=>{localStorage.clear();localStorage.setItem('ghanimat-demo-session-v1',JSON.stringify({userId:'u1',theme:t}))},theme);
+ await p.goto(B+'/login');await p.evaluate((t)=>{localStorage.clear();localStorage.setItem('ghanimat-demo-session-v2',JSON.stringify({userId:'u1',theme:t}))},theme);
  for(const r of pages){
-  if(r==='/simple')await p.evaluate(()=>{const k='ghanimat-demo-session-v1';const o=JSON.parse(localStorage.getItem(k));o.userId='u3';localStorage.setItem(k,JSON.stringify(o))});
-  if(r==='/partner')await p.evaluate(()=>{const k='ghanimat-demo-session-v1';const o=JSON.parse(localStorage.getItem(k));o.userId='u4';localStorage.setItem(k,JSON.stringify(o))});
+  if(r==='/simple')await p.evaluate(()=>{const k='ghanimat-demo-session-v2';const o=JSON.parse(localStorage.getItem(k));o.userId='u3';localStorage.setItem(k,JSON.stringify(o))});
+  if(r==='/partner')await p.evaluate(()=>{const k='ghanimat-demo-session-v2';const o=JSON.parse(localStorage.getItem(k));o.userId='u4';localStorage.setItem(k,JSON.stringify(o))});
   await p.goto(B+r);await p.reload();await p.waitForTimeout(350);
   const res=await p.evaluate(()=>{
    const cv=document.createElement('canvas');cv.width=cv.height=1;const cx=cv.getContext('2d',{willReadFrequently:true});const cache={};

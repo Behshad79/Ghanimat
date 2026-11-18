@@ -83,6 +83,8 @@
 | `/admin/shipping` | ارسال و لجستیک | سفارش و ارسال | `Shipping` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات | ![](../screens/admin-shipping.jpg) |
 | `/admin/print` | چاپ و خروجی | سفارش و ارسال | `PrintCenter` · `src/admin/print/PrintCenter.tsx` | مدیر کل، مدیر عملیات، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-print.jpg) |
 | `/admin/returns` | مرجوعی و گارانتی | سفارش و ارسال | `Returns` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات، کارشناس پشتیبانی، کارشناس مالی | ![](../screens/admin-returns.jpg) |
+| `/admin/returns/w/:id` | — | — | `WarrantyCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-w-id.jpg) |
+| `/admin/returns/:id` | — | — | `ReturnCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-id.jpg) |
 | `/admin/customers` | مشتریان | مشتری و پشتیبانی | `Customers` · `src/admin/pages/People.tsx` | مدیر کل، کارشناس پشتیبانی | ![](../screens/admin-customers.jpg) |
 | `/admin/customers/:id` | — | — | `Customer360` · `src/admin/customer/Customer360.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-customers-id.jpg) |
 | `/admin/support` | پشتیبانی | مشتری و پشتیبانی | `Support` · `src/admin/pages/People.tsx` | مدیر کل، کارشناس پشتیبانی | ![](../screens/admin-support.jpg) |

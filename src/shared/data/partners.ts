@@ -28,7 +28,7 @@ const CHECK = ['قرارداد و ودیعه امضا شد', 'انبار باز�
 
 export function makePartners(): PartnerT[] {
   return [
-    { id: 'mahabad', name: 'شعبهٔ مهاباد', city: 'مهاباد', owner: 'کاک هیوا', userId: 'u4', phone: '0914-000-0004', warehouse: 'mahabad', address: 'مهاباد، خیابان جمهوری، پاساژ نمونه', status: 'فعال', color: '#0e9f6e', since: ago(420),
+    { id: 'mahabad', name: 'شعبهٔ مهاباد', city: 'مهاباد', owner: 'یاسین', userId: 'u4', phone: '0914-000-0004', warehouse: 'mahabad', address: 'مهاباد، خیابان جمهوری، پاساژ نمونه', status: 'فعال', color: '#0e9f6e', since: ago(420),
       contract: { hqCommission: 9, platformFee: 12, sharedSplit: 50, settleDays: 7, noStockPenalty: 1500000, deposit: 800000000, returnsBy: 'صاحب سرمایه', minMargin: 6 },
       fast: { on: true, cities: 'مهاباد، بوکان، میاندوآب', hours: 3, fee: 90000, cutoff: '17:00', capacity: 25, courier: 'پیک خود شعبه' },
       services: { pickup: true, test: true, ownProducts: true, storeSales: true },

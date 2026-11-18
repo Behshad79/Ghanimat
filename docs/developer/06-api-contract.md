@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (259 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (265 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -240,15 +240,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| اصلاح موجودی طبق سایت شریک | [75](../../src/admin/pages/Ops.tsx#L75) |
-| بازنشستگی ارائه‌دهنده | [139](../../src/admin/pages/Ops.tsx#L139) |
-| تست اتصال | [148](../../src/admin/pages/Ops.tsx#L148) |
-| تغییر پیش‌فرض | [149](../../src/admin/pages/Ops.tsx#L149) |
-| فعال‌سازی ارائه‌دهنده | [150](../../src/admin/pages/Ops.tsx#L150) |
-| افزودن ارائه‌دهنده | [155](../../src/admin/pages/Ops.tsx#L155) |
-| توقف موقت ارائه‌دهنده | [159](../../src/admin/pages/Ops.tsx#L159) |
-| الحاق کد رهگیری با اسکن | [256](../../src/admin/pages/Ops.tsx#L256) |
-| ثبت کد رهگیری از فایل باجه | [284](../../src/admin/pages/Ops.tsx#L284) |
+| اصلاح موجودی طبق سایت شریک | [76](../../src/admin/pages/Ops.tsx#L76) |
+| بازنشستگی ارائه‌دهنده | [140](../../src/admin/pages/Ops.tsx#L140) |
+| تست اتصال | [149](../../src/admin/pages/Ops.tsx#L149) |
+| تغییر پیش‌فرض | [150](../../src/admin/pages/Ops.tsx#L150) |
+| فعال‌سازی ارائه‌دهنده | [151](../../src/admin/pages/Ops.tsx#L151) |
+| افزودن ارائه‌دهنده | [156](../../src/admin/pages/Ops.tsx#L156) |
+| توقف موقت ارائه‌دهنده | [160](../../src/admin/pages/Ops.tsx#L160) |
+| الحاق کد رهگیری با اسکن | [243](../../src/admin/pages/Ops.tsx#L243) |
+| ثبت کد رهگیری از فایل باجه | [271](../../src/admin/pages/Ops.tsx#L271) |
 ### `src/admin/pages/Orders.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -404,6 +404,16 @@
 | ذخیرهٔ متای کالا | [24](../../src/admin/pro/SeoPro.tsx#L24) |
 | ذخیرهٔ اسکیما و ایندکس | [60](../../src/admin/pro/SeoPro.tsx#L60) |
 | ساخت صفحهٔ فرود سئو | [88](../../src/admin/pro/SeoPro.tsx#L88) |
+### `src/admin/returns/Case.tsx` — ماژول `returns`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| سرنوشت واحد مرجوعی | [189](../../src/admin/returns/Case.tsx#L189) |
+| تأیید بازگشت وجه | [217](../../src/admin/returns/Case.tsx#L217) |
+| رزرو واحد جایگزین گارانتی | [280](../../src/admin/returns/Case.tsx#L280) |
+| دریافت واحد مرجوعی | [329](../../src/admin/returns/Case.tsx#L329) |
+| بازگشت وجه | [355](../../src/admin/returns/Case.tsx#L355) |
+| بازگشت واحد به مشتری | [379](../../src/admin/returns/Case.tsx#L379) |
 ### `src/admin/settings/FeedsApi.tsx` — ماژول `settings`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -498,11 +508,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت مرسوله | [234](../../src/shared/data/seed.ts#L234) |
-| پیش‌نویس پاسخ تیکت | [235](../../src/shared/data/seed.ts#L235) |
-| درخواست بازگشت وجه | [236](../../src/shared/data/seed.ts#L236) |
-| مشاهدهٔ دادهٔ حساس | [237](../../src/shared/data/seed.ts#L237) |
-| تغییر موجودی | [238](../../src/shared/data/seed.ts#L238) |
+| تغییر وضعیت مرسوله | [245](../../src/shared/data/seed.ts#L245) |
+| پیش‌نویس پاسخ تیکت | [246](../../src/shared/data/seed.ts#L246) |
+| درخواست بازگشت وجه | [247](../../src/shared/data/seed.ts#L247) |
+| مشاهدهٔ دادهٔ حساس | [248](../../src/shared/data/seed.ts#L248) |
+| تغییر موجودی | [249](../../src/shared/data/seed.ts#L249) |
 ### `src/shared/lib/store.ts` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

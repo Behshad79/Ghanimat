@@ -115,6 +115,16 @@
   "admin-returns.jpg"
  ],
  [
+  "/admin/returns/w/:id",
+  "/admin/returns/w/GR-1843",
+  "admin-returns-w-id.jpg"
+ ],
+ [
+  "/admin/returns/:id",
+  "/admin/returns/RT-840552",
+  "admin-returns-id.jpg"
+ ],
+ [
   "/admin/customers",
   "/admin/customers",
   "admin-customers.jpg"

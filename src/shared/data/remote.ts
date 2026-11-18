@@ -5,7 +5,7 @@ export const SMS_MENU: [string, string][] = [['1', 'تأیید و شروع آم�
 
 export function makeRemote() {
   return {
-    telegram: { on: true, bot: '@GhanimatOpsBot', token: 'تنظیم‌شده', lastSeen: ago(1), chats: [{ name: 'بهشاد', chatId: '81423301', role: 'مدیر کل', on: true }, { name: 'گروه عملیات تهران', chatId: '-1002281123', role: 'گروه', on: true }, { name: 'کاک هیوا (شعبهٔ مهاباد)', chatId: '76611290', role: 'شریک', on: true }] },
+    telegram: { on: true, bot: '@GhanimatOpsBot', token: 'تنظیم‌شده', lastSeen: ago(1), chats: [{ name: 'بهشاد', chatId: '81423301', role: 'مدیر کل', on: true }, { name: 'گروه عملیات تهران', chatId: '-1002281123', role: 'گروه', on: true }, { name: 'یاسین (شعبهٔ مهاباد)', chatId: '76611290', role: 'شریک', on: true }] },
     sms: { on: true, line: '3000 4412', pin: '1234', lastSeen: ago(4), allowed: [{ name: 'بهشاد', phone: '09000000001', on: true }, { name: 'سارا', phone: '09000000002', on: false }] },
     events: { newOrder: true, fastOnly: false, slaWarn: true, payFail: true, noStock: true, returns: false, dailySummary: true },
     log: [

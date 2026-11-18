@@ -230,7 +230,7 @@ const makeSeedBase = () => ({
     { id: 'u1', name: 'بهشاد', role: 'super', phone: '09000000001', status: 'آنلاین', twoFA: true },
     { id: 'u2', name: 'نیما', role: 'ops', phone: '09000000002', status: 'آنلاین', twoFA: true },
     { id: 'u3', name: 'آرش', role: 'simple', phone: '09000000003', status: 'آنلاین', twoFA: false },
-    { id: 'u4', name: 'کاک هیوا', role: 'partner', phone: '09000000004', status: 'آفلاین', twoFA: false },
+    { id: 'u4', name: 'یاسین', role: 'partner', phone: '09000000004', status: 'آفلاین', twoFA: false },
     { id: 'u5', name: 'سارا', role: 'support', phone: '09000000005', status: 'آنلاین', twoFA: true },
     { id: 'u6', name: 'مریم', role: 'finance', phone: '09000000006', status: 'استراحت', twoFA: true },
     { id: 'u7', name: 'پویا', role: 'growth', phone: '09000000007', status: 'آنلاین', twoFA: true },
@@ -246,7 +246,7 @@ const makeSeedBase = () => ({
     { at: ago(31), who: 'دستیار غنیمت', action: 'پیش‌نویس پاسخ تیکت', target: 'TK-482044', before: '-', after: 'پذیرفته شد', ai: true },
     { at: ago(55), who: 'مریم', action: 'درخواست بازگشت وجه', target: 'RT-300398', before: '-', after: '۳۸٬۵۰۰٬۰۰۰ تومان', ai: false },
     { at: ago(60 * 3), who: 'بهشاد', action: 'مشاهدهٔ دادهٔ حساس', target: 'شمارهٔ موبایل c1', before: '-', after: '-', ai: false },
-    { at: ago(60 * 5), who: 'کاک هیوا', action: 'تغییر موجودی', target: 'Kindle Paperwhite / انبار مهاباد', before: '۹', after: '۷', ai: false },
+    { at: ago(60 * 5), who: 'یاسین', action: 'تغییر موجودی', target: 'Kindle Paperwhite / انبار مهاباد', before: '۹', after: '۷', ai: false },
   ],
   alerts: [
     { id: 'al1', cat: 'مالی', tone: 'danger', title: 'تارا پاسخ نمی‌دهد', body: 'درگاه اقساطی تارا خودکار از صفحهٔ پرداخت پنهان شد. پرداخت‌ها از سایر درگاه‌ها ادامه دارد.', to: '/admin/finance?tab=gateways', at: ago(9), read: false },
@@ -283,7 +283,7 @@ const makeSeedBase = () => ({
   },
   warehouses: [
     { id: 'tehran', name: 'انبار تهران', owner: 'غنیمت', province: 'تهران', city: 'تهران', district: 'منطقهٔ نمونه', street: 'خیابان اصلی نمونه', alley: 'کوچهٔ نمونه', plaque: '۰', postalCode: '1500000001', phone: '021-00000001', manager: 'نیما', services: 'تحویل سریع و ارسال پستی', assumed: true },
-    { id: 'mahabad', name: 'انبار مهاباد', owner: 'شریک انبار مهاباد', province: 'آذربایجان غربی', city: 'مهاباد', district: 'محلهٔ نمونه', street: 'خیابان اصلی نمونه', alley: 'کوچهٔ نمونه', plaque: '۰', postalCode: '5900000001', phone: '044-00000001', manager: 'کاک هیوا', services: 'فقط ارسال پستی', assumed: true },
+    { id: 'mahabad', name: 'انبار مهاباد', owner: 'شریک انبار مهاباد', province: 'آذربایجان غربی', city: 'مهاباد', district: 'محلهٔ نمونه', street: 'خیابان اصلی نمونه', alley: 'کوچهٔ نمونه', plaque: '۰', postalCode: '5900000001', phone: '044-00000001', manager: 'یاسین', services: 'فقط ارسال پستی', assumed: true },
   ],
   carrierLogos: { post: '', tipax: '' } as Record<string, string>,
   entities: { ...makeEntities(), ...makeCxEntities() },
@@ -324,7 +324,7 @@ const makeSeedBase = () => ({
   moves: [
     { id: 'mv1', at: ago(25), who: 'نیما', kind: 'ورود', unit: 'GU-20413', product: 'p1', from: 'رسید', to: 'QC-1', read: false },
     { id: 'mv2', at: ago(90), who: 'نیما', kind: 'جابه‌جایی', unit: 'GU-20412', product: 'p1', from: 'A-02', to: 'A-03', read: false },
-    { id: 'mv3', at: ago(60 * 5), who: 'کاک هیوا', kind: 'ورود', unit: '', product: 'p8', from: 'رسید', to: 'M-08', qty: 6, read: true },
+    { id: 'mv3', at: ago(60 * 5), who: 'یاسین', kind: 'ورود', unit: '', product: 'p8', from: 'رسید', to: 'M-08', qty: 6, read: true },
     { id: 'mv4', at: ago(60 * 26), who: 'نیما', kind: 'خروج', unit: 'GU-20471', product: 'p2', from: 'B-01', to: 'بسته‌بندی', read: true },
   ] as { id: string; at: string; who: string; kind: string; unit: string; product: string; from: string; to: string; qty?: number; read: boolean }[],
 })

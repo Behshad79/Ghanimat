@@ -11,7 +11,7 @@ const REPO = 'https://github.com/Behshad79/Ghanimat'
 const SITE = 'https://behshad79.github.io/Ghanimat/'
 const LABEL = 'نظر طراحی'
 const NAME_KEY = 'ghanimat-reviewer'
-const TEAM = ['بهشاد', 'پارسا', 'نسترن', 'معصومه', 'بنیامین', 'زینب']
+const TEAM = ['بهشاد', 'پارسا', 'یاسین', 'بنیامین', 'زینب']
 const KINDS = ['ایراد', 'پیشنهاد', 'سؤال', 'نگارش'] as const
 const LEVELS = ['کم', 'متوسط', 'زیاد'] as const
 export const REVIEW_LIST = `${REPO}/issues?q=${encodeURIComponent(`is:issue label:"${LABEL}"`)}`
@@ -81,7 +81,7 @@ function MItem({ icon, onClick, children }: { icon: React.ReactNode; onClick: ()
 }
 
 function ReviewForm({ open, onClose, picked, page, path, role, theme, onRepick }: { open: boolean; onClose: () => void; picked: Picked; page: string; path: string; role: string; theme: string; onRepick: () => void }) {
-  const [name, setName] = useState(() => { try { return localStorage.getItem(NAME_KEY) || '' } catch { return '' } })
+  const [name, setName] = useState(() => { try { const n = localStorage.getItem(NAME_KEY) || ''; return TEAM.includes(n) || n.startsWith('سایر: ') ? n : '' } catch { return '' } })
   const [kind, setKind] = useState<string>(KINDS[0]); const [level, setLevel] = useState<string>(LEVELS[1]); const [text, setText] = useState('')
   useEffect(() => { if (open) setText('') }, [open])
   const where = picked ? [...picked.trail, picked.text ? `${picked.tag} «${picked.text}»` : picked.tag].filter(Boolean).join(' › ') : 'کل صفحه'

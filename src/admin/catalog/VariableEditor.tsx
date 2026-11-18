@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ChevronDown, Copy, ImageOff, Layers, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { ChevronDown, Copy, ImageOff, Layers, Pencil, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { ColorPicker, guessHex } from '@/shared/ui/colorPicker'
 import { Badge, Button, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
 import { confirm, toast } from '@/shared/ui/overlay'
 import { getDB, mutate, useDB } from '@/shared/lib/store'
@@ -20,6 +21,7 @@ const newVar = (opts: Record<string, string>, n: number): Variation => ({ id: `v
 /** ویژگی‌ها و تنوع‌های کالای متغیر (الگو: ووکامرس؛ با کد، قیمت، موجودی و تصویر جدا برای هر تنوع) */
 export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDraft>) => void }) {
   const d = useDB(); const [open, setOpen] = useState<string | null>(null); const [newAttr, setNewAttr] = useState<string | null>(null); const [newVal, setNewVal] = useState<Record<string, string>>({})
+  const [newHex, setNewHex] = useState<Record<string, string>>({}); const [edit, setEdit] = useState<{ k: string; i: number; v: string; l: string; hex?: string } | null>(null)
   const [bulk, setBulk] = useState('price'); const [bulkV, setBulkV] = useState(''); const [sfx, setSfx] = useState<'num' | 'code'>('num')
   const A = f.attrs; const V = f.variations; const forVar = A.filter((a) => a.forVar)
   const setA = (i: number, p: Partial<PAttr>) => set({ attrs: A.map((a, j) => (j === i ? { ...a, ...p } : a)) })
@@ -37,8 +39,20 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
     set({ variations: V.map(map[bulk]) }); toast('روی همهٔ تنوع‌ها اعمال شد.') }
   const addAxisVal = (i: number) => { const a = A[i]; const l = (newVal[attrKey(a)] ?? '').trim(); if (!l) return
     if (a.axis === LOCAL) { if (a.values.includes(l)) return toast('این مقدار هست.', { tone: 'err' }); setA(i, { values: [...a.values, l] }) }
-    else { const ax = getDB().axes.find((x) => x.id === a.axis)!; if (ax.values.some((x) => x.l === l)) return toast('این مقدار هست.', { tone: 'err' }); const v = slug(l); mutate((x) => { x.axes.find((y) => y.id === a.axis)!.values.push({ v, l }) }, { action: 'افزودن مقدار ویژگی', target: `${ax.name} › ${l}` }); setA(i, { values: [...a.values, v] }) }
+    else { const ax = getDB().axes.find((x) => x.id === a.axis)!; if (ax.values.some((x) => x.l === l)) return toast('این مقدار هست.', { tone: 'err' }); const v = slug(l); const hex = ax.kind === 'color' ? newHex[attrKey(a)] || guessHex(l) : undefined; mutate((x) => { x.axes.find((y) => y.id === a.axis)!.values.push(hex ? { v, l, hex } : { v, l }) }, { action: 'افزودن مقدار ویژگی', target: `${ax.name} › ${l}${hex ? ` (${hex})` : ''}` }); setNewHex({ ...newHex, [attrKey(a)]: '' }); setA(i, { values: [...a.values, v] }) }
     setNewVal({ ...newVal, [attrKey(a)]: '' }) }
+  const saveEdit = () => { if (!edit) return; const a = A[edit.i]; const l = edit.l.trim(); if (!l) return toast('نام مقدار را بنویسید.', { tone: 'err' })
+    if (a.axis === LOCAL) { if (l !== edit.v && a.values.includes(l)) return toast('این مقدار هست.', { tone: 'err' }); const k = attrKey(a); setA(edit.i, { values: a.values.map((x) => (x === edit.v ? l : x)) }); set({ attrs: A.map((y, j) => (j === edit.i ? { ...y, values: y.values.map((x) => (x === edit.v ? l : x)) } : y)), variations: V.map((v) => (v.opts[k] === edit.v ? { ...v, opts: { ...v.opts, [k]: l } } : v)) }) }
+    else { const ax = getDB().axes.find((x) => x.id === a.axis)!; if (ax.values.some((x) => x.l === l && x.v !== edit.v)) return toast('مقداری با این نام هست.', { tone: 'err' }); mutate((x) => { const val = x.axes.find((y) => y.id === a.axis)!.values.find((y) => y.v === edit.v)!; val.l = l; if (edit.hex) val.hex = edit.hex }, { action: 'ویرایش مقدار ویژگی سراسری', target: `${ax.name} › ${l}`, after: edit.hex ?? '' }) }
+    toast('مقدار ذخیره شد.'); setEdit(null) }
+  const delVal = async () => { if (!edit) return; const a = A[edit.i]; const k = attrKey(a)
+    if (V.some((v) => v.opts[k] === edit.v)) return toast('این مقدار در تنوع‌های همین کالا استفاده شده؛ اول آن تنوع‌ها را حذف یا مقدارشان را عوض کنید.', { tone: 'err' })
+    if (a.axis === LOCAL) { setA(edit.i, { values: a.values.filter((x) => x !== edit.v) }); setEdit(null); return }
+    const db = getDB(); const inVars = db.products.filter((p) => p.id !== f.id && (p.variations ?? []).some((v) => v.opts[a.axis] === edit.v) || (p.pdp?.variant?.[a.axis] === edit.v && p.id !== f.id)); if (inVars.length) return toast(`این مقدار در تنوع ${inVars.length} کالای دیگر استفاده شده (${inVars.slice(0, 2).map((p) => p.title).join('، ')}) و حذف نمی‌شود. می‌توانید نام یا رنگش را ویرایش کنید.`, { tone: 'err' })
+    const inAttrs = db.products.filter((p) => p.id !== f.id && (p.attrs ?? []).some((x) => x.axis === a.axis && x.values.includes(edit.v)))
+    if (!(await confirm({ title: `حذف «${edit.l}» از ویژگی سراسری`, body: inAttrs.length ? `از ویژگی‌های ${inAttrs.length} کالای دیگر هم برداشته می‌شود.` : 'این مقدار از فهرست ویژگی برای همهٔ کالاها حذف می‌شود.', confirm: 'حذف مقدار', danger: true }))) return
+    mutate((x) => { const ax = x.axes.find((y) => y.id === a.axis)!; ax.values = ax.values.filter((y) => y.v !== edit.v); x.products.forEach((p) => { p.attrs?.forEach((y) => { if (y.axis === a.axis) y.values = y.values.filter((z) => z !== edit.v) }) }) }, { action: 'حذف مقدار ویژگی سراسری', target: edit.l })
+    setA(edit.i, { values: a.values.filter((x) => x !== edit.v) }); setEdit(null); toast('مقدار حذف شد.') }
   const dupSuffix = V.map((v) => v.suffix).filter((s, i, arr) => arr.indexOf(s) !== i)
   const [lo, hi] = priceRange(V, f.price); const tq = totalQty(V)
   const unitCount = (id: string) => f.units.filter((u) => u.variationId === id).length
@@ -57,10 +71,19 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
         {A.map((a, i) => { const ax = axisOf(d, a); const k = attrKey(a); return <div key={k} className="rounded-xl border border-line p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><span className="flex items-center gap-2"><b className="text-13">{ax.name}</b><Badge dot={false} tone={a.axis === LOCAL ? 'neutral' : 'info'}>{a.axis === LOCAL ? 'اختصاصی این کالا' : 'سراسری'}</Badge><span className="text-11 text-t2">{fa(a.values.length)} مقدار</span></span>
             <span className="flex flex-wrap items-center gap-3 text-12"><Toggle on={a.visible} onChange={(v) => setA(i, { visible: v })} text="نمایش در برگهٔ کالا" /><Toggle on={a.forVar} onChange={(v) => setA(i, { forVar: v })} text="استفاده برای تنوع‌ها" /><button type="button" className="text-danger" onClick={() => { set({ attrs: A.filter((_, j) => j !== i), variations: V.map((v) => { const o = { ...v.opts }; delete o[k]; return { ...v, opts: o } }) }) }}>حذف</button></span></div>
-          <div className="flex flex-wrap gap-1.5">{(a.axis === LOCAL ? a.values.map((v) => ({ v, l: v, hex: undefined as string | undefined })) : ax.values).map((o) => { const on = a.values.includes(o.v); return <button key={o.v} type="button" aria-pressed={on} onClick={() => setA(i, { values: on ? a.values.filter((x) => x !== o.v) : [...a.values, o.v] })} className={cx('flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-12', on ? 'border-brand bg-brand-tint text-brand' : 'border-line text-t2 hover:border-brand/50')}>{o.hex && <span className="size-3.5 rounded-full border border-line" style={{ background: o.hex }} />}{o.l}{on && a.axis === LOCAL && <X size={11} />}</button> })}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5"><Input aria-label={`مقدار تازهٔ ${ax.name}`} className="h-8 w-40 text-12" value={newVal[k] ?? ''} placeholder="مقدار تازه" onChange={(e) => setNewVal({ ...newVal, [k]: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAxisVal(i) } }} /><Button size="sm" onClick={() => addAxisVal(i)}>ایجاد مقدار</Button>
+          <div className="flex flex-wrap gap-1.5">{(a.axis === LOCAL ? a.values.map((v) => ({ v, l: v, hex: undefined as string | undefined })) : ax.values).map((o) => { const on = a.values.includes(o.v); const ed = edit?.k === k && edit.v === o.v; return <span key={o.v} className={cx('group inline-flex items-center rounded-full border text-12', ed ? 'border-brand ring-2 ring-brand/30' : on ? 'border-brand bg-brand-tint text-brand' : 'border-line text-t2 hover:border-brand/50')}>
+            <button type="button" aria-pressed={on} onClick={() => setA(i, { values: on ? a.values.filter((x) => x !== o.v) : [...a.values, o.v] })} className="flex items-center gap-1.5 py-1 pr-2.5 pl-1">{o.hex && <span className="size-3.5 rounded-full border border-line" style={{ background: o.hex }} />}{o.l}</button>
+            <button type="button" aria-label={`ویرایش ${o.l}`} title="ویرایش نام و رنگ" onClick={() => setEdit(ed ? null : { k, i, v: o.v, l: o.l, hex: o.hex ?? (ax.kind === 'color' ? guessHex(o.l) : undefined) })} className="grid size-6 place-items-center rounded-full text-t3 opacity-60 hover:bg-neutral-bg hover:text-brand group-hover:opacity-100 focus:opacity-100"><Pencil size={11} /></button></span> })}</div>
+          {edit?.k === k && <div className="mt-2 grid gap-3 rounded-xl border border-brand/30 bg-surface-2 p-3 sm:grid-cols-[1fr_280px]">
+            <div className="space-y-2"><p className="text-12 font-semibold">ویرایش مقدار «{edit.l}»</p><Input aria-label="نام مقدار" value={edit.l} onChange={(e) => setEdit({ ...edit, l: e.target.value })} />
+              <p className="text-11 text-t2">{a.axis === LOCAL ? 'فقط در همین کالا تغییر می‌کند.' : 'ویژگی سراسری است؛ نام و رنگ برای همهٔ کالاهایی که این مقدار را دارند عوض می‌شود.'}</p>
+              <div className="flex flex-wrap gap-2"><Button size="sm" variant="primary" onClick={saveEdit}>ذخیره</Button><Button size="sm" variant="danger" icon={<Trash2 size={12} />} onClick={delVal}>حذف مقدار</Button><Button size="sm" variant="ghost" onClick={() => setEdit(null)}>انصراف</Button></div></div>
+            {edit.hex !== undefined && <ColorPicker label={`رنگ ${edit.l}`} value={edit.hex} onChange={(hex) => setEdit({ ...edit, hex })} />}
+          </div>}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5"><Input aria-label={`مقدار تازهٔ ${ax.name}`} className="h-8 w-40 text-12" value={newVal[k] ?? ''} placeholder="مقدار تازه" onChange={(e) => setNewVal({ ...newVal, [k]: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAxisVal(i) } }} />{ax.kind === 'color' && a.axis !== LOCAL && <span className="size-6 rounded-full border border-line" style={{ background: newHex[k] || guessHex(newVal[k] ?? '') }} title="رنگ مقدار تازه" />}<Button size="sm" onClick={() => addAxisVal(i)}>ایجاد مقدار</Button>
             {a.axis !== LOCAL && <><Button size="sm" variant="ghost" onClick={() => setA(i, { values: ax.values.map((x) => x.v) })}>انتخاب همه</Button><Button size="sm" variant="ghost" onClick={() => setA(i, { values: [] })}>انتخاب هیچ‌کدام</Button></>}
             {a.axis !== LOCAL && <span className="text-11 text-t3">مقدار تازهٔ ویژگی سراسری برای همهٔ کالاها اضافه می‌شود.</span>}</div>
+          {ax.kind === 'color' && a.axis !== LOCAL && (newVal[k] ?? '').trim() && <div className="mt-2 max-w-sm rounded-xl border border-line p-3"><p className="mb-2 text-12 font-medium">رنگ «{newVal[k]}»</p><ColorPicker label={`رنگ ${newVal[k]}`} value={newHex[k] || guessHex(newVal[k] ?? '')} onChange={(hex) => setNewHex({ ...newHex, [k]: hex })} /></div>}
         </div> })}
       </div>
 

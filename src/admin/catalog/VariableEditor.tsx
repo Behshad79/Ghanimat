@@ -6,9 +6,11 @@ import { getDB, mutate, useDB } from '@/shared/lib/store'
 import { isEan13 } from '@/shared/lib/barcode'
 import { fa, toman } from '@/shared/lib/fa'
 import type { PAttr, Unit, Variation } from '@/shared/data/seed'
-import { attrKey, axisOf, combos, effPrice, LOCAL, priceRange, sameOpts, skuOf, totalQty, valHex, valLabel, varLabel, varStock } from '@/shared/lib/variants'
+import { attrKey, axisOf, combos, deliveryFor, effPrice, LOCAL, priceRange, sameOpts, skuOf, totalQty, valHex, valLabel, varLabel, varStock, type Delivery } from '@/shared/lib/variants'
+import { fastOn } from '@/shared/data/partners'
+import { Truck, Zap, Bell } from 'lucide-react'
 
-export type VarDraft = { code: string; images: string[]; price: number; mode: 'qty' | 'serial'; attrs: PAttr[]; variations: Variation[]; defaultVar: string; units: { serial: string; variationId?: string }[]; id?: string }
+export type VarDraft = { fastEligible?: boolean; title?: string; code: string; images: string[]; price: number; mode: 'qty' | 'serial'; attrs: PAttr[]; variations: Variation[]; defaultVar: string; units: { serial: string; variationId?: string }[]; id?: string }
 const money = (v?: number) => (v ? v.toLocaleString('en-US') : '')
 const parse = (s: string) => Number(s.replace(/[^\d]/g, '')) || 0
 const Num = ({ value, onChange, placeholder, label, w }: { value?: number; onChange: (n: number) => void; placeholder?: string; label: string; w?: string }) => <Input aria-label={label} className={cx('ltr text-left font-mono', w)} inputMode="numeric" value={money(value)} placeholder={placeholder} onChange={(e) => onChange(parse(e.target.value))} />
@@ -88,7 +90,7 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
                 <span className="flex flex-wrap items-center gap-1.5">{forVar.map((a) => { const k = attrKey(a); const ax = axisOf(d, a); return <span key={k} className="w-36"><Select label={`${ax.name} تنوع ${i + 1}`} value={v.opts[k] ?? '*'} other={false} onChange={(x) => setVar(v.id, { opts: { ...v.opts, [k]: x } })} options={[['*', `هر ${ax.name}…`], ...a.values.map((x) => [x, valLabel(d, a, x)] as [string, string])]} /></span> })}
                   {forVar.map((a) => { const hx = valHex(d, a, v.opts[attrKey(a)]); return hx ? <span key={attrKey(a)} className="size-4 rounded-full border border-line" style={{ background: hx }} /> : null })}</span>
                 <span className="ltr font-mono text-11 text-t2">{skuOf(f.code, v)}</span>
-                <span className="mr-auto flex items-center gap-2 text-12"><span className={cx('tnum', !stock && 'text-danger')}>{stock ? `${fa(stock)} عدد` : 'ناموجود'}</span><span className="tnum font-medium">{pr ? toman(pr) : <span className="text-warning">بدون قیمت</span>}</span>
+                <span className="mr-auto flex items-center gap-2 text-12">{f.mode === 'qty' && <span className="tnum text-11 text-t2">تهران {fa(v.qty.tehran)} · مهاباد {fa(v.qty.mahabad)}</span>}{f.mode === 'qty' && <DeliveryBadge dl={deliveryFor(v, !!f.fastEligible, fastOn(d.network, 'tehran', d.partners), fastOn(d.network, 'mahabad', d.partners))} />}<span className={cx('tnum', !stock && 'text-danger')}>{stock ? `${fa(stock)} عدد` : 'ناموجود'}</span><span className="tnum font-medium">{pr ? toman(pr) : <span className="text-warning">بدون قیمت</span>}</span>
                   <Toggle on={v.enabled} label={`فعال بودن تنوع ${i + 1}`} onChange={(x) => setVar(v.id, { enabled: x })} />
                   <Button size="sm" variant="ghost" onClick={() => setOpen(isOpen ? null : v.id)} icon={<ChevronDown size={14} className={cx('transition-transform', isOpen && 'rotate-180')} />}>ویرایش</Button>
                   <Button size="sm" variant="ghost" aria-label={`کپی تنوع ${i + 1}`} icon={<Copy size={13} />} onClick={() => set({ variations: [...V, { ...structuredClone(v), id: newVar({}, i).id, suffix: String(V.length + 1), ean: '' }] })} />
@@ -121,6 +123,7 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
           <p>بدون تصویر اختصاصی: <b className="tnum">{fa(V.filter((v) => !v.image).length)}</b> <span className="text-t2">(تصویر اصلی نمایش داده می‌شود)</span></p>
           <p className="text-t2 sm:col-span-3"><Sparkles size={12} className="ml-1 inline" />در صفحهٔ کالا: {V.filter((v) => v.enabled).slice(0, 4).map((v) => `«${varLabel(d, A, v)}» ← ${v.image && f.images.includes(v.image) ? `تصویر ${fa(f.images.indexOf(v.image) + 1)}` : 'تصویر اصلی'}`).join('، ')}{V.length > 4 ? '…' : ''}. تنوع ناموجود با «خبرم کن» نمایش داده می‌شود و تنوع غیرفعال پنهان است.</p>
         </div>}
+        {V.some((v) => v.enabled) && <PdpPreview f={f} />}
       </div>
     </div>
   )
@@ -139,13 +142,14 @@ export function VariantStockTable({ pid, onlyLow, onEdit }: { pid?: string; only
   const rows = d.products.filter((p) => p.kind === 'variable' && (!pid || p.id === pid)).flatMap((p) => (p.variations ?? []).map((v) => { const units = d.units.filter((u) => u.productId === p.id && u.variationId === v.id && ['unit.published', 'unit.ready'].includes(u.status)).length; const t = p.mode === 'serial' ? units : varStock(v); return { p, v, t, low: t <= (v.low ?? low0), label: varLabel(d, p.attrs ?? [], v) } }))
     .filter((r) => !onlyLow || (r.low && r.v.enabled))
   if (!rows.length) return <p className="rounded-xl bg-surface-2 px-3 py-3 text-center text-12 text-t2">{onlyLow ? 'هیچ تنوعی زیر آستانهٔ کمبود نیست.' : 'کالای متغیری ثبت نشده است.'}</p>
-  return <div className="overflow-x-auto rounded-xl border border-line"><table className="gh-table w-full text-12"><thead><tr className="bg-surface-2">{[...(pid ? [] : ['کالا']), 'تنوع', 'کد', 'بارکد', 'تهران', 'مهاباد', 'جمع', 'قیمت', 'تصویر', ''].map((h) => <th key={h} className="p-2 text-right font-medium text-t2">{h}</th>)}</tr></thead>
+  return <div className="overflow-x-auto rounded-xl border border-line"><table className="gh-table w-full text-12"><thead><tr className="bg-surface-2">{[...(pid ? [] : ['کالا']), 'تنوع', 'کد', 'بارکد', 'تهران', 'مهاباد', 'جمع', 'ارسال', 'قیمت', 'تصویر', ''].map((h) => <th key={h} className="p-2 text-right font-medium text-t2">{h}</th>)}</tr></thead>
     <tbody>{rows.map(({ p, v, t, low, label }) => { const hex = (p.attrs ?? []).map((a) => valHex(d, a, v.opts[attrKey(a)])).find(Boolean); return <tr key={v.id} className={cx('border-t border-line', !v.enabled && 'opacity-50')}>
       {!pid && <td className="p-2">{p.title}</td>}
       <td className="p-2"><span className="flex items-center gap-1.5">{hex && <span className="size-3.5 rounded-full border border-line" style={{ background: hex }} />}{label}{p.defaultVar === v.id && <Badge dot={false} tone="info">پیش‌فرض</Badge>}{!v.enabled && <Badge dot={false}>غیرفعال</Badge>}</span></td>
       <td className="ltr p-2 text-left font-mono">{skuOf(p.code ?? '', v)}</td><td className="ltr p-2 text-left font-mono text-t2">{v.ean || '—'}</td>
       <td className="tnum p-2">{p.mode === 'serial' ? '—' : fa(v.qty.tehran)}</td><td className="tnum p-2">{p.mode === 'serial' ? '—' : fa(v.qty.mahabad)}</td>
       <td className="p-2"><span className={cx('tnum font-semibold', !t ? 'text-danger' : low ? 'text-warning' : '')}>{t ? fa(t) : 'ناموجود'}</span>{t > 0 && low && <span className="mr-1 text-11 text-warning">کمبود</span>}{!t && v.backorder && <span className="mr-1 text-11 text-info">پیش‌فروش</span>}</td>
+      <td className="p-2">{p.mode === 'qty' ? <DeliveryBadge dl={deliveryFor(v, p.fastEligible, fastOn(d.network, 'tehran', d.partners), fastOn(d.network, 'mahabad', d.partners))} /> : '—'}</td>
       <td className="tnum p-2">{toman(effPrice(v, p.price ?? 0))}{v.sale && v.sale < (v.price || p.price || 0) ? <span className="mr-1 text-11 text-t3 line-through">{toman(v.price || p.price || 0)}</span> : null}</td>
       <td className="p-2">{v.image ? <img src={v.image} alt="" className="size-8 rounded border border-line object-contain" /> : <span className="text-11 text-t3">اصلی</span>}</td>
       <td className="p-2">{onEdit && <Button size="sm" variant="ghost" onClick={() => onEdit(p.id)}>ویرایش</Button>}</td></tr> })}</tbody></table></div>
@@ -161,5 +165,36 @@ export function VariantStockEditor({ pid, onDone }: { pid: string; onDone: () =>
       <div className="grid grid-cols-2 gap-2">{([['t', 'تهران'], ['m', 'مهاباد']] as const).map(([k, l]) => <Field key={k} label={l}><div className="flex items-center gap-1.5"><Button aria-label={`کم ${l}`} onClick={() => up(k, r[k] - 1)}>−</Button><Input aria-label={`${l} ${varLabel(d, p.attrs ?? [], v)}`} type="number" className="ltr w-20 text-center font-mono" value={r[k]} onChange={(e) => up(k, +e.target.value)} /><Button aria-label={`زیاد ${l}`} onClick={() => up(k, r[k] + 1)}>+</Button></div></Field>)}</div></div> })}
     <Field label="دلیل تعدیل" help="در لاگ و تاریخچهٔ کالا ثبت می‌شود."><Select value={reason} onChange={setReason} options={['دریافت محموله', 'شمارش انبار', 'کالای آسیب‌دیده', 'انتقال بین انبارها', 'اصلاح خطای ثبت']} /></Field>
     <Button variant="primary" onClick={save}>ثبت موجودی</Button>
+  </div>
+}
+
+const DL_TONE: Record<Delivery['tone'], string> = { fast: 'bg-success-bg text-success', post: 'bg-info-bg text-info', none: 'bg-danger-bg text-danger', pre: 'bg-warning-bg text-warning' }
+export const DeliveryBadge = ({ dl }: { dl: Delivery }) => <span title={dl.lines.join(' · ')} className={cx('rounded-full px-2 py-0.5 text-[11px] font-medium', DL_TONE[dl.tone])}>{dl.tone === 'fast' ? 'ارسال سریع' : dl.tone === 'post' ? (dl.from.includes('تهران') ? 'از تهران' : 'فقط پیشتاز') : dl.tone === 'pre' ? 'پیش‌فروش' : 'ناموجود'}</span>
+
+/** پیش‌نمایش رفتار صفحهٔ کالا: با انتخاب هر مقدار، تصویر، قیمت، موجودی هر انبار و روش ارسال همان تنوع نمایش داده می‌شود */
+export function PdpPreview({ f }: { f: Pick<VarDraft, 'attrs' | 'variations' | 'images' | 'price' | 'defaultVar' | 'fastEligible' | 'title' | 'mode'> & { code?: string } }) {
+  const d = useDB(); const use = f.attrs.filter((a) => a.forVar)
+  const def = f.variations.find((v) => v.id === f.defaultVar && v.enabled) ?? f.variations.find((v) => v.enabled)!
+  const [pick, setPick] = useState<Record<string, string>>(() => ({ ...(def?.opts ?? {}) }))
+  const match = (o: Record<string, string>) => f.variations.find((v) => v.enabled && use.every((a) => { const k = attrKey(a); const x = v.opts[k]; return !x || x === '*' || x === o[k] }))
+  const v = match(pick); const img = v?.image && f.images.includes(v.image) ? v.image : f.images[0]
+  const dl = v ? deliveryFor(v, !!f.fastEligible, fastOn(d.network, 'tehran', d.partners), fastOn(d.network, 'mahabad', d.partners)) : null
+  const price = v ? effPrice(v, f.price) : 0; const reg = v ? v.price || f.price : 0
+  const avail = (k: string, val: string) => f.variations.some((x) => x.enabled && (x.opts[k] === val || x.opts[k] === '*') && varStock(x) > 0)
+  return <div className="rounded-2xl border border-brand/30 bg-brand-tint/20 p-3">
+    <p className="mb-2 text-12 font-semibold">پیش‌نمایش صفحهٔ کالا برای مشتری <span className="font-normal text-t2">(مقدارها را بزنید)</span></p>
+    <div className="grid gap-3 rounded-xl bg-surface p-3 sm:grid-cols-[160px_1fr]">
+      <div className="grid aspect-square place-items-center overflow-hidden rounded-xl border border-line bg-white">{img ? <img src={img} alt="" className="size-full object-contain" /> : <span className="text-11 text-t3">بدون تصویر</span>}</div>
+      <div className="space-y-2 text-13">
+        <p className="font-semibold">{f.title || 'عنوان کالا'}</p>
+        {use.map((a) => { const k = attrKey(a); const ax = axisOf(d, a); return <div key={k}><p className="mb-1 text-12 text-t2">{ax.name}: <b className="text-t1">{pick[k] ? valLabel(d, a, pick[k]) : '—'}</b></p><div className="flex flex-wrap gap-1.5">{a.values.map((val) => { const hx = valHex(d, a, val); const on = pick[k] === val; const ok = avail(k, val); return <button key={val} type="button" aria-label={`پیش‌نمایش ${valLabel(d, a, val)}`} aria-pressed={on} onClick={() => setPick({ ...pick, [k]: val })} className={cx('flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-12', on ? 'border-brand ring-2 ring-brand/25' : 'border-line', !ok && 'text-t3 line-through decoration-t3')}>{hx && <span className="size-3.5 rounded-full border border-line" style={{ background: hx }} />}{valLabel(d, a, val)}</button> })}</div></div> })}
+        {!v ? <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2">این ترکیب تنوع ندارد؛ در سایت قابل انتخاب نیست.</p> : <>
+          <p className="tnum text-16 font-bold">{toman(price)}{price < reg && <span className="mr-2 text-12 font-normal text-t3 line-through">{toman(reg)}</span>}</p>
+          {f.mode === 'qty' && <p className="text-12 text-t2">{d.warehouses.map((w) => { const n = w.id === 'tehran' ? v.qty.tehran : w.id === 'mahabad' ? v.qty.mahabad : 0; return <span key={w.id} className={cx('ml-3', n ? 'text-t1' : 'text-t3')}>{w.name}: <b className="tnum">{n ? fa(n) : 'ندارد'}</b></span> })}{varStock(v) > 0 && varStock(v) <= (v.low ?? d.storeCfg.pdp.lowStock) && <span className="text-warning">تنها {fa(varStock(v))} عدد باقی مانده</span>}</p>}
+          {dl && <div className={cx('rounded-xl px-3 py-2 text-12', DL_TONE[dl.tone])}><p className="flex items-center gap-1.5 font-semibold">{dl.tone === 'fast' ? <Zap size={14} /> : dl.tone === 'none' ? <Bell size={14} /> : <Truck size={14} />}{dl.title}</p><ul className="mt-0.5 list-disc pr-5">{dl.lines.map((l) => <li key={l}>{l}</li>)}</ul></div>}
+          <p className="text-11 text-t3">کد: <bdi className="font-mono">{skuOf(f.code ?? '', v)}</bdi> {v.image && f.images.includes(v.image) ? `· تصویر ${fa(f.images.indexOf(v.image) + 1)}` : '· تصویر اصلی'}</p>
+        </>}
+      </div>
+    </div>
   </div>
 }

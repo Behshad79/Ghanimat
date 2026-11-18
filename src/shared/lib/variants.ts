@@ -37,3 +37,13 @@ export const isVariable = (p?: Product) => p?.kind === 'variable' && !!p.variati
 export function variationRows(d: DB, p: Product) {
   return (p.variations ?? []).map((v) => { const units = d.units.filter((u) => u.productId === p.id && u.variationId === v.id); return { v, label: varLabel(d, p.attrs ?? [], v), sku: skuOf(p.code ?? '', v), stock: p.mode === 'serial' ? units.filter((u) => ['unit.published', 'unit.ready'].includes(u.status)).length : varStock(v), units } })
 }
+
+/** روش‌های ارسالی که با انتخاب این تنوع در صفحهٔ کالا نمایش داده می‌شود (بر اساس موجودی هر انبار) */
+export type Delivery = { tone: 'fast' | 'post' | 'none' | 'pre'; title: string; lines: string[]; from: string[] }
+export function deliveryFor(v: Pick<Variation, 'qty' | 'backorder'>, fastEligible: boolean, fastTehran = true, fastMahabad = true): Delivery {
+  const t = v.qty.tehran, m = v.qty.mahabad; const from = [t > 0 && 'تهران', m > 0 && 'مهاباد'].filter(Boolean) as string[]
+  if (!t && !m) return v.backorder ? { tone: 'pre', title: 'پیش‌فروش', lines: ['ارسال پس از رسیدن محمولهٔ بعدی', 'زمان تقریبی رسیدن در صفحه نمایش داده می‌شود'], from } : { tone: 'none', title: 'ناموجود', lines: ['دکمهٔ «موجود شد، خبرم کن» به‌جای «افزودن به سبد»', 'کالاهای مشابه نمایش داده می‌شود'], from }
+  if (t > 0 && fastEligible && fastTehran) return { tone: 'fast', title: 'ارسال سریع ۲ ساعته در تهران و کرج', lines: ['تحویل ۲ ساعته در تهران و کرج · پیک', 'تحویل حضوری در شعبه', 'ارسال پستی به سایر شهرها'], from }
+  if (t > 0) return { tone: 'post', title: 'ارسال از انبار تهران', lines: ['ارسال پیشتاز به همهٔ شهرها', 'تحویل حضوری در شعبه'], from }
+  return { tone: 'post', title: 'فقط ارسال پیشتاز از انبار مهاباد', lines: ['ارسال سریع تهران برای این تنوع در دسترس نیست', `ارسال پیشتاز به همهٔ شهرها · ۲ تا ۴ روز کاری${fastMahabad ? '؛ در مهاباد تحویل سریع شهری' : ''}`], from }
+}

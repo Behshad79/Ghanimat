@@ -19,6 +19,7 @@ import { KIND_DEFAULT, LINE_COLORS, LINE_ICONS, LineIcon, readIcon, WEIGHT } fro
 import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
+import { logPrice, QcLayers, RouteEditor } from './PdpExtras'
 import { EditableChoice, VariantEditor } from './Choices'
 import { ProductLabel } from '../print/ProductLabel'
 
@@ -50,7 +51,10 @@ const MoneyIn = ({ value, onChange, placeholder }: { value: number; onChange: (n
 
 /** ثبت دستی گام‌به‌گام کالا (۱۲ گام) — همچنین ویرایش کالای موجود و نسخهٔ کوتاه حالت سریع */
 /** partner: ثبت کامل کالا از پرتال شعبه؛ به‌جای انتشار، برای تأیید نهایی غنیمت می‌رود و فقط به موجودی همان شعبه اضافه می‌شود */
-export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?: boolean; onDone?: (id: string) => void; partner?: PartnerT; initialTitle?: string }) {
+type WizardProps = { quick?: boolean; onDone?: (id: string) => void; partner?: PartnerT; initialTitle?: string }
+/** با عوض شدن کالا در نشانی، فرم از نو ساخته می‌شود تا داده‌های کالای قبلی در فرم نماند */
+export function ProductWizard(props: WizardProps) { const { id } = useParams(); return <ProductWizardInner key={id ?? 'new'} {...props} /> }
+function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProps) {
   const d = useDB(); const nav = useNavigate(); const { id } = useParams(); const [sp] = useSearchParams()
   const editing = id ? d.products.find((p) => p.id === id) : undefined
   const missing0 = !!id && !editing
@@ -111,6 +115,7 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
     mutate((x) => {
       const i = x.products.findIndex((p) => p.id === pid); if (i >= 0) x.products[i] = prod; else x.products.unshift(prod)
       x.units.unshift(...newUnits)
+      if (status !== 'product.draft') logPrice(x, pid, finalPrice, by?.name ?? 'پنل')
       if (!isNew) x.units.filter((u) => u.productId === pid && ['unit.published', 'unit.ready'].includes(u.status)).forEach((u) => { u.price = finalPrice; const r = f.units.find((q) => q.serial === u.serial); if (r) { u.color = r.color; u.shelf = r.shelf || u.shelf; u.warehouse = r.warehouse; u.grade = r.grade } })
       delete ((x as any).drafts ?? {})[draftKey]
       if (status === 'product.published') x.partnerQueue = x.partnerQueue.filter((q) => q.productId !== pid)
@@ -182,6 +187,8 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
       <div className="space-y-2 sm:col-span-2"><p className="text-13 font-semibold">بررسی جزئیات ظاهری (به تفکیک بخش)</p><p className="text-11 text-t2">هر بخش با وضعیت و توضیح در صفحهٔ کالا و کنار عکس واقعی همان بخش نمایش داده می‌شود.</p>
         {f.pdp.flaws.map((z, i) => <div key={i} className="grid gap-2 rounded-xl border border-line p-2 sm:grid-cols-[1fr_160px_2fr_auto]"><Input aria-label="بخش" value={z.zone} onChange={(e) => set({ pdp: { ...f.pdp, flaws: f.pdp.flaws.map((x, j) => j === i ? { ...x, zone: e.target.value } : x) } })} /><Select value={z.status} onChange={(v) => set({ pdp: { ...f.pdp, flaws: f.pdp.flaws.map((x, j) => j === i ? { ...x, status: v } : x) } })} options={d.opts.flawStatus.map((o) => o.l)} /><Input aria-label="توضیح" placeholder="مثلاً خط‌وخش سطحی ۳ میلی‌متری لبهٔ راست" value={z.note} onChange={(e) => set({ pdp: { ...f.pdp, flaws: f.pdp.flaws.map((x, j) => j === i ? { ...x, note: e.target.value } : x) } })} /><Button variant="ghost" aria-label="حذف بخش" icon={<Trash2 size={14} />} onClick={() => set({ pdp: { ...f.pdp, flaws: f.pdp.flaws.filter((_, j) => j !== i) } })} /></div>)}
         <Button size="sm" icon={<Plus size={13} />} onClick={() => set({ pdp: { ...f.pdp, flaws: [...f.pdp.flaws, { zone: 'بخش تازه', status: 'سالم', note: '' }] } })}>افزودن بخش</Button></div>
+      <div className="sm:col-span-2"><RouteEditor pdp={f.pdp} onChange={(pdp) => set({ pdp })} /></div>
+      <div className="sm:col-span-2"><QcLayers pdp={f.pdp} sealed={f.condition === 'sealed'} onChange={(pdp) => set({ pdp })} /></div>
       <p className="rounded-md bg-neutral-bg px-3 py-2 text-12 text-t2 sm:col-span-2">برچسب مبدأ روی کارت: <b className="text-t1">{d.opts.source.find((o) => o.v === f.source)?.note ?? d.opts.source.find((o) => o.v === f.source)?.l ?? '—'}</b></p></div>,
     5: <div className="space-y-4">
       <Field label="نوع نگهداری" hint={<Hint k="product_unit" />}><Segmented value={f.mode} onChange={(v) => set({ mode: v })} options={[['qty', 'موجودی تعدادی (اکبند هم‌مدل)'], ['serial', 'واحد سریال‌دار (هر واحد جدا)']]} /></Field>
@@ -232,7 +239,7 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
     9: <div className="space-y-4">
       <WherePlaced f={f} set={set} />
       <CardLinesEditor f={f} set={set} preview={<ProductCard p={{ ...(editing ?? {}), id: f.id ?? 'preview', image: f.images[0] ?? '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: 'product.published', mode: 'qty', qty: { tehran: Math.max(1, f.qtyTehran), mahabad: f.qtyMahabad }, priceNew: f.priceNew, price: finalPrice, compareAt: f.discount ? f.price : undefined, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, fastEligible: f.fastEligible, seller: 'غنیمت', torob: f.torob, source: f.source, pdp: f.pdp } as Product} />} />
-      <div className="flex flex-wrap gap-6 rounded-xl bg-surface-2 p-3 text-13"><Toggle on={!!f.pdp.featured} onChange={(v) => set({ pdp: { ...f.pdp, featured: v } })} text="کالای ویژه (در بخش «پیشنهاد غنیمت»)" /><Toggle on={f.pdp.showQA ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showQA: v } })} text="نمایش پرسش و پاسخ" /><Toggle on={f.pdp.showReviews ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showReviews: v } })} text="نمایش دیدگاه‌ها" /></div>
+      <div className="flex flex-wrap gap-6 rounded-xl bg-surface-2 p-3 text-13"><Toggle on={!!f.pdp.featured} onChange={(v) => set({ pdp: { ...f.pdp, featured: v } })} text="کالای ویژه (در بخش «پیشنهاد غنیمت»)" /><Toggle on={f.pdp.showQA ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showQA: v } })} text="نمایش پرسش و پاسخ" /><Toggle on={f.pdp.showReviews ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showReviews: v } })} text="نمایش دیدگاه‌ها" /><Toggle on={f.pdp.showPriceChart ?? d.storeCfg.pdp.priceChart.on} onChange={(v) => set({ pdp: { ...f.pdp, showPriceChart: v } })} text="نمایش نمودار قیمت" /></div>
       <div className="flex flex-wrap gap-6"><label className="flex items-center gap-2 text-13"><Toggle on={f.site} label="سایت" onChange={(v) => set({ site: v })} />نمایش در سایت</label><label className="flex items-center gap-2 text-13"><Toggle on={f.torob} label="ترب" onChange={(v) => set({ torob: v })} />نمایش در ترب</label></div>
       <Field label="عنوان متا" help={`${fa((f.metaTitle || `خرید ${f.title} | غنیمت`).length)} نویسه؛ هدف زیر ۶۰`}><Input value={f.metaTitle} onChange={(e) => set({ metaTitle: e.target.value })} placeholder={`خرید ${f.title || '…'} | غنیمت`} /></Field>
       <Field label="توضیح متا" help={`${fa(f.metaDesc.length)} نویسه؛ هدف ۱۲۰ تا ۱۶۰`}><Textarea rows={2} value={f.metaDesc} onChange={(e) => set({ metaDesc: e.target.value })} /></Field>

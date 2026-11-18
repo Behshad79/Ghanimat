@@ -3,9 +3,11 @@ const d = (days: number) => new Date(Date.now() + days * 864e5).toISOString()
 
 export type BlockT = 'h2' | 'h3' | 'p' | 'img' | 'banner' | 'product' | 'products' | 'compare' | 'grades' | 'callout' | 'summary' | 'quote' | 'cta' | 'faq' | 'video' | 'link' | 'toc' | 'divider'
 export type Block = { id: string; t: BlockT; v?: string; html?: string; src?: string; alt?: string; caption?: string; href?: string; w?: number; h?: number; pid?: string; pids?: string[]; tone?: 'tip' | 'warn' | 'info'; author?: string; btn?: string; rows?: [string, string][]; cols?: { title: string; sub: string; points: string }[]; vid?: string; external?: boolean }
-export type Post = { id: string; title: string; slug: string; excerpt: string; cover: string; category: string; tags: string[]; author: string; reviewer?: string; status: 'پیش‌نویس' | 'در بازبینی' | 'زمان‌بندی‌شده' | 'منتشرشده'; publishAt: string; views: number; helpful: [number, number]; seo: { title: string; desc: string }; featured?: boolean; related: string[]; blocks: Block[] }
+export type Post = { id: string; title: string; slug: string; excerpt: string; cover: string; category: string; tags: string[]; author: string; reviewer?: string; status: 'پیش‌نویس' | 'در بازبینی' | 'زمان‌بندی‌شده' | 'منتشرشده'; publishAt: string; views: number; helpful: [number, number]; seo: { title: string; desc: string }; featured?: boolean; trend?: boolean; related: string[]; blocks: Block[] }
+export type Chapter = { t: string; from: string; to: string }
+export type BSearch = { q: string; n: number; results: number; at: string }
 export type BComment = { id: string; postId: string; name: string; text: string; at: string; status: 'pending' | 'approved' | 'rejected'; reply?: string }
-export type Video = { id: string; title: string; cat: string; dur: string; views: number; cover: string; url: string; productId?: string; isNew?: boolean; featured?: boolean; status: 'منتشرشده' | 'پیش‌نویس'; desc?: string }
+export type Video = { id: string; title: string; cat: string; dur: string; views: number; cover: string; url: string; productId?: string; isNew?: boolean; featured?: boolean; status: 'منتشرشده' | 'پیش‌نویس'; desc?: string; chapters?: Chapter[] }
 
 const b = (t: BlockT, x: Partial<Block> = {}): Block => ({ id: `${t}${Math.random().toString(36).slice(2, 7)}`, t, ...x })
 export const BLOG_CATS = ['راهنمای خرید', 'آموزشی', 'اصالت کالا', 'نقد و بررسی', 'فرهنگ خرید', 'سبک زندگی', 'اخبار']
@@ -35,7 +37,7 @@ export const makeBlog = () => ({
     { id: 'bc3', postId: 'ar3', name: 'کاربر مهمان', text: 'لینک خرید ارزان از سایت دیگر: ...', at: d(-1), status: 'pending' },
   ] as BComment[],
   videos: [
-    { id: 'v1', title: 'آنباکسینگ AirPods اکبند و بررسی پلمپ', cat: 'آنباکسینگ', dur: '۵:۴۰', views: 6300, cover: './products/p2-500.webp', url: 'https://www.aparat.com/v/a1', productId: 'p2', featured: true, status: 'منتشرشده' },
+    { id: 'v1', title: 'آنباکسینگ AirPods اکبند و بررسی پلمپ', cat: 'آنباکسینگ', dur: '۵:۴۰', views: 6300, cover: './products/p2-500.webp', url: 'https://www.aparat.com/v/a1', productId: 'p2', featured: true, status: 'منتشرشده', chapters: [{ t: 'معرفی و جعبه‌گشایی', from: '۰۰:۰۰', to: '۰۱:۴۰' }, { t: 'بررسی پلمپ و سریال', from: '۰۱:۴۰', to: '۳:۳۰' }, { t: 'اتصال و تست صدا', from: '۳:۳۰', to: '۵:۴۰' }] },
     { id: 'v2', title: 'بازکردن جعبهٔ مرسوله؛ پیش از امضا', cat: 'آنباکسینگ', dur: '۳:۲۰', views: 4400, cover: './products/p5-500.webp', url: 'https://www.aparat.com/v/a2', status: 'منتشرشده' },
     { id: 'v3', title: 'چک‌لیست خرید لپ‌تاپ استوک', cat: 'راهنمای خرید', dur: '۸:۲۰', views: 3100, cover: './products/p3-500.webp', url: 'https://www.aparat.com/v/a3', productId: 'p3', status: 'منتشرشده' },
     { id: 'v4', title: 'بهینه‌سازی باتری لپ‌تاپ', cat: 'آموزش استفاده', dur: '۹:۰۵', views: 1800, cover: './products/p3-500.webp', url: 'https://www.aparat.com/v/a4', status: 'منتشرشده' },
@@ -47,7 +49,15 @@ export const makeBlog = () => ({
     sections: [{ id: 'featured', label: 'مقالهٔ ویژه (بالای صفحه)', on: true }, { id: 'cats', label: 'دسته‌بندی‌ها', on: true }, { id: 'latest', label: 'تازه‌ترین مطالب', on: true }, { id: 'popular', label: 'پربازدیدترین‌ها', on: true }, { id: 'videos', label: 'ردیف ویدیوها', on: true }, { id: 'products', label: 'کالاهای پیشنهادی', on: false }, { id: 'newsletter', label: 'خبرنامه', on: true }],
     videoHero: 'مطمئن بخر و اول ببین؛ از بررسی تخصصی تا آنباکسینگ، همه با ویدیو!',
     popularSearches: ['تست سلامت باتری', 'گرید ظاهری', 'آنباکسینگ AirPods'],
+    popularTags: ['خرید اقساطی', 'لپ‌تاپ', 'هدفون', 'گارانتی', 'کالای استوک'],
+    trendTitle: 'ترندهای پوشیدنی',
+    noResult: { title: 'مطلبی پیدا نشد', text: 'عبارت دیگری را امتحان کنید یا از دسته‌بندی‌ها و پربازدیدترین مطالب شروع کنید.', showPopular: true, showProducts: true },
   },
+  searches: [
+    { q: 'کالای استوک', n: 184, results: 9, at: new Date(Date.now() - 2 * 36e5).toISOString() }, { q: 'گارانتی', n: 121, results: 6, at: new Date(Date.now() - 5 * 36e5).toISOString() },
+    { q: 'قاب گوشی', n: 47, results: 0, at: new Date(Date.now() - 3 * 36e5).toISOString() }, { q: 'رجیستری آیفون', n: 38, results: 0, at: new Date(Date.now() - 9 * 36e5).toISOString() },
+    { q: 'خرید اقساطی', n: 66, results: 3, at: new Date(Date.now() - 864e5).toISOString() }, { q: 'شارژر اصل', n: 29, results: 0, at: new Date(Date.now() - 2 * 864e5).toISOString() },
+  ] as BSearch[],
   cats: [...BLOG_CATS],
   videoCats: [...VIDEO_CATS],
 })

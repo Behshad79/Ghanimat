@@ -24,8 +24,8 @@ export const makeCxEntities = (): Record<string, Rec[]> => ({
     { id: 'pr2', product: 'Sony WH-1000XM5', reason: 'اطلاعات یا مشخصات نادرست', text: 'وزن نوشته‌شده درست نیست.', reporter: 'ناشناس', status: 'اصلاح شد', at: ago(60 * 30) },
   ],
   reportReasons: [
-    { id: 'rr1', name: 'قیمت نادرست', active: true }, { id: 'rr2', name: 'اطلاعات یا مشخصات نادرست', active: true }, { id: 'rr3', name: 'تصویر نامناسب یا نامرتبط', active: true },
-    { id: 'rr4', name: 'شک به اصل نبودن کالا', active: true }, { id: 'rr5', name: 'محتوای توهین‌آمیز در دیدگاه‌ها', active: true }, { id: 'rr6', name: 'سایر', active: true },
+    { id: 'rr1', name: 'قیمت نمایش‌داده‌شده نادرست است', active: true }, { id: 'rr2', name: 'مشخصات یا توضیحات کالا نادرست است', active: true }, { id: 'rr3', name: 'تصاویر با کالا مطابقت ندارد', active: true },
+    { id: 'rr7', name: 'وضعیت کالا (اکبند، جعبه‌باز، استوک) درست نیست', active: true }, { id: 'rr4', name: 'شک به اصل نبودن کالا', active: false }, { id: 'rr5', name: 'محتوای توهین‌آمیز در دیدگاه‌ها', active: true }, { id: 'rr6', name: 'سایر', active: true },
   ],
   // صفحهٔ کالا › ناموجود › درخواست ورود و خبرم کن
   stockRequests: [

@@ -10,6 +10,7 @@ import { compactToman, fa, rel, toman } from '@/shared/lib/fa'
 import { CHANNELS } from '../orders/OrderTools'
 import { CH_STYLE, ChannelLogo } from '../social/ChannelLogo'
 import { ProductImg } from '../pages/_shared'
+import { logPrice } from '../catalog/PdpExtras'
 
 /** فروش کانال‌های اجتماعی و حضوری در نمای کلی کانال‌ها (از همان سفارش‌های ثبت‌شده) */
 export function SocialChannelStats() {
@@ -43,7 +44,7 @@ export function PriceWatch() {
   const cheaper = rows.filter((r) => r.torob < r.ours || r.emalls < r.ours)
   const match = async (r: Row) => { const p = d.products.find((x) => x.id === r.pid); if (!p) return; const target = Math.min(r.torob, r.emalls) - 10000; const cost = p.cost ?? 0; const margin = cost ? Math.round(((target - cost) / target) * 1000) / 10 : null
     if (!(await confirm({ title: `قیمت ${p.en} به ${toman(target)} برسد؟`, body: <>۱۰ هزار تومان ارزان‌تر از کمترین قیمت رقبا. {margin !== null ? <>حاشیهٔ سود بعد از تغییر: <b className={margin < 5 ? 'text-danger' : ''}>{fa(margin)}٪</b>.</> : 'قیمت خرید ثبت نشده؛ حاشیه را بررسی کنید.'}</>, confirm: 'اعمال قیمت' }))) return
-    mutate((x) => { const y = x.products.find((z) => z.id === p.id)!; if (y.price) y.price = target; else y.priceNew = target }, { action: 'هم‌قیمت شدن با رقیب', target: p.en, before: toman(r.ours), after: toman(target) })
+    mutate((x) => { const y = x.products.find((z) => z.id === p.id)!; if (y.price) { y.price = target; logPrice(x, y.id, target, 'هم‌قیمتی با رقیب') } else y.priceNew = target }, { action: 'هم‌قیمت شدن با رقیب', target: p.en, before: toman(r.ours), after: toman(target) })
     setRows((R) => R.map((z) => (z.pid === r.pid ? { ...z, ours: target, torobRank: 1, emallsRank: 1, at: Date.now() } : z))); toast('قیمت در سایت و فید ترب و ایمالز به‌روز شد.') }
   const rank = (n: number, theirs: number, ours: number) => <span className="flex flex-col"><Badge tone={n === 1 ? 'success' : n <= 2 ? 'warning' : 'danger'}>{n === 1 ? 'ارزان‌ترین هستیم' : `رتبهٔ ${fa(n)}`}</Badge><span className={cx('mt-0.5 text-11 tnum', theirs < ours ? 'text-danger' : 'text-t2')}>کمترین: {toman(theirs)}</span></span>
   const sorted = useMemo(() => [...rows].sort((a, b) => Math.min(a.torob, a.emalls) / a.ours - Math.min(b.torob, b.emalls) / b.ours), [rows])

@@ -17,7 +17,7 @@ import { SellerSettings } from './SellerSettings'
 import { askBrowserNotify } from '../shared/LiveAlert'
 import { InviteMember, MemberAccess, RolesMatrix } from '../team/Access'
 import { ActiveSessions } from '../analytics/Traffic'
-import { CheckoutRules, LoyaltyClub, StoreIdentity } from '../settings/StoreSettings'
+import { CheckoutRules, LoyaltyClub, ProductPageRules, StoreIdentity } from '../settings/StoreSettings'
 import { ReasonCenter } from '../settings/ReasonCenter'
 import { WhenPicker, whenLabel } from '@/shared/ui/jdate'
 
@@ -93,7 +93,7 @@ export function Settings() {
   const sms = `غنیمت | سفارش جدید GH-10481 | ۲ کالا | ۱۴۷ میلیون | تحویل ${fa(d.rules[0].value)}ساعته | g.ir/o/x7k`
   return (
     <Page title="تنظیمات و سیستم" module="settings" sub="هر تنظیم توضیح اثر و مقدار پیش‌فرض دارد." empty={{ title: 'تنظیماتی برای نمایش نیست.' }}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'store', label: 'فروشگاه و برند' }, { id: 'club', label: 'باشگاه مشتریان' }, { id: 'checkout', label: 'پرداخت، سبد و مالی' }, { id: 'reasons', label: 'دراپ‌داون‌ها و دلیل‌ها' }, { id: 'notif', label: 'اعلان‌های من' }, { id: 'chain', label: 'زنجیرهٔ کانال‌ها' }, { id: 'hints', label: 'ظاهر و راهنما' }, { id: 'seller', label: 'فروشنده و انبارها' }, { id: 'integrations', label: 'یکپارچه‌سازی‌ها' }, { id: 'setup', label: 'چک‌لیست راه‌اندازی' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'store', label: 'فروشگاه و برند' }, { id: 'club', label: 'باشگاه مشتریان' }, { id: 'checkout', label: 'پرداخت، سبد و مالی' }, { id: 'pdp', label: 'صفحهٔ کالا' }, { id: 'reasons', label: 'دراپ‌داون‌ها و دلیل‌ها' }, { id: 'notif', label: 'اعلان‌های من' }, { id: 'chain', label: 'زنجیرهٔ کانال‌ها' }, { id: 'hints', label: 'ظاهر و راهنما' }, { id: 'seller', label: 'فروشنده و انبارها' }, { id: 'integrations', label: 'یکپارچه‌سازی‌ها' }, { id: 'setup', label: 'چک‌لیست راه‌اندازی' }]} />}>
       {tab === 'notif' && <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Card title="ماتریس رویداد × کانال" pad={false}><div className="overflow-x-auto"><table className="gh-table w-full text-12"><thead><tr className="bg-surface-2"><th className="p-2 text-right font-medium">رویداد</th>{CHS.map((c) => <th key={c} className="p-2 font-medium">{c}</th>)}</tr></thead><tbody>
           {EVENTS.map(([g, evs]) => [<tr key={g}><td colSpan={6} className="bg-neutral-bg px-2 py-1 text-11 font-semibold text-t2">{g}</td></tr>, ...evs.map((e) => <tr key={e} className="border-t border-line"><td className="p-2">{e}</td>{CHS.map((c) => <td key={c} className="p-2 text-center"><Toggle on={on(e, c)} label={`${e} ${c}`} onChange={(v) => { mutate((x) => { x.notifMatrix[`${e}|${c}`] = v }); if (!v && /قطعی سایت/.test(e) && CHS.every((cc) => cc === c || !on(e, cc))) toast('همهٔ کانال‌های یک رویداد بحرانی خاموش شد. دست‌کم یک کانال را روشن نگه دارید.', { tone: 'err' }) }} /></td>)}</tr>)])}</tbody></table></div></Card>
@@ -110,6 +110,7 @@ export function Settings() {
       {tab === 'store' && <StoreIdentity />}
       {tab === 'club' && <LoyaltyClub />}
       {tab === 'checkout' && <CheckoutRules />}
+      {tab === 'pdp' && <ProductPageRules />}
       {tab === 'reasons' && <ReasonCenter />}
       {tab === 'seller' && <SellerSettings />}
       {tab === 'integrations' && <div className="space-y-6">{[['sms', 'پنل پیامک'], ['messenger', 'پیام‌رسان'], ['inquiry', 'سرویس استعلام']].map(([f, t]) => <div key={f}><h2 className="mb-2 text-14 font-semibold">{t}</h2><Providers family={f} title={t} list={d.providers.filter((p) => p.family === f)} /></div>)}</div>}

@@ -29,6 +29,14 @@ export function makeStoreCfg() {
       minCart: 0, maxCart: 500000000, vpnWarn: true, reserveMin: 15, socialProof: false,
       autoDeliverDays: 7, vat: 10, cashback: 0, walletMinWithdraw: 100000, walletMaxCharge: 50000000,
     },
+    pdp: {
+      insurance: { on: true, rate: 1.5, min: 150000, max: 5000000, title: 'بیمهٔ سفارش برای این کالا', terms: 'پوشش آسیب یا مشکل در فرایند ارسال.', minPrice: 5000000 },
+      installments: { on: true, count: 4, providers: ['اسنپ‌پی', 'ترب‌پی', 'دیجی‌پی'], text: 'در ۴ قسط ماهانه با یکی از سرویس‌های زیر' },
+      priceChart: { on: true, range: '6m', minPoints: 3 },
+      lowStock: 3, lastUpdate: true, otherSellers: true, sellerScore: true,
+      share: { copy: true, sms: true, bale: true, eitaa: true, whatsapp: true },
+      notifyMe: true, report: true, compare: true, lists: true,
+    },
     feeds: { torob: true, emalls: true, snapppay: true, torobpay: true, onlyInStock: true },
     apiKeys: [
       { id: 'key1', label: 'همگام‌سازی موجودی شریک', scope: ['products:read', 'units:read'], created: new Date(Date.now() - 864e5 * 40).toISOString(), last: new Date(Date.now() - 36e5 * 2).toISOString(), masked: 'gk_live_••••••••3f9a', active: true },

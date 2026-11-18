@@ -9,7 +9,7 @@ import { fileToImage } from '@/shared/lib/image'
 import { fa, num, pct, toman } from '@/shared/lib/fa'
 import { tierOf, type StoreCfg } from '@/shared/data/storeCfg'
 
-type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout'
+type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout' | 'pdp'
 
 /** پیش‌نویس محلی + نوار شناور «لغو / ذخیرهٔ تغییرات» */
 function useDraft<K extends Part>(k: K) {
@@ -203,6 +203,69 @@ export function CheckoutRules() {
       </div>
       <Card><p className="flex flex-wrap items-center gap-2 text-12 text-t2"><Badge tone="info" dot={false}>مرتبط</Badge>درگاه‌ها و سرویس‌های اقساطی در <button className="text-brand underline" onClick={() => nav('/admin/finance?tab=gateways')}>مالی ← درگاه‌ها</button>، روش‌ها و هزینهٔ ارسال در <button className="text-brand underline" onClick={() => nav('/admin/shipping?tab=methods')}>ارسال ← روش‌ها</button>.</p></Card>
       <SaveBar dirty={C.dirty} onCancel={C.reset} onSave={() => { if (v.minCart && v.maxCart && v.minCart >= v.maxCart) return toast('حداقل سبد باید از حداکثر کمتر باشد.', { tone: 'err' }); C.save('قوانین پرداخت و سبد') }} />
+    </div>
+  )
+}
+
+// ───────── صفحهٔ کالا (فیگما: صفحهٔ جزئیات محصول) ─────────
+export function ProductPageRules() {
+  const d = useDB(); const nav = useNavigate(); const C = useDraft('pdp'); const v = C.v
+  const ins = v.insurance; const setIns = (p: Partial<typeof ins>) => C.set({ insurance: { ...ins, ...p } })
+  const inst = v.installments; const setInst = (p: Partial<typeof inst>) => C.set({ installments: { ...inst, ...p } })
+  const pc = v.priceChart; const bnpl = d.providers.filter((p) => p.family === 'bnpl')
+  const sample = 124900000; const fee = Math.min(ins.max, Math.max(ins.min, Math.round((sample * ins.rate) / 100 / 10000) * 10000))
+  const numIn = (val: number, on: (n: number) => void) => <Input className="ltr text-left" inputMode="numeric" value={val} onChange={(e) => on(+e.target.value.replace(/[^\d.]/g, '') || 0)} />
+  const SH: [keyof typeof v.share, string][] = [['copy', 'کپی لینک'], ['sms', 'پیامک'], ['bale', 'بله'], ['eitaa', 'ایتا'], ['whatsapp', 'واتساپ']]
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Sec title={<span className="flex items-center gap-1.5"><ShieldAlert size={15} />بیمهٔ سفارش</span>} sub="فیگما: بعد از «افزودن به سبد»، کارت «بیمهٔ سفارش برای این کالا» با مبلغ و «شرایط بیمه» نمایش داده می‌شود.">
+          <Toggle on={ins.on} onChange={(x) => setIns({ on: x })} text="پیشنهاد بیمهٔ سفارش فعال باشد" />
+          <div className={cx('mt-3 grid gap-3 sm:grid-cols-2', !ins.on && 'pointer-events-none opacity-40')}>
+            <Field label={`نرخ بیمه: ${pct(ins.rate, 1)} از قیمت کالا`}><input type="range" min={0.5} max={5} step={0.1} value={ins.rate} onChange={(e) => setIns({ rate: +e.target.value })} className="w-full accent-[var(--brand)]" /></Field>
+            <Field label="فقط برای کالای بالای (تومان)" help={toman(ins.minPrice)}>{numIn(ins.minPrice, (n) => setIns({ minPrice: n }))}</Field>
+            <Field label="حداقل مبلغ بیمه (تومان)" help={toman(ins.min)}>{numIn(ins.min, (n) => setIns({ min: n }))}</Field>
+            <Field label="حداکثر مبلغ بیمه (تومان)" help={toman(ins.max)}>{numIn(ins.max, (n) => setIns({ max: n }))}</Field>
+            <Field label="عنوان کارت"><Input value={ins.title} onChange={(e) => setIns({ title: e.target.value })} /></Field>
+            <Field label="متن پوشش"><Input value={ins.terms} onChange={(e) => setIns({ terms: e.target.value })} /></Field>
+          </div>
+          <p className="mt-2 rounded-xl bg-surface-2 px-3 py-2 text-12">نمونه برای کالای {toman(sample)}: <b>{toman(fee)}</b> · ردیف «بیمهٔ سفارش» در خلاصهٔ سبد جدا نمایش داده می‌شود. بیمه شرکت بیمه‌گر و قرارداد مکتوب می‌خواهد؛ پیش از امضا فعال نکنید.</p>
+        </Sec>
+        <Sec title={<span className="flex items-center gap-1.5"><Wallet size={15} />کادر خرید اقساطی</span>} sub="فیگما: «خرید اقساطی با تسهیلات · در ۴ قسط ماهانه با یکی از سرویس‌های زیر» و «تنها با ماهی … تومان».">
+          <Toggle on={inst.on} onChange={(x) => setInst({ on: x })} text="کادر اقساط در صفحهٔ کالا نمایش داده شود" />
+          <div className={cx('mt-3 space-y-3', !inst.on && 'pointer-events-none opacity-40')}>
+            <div className="grid gap-3 sm:grid-cols-2"><Field label="تعداد قسط"><Segmented value={String(inst.count)} onChange={(x) => setInst({ count: +x, text: `در ${fa(+x)} قسط ماهانه با یکی از سرویس‌های زیر` })} options={[['3', '۳'], ['4', '۴'], ['6', '۶']]} /></Field><Field label="متن کادر"><Input value={inst.text} onChange={(e) => setInst({ text: e.target.value })} /></Field></div>
+            <Field label="سرویس‌های نمایش‌داده‌شده" help="فقط سرویسی را روشن کنید که قراردادش امضا و در «مالی ← درگاه‌ها» فعال شده است.">
+              <div className="flex flex-wrap gap-2">{(bnpl.length ? bnpl.map((p) => p.name) : ['اسنپ‌پی', 'ترب‌پی', 'دیجی‌پی']).map((n) => { const on = inst.providers.includes(n); const pv = bnpl.find((p) => p.name === n); const live = pv ? ['prov.active', 'prov.slow'].includes(pv.status) : undefined; return <button key={n} type="button" onClick={() => setInst({ providers: on ? inst.providers.filter((x) => x !== n) : [...inst.providers, n] })} className={cx('flex items-center gap-1.5 rounded-full border px-3 py-1 text-12', on ? 'border-brand bg-brand-tint text-brand' : 'border-line')}>{n}{live === false && <Badge tone="warning" dot={false}>غیرفعال در مالی</Badge>}</button> })}</div>
+            </Field>
+            <p className="rounded-xl bg-surface-2 px-3 py-2 text-12">نمونه: {toman(sample)} ← ماهی <b>{toman(Math.round(sample / inst.count / 1000) * 1000)}</b> ({fa(inst.count)} ماه). مبلغ دقیق قسط و پیش‌پرداخت را سرویس اقساطی تعیین می‌کند؛ عدد صفحه «تقریبی» است.</p>
+          </div>
+        </Sec>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Sec title="نمودار قیمت و موجودی" sub="فیگما: «نمودار قیمت فروش»، «آخرین به‌روزرسانی قیمت و موجودی» و «تنها ۱ عدد در انبار باقی مانده».">
+          <div className="space-y-3 text-13">
+            <Toggle on={pc.on} onChange={(x) => C.set({ priceChart: { ...pc, on: x } })} text="نمودار قیمت به‌صورت پیش‌فرض در صفحهٔ کالا نمایش داده شود" />
+            <div className="grid gap-3 sm:grid-cols-2"><Field label="بازهٔ پیش‌فرض"><Segmented value={pc.range} onChange={(x) => C.set({ priceChart: { ...pc, range: x } })} options={[['1m', '۱ ماه'], ['3m', '۳ ماه'], ['6m', '۶ ماه'], ['1y', '۱ سال']]} /></Field><Field label="حداقل نقطه برای نمایش" help="کمتر از این، نمودار پنهان می‌ماند.">{numIn(pc.minPoints, (n) => C.set({ priceChart: { ...pc, minPoints: n } }))}</Field></div>
+            <Field label="هشدار کمبود موجودی از (عدد)" help="«تنها N عدد در انبار باقی مانده»؛ فقط عدد واقعی.">{numIn(v.lowStock, (n) => C.set({ lowStock: n }))}</Field>
+            <Toggle on={v.lastUpdate} onChange={(x) => C.set({ lastUpdate: x })} text="نمایش «آخرین به‌روزرسانی قیمت و موجودی» با تاریخ و ساعت" />
+          </div>
+        </Sec>
+        <Sec title="اقدام‌های کنار عکس و فروشندگان" sub="فیگما: لیست، علاقه‌مندی، مقایسه، اشتراک‌گذاری، نمودار قیمت، گزارش مشکل؛ و «فروشنده و سایر فروشندگان».">
+          <div className="grid gap-2 text-13 sm:grid-cols-2">
+            <Toggle on={v.lists} onChange={(x) => C.set({ lists: x })} text="افزودن به لیست و علاقه‌مندی" />
+            <Toggle on={v.compare} onChange={(x) => C.set({ compare: x })} text="مقایسه با کالاهای مشابه" />
+            <Toggle on={v.notifyMe} onChange={(x) => C.set({ notifyMe: x })} text="«موجود شد، خبرم کن» در حالت ناموجود" />
+            <Toggle on={v.report} onChange={(x) => C.set({ report: x })} text="گزارش مشکل در اطلاعات کالا" />
+            <Toggle on={v.otherSellers} onChange={(x) => C.set({ otherSellers: x })} text="نمایش سایر فروشندگان (شعبه‌ها و شرکا)" />
+            <Toggle on={v.sellerScore} onChange={(x) => C.set({ sellerScore: x })} text="نمایش امتیاز عملکرد فروشنده" />
+          </div>
+          <p className="mb-1 mt-3 text-12 font-semibold">کانال‌های اشتراک‌گذاری</p>
+          <div className="flex flex-wrap gap-3 text-12">{SH.map(([k, l]) => <Toggle key={k} on={v.share[k]} onChange={(x) => C.set({ share: { ...v.share, [k]: x } })} text={l} />)}</div>
+          <p className="mt-3 text-12 text-t2">دلیل‌های گزارش در <button className="text-brand underline" onClick={() => nav('/admin/experience?tab=support')}>تجربهٔ مشتری ← دلیل‌های گزارش</button> و صف گزارش‌ها در <button className="text-brand underline" onClick={() => nav('/admin/requests')}>درخواست‌های مشتری</button>.</p>
+        </Sec>
+      </div>
+      <SaveBar dirty={C.dirty} onCancel={C.reset} onSave={() => { if (ins.min > ins.max) return toast('حداقل مبلغ بیمه از حداکثر بیشتر است.', { tone: 'err' }); if (inst.on && !inst.providers.length) return toast('دست‌کم یک سرویس اقساطی را انتخاب کنید یا کادر را خاموش کنید.', { tone: 'err' }); C.save('تنظیمات صفحهٔ کالا') }} />
     </div>
   )
 }

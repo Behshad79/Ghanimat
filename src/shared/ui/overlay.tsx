@@ -7,13 +7,13 @@ import { HINTS } from '../data/hints'
 import { useSession } from '../lib/store'
 
 // ───── Modal ─────
-export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+export function Modal({ open, onClose, title, children, footer, wide, xl }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; xl?: boolean }) {
   useEffect(() => { if (!open) return; const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h) }, [open, onClose])
   if (!open) return null
   // پورتال روی body: پنجره همیشه وسط صفحه است، حتی اگر والدش transform داشته باشد
   return createPortal(
     <div className="anim-fade fixed inset-0 z-50 grid place-items-end bg-[#10123d]/40 sm:place-items-center sm:p-4" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()} className={cx('anim-pop flex max-h-[90vh] w-full flex-col rounded-t-lg bg-surface shadow-float sm:rounded-lg', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}>
+      <div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()} className={cx('anim-pop flex max-h-[90vh] w-full flex-col rounded-t-lg bg-surface shadow-float sm:rounded-lg', xl ? 'sm:max-w-6xl' : wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}>
         <header className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-14 font-semibold">{title}</h2><button aria-label="بستن" onClick={onClose} className="text-t3 hover:text-t1"><X size={18} /></button></header>
         <div data-dialog-body className="overflow-y-auto p-4 text-13">{children}</div>
         {footer && <footer className="flex justify-start gap-2 border-t border-line px-4 py-3">{footer}</footer>}

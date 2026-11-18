@@ -19,6 +19,8 @@ import { KIND_DEFAULT, LINE_COLORS, LINE_ICONS, LineIcon, readIcon, WEIGHT } fro
 import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
+import { ImageEditor, MediaPicker, SizeGuide } from '../media/Media'
+import { assess, processImage, readFile, type MediaItem } from '@/shared/lib/media'
 import { CategoryPicker } from './CategoryPicker'
 import { FxRevalue, logPrice, QcLayers, RouteEditor } from './PdpExtras'
 import { fetchRate, FX_CURS, type FxCur, type FxResult } from '@/shared/lib/fx'
@@ -140,7 +142,10 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
     onDone ? onDone(pid) : nav(`/admin/catalog/${pid}`)
   }
   saveRef.current = save
-  const addImages = async (files: FileList | null) => { if (!files) return; try { const imgs = await Promise.all([...files].slice(0, 10).map((fl) => fileToImage(fl))); set({ images: [...f.images, ...imgs].slice(0, 12) }); toast(`${fa(imgs.length)} تصویر اضافه شد.`) } catch (e) { toast((e as Error).message, { tone: 'err' }) } }
+  const addImages = async (files: FileList | null) => { if (!files) return; try { const by = currentUser()?.name ?? 'بهشاد'; const made: MediaItem[] = []
+      for (const fl of [...files].slice(0, 10)) { const r0 = await readFile(fl); const r = await processImage(r0.src, r0.type, { optimize: true, square: 'none', watermark: false }); made.push({ id: `M-${Date.now().toString(36)}${made.length}`, src: r.src, name: `${fl.name.replace(/\.[^.]+$/, '')}.${r.type}`, alt: f.title ? `${f.title}، عکس واقعی همین کالا` : '', w: r.w, h: r.h, size: r.size, type: r.type, by, at: new Date().toISOString(), optimized: true, orig: { w: r0.w, h: r0.h, size: r0.size } }) }
+      mutate((x) => { x.media.unshift(...made) }, { action: 'بارگذاری تصویر کالا', target: `${fa(made.length)} تصویر` }); set({ images: [...f.images, ...made.map((m) => m.src)].slice(0, 12) }); toast(`${fa(made.length)} تصویر بهینه و اضافه شد و در کتابخانهٔ رسانه هم ذخیره شد.`) } catch (e) { toast((e as Error).message, { tone: 'err' }) } }
+  const [lib, setLib] = useState(false); const [edImg, setEdImg] = useState<MediaItem | null>(null)
   const [drag, setDrag] = useState<number | null>(null)
 
   const body: Record<number, ReactNode> = {
@@ -160,23 +165,27 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
       <SpecAdder known={[...specFields, ...Object.keys(f.specs)]} tplName={tpl?.name} onAdd={(k, toTpl) => { set({ specs: { ...f.specs, [k]: f.specs[k] ?? '' } }); if (toTpl && tpl) { mutate((x) => { const t = x.entities.attrTemplates.find((y) => y.name === tpl.name); if (t) t.fields = `${t.fields}، ${k}` }, { action: 'افزودن ویژگی به قالب', target: `${tpl.name} › ${k}` }); toast(`«${k}» به قالب «${tpl.name}» اضافه شد و برای همهٔ کالاهای این قالب نمایش داده می‌شود.`) } else toast(`«${k}» فقط برای همین کالا اضافه شد.`) }} />
       <Field label="ویژگی‌های کلیدی" help="هر خط یک ویژگی؛ بالای صفحهٔ کالا نمایش داده می‌شود."><Textarea rows={4} value={f.keyFeatures} onChange={(e) => set({ keyFeatures: e.target.value })} placeholder={'حذف نویز فعال\nصدای فضایی\n۲۰ ساعت شارژدهی'} /></Field></div>,
     2: <div className="space-y-4">
-      <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addImages(e.dataTransfer.files) }} className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-surface-2 px-4 py-10 text-center transition-colors hover:border-brand">
+      <div role="button" tabIndex={0} onClick={() => setLib(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLib(true) } }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addImages(e.dataTransfer.files) }} className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-surface-2 px-4 py-10 text-center transition-colors hover:border-brand">
         <span className="grid size-12 place-items-center rounded-full bg-brand-tint text-brand"><ImagePlus size={22} /></span>
-        <span className="text-14 font-semibold">عکس‌ها را اینجا رها کنید یا انتخاب کنید</span><span className="text-12 text-t2">تا ۱۲ تصویر؛ روی موبایل دوربین باز می‌شود. اولین تصویر کاور است.</span>
-        <input type="file" accept="image/*" multiple capture="environment" className="sr-only" onChange={(e) => { addImages(e.target.files); e.target.value = '' }} />
-      </label>
+        <span className="text-14 font-semibold">افزودن تصویر از کتابخانهٔ مدیا</span><span className="text-12 text-t2">بارگذاری تازه با بهینه‌سازی، مربع‌کردن و واترمارک، یا انتخاب از فایل‌های قبلی. فایل را اینجا رها کنید تا مستقیم بهینه و اضافه شود. اولین تصویر کاور است.</span>
+        <span className="flex gap-2"><span className="btn rounded-md bg-brand-solid px-3 py-1.5 text-12 text-white">باز کردن کتابخانه</span><label onClick={(e) => e.stopPropagation()} className="btn cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-12">دوربین<input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { addImages(e.target.files); e.target.value = '' }} /></label></span>
+      </div>
+      <SizeGuide compact />
       {f.condition !== 'sealed' && <p className="flex items-center gap-1.5 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><CircleAlert size={14} />برای کالای استوک یا جعبه‌باز، عکس واقعی همان واحد الزامی است. ایراد ظاهری روتوش نشود.</p>}
       {f.images.length > 0 && <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">{f.images.map((src, i) => (
         <li key={i} draggable onDragStart={() => setDrag(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (drag === null || drag === i) return; const a = [...f.images]; const [m] = a.splice(drag, 1); a.splice(i, 0, m); set({ images: a }); setDrag(null) }} className={cx('group relative aspect-square overflow-hidden rounded-lg border bg-white', i === 0 ? 'border-brand ring-2 ring-brand/30' : 'border-line')}>
           <img src={src} alt={`تصویر ${fa(i + 1)}`} className="size-full object-cover" />
           {i === 0 && <span className="absolute top-1.5 right-1.5 rounded-sm bg-brand-solid px-1.5 py-0.5 text-11 text-white">کاور</span>}
+          {(() => { const m = d.media.find((y) => y.src === src); const bad = m && assess(m.w, m.h, m.size).find((x) => x.tone !== 'success'); return m ? <span title={bad?.text ?? `${m.w}×${m.h}`} className={cx('absolute bottom-8 right-1.5 rounded-sm px-1 text-11', bad ? 'bg-warning-bg text-warning' : 'bg-white/90 text-t2')}>{fa(m.w)}×{fa(m.h)}</span> : null })()}
           <span className="absolute top-1.5 left-1.5 cursor-grab rounded-sm bg-white/90 p-0.5 text-t2"><GripVertical size={14} /></span>
           <div className="absolute inset-x-1.5 bottom-1.5 flex justify-between opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
             {i > 0 ? <button onClick={() => { const a = [...f.images]; a.splice(i, 1); a.unshift(src); set({ images: a }) }} className="rounded-sm bg-white/95 px-1.5 py-0.5 text-11 font-medium text-t1 shadow">کاور کن</button> : <span />}
-            <button aria-label="حذف تصویر" onClick={() => set({ images: f.images.filter((_, j) => j !== i) })} className="grid size-6 place-items-center rounded-sm bg-white/95 text-danger shadow"><Trash2 size={13} /></button>
+            <span className="flex gap-1">{d.media.some((y) => y.src === src) && <button aria-label="ویرایش تصویر" onClick={() => setEdImg(d.media.find((y) => y.src === src)!)} className="rounded-sm bg-white/95 px-1.5 py-0.5 text-11 font-medium text-t1 shadow">ویرایش</button>}<button aria-label="حذف تصویر" onClick={() => set({ images: f.images.filter((_, j) => j !== i) })} className="grid size-6 place-items-center rounded-sm bg-white/95 text-danger shadow"><Trash2 size={13} /></button></span>
           </div>
         </li>))}</ul>}
-      <VideoField videos={f.pdp.videos} onChange={(v) => set({ pdp: { ...f.pdp, videos: v } })} /></div>,
+      <VideoField videos={f.pdp.videos} onChange={(v) => set({ pdp: { ...f.pdp, videos: v } })} />
+      <MediaPicker open={lib} onClose={() => setLib(false)} picked={f.images} onPick={(srcs) => { set({ images: [...f.images, ...srcs.filter((x) => !f.images.includes(x))].slice(0, 12) }); toast(`${fa(srcs.length)} تصویر به گالری کالا اضافه شد.`) }} />
+      {edImg && <ImageEditor item={edImg} onClose={() => { const old = edImg.src; setEdImg(null); const m = getDB().media.find((y) => y.id === edImg.id); if (m && m.src !== old) set({ images: f.images.map((x) => (x === old ? m.src : x)) }) }} />}</div>,
     3: <div className="space-y-4">
       <Field label="لینک کالا در آمازون (اختیاری)" help="برای خواندن نظرات خریداران آمازون و نمایش انتخاب‌شده‌ها زیر «نظرات آمازون» در صفحهٔ کالا."><Input className="ltr text-left font-mono" value={f.pdp.amazonUrl ?? ''} onChange={(e) => set({ pdp: { ...f.pdp, amazonUrl: e.target.value } })} placeholder="https://www.amazon.com/dp/…" /></Field>
       {f.pdp.amazonUrl && f.id && <AmazonReviews pid={f.id} initialUrl={f.pdp.amazonUrl} />}

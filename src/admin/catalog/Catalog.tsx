@@ -20,7 +20,8 @@ import { WIZARD_STEPS } from './Wizard'
 import { LABEL_BG, LABEL_SIZES, ProductLabel } from '../print/ProductLabel'
 import { CardRules } from '../pages/Catalog'
 import { CatalogInsights, ProductBoard } from './ProductBoard'
-import { ContentWorkflow, InlineTable, MediaLibrary, PimPanel } from '../pro/CatalogPro'
+import { ContentWorkflow, InlineTable, PimPanel } from '../pro/CatalogPro'
+import { MediaLibraryView } from '../media/Media'
 import { FxRevalue, PriceChart, RouteSummary } from './PdpExtras'
 
 export const stockOf = (d: DB, p: Product) => (p.mode === 'qty' ? (p.qty?.tehran ?? 0) + (p.qty?.mahabad ?? 0) : d.units.filter((u) => u.productId === p.id && u.status === 'unit.published').length)
@@ -169,7 +170,7 @@ export function Catalog() {
       {tab === 'bulk' && <InlineTable />}
       {tab === 'pim' && <PimPanel />}
       {tab === 'workflow' && <ContentWorkflow />}
-      {tab === 'media' && <MediaLibrary />}
+      {tab === 'media' && <div className="space-y-3"><p className="text-12 text-t2">کتابخانهٔ کامل با آمار و بهینه‌سازی گروهی در <button type="button" className="text-brand underline" onClick={() => nav('/admin/media')}>منوی کناری ← کتابخانهٔ رسانه</button> هم هست.</p><MediaLibraryView /></div>}
       {tab === 'categories' && <EntityManager ek="categories" kind="دسته" fields={[{ k: 'name', label: 'نام دسته', required: true }, { k: 'parent', label: 'دستهٔ والد' }, { k: 'slug', label: 'نشانی', ltr: true }, { k: 'template', label: 'قالب ویژگی', type: 'select', options: (d.entities.attrTemplates ?? []).map((t) => t.name) }, { k: 'faq', label: 'پرسش متداول', type: 'number' }, { k: 'active', label: 'نمایش در سایت', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.category === r.name).length; return n ? `${fa(n)} کالا در دستهٔ «${r.name}» هست. اول آن‌ها را به دستهٔ دیگری ببرید.` : null }} />}
       {tab === 'brands' && <EntityManager ek="brands" kind="برند" fields={[{ k: 'name', label: 'نام برند', required: true }, { k: 'en', label: 'نام انگلیسی', ltr: true }, { k: 'origin', label: 'کشور' }, { k: 'site', label: 'سایت رسمی', ltr: true, table: false, help: 'برای لینک «مشاهده در سایت سازنده» و تطبیق اصالت.' }, { k: 'slug', label: 'نامک صفحهٔ برند', ltr: true, table: false, help: 'خالی بماند تا از نام انگلیسی ساخته شود.' }, { k: 'seoDesc', label: 'توضیح سئو', type: 'textarea', table: false, help: '۱۲۰ تا ۱۶۰ نویسه؛ در نتیجهٔ گوگل صفحهٔ برند.' }, { k: 'products', label: 'تعداد کالا', type: 'number', render: (r) => fa(d.products.filter((p) => p.brand === r.name).length) }, { k: 'active', label: 'فعال', type: 'toggle' }]} blockDelete={(r) => { const n = d.products.filter((p) => p.brand === r.name).length; return n ? `${fa(n)} کالا با برند «${r.name}» ثبت شده است.` : null }} />}
       {tab === 'attr' && <EntityManager ek="attrTemplates" kind="قالب ویژگی" fields={[{ k: 'name', label: 'نام قالب', required: true }, { k: 'fields', label: 'فیلدها (با ویرگول فارسی جدا کنید)', type: 'textarea', required: true }, { k: 'compare', label: 'در مقایسه نمایش داده شود', type: 'toggle' }]} />}

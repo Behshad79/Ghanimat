@@ -51,6 +51,7 @@
 | سیستم | تنظیمات و سیستم | `/admin/settings` | `settings` |
 | سیستم | مرکز اتصالات و API | `/admin/integrations` | `integrations` |
 | سیستم | هوش مصنوعی | `/admin/ai` | `ai` |
+| سیستم | ایجنت‌ها و اتوماسیون | `/admin/agents` | `agents` |
 | سیستم | زیرساخت و سرویس‌ها | `/admin/infra` | `infra` |
 | سیستم | سیستم طراحی | `/admin/design` | `design` |
 | سیستم | سطل بازیافت | `/admin/trash` | `trash` |
@@ -83,6 +84,7 @@
 | `/admin/shipping` | ارسال و لجستیک | سفارش و ارسال | `Shipping` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات | ![](../screens/admin-shipping.jpg) |
 | `/admin/print` | چاپ و خروجی | سفارش و ارسال | `PrintCenter` · `src/admin/print/PrintCenter.tsx` | مدیر کل، مدیر عملیات، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-print.jpg) |
 | `/admin/returns` | مرجوعی و گارانتی | سفارش و ارسال | `Returns` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات، کارشناس پشتیبانی، کارشناس مالی | ![](../screens/admin-returns.jpg) |
+| `/admin/agents` | ایجنت‌ها و اتوماسیون | سیستم | `Agents` · `src/admin/agents/Agents.tsx` | مدیر کل |  |
 | `/admin/returns/w/:id` | — | — | `WarrantyCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-w-id.jpg) |
 | `/admin/returns/:id` | — | — | `ReturnCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-id.jpg) |
 | `/admin/customers` | مشتریان | مشتری و پشتیبانی | `Customers` · `src/admin/pages/People.tsx` | مدیر کل، کارشناس پشتیبانی | ![](../screens/admin-customers.jpg) |

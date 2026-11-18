@@ -115,6 +115,11 @@
   "admin-returns.jpg"
  ],
  [
+  "/admin/agents",
+  "/admin/agents",
+  "admin-agents.jpg"
+ ],
+ [
   "/admin/returns/w/:id",
   "/admin/returns/w/GR-1843",
   "admin-returns-w-id.jpg"

@@ -9,6 +9,7 @@
 | کد | برچسب | رنگ |
 |---|---|---|
 | `order.awaiting_payment` | در انتظار پرداخت | `neutral` |
+| `order.awaiting_credit` | در انتظار تأیید اعتبار اقساطی | `warning` |
 | `order.paid` | پرداخت‌شده | `info` |
 | `order.needs_decision` | نیازمند تصمیم مشتری | `warning` |
 | `order.preparing` | در حال آماده‌سازی | `info` |
@@ -67,38 +68,35 @@
 
 | کد | برچسب | رنگ |
 |---|---|---|
-| `return.registered` | ثبت‌شده | `neutral` |
-| `return.awaiting_customer` | در انتظار ارسال توسط مشتری | `warning` |
-| `return.in_transit` | در راه انبار | `purple` |
-| `return.inspecting` | در حال بررسی | `purple` |
-| `return.approved` | تأییدشده | `success` |
+| `return.awaiting_customer` | در انتظار ارسال کالا توسط مشتری | `warning` |
+| `return.awaiting_pickup` | در انتظار تحویل حضوری کالا | `warning` |
+| `return.in_transit` | ارسال‌شده، در راه انبار غنیمت | `purple` |
+| `return.inspecting` | در حال بررسی کالا | `purple` |
+| `return.approved` | تأییدشده، منتظر تأیید مالی | `info` |
+| `return.refunding` | تأییدشده، در حال واریز وجه | `info` |
+| `return.approved_deducted` | تأییدشده با کسر هزینهٔ ارسال | `info` |
 | `return.partial` | تأیید بخشی | `warning` |
-| `return.rejected` | ردشده | `danger` |
-| `return.refunding` | در حال واریز | `info` |
-| `return.refunded` | واریزشده | `success` |
-| `return.awaiting_pickup` | در انتظار تحویل حضوری | `warning` |
-| `return.approved_deducted` | تأیید با کسر هزینهٔ ارسال | `success` |
-| `return.cancelled` | لغو توسط مشتری | `neutral` |
+| `return.rejected` | ردشده، ارسال مجدد کالا | `danger` |
+| `return.refunded` | وجه واریز شد | `success` |
+| `return.cancelled` | لغوشده توسط مشتری | `neutral` |
 | `return.expired` | مهلت ارسال تمام شد | `danger` |
-| `return.pickup_scheduled` | پیک غنیمت در راه دریافت | `purple` |
-| `return.sent_back` | کالا به مشتری بازگردانده شد | `neutral` |
 
 ### `warranty`
 
 | کد | برچسب | رنگ |
 |---|---|---|
 | `warranty.pending` | در انتظار بررسی | `warning` |
-| `warranty.repairing` | در حال تعمیر | `purple` |
-| `warranty.replaced` | تعویض‌شده | `success` |
-| `warranty.done` | تکمیل‌شده | `success` |
-| `warranty.rejected` | ردشده | `danger` |
+| `warranty.reviewing` | در حال بررسی | `purple` |
 | `warranty.approved` | تأیید شد، منتظر ارسال کالا | `info` |
+| `warranty.rejected` | رد شد | `danger` |
 | `warranty.in_transit` | کالا در راه غنیمت | `purple` |
+| `warranty.received` | دریافت و بررسی کالا در غنیمت | `purple` |
+| `warranty.repairing` | در حال تعمیر | `purple` |
+| `warranty.replaced` | تعویض شد | `info` |
+| `warranty.shipping_back` | کالای تعمیرشده در راه مشتری | `info` |
 | `warranty.refunded` | مبلغ بازگشت داده شد | `success` |
-| `warranty.received` | دریافت شد، در حال عیب‌یابی | `purple` |
-| `warranty.external` | نزد مرکز خدمات شرکت | `purple` |
-| `warranty.ready` | آمادهٔ ارسال به مشتری | `info` |
-| `warranty.shipping_back` | در راه مشتری | `info` |
+| `warranty.done` | خدمت تکمیل شد | `success` |
+| `warranty.closed` | بسته شد، مهلت ارسال تمام شد | `neutral` |
 
 ### `ticket`
 

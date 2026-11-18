@@ -8,8 +8,9 @@ import { mutate, useDB } from '@/shared/lib/store'
 import { fileToImage } from '@/shared/lib/image'
 import { fa, num, pct, toman } from '@/shared/lib/fa'
 import { tierOf, type StoreCfg } from '@/shared/data/storeCfg'
+import { FX_CURS, refreshAll } from '@/shared/lib/fx'
 
-type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout' | 'pdp'
+type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout' | 'pdp' | 'fx'
 
 /** پیش‌نویس محلی + نوار شناور «لغو / ذخیرهٔ تغییرات» */
 function useDraft<K extends Part>(k: K) {
@@ -201,6 +202,7 @@ export function CheckoutRules() {
           <p className="mt-2 flex items-center gap-1.5 text-11 text-t2"><Globe size={12} />تحویل سریع و پیک با ثبت تحویل توسط پیک یا شعبه بسته می‌شود و این قاعده شامل آن‌ها نیست.</p>
         </Sec>
       </div>
+      <FxSettings />
       <Card><p className="flex flex-wrap items-center gap-2 text-12 text-t2"><Badge tone="info" dot={false}>مرتبط</Badge>درگاه‌ها و سرویس‌های اقساطی در <button className="text-brand underline" onClick={() => nav('/admin/finance?tab=gateways')}>مالی ← درگاه‌ها</button>، روش‌ها و هزینهٔ ارسال در <button className="text-brand underline" onClick={() => nav('/admin/shipping?tab=methods')}>ارسال ← روش‌ها</button>.</p></Card>
       <SaveBar dirty={C.dirty} onCancel={C.reset} onSave={() => { if (v.minCart && v.maxCart && v.minCart >= v.maxCart) return toast('حداقل سبد باید از حداکثر کمتر باشد.', { tone: 'err' }); C.save('قوانین پرداخت و سبد') }} />
     </div>
@@ -267,5 +269,35 @@ export function ProductPageRules() {
       </div>
       <SaveBar dirty={C.dirty} onCancel={C.reset} onSave={() => { if (ins.min > ins.max) return toast('حداقل مبلغ بیمه از حداکثر بیشتر است.', { tone: 'err' }); if (inst.on && !inst.providers.length) return toast('دست‌کم یک سرویس اقساطی را انتخاب کنید یا کادر را خاموش کنید.', { tone: 'err' }); C.save('تنظیمات صفحهٔ کالا') }} />
     </div>
+  )
+}
+
+// ───────── نرخ روز ارز (API) ─────────
+export function FxSettings() {
+  const C = useDraft('fx'); const v = C.v; const a = v.api; const setA = (p: Partial<typeof a>) => C.set({ api: { ...a, ...p } })
+  const [test, setTest] = useState<string | null>(null)
+  const run = async () => { if (C.dirty) C.save('تنظیمات نرخ روز ارز'); setTest('در حال دریافت…'); const res = await refreshAll(); setTest(res.map(([c, r]) => `${c}: ${r.source === 'saved' ? `خطا (${r.error ?? 'API خاموش است'})، نرخ ذخیره‌شده ${num(r.rate)}` : `${num(r.rate)} تومان${r.source === 'demo' ? ' (نمایشی)' : ''}`}`).join(' · ')) }
+  return (
+    <Sec title={<span className="flex items-center gap-1.5"><Globe size={15} />نرخ روز ارز (API)</span>} sub="با انتخاب ارز در فرم کالا و سفارش خرید، نرخ امروز از همین API خوانده و در فیلد «نرخ» گذاشته می‌شود. فیلد همیشه دستی هم قابل تغییر است.">
+      <div className="space-y-3">
+        <Toggle on={a.on} onChange={(x) => setA({ on: x })} text="دریافت خودکار نرخ روز فعال باشد" />
+        <div className={cx('space-y-3', !a.on && 'pointer-events-none opacity-40')}>
+          <Field label="حالت"><Segmented value={a.mode} onChange={(x) => setA({ mode: x })} options={[['demo', 'نمایشی (بدون API)'], ['live', 'API واقعی']]} /></Field>
+          {a.mode === 'live' && <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="نام سرویس"><Input value={a.name} onChange={(e) => setA({ name: e.target.value })} placeholder="مثلاً سرویس نرخ ارز بازار" /></Field>
+            <Field label="نشانی API" help="{cur} با کد ارز جایگزین می‌شود؛ اگر یک درخواست همهٔ ارزها را برمی‌گرداند، {cur} نگذارید."><Input className="ltr text-left font-mono" value={a.url} onChange={(e) => setA({ url: e.target.value })} placeholder="https://api.example.com/rates?symbol={cur}" /></Field>
+            <Field label="نام هدر کلید"><Input className="ltr text-left font-mono" value={a.keyHeader} onChange={(e) => setA({ keyHeader: e.target.value })} placeholder="Authorization" /></Field>
+            <Field label="کلید API" help="در نسخهٔ نهایی کلید فقط روی سرور ذخیره می‌شود و به مرورگر نمی‌آید."><Input type="password" autoComplete="off" className="ltr text-left font-mono" value={a.key} onChange={(e) => setA({ key: e.target.value })} placeholder="Bearer …" /></Field>
+            <Field label="واحد پاسخ API"><Segmented value={a.unit} onChange={(x) => setA({ unit: x })} options={[['تومان', 'تومان'], ['ریال', 'ریال (تقسیم بر ۱۰)']]} /></Field>
+            <Field label="به‌روزرسانی خودکار هر (دقیقه)"><Input className="ltr text-left" inputMode="numeric" value={a.autoMin} onChange={(e) => setA({ autoMin: +e.target.value.replace(/\D/g, '') || 0 })} /></Field>
+            <div className="sm:col-span-2"><p className="mb-1 text-12 font-medium text-t2">کد هر ارز و مسیر عدد در پاسخ JSON</p><div className="grid gap-2 sm:grid-cols-3">{FX_CURS.map((c) => <div key={c} className="rounded-xl border border-line p-2"><b className="text-12">{c}</b><Input aria-label={`کد ${c}`} className="ltr mt-1 h-8 text-left font-mono" value={a.codes[c]} onChange={(e) => setA({ codes: { ...a.codes, [c]: e.target.value } })} /><Input aria-label={`مسیر ${c}`} className="ltr mt-1 h-8 text-left font-mono" value={a.paths[c]} onChange={(e) => setA({ paths: { ...a.paths, [c]: e.target.value } })} placeholder="data.usd.sell" /></div>)}</div></div>
+          </div>}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">{FX_CURS.map((c) => <Field key={c} label={`نرخ ذخیره‌شدهٔ ${c} (تومان)`} help="اگر API در دسترس نباشد همین استفاده می‌شود."><Input className="ltr text-left font-mono" inputMode="numeric" value={v.rates[c].toLocaleString('en-US')} onChange={(e) => C.set({ rates: { ...v.rates, [c]: +e.target.value.replace(/\D/g, '') || 0 }, source: 'manual' })} /></Field>)}</div>
+        <div className="flex flex-wrap items-center gap-2"><Button icon={<Send size={14} />} disabled={!a.on} onClick={run}>آزمایش و به‌روزرسانی از API</Button><span className="text-11 text-t2">آخرین به‌روزرسانی: {new Date(v.updatedAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })} · {v.source === 'api' ? 'از API' : 'دستی'}</span></div>
+        {test && <p className="rounded-xl bg-surface-2 px-3 py-2 text-12">{test}</p>}
+      </div>
+      <SaveBar dirty={C.dirty} onCancel={C.reset} onSave={() => { if (a.on && a.mode === 'live' && !/^https:\/\//.test(a.url)) return toast('نشانی API باید با https:// شروع شود.', { tone: 'err' }); C.save('تنظیمات نرخ روز ارز') }} />
+    </Sec>
   )
 }

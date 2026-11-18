@@ -20,6 +20,7 @@ import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
 import { logPrice, QcLayers, RouteEditor } from './PdpExtras'
+import { fetchRate, FX_CURS, type FxCur, type FxResult } from '@/shared/lib/fx'
 import { EditableChoice, VariantEditor } from './Choices'
 import { ProductLabel } from '../print/ProductLabel'
 
@@ -36,7 +37,8 @@ export type Draft = {
   site: boolean; torob: boolean; metaTitle: string; metaDesc: string; slug: string; scheduledAt: string
   places?: Record<string, 'pin' | 'excl'>; dealDraft?: Omit<Deal, 'id' | 'pid'>
 }
-const RATES: Record<string, number> = { تومان: 1, دلار: 61500, درهم: 16700, دینار: 47 }
+const CURRENCIES = ['تومان', ...FX_CURS]
+type FxInfo = (FxResult & { manual?: boolean }) | { loading: true } | null
 const STEPS = ['نوع و دسته', 'مشخصات', 'تصاویر و ویدیو', 'توضیحات', 'وضعیت و منبع', 'موجودی', 'قیمت و سود', 'ارسال و خدمات', 'گارانتی', 'کانال‌ها و سئو', 'بارکد و برچسب', 'مرور و انتشار']
 const QUICK = [2, 0, 4, 5, 6, 11] // حالت سریع: عکس، نام، وضعیت، تعداد، قیمت، انتشار
 
@@ -65,6 +67,9 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
   const [step, setStep] = useState(() => Number(sp.get('step') ?? (quick ? QUICK[0] : 0))); const [sch, setSch] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(saved ? Date.now() : null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [fx, setFx] = useState<FxInfo>(null)
+  /** استعلام نرخ روز با انتخاب ارز؛ نرخ در فیلد «نرخ» می‌نشیند و دستی هم قابل تغییر است */
+  const loadRate = async (cur: string) => { if (cur === 'تومان') { setFx(null); return set({ currency: cur, rate: 1 }) } set({ currency: cur }); setFx({ loading: true }); const r = await fetchRate(cur as FxCur); setF((x) => (x.currency === cur ? { ...x, rate: r.rate } : x)); setFx(r); if (r.error) toast(`نرخ روز دریافت نشد (${r.error})؛ آخرین نرخ ذخیره‌شده گذاشته شد.`, { tone: 'err' }) }
   const order = quick ? QUICK : STEPS.map((_, i) => i)
   const pos = order.indexOf(step)
   const set = (patch: Partial<Draft>) => setF((x) => ({ ...x, ...patch }))
@@ -207,8 +212,10 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
     <div className="grid gap-5 xl:grid-cols-[1fr_300px]">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="قیمت خرید"><MoneyIn value={f.costFx} onChange={(n) => set({ costFx: n })} placeholder="مثلاً 12,000,000" /></Field>
-        <Field label="ارز خرید"><Select value={f.currency} onChange={(v) => set({ currency: v, rate: RATES[v] })} options={Object.keys(RATES)} /></Field>
-        {f.currency !== 'تومان' && <Field label={`نرخ ${f.currency} (تومان)`} help="پیش‌فرض: نرخ مرجع امروز در تأمین و خرید"><MoneyIn value={f.rate} onChange={(n) => set({ rate: n })} /></Field>}
+        <Field label="ارز خرید" help={f.currency !== 'تومان' ? 'با انتخاب ارز، نرخ امروز خودکار استعلام می‌شود.' : undefined}><Select value={f.currency} onChange={loadRate} options={CURRENCIES} /></Field>
+        {f.currency !== 'تومان' && <Field label={`نرخ روز ${f.currency} (تومان)`} help={!fx ? 'برای گرفتن نرخ امروز «استعلام نرخ روز» را بزنید.' : 'loading' in fx ? 'در حال استعلام نرخ روز…' : fx.manual ? 'نرخ دستی وارد شده است.' : fx.source === 'api' ? `نرخ روز از API · ${new Date(fx.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}` : fx.source === 'demo' ? 'نرخ روز (حالت نمایشی؛ API واقعی را در تنظیمات وصل کنید)' : `آخرین نرخ ذخیره‌شده (${new Date(fx.at).toLocaleDateString('fa-IR')})`}
+          hint={<button type="button" disabled={!!fx && 'loading' in fx} onClick={() => loadRate(f.currency)} className="text-11 text-brand disabled:opacity-50">{fx && 'loading' in fx ? 'در حال استعلام…' : 'استعلام نرخ روز'}</button>}>
+          <MoneyIn value={f.rate} onChange={(n) => { set({ rate: n }); setFx((x) => (x && !('loading' in x) ? { ...x, manual: true } : { rate: n, at: new Date().toISOString(), source: 'saved', manual: true })) }} /></Field>}
         <Field label="حمل بین‌المللی (تومان)"><MoneyIn value={f.freight} onChange={(n) => set({ freight: n })} /></Field>
         <Field label="ترخیص (تومان)"><MoneyIn value={f.customs} onChange={(n) => set({ customs: n })} /></Field>
         <Field label="سایر هزینه‌ها (QC، عکاسی)"><MoneyIn value={f.other} onChange={(n) => set({ other: n })} /></Field>

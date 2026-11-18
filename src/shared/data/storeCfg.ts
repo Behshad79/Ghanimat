@@ -29,6 +29,13 @@ export function makeStoreCfg() {
       minCart: 0, maxCart: 500000000, vpnWarn: true, reserveMin: 15, socialProof: false,
       autoDeliverDays: 7, vat: 10, cashback: 0, walletMinWithdraw: 100000, walletMaxCharge: 50000000,
     },
+    fx: {
+      rates: { دلار: 61500, درهم: 16700, دینار: 47 } as Record<'دلار' | 'درهم' | 'دینار', number>,
+      updatedAt: new Date(Date.now() - 3 * 36e5).toISOString(), source: 'manual' as 'manual' | 'api',
+      api: { on: true, mode: 'demo' as 'demo' | 'live', name: '', url: '', keyHeader: 'Authorization', key: '', unit: 'تومان' as 'تومان' | 'ریال',
+        codes: { دلار: 'usd', درهم: 'aed', دینار: 'iqd' } as Record<'دلار' | 'درهم' | 'دینار', string>,
+        paths: { دلار: 'usd.sell', درهم: 'aed.sell', دینار: 'iqd.sell' } as Record<'دلار' | 'درهم' | 'دینار', string>, autoMin: 60 },
+    },
     pdp: {
       insurance: { on: true, rate: 1.5, min: 150000, max: 5000000, title: 'بیمهٔ سفارش برای این کالا', terms: 'پوشش آسیب یا مشکل در فرایند ارسال.', minPrice: 5000000 },
       installments: { on: true, count: 4, providers: ['اسنپ‌پی', 'ترب‌پی', 'دیجی‌پی'], text: 'در ۴ قسط ماهانه با یکی از سرویس‌های زیر' },

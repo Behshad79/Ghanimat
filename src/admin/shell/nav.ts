@@ -1,4 +1,4 @@
-import { Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -50,6 +50,7 @@ export const NAV: NavItem[] = [
   { id: 'settings', label: 'تنظیمات و سیستم', icon: Settings, path: '/admin/settings', group: 'سیستم' },
   { id: 'integrations', label: 'مرکز اتصالات و API', icon: Cable, path: '/admin/integrations', group: 'سیستم', count: (d) => d.hub.deliveries.filter((x) => x.status >= 300).length },
   { id: 'ai', label: 'هوش مصنوعی', icon: Bot, path: '/admin/ai', group: 'سیستم' },
+  { id: 'agents', label: 'ایجنت‌ها و اتوماسیون', icon: Workflow, path: '/admin/agents', group: 'سیستم', count: (d) => d.agents.tasks.filter((t) => t.status === 'needs_approval').length },
   { id: 'infra', label: 'زیرساخت و سرویس‌ها', icon: ServerCog, path: '/admin/infra', group: 'سیستم' },
   { id: 'design', label: 'سیستم طراحی', icon: Palette, path: '/admin/design', group: 'سیستم' },
   { id: 'trash', label: 'سطل بازیافت', icon: Trash2, path: '/admin/trash', group: 'سیستم', count: (d) => d.trash.length },

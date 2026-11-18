@@ -24,6 +24,7 @@ import { makeOrderEvents } from './orderEvents'
 import { makeContentQueue } from './contentQueue'
 import { makeIncoming } from './incoming'
 import { makeMerch } from './merch'
+import { makeAgents } from './agents'
 import { makeBlog } from './blog'
 import { makeTraffic } from './traffic'
 import { makeStoreCfg } from './storeCfg'
@@ -259,7 +260,7 @@ const makeSeedBase = () => ({
     { key: 'otp_seconds', group: 'حساب و امنیت', name: 'اعتبار کد یک‌بارمصرف', value: 120, unit: 'ثانیه', desc: 'کد ورود همیشه با پیامک ارسال می‌شود.', sensitive: false, usedIn: ['صفحهٔ ورود سایت', 'ورود پنل'], history: [] },
   ],
   roleDefs: structuredClone(BASE_ROLES),
-  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), network: makeNetwork(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), remote: makeRemote(), incoming: makeIncoming(), merch: makeMerch(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
+  people: makePeople(), peopleCfg: makePeopleConfig(), vault: makeVault(), opts: makeOptions(), axes: makeAxes(), orderEvents: makeOrderEvents(), contentQueue: makeContentQueue(), blog: makeBlog(), traffic: makeTraffic(), storeCfg: makeStoreCfg(), reviewMeta: makeReviewMeta(), questions: makeQuestions(), reasonPresets: makeReasonPresets(), acct: makeAcct(), partners: makePartners(), network: makeNetwork(), lots: makeLots(), nudges: makeNudges(), calls: makeCalls(), remote: makeRemote(), incoming: makeIncoming(), merch: makeMerch(), agents: makeAgents(), extReviews: {} as Record<string, { id: string; author: string; rating: number; text: string; textFa: string; date: string; country: string; verified: boolean; show: boolean }[]>,
   // دسترسی اختصاصی هر عضو: ماژول‌های افزوده یا گرفته‌شده نسبت به نقش او
   access: { u5: { add: ['conversations'], remove: [] } } as Record<string, { add: string[]; remove: string[] }>,
   team: [

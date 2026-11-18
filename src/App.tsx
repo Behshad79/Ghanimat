@@ -31,6 +31,7 @@ import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
 import { ReturnCase, WarrantyCase } from './admin/returns/Case'
 import { ReviewWidget } from './shared/ui/review'
+import { Agents } from './admin/agents/Agents'
 import { Partner } from './admin/partner/Partner'
 import { Insight } from './admin/insight/Insight'
 import { Merch } from './admin/merch/Merch'
@@ -78,6 +79,7 @@ export function App() {
               <Route path="shipping" element={<Shipping />} />
               <Route path="print" element={<PrintCenter />} />
               <Route path="returns" element={<Returns />} />
+              <Route path="agents" element={<Agents />} />
               <Route path="returns/w/:id" element={<WarrantyCase />} />
               <Route path="returns/:id" element={<ReturnCase />} />
               <Route path="customers" element={<Customers />} />

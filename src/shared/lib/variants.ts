@@ -47,3 +47,10 @@ export function deliveryFor(v: Pick<Variation, 'qty' | 'backorder'>, fastEligibl
   if (t > 0) return { tone: 'post', title: 'ارسال از انبار تهران', lines: ['ارسال پیشتاز به همهٔ شهرها', 'تحویل حضوری در شعبه'], from }
   return { tone: 'post', title: 'فقط ارسال پیشتاز از انبار مهاباد', lines: ['ارسال سریع تهران برای این تنوع در دسترس نیست', `ارسال پیشتاز به همهٔ شهرها · ۲ تا ۴ روز کاری${fastMahabad ? '؛ در مهاباد تحویل سریع شهری' : ''}`], from }
 }
+
+/** قیمت تمام‌شدهٔ هر تنوع: قیمت خرید خود تنوع (یا پایه) × نرخ ارز + هزینهٔ جانبی خود تنوع (یا پایه) */
+export type CostBase = { costFx: number; rate: number; extra: number }
+export const landedVar = (v: Pick<Variation, 'costFx' | 'extra'>, b: CostBase, rate = b.rate) => Math.round((v.costFx ?? b.costFx) * rate + (v.extra ?? b.extra))
+export const marginOf = (price: number, cost: number) => (price && cost ? ((price - cost) / price) * 100 : 0)
+/** قیمت لازم برای رسیدن به حاشیهٔ هدف، گردشده به هزار تومان */
+export const priceForMargin = (cost: number, pct: number) => (pct < 100 ? Math.ceil(cost / (1 - pct / 100) / 1000) * 1000 : cost)

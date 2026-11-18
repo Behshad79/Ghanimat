@@ -1,7 +1,7 @@
 // تنظیمات سایت مشتری (سربرگ، منو، فوتر، کارت و فهرست محصولات).
 // «site» پیش‌نویس در حال ویرایش است و «sitePublished» نسخه‌ای است که مشتری می‌بیند.
 export type Link = { id: string; label: string; to: string; badge?: string; children?: Link[]; hidden?: boolean }
-export type CardLine = { id: string; kind: 'low' | 'origin' | 'bnpl' | 'custom'; text: string; on: boolean; icon?: string }
+export type CardLine = { id: string; kind: 'low' | 'origin' | 'bnpl' | 'fast' | 'custom'; text: string; on: boolean; icon?: string; color?: string; dur?: number; weight?: number; scope?: 'all' | 'manual' }
 export type Social = { id: string; kind: string; url: string; on: boolean }
 
 export const makeSite = () => ({
@@ -68,6 +68,9 @@ export const makeSite = () => ({
       { id: 'low', kind: 'low', text: 'موجودی محدود', on: true },
       { id: 'origin', kind: 'origin', text: 'ارسال از مبدأ آمازون', on: true },
       { id: 'bnpl', kind: 'bnpl', text: 'خرید {اقساط} قسطه {سرویس}', on: true },
+      { id: 'fast', kind: 'fast', text: 'ارسال سریع همین امروز', on: true, icon: 'zap', color: '#16a34a' },
+      { id: 'warranty', kind: 'custom', text: '۷ روز ضمانت بازگشت', on: true, icon: 'shield', color: '#16a34a', scope: 'manual' },
+      { id: 'gift', kind: 'custom', text: 'بسته‌بندی کادویی رایگان', on: true, icon: 'gift', color: '#7c3aed', scope: 'manual' },
     ] as CardLine[],
   },
   listing: {

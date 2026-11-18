@@ -15,6 +15,7 @@ import { compactToman, fa, num, pct, toman } from '@/shared/lib/fa'
 import type { Product, Unit, Pdp } from '@/shared/data/seed'
 import type { PartnerT } from '@/shared/data/partners'
 import { dealStatus, DEAL_LABEL, type Deal } from '@/shared/data/merch'
+import { KIND_DEFAULT, LINE_COLORS, LINE_ICONS, LineIcon, WEIGHT } from '@/shared/ui/lineIcons'
 import { DealForm } from '../merch/Merch'
 export type { Pdp }
 import { ProductCard } from './ProductCard'
@@ -230,6 +231,7 @@ export function ProductWizard({ quick, onDone, partner, initialTitle }: { quick?
       <div className="sm:col-span-2"><Field label="شرایط" help="روی کارت گارانتی چاپی خلاصه می‌شود."><Textarea rows={3} value={f.warrantyTerms} onChange={(e) => set({ warrantyTerms: e.target.value })} /></Field></div></div>,
     9: <div className="space-y-4">
       <WherePlaced f={f} set={set} />
+      <CardLinesEditor f={f} set={set} preview={<ProductCard p={{ ...(editing ?? {}), id: f.id ?? 'preview', image: f.images[0] ?? '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: 'product.published', mode: 'qty', qty: { tehran: Math.max(1, f.qtyTehran), mahabad: f.qtyMahabad }, priceNew: f.priceNew, price: finalPrice, compareAt: f.discount ? f.price : undefined, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, fastEligible: f.fastEligible, seller: 'غنیمت', torob: f.torob, source: f.source, pdp: f.pdp } as Product} />} />
       <div className="flex flex-wrap gap-6 rounded-xl bg-surface-2 p-3 text-13"><Toggle on={!!f.pdp.featured} onChange={(v) => set({ pdp: { ...f.pdp, featured: v } })} text="کالای ویژه (در بخش «پیشنهاد غنیمت»)" /><Toggle on={f.pdp.showQA ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showQA: v } })} text="نمایش پرسش و پاسخ" /><Toggle on={f.pdp.showReviews ?? true} onChange={(v) => set({ pdp: { ...f.pdp, showReviews: v } })} text="نمایش دیدگاه‌ها" /></div>
       <div className="flex flex-wrap gap-6"><label className="flex items-center gap-2 text-13"><Toggle on={f.site} label="سایت" onChange={(v) => set({ site: v })} />نمایش در سایت</label><label className="flex items-center gap-2 text-13"><Toggle on={f.torob} label="ترب" onChange={(v) => set({ torob: v })} />نمایش در ترب</label></div>
       <Field label="عنوان متا" help={`${fa((f.metaTitle || `خرید ${f.title} | غنیمت`).length)} نویسه؛ هدف زیر ۶۰`}><Input value={f.metaTitle} onChange={(e) => set({ metaTitle: e.target.value })} placeholder={`خرید ${f.title || '…'} | غنیمت`} /></Field>
@@ -306,5 +308,34 @@ function WherePlaced({ f, set }: { f: Draft; set: (p: Partial<Draft>) => void })
       <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setDeal({ pid: f.id, regular: Math.round(f.price * (1 - f.discount / 100)) || f.priceNew })}>زمان‌بندی غنی‌آف</Button>
     </div>
     {deal && (f.id ? <DealForm init={deal} lockPid onClose={() => setDeal(null)} /> : <DealForm init={deal} lockPid onClose={() => setDeal(null)} onDraft={(x) => set({ dealDraft: { ...x, sold: 0 } as any })} />)}
+  </div>
+}
+
+/** خط متحرک کارت همین کالا: مثل همهٔ کالاها، یا خط‌های عمومی + انتخاب‌های این کالا، یا فقط انتخاب‌های این کالا؛ با مدت و اهمیت هر خط */
+function CardLinesEditor({ f, set, preview }: { f: Draft; set: (p: Partial<Draft>) => void; preview: ReactNode }) {
+  const d = useDB(); const lib = d.site.card.lines; const cl = f.pdp.cardLines ?? { mode: 'inherit' as const, pick: [], custom: [], over: {} }
+  const up = (patch: Partial<typeof cl>) => set({ pdp: { ...f.pdp, cardLines: { ...cl, ...patch } } })
+  const over = (id: string, o: { dur?: number; weight?: number }) => up({ over: { ...(cl.over ?? {}), [id]: { ...(cl.over?.[id] ?? {}), ...o } } })
+  return <div className="space-y-3 rounded-xl border border-line p-3">
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-13 font-semibold">خط متحرک کارت این کالا</p><span className="text-11 text-t2">خط‌های عمومی، آیکون، رنگ و سرعت را در «سربرگ، منو و فوتر ← کارت محصول» تعریف کنید</span></div>
+    <Segmented size="sm" value={cl.mode} onChange={(v) => up({ mode: v })} options={[['inherit', 'مثل همهٔ کالاها'], ['add', 'عمومی + انتخاب‌های این کالا'], ['replace', 'فقط انتخاب‌های این کالا']]} />
+    <div className="grid gap-3 lg:grid-cols-[1fr_250px]">
+      <div className="space-y-2">{cl.mode === 'inherit' ? <p className="rounded-lg bg-neutral-bg p-2.5 text-12 text-t2">همان خط‌های عمومی با شرط‌هایشان نمایش داده می‌شود (مثلاً «موجودی محدود» فقط وقتی موجودی کم است).</p> : <>
+        <p className="text-12 font-medium">از خط‌های آماده انتخاب کنید</p>
+        <ul className="space-y-1.5">{lib.map((l) => { const def = KIND_DEFAULT[l.kind] ?? KIND_DEFAULT.custom; const on = cl.mode === 'add' && l.scope !== 'manual' ? true : cl.pick.includes(l.id); const forced = cl.mode === 'add' && l.scope !== 'manual'; const o = cl.over?.[l.id] ?? {}; return <li key={l.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line px-2.5 py-1.5 text-12">
+          <input type="checkbox" aria-label={l.text} checked={on} disabled={forced} onChange={() => up({ pick: cl.pick.includes(l.id) ? cl.pick.filter((x) => x !== l.id) : [...cl.pick, l.id] })} /><LineIcon k={l.icon ?? def.icon} color={l.color ?? def.color} /><span className="min-w-0 flex-1 truncate">{l.text}{forced && <span className="text-11 text-t3"> (عمومی)</span>}</span>
+          {on && <><Input aria-label={`مدت ${l.text}`} className="h-7 w-14 text-center text-11" inputMode="decimal" placeholder={String(l.dur ?? d.site.card.interval)} value={o.dur ?? ''} onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^\d.]/g, '')); over(l.id, { dur: isNaN(v) ? undefined : Math.max(0.25, v) }) }} /><span className="text-11 text-t3">ثانیه</span><Segmented size="sm" value={String(o.weight ?? l.weight ?? 1)} onChange={(v) => over(l.id, { weight: +v })} options={WEIGHT} /></>}
+        </li> })}</ul>
+        <p className="pt-1 text-12 font-medium">خط اختصاصی همین کالا</p>
+        {cl.custom.map((c, i) => <div key={c.id} className="space-y-1.5 rounded-lg border border-brand/30 bg-brand-tint/20 p-2">
+          <div className="flex items-center gap-1.5"><LineIcon k={c.icon} color={c.color} /><Input aria-label="متن خط اختصاصی" className="h-8 flex-1 text-12" value={c.text} onChange={(e) => up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} /><Button size="sm" variant="ghost" aria-label="حذف خط" icon={<Trash2 size={13} />} onClick={() => up({ custom: cl.custom.filter((_, j) => j !== i) })} /></div>
+          <div className="flex flex-wrap items-center gap-1">{Object.entries(LINE_ICONS).map(([k, [I, lb]]) => <button key={k} type="button" aria-label={`آیکون ${lb}`} aria-pressed={c.icon === k} onClick={() => up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, icon: k } : x)) })} className={cx('grid size-6 place-items-center rounded-md', c.icon === k ? 'bg-brand-tint ring-1 ring-brand' : 'hover:bg-neutral-bg')}><I size={13} style={{ color: c.color }} /></button>)}</div>
+          <div className="flex flex-wrap items-center gap-1.5">{LINE_COLORS.map((col) => <button key={col} type="button" aria-label={`رنگ ${col}`} aria-pressed={c.color === col} onClick={() => up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, color: col } : x)) })} className={cx('size-5 rounded-full border-2', c.color === col ? 'border-t1' : 'border-transparent')} style={{ background: col }} />)}<input type="color" aria-label="رنگ دلخواه" value={c.color} onChange={(e) => up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)) })} className="size-6 cursor-pointer rounded" />
+            <Input aria-label="مدت خط اختصاصی" className="mr-2 h-7 w-14 text-center text-11" inputMode="decimal" placeholder={String(d.site.card.interval)} value={c.dur ?? ''} onChange={(e) => { const v = parseFloat(e.target.value.replace(/[^\d.]/g, '')); up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, dur: isNaN(v) ? undefined : Math.max(0.25, v) } : x)) }) }} /><span className="text-11 text-t3">ثانیه</span><Segmented size="sm" value={String(c.weight ?? 1)} onChange={(v) => up({ custom: cl.custom.map((x, j) => (j === i ? { ...x, weight: +v } : x)) })} options={WEIGHT} /></div>
+        </div>)}
+        <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => up({ custom: [...cl.custom, { id: `cc${Date.now().toString(36)}`, text: 'فقط ۳ عدد با این قیمت', icon: 'flame', color: '#dc2626', weight: 2 }] })}>افزودن خط اختصاصی</Button>
+      </>}</div>
+      <div className="flex flex-col items-center gap-1 rounded-lg bg-neutral-bg p-2"><p className="text-11 text-t2">پیش‌نمایش زنده</p>{preview}</div>
+    </div>
   </div>
 }

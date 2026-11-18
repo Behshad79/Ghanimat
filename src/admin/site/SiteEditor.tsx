@@ -1,3 +1,4 @@
+import { KIND_DEFAULT, LINE_COLORS, LINE_ICONS, LineIcon, WEIGHT } from '@/shared/ui/lineIcons'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ChevronLeft, CreditCard, Eye, EyeOff, History, LayoutGrid, Megaphone, Monitor, PanelBottom, PanelTop, Plus, Rows3, RotateCcw, Smartphone, Trash2, Upload } from 'lucide-react'
@@ -111,10 +112,17 @@ export function SiteEditor() {
       </Group>
       case 'card': return <>
         <Group title="خط متحرک کارت" desc="متن‌ها پشت‌سرهم و با انیمیشن عوض می‌شوند. شرط نمایش هر خط (مثلاً موجودی کم) در «قوانین کارت محصول» است.">
-          {s.card.lines.map((l, i) => <RowCtl key={l.id} i={i} n={s.card.lines.length} hidden={!l.on} onHide={() => set((x) => { x.card.lines[i].on = !l.on })} onMove={(dir) => set((x) => swap(x.card.lines, i, i + dir))} onDel={() => set((x) => { x.card.lines.splice(i, 1) })}>
-            <div className="flex items-center gap-1.5"><Badge dot={false}>{({ low: 'موجودی کم', origin: 'مبدأ آمازون', bnpl: 'اقساط', custom: 'همیشه' } as Record<string, string>)[l.kind]}</Badge><Input aria-label="متن" className="h-8 flex-1 text-12" value={l.text} onChange={(e) => set((x) => { x.card.lines[i].text = e.target.value })} /></div></RowCtl>)}
-          <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.card.lines.push({ id: uid('cl'), kind: 'custom', text: 'ضمانت اصالت کالا', on: true }) })}>افزودن خط همیشگی</Button>
-          <Field label="سرعت چرخش (ثانیه)"><Input type="number" step={0.2} min={1.5} value={s.card.interval} onChange={(e) => set((x) => { x.card.interval = Math.max(1.5, +e.target.value || 2.6) })} /></Field>
+          {s.card.lines.map((l, i) => { const def = KIND_DEFAULT[l.kind] ?? KIND_DEFAULT.custom; const ic = l.icon ?? def.icon; const col = l.color ?? def.color; return <RowCtl key={l.id} i={i} n={s.card.lines.length} hidden={!l.on} onHide={() => set((x) => { x.card.lines[i].on = !l.on })} onMove={(dir) => set((x) => swap(x.card.lines, i, i + dir))} onDel={() => set((x) => { x.card.lines.splice(i, 1) })}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5"><LineIcon k={ic} color={col} /><Badge dot={false}>{({ low: 'موجودی کم', origin: 'مبدأ آمازون', bnpl: 'اقساط', fast: 'ارسال سریع', custom: l.scope === 'manual' ? 'انتخابی' : 'همیشه' } as Record<string, string>)[l.kind]}</Badge><Input aria-label="متن" className="h-8 flex-1 text-12" value={l.text} onChange={(e) => set((x) => { x.card.lines[i].text = e.target.value })} /></div>
+              <div className="flex flex-wrap items-center gap-1">{Object.entries(LINE_ICONS).map(([k, [I, lb]]) => <button key={k} type="button" title={lb} aria-label={`آیکون ${lb}`} aria-pressed={ic === k} onClick={() => set((x) => { x.card.lines[i].icon = k })} className={cx('grid size-6 place-items-center rounded-md', ic === k ? 'bg-brand-tint ring-1 ring-brand' : 'hover:bg-neutral-bg')}><I size={13} style={{ color: col }} /></button>)}</div>
+              <div className="flex flex-wrap items-center gap-1.5">{LINE_COLORS.map((c) => <button key={c} type="button" aria-label={`رنگ ${c}`} aria-pressed={col === c} onClick={() => set((x) => { x.card.lines[i].color = c })} className={cx('size-5 rounded-full border-2', col === c ? 'border-t1' : 'border-transparent')} style={{ background: c }} />)}<input type="color" aria-label="رنگ دلخواه" value={col} onChange={(e) => set((x) => { x.card.lines[i].color = e.target.value })} className="size-6 cursor-pointer rounded" />
+                <span className="mr-2 text-11 text-t3">ماندن</span><Input aria-label="مدت نمایش (ثانیه)" className="h-7 w-16 text-center text-12" inputMode="decimal" placeholder={String(s.card.interval)} value={l.dur ?? ''} onChange={(e) => set((x) => { const v = parseFloat(e.target.value.replace(/[^\d.]/g, '')); x.card.lines[i].dur = isNaN(v) ? undefined : Math.max(0.25, Math.min(10, v)) })} /><span className="text-11 text-t3">ثانیه</span></div>
+              <div className="flex flex-wrap items-center gap-2"><Segmented size="sm" value={String(l.weight ?? 1)} onChange={(v) => set((x) => { x.card.lines[i].weight = +v })} options={WEIGHT} />{l.kind === 'custom' && <Segmented size="sm" value={l.scope ?? 'all'} onChange={(v) => set((x) => { x.card.lines[i].scope = v as 'all' | 'manual' })} options={[['all', 'همهٔ کالاها'], ['manual', 'فقط کالاهای انتخاب‌شده']]} />}{l.scope === 'manual' && <LineProducts lineId={l.id} text={l.text} />}</div>
+            </div></RowCtl> })}
+          <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => set((x) => { x.card.lines.push({ id: uid('cl'), kind: 'custom', text: 'ضمانت اصالت کالا', on: true, icon: 'shield', color: '#16a34a' }) })}>افزودن خط تازه</Button>
+          <p className="text-11 leading-5 text-t2">«مهم» دو بار و «خیلی مهم» سه بار در هر دور نمایش داده می‌شود و اول می‌آید. مدت هر خط اگر خالی بماند، از سرعت عمومی زیر پیروی می‌کند (حداقل ۰٫۲۵ ثانیه). خط «فقط کالاهای انتخاب‌شده» را در فرم هر کالا (گام «کانال‌ها و سئو») روشن کنید.</p>
+          <Field label="سرعت عمومی چرخش (ثانیه)"><Input type="number" step={0.25} min={0.25} value={s.card.interval} onChange={(e) => set((x) => { x.card.interval = Math.max(0.25, +e.target.value || 2.6) })} /></Field>
         </Group>
         <Group title="ظاهر کارت">
           <Field label="نسبت تصویر"><Segmented value={s.card.ratio} onChange={(v) => set((x) => { x.card.ratio = v })} options={[['1/1', 'مربع'], ['4/5', 'عمودی']]} /></Field>
@@ -195,4 +203,17 @@ export function SiteEditor() {
       <Modal wide open={full} onClose={() => setFull(false)} title="پیش‌نمایش کامل (پیش‌نویس)"><div className="overflow-hidden rounded-xl border border-line"><StorePreview site={s} device={device} page={page} /></div></Modal>
     </Page>
   )
+}
+
+/** اعمال یک خط «انتخابی» روی چند کالا به‌صورت یک‌جا */
+function LineProducts({ lineId, text }: { lineId: string; text: string }) {
+  const d = useDB(); const [open, setOpen] = useState(false); const [q, setQ] = useState('')
+  const has = (p: (typeof d.products)[number]) => !!p.pdp?.cardLines && p.pdp.cardLines.mode !== 'inherit' && p.pdp.cardLines.pick.includes(lineId)
+  const n = d.products.filter(has).length
+  const toggle = (pid: string, on: boolean) => mutate((x) => { const p = x.products.find((y) => y.id === pid)!; const base = { mode: 'add' as const, pick: [] as string[], custom: [], over: {}, ...(p.pdp?.cardLines ?? {}) }; if (base.mode === 'inherit') base.mode = 'add'; base.pick = on ? [...new Set([...base.pick, lineId])] : base.pick.filter((z) => z !== lineId); p.pdp = { ...(p.pdp as any), cardLines: base } }, { action: on ? 'افزودن خط کارت به کالا' : 'برداشتن خط کارت از کالا', target: `${text} · ${pid}` })
+  return <><Button size="sm" variant="ghost" onClick={() => setOpen(true)}>کالاها ({fa(n)})</Button>
+    <Modal open={open} onClose={() => setOpen(false)} title={`«${text}» روی کدام کالاها؟`} footer={<Button variant="primary" onClick={() => setOpen(false)}>تمام</Button>}>
+      <Input aria-label="جست‌وجوی کالا" value={q} onChange={(e) => setQ(e.target.value)} placeholder="جست‌وجوی کالا" />
+      <ul className="mt-2 max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line text-13">{d.products.filter((p) => p.status === 'product.published' && (!q || p.title.includes(q) || p.en.toLowerCase().includes(q.toLowerCase()))).map((p) => <li key={p.id}><label className="flex cursor-pointer items-center gap-2 px-3 py-2"><input type="checkbox" checked={has(p)} onChange={(e) => toggle(p.id, e.target.checked)} /><span className="flex-1 truncate">{p.title}</span></label></li>)}</ul>
+    </Modal></>
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Building2, Check, ExternalLink, Package, Plus, Truck, Wallet } from 'lucide-react'
 import { Badge, Button, Card, cx, EmptyState, Field, Input, Progress, Row, Segmented, Select, Tabs, Toggle } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
@@ -16,7 +16,7 @@ const num = (v: string) => +v.replace(/[^\d.]/g, '') || 0
 
 /** شعب و شرکای فروش: انبار، شهر، ارسال سریع، کالای امانی و کالای خود شریک، کمیسیون و تسویه */
 export function PartnersAdmin() {
-  const d = useDB(); const nav = useNavigate(); const [sel, setSel] = useState<string | null>(null); const [add, setAdd] = useState(false)
+  const d = useDB(); const nav = useNavigate(); const [sp0] = useSearchParams(); const [sel, setSel] = useState<string | null>(sp0.get('p')); const [add, setAdd] = useState(sp0.get('add') === '1')
   const P = d.partners ?? []
   const all = P.map((p) => ({ p, s: statement(p, d.lots) }))
   const p = P.find((x) => x.id === sel)

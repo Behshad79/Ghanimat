@@ -36,6 +36,7 @@ export function StorePreview({ site, device = 'desktop', page = 'home', active, 
 
   return (
     <div dir="rtl" className="overflow-hidden bg-[#f5f6fa] text-[#10123d]" style={{ fontSize: 13 }}>
+      {d.network?.closed && new Date(d.network.closed.until).getTime() > Date.now() && <div className="bg-[#b3261e] py-2 text-center text-12 font-medium text-white">{d.network.closed.msg || 'امروز تعطیل هستیم؛ سفارش‌ها در اولین روز کاری ارسال می‌شود.'}</div>}
       {site.announce.on && ann.length > 0 && <R id="announce"><div className={cx('relative h-8 overflow-hidden text-center text-12', annTone)}><p key={ai} className="rot-in absolute inset-0 flex items-center justify-center px-3">{fill(ann[ai % ann.length].text)}</p></div></R>}
       <R id="header"><div className="bg-white">
         {!mob && site.header.utility.length > 0 && <div className="flex items-center justify-between border-b border-[#eef0f6] px-5 py-1.5 text-11 text-[#5a5e78]"><span className="flex gap-4">{site.header.utility.filter((u) => !u.hidden).map((u) => <span key={u.id}>{u.label}</span>)}</span>{site.header.showPhone && <span className="ltr flex items-center gap-1"><Phone size={11} />{site.header.phone}</span>}</div>}

@@ -1,4 +1,4 @@
-import { Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -9,6 +9,7 @@ export const NAV_CLOSED_DEFAULT = ['سیستم']
 export const NAV: NavItem[] = [
   { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
   { id: 'live', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
+  { id: 'network', label: 'کنترل شعب و ارسال سریع', icon: Zap, path: '/admin/network', group: 'سفارش و ارسال', count: (d) => [d.network?.closed, d.network?.fastOff].filter((x) => x && new Date(x.until).getTime() > Date.now()).length },
   { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'سفارش و ارسال', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
   { id: 'social', label: 'فروش اجتماعی و کارت به کارت', icon: SocialIcon, path: '/admin/social', group: 'سفارش و ارسال', count: (d) => d.bank.receipts.filter((r) => r.status !== 'تطبیق شد').length },
   { id: 'shipping', label: 'ارسال و لجستیک', icon: Truck, path: '/admin/shipping', group: 'سفارش و ارسال' },

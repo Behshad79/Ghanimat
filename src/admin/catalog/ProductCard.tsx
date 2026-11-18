@@ -1,3 +1,4 @@
+import { fastOn } from '@/shared/data/partners'
 import { liveDeal } from '@/shared/data/merch'
 import { useEffect, useState } from 'react'
 import { BellRing, CircleAlert, CreditCard, Flame, Plane, ShoppingCart, Sparkle, Star, Zap } from 'lucide-react'
@@ -33,7 +34,7 @@ export function ProductCard({ p, u, mini, hover, out, skeleton, cfg: cfgIn, flui
   const bnpl = d.providers.find((x) => x.family === 'bnpl' && x.isDefault && x.status === 'prov.active')
   const camp = d.entities.priceCampaigns?.find((c) => c.active && String(c.products).includes(p.en.split(' ').slice(1, 3).join(' ')))
   const timer = useCountdown(deal ? deal.end : camp ? new Date(new Date(camp.end).getTime() + 864e5 - 1).toISOString() : undefined)
-  const fast = on('fast') && p.fastEligible && (unit ? unit.warehouse === 'tehran' : (p.qty?.tehran ?? 0) > 0) && !isOut
+  const fast = on('fast') && fastOn(d.network, unit?.warehouse ?? 'tehran', d.partners) && p.fastEligible && (unit ? unit.warehouse === 'tehran' : (p.qty?.tehran ?? 0) > 0) && !isOut
   const lineIcon = (k: string) => k === 'low' ? <CircleAlert size={16} className="text-[#d97706]" /> : k === 'origin' ? <Plane size={15} className="text-[#0000ff]" /> : k === 'bnpl' ? <CreditCard size={15} className="text-[#0000ff]" /> : <Sparkle size={15} className="text-[#0000ff]" />
   const lineOk = (k: string) => k === 'low' ? on('low') && stock > 0 && stock <= rule('low_stock_threshold') : k === 'origin' ? on('origin') && (unit?.source ?? p.source) === 'amazon' : k === 'bnpl' ? on('bnpl') && !!bnpl : true
   const rot = (cfg?.lines ?? []).filter((l) => l.on && l.text.trim() && lineOk(l.kind)).map((l) => ({ icon: lineIcon(l.kind), text: l.text.replace('{اقساط}', fa(bnpl?.installments ?? rule('installments_shown'))).replace('{سرویس}', bnpl?.name ?? '') }))

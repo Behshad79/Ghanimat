@@ -108,6 +108,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
       </div>
       <div className="mr-auto hidden xl:block"><Select value={s.scope} onChange={(v) => setSession({ scope: v as any })} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="h-9 w-36" /></div>
       <div className="mr-auto flex items-center xl:mr-0">
+        {(() => { const n = d.network; const c = n?.closed && new Date(n.closed.until).getTime() > Date.now(); const f = n?.fastOff && new Date(n.fastOff.until).getTime() > Date.now(); if (!c && !f) return null; return <button onClick={() => nav('/admin/network')} className={cx('btn ml-1 flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-12 font-semibold', c ? 'bg-danger-bg text-danger' : 'bg-warning-bg text-warning')}><span className="size-2 animate-pulse rounded-full bg-current" />{c ? 'تعطیل' : 'ارسال سریع متوقف'}</button> })()}
         {(() => { const lv = bad.some((b) => b.status === 'prov.error') ? 'crit' : bad.length ? 'warn' : 'ok'; return (
           <button onClick={() => setPanel('status')} title="وضعیت سیستم" className="btn flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg hover:text-t1">
             <Light s={lv} /><span className="hidden md:inline">{lv === 'ok' ? 'سیستم سالم' : lv === 'warn' ? `${fa(bad.length)} هشدار` : `${fa(bad.filter((b) => b.status === 'prov.error').length)} سرویس قطع`}</span>

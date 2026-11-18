@@ -109,3 +109,26 @@ export function ledger(p: PartnerT, lots: Lot[]) {
   items.sort((a, b) => a.at.localeCompare(b.at)); let bal = 0
   return items.map((x) => { bal += x.amount; return { ...x, bal } })
 }
+
+/** کنترل شبکهٔ شعب: تعطیلی فوری، توقف ارسال سریع، شهرهای ارسال سریع انبار مرکزی و ترتیب برداشت موجودی */
+export type Pause = { until: string; reason: string; at: string; by: string; msg?: string }
+export function makeNetwork() {
+  return {
+    closed: null as Pause | null, fastOff: null as Pause | null,
+    hq: { fast: true, cities: 'تهران، کرج', hours: 3, cutoff: '18:00', paused: null as Pause | null },
+    pausedBranches: {} as Record<string, Pause>,
+    priority: ['tehran', 'mahabad', 'shiraz', 'mashhad'],
+    log: [] as { at: string; by: string; text: string }[],
+  }
+}
+export type NetworkT = ReturnType<typeof makeNetwork>
+const live = (p: Pause | null | undefined) => !!p && new Date(p.until).getTime() > Date.now()
+/** آیا ارسال سریع همین الان در سایت نمایش داده شود؟ (بدون تعطیلی، بدون توقف سراسری و با شعبهٔ فعال) */
+export function fastOn(n: NetworkT | undefined, wh = 'tehran', partners: PartnerT[] = []): boolean {
+  if (!n) return true
+  if (live(n.closed) || live(n.fastOff)) return false
+  if (wh === 'tehran') return n.hq.fast && !live(n.hq.paused)
+  const p = partners.find((x) => x.warehouse === wh || x.id === wh)
+  return !!p && p.status === 'فعال' && p.fast.on && !live(n.pausedBranches[p.id])
+}
+export const isLive = live

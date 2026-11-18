@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, Clock, HelpCircle, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Badge, Button, cx, Field, Row, Segmented, Select, Textarea } from '@/shared/ui/base'
-import { Modal, toast } from '@/shared/ui/overlay'
+import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fa, left, rel } from '@/shared/lib/fa'
 import { STATUS } from '@/shared/data/statuses'
@@ -66,4 +66,17 @@ export function TicketContext({ t }: { t: Ticket }) {
     {t.status === 'ticket.closed' && <Row k="«مشکل شما حل شد؟»">{t.csat === 'yes' ? <Badge tone="success"><ThumbsUp size={11} className="ml-1 inline" />بله</Badge> : t.csat === 'no' ? <Badge tone="danger"><ThumbsDown size={11} className="ml-1 inline" />خیر</Badge> : <span className="text-t3">پاسخ نداده</span>}</Row>}
     {(t.history?.length ?? 0) > 0 && <div className="mt-2 border-t border-line pt-2 text-11 text-t2">{t.history!.slice(-3).map((h, i) => <p key={i}>{STATUS[h.status]?.label} · {rel(h.at)}</p>)}</div>}
   </>
+}
+
+/** فیگما: «بسته‌شده — بسته‌شدن به‌دلیل پاسخ ندادن در مهلت». فقط برای تیکت منتظر اطلاعات که مهلتش گذشته یا نزدیک است */
+export function NoReplyCloseButton({ t }: { t: Ticket }) {
+  const d = useDB()
+  if (t.status !== 'ticket.needs_info') return null
+  const late = !!t.replyBy && new Date(t.replyBy).getTime() < Date.now()
+  return <Button variant={late ? 'primary' : 'ghost'} onClick={async () => {
+    if (!late && !(await confirm({ title: 'مهلت پاسخ مشتری هنوز تمام نشده', body: 'تیکت با پیام «بسته‌شدن به‌دلیل پاسخ ندادن در مهلت» بسته می‌شود. مطمئن هستید؟', confirm: 'بستن تیکت' }))) return
+    const c = d.customers.find((x) => x.id === t.customerId)
+    mutate((x) => { const y = x.tickets.find((z) => z.id === t.id)!; y.status = 'ticket.closed'; y.messages.push({ from: 'note', text: 'این درخواست به‌دلیل پاسخ ندادن در مهلت بسته شد. مشتری تا مهلت بازگشایی می‌تواند آن را دوباره باز کند.', at: new Date().toISOString() }) }, { action: 'بستن تیکت به‌دلیل پاسخ ندادن مشتری', target: t.id })
+    if (c) sendSms(c.mobile, `غنیمت: درخواست ${t.id} به‌دلیل پاسخ ندادن در مهلت بسته شد. اگر هنوز مشکل دارید، از پنل کاربری بازگشایی کنید.`, 'پشتیبانی', t.id, c.id)
+    toast('تیکت بسته شد و به مشتری پیامک رفت.') }}>{late ? 'بستن: مشتری در مهلت پاسخ نداد' : 'بستن به‌دلیل پاسخ ندادن'}</Button>
 }

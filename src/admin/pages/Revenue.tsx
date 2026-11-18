@@ -4,12 +4,12 @@ import { PriceWatch, SocialChannelStats } from '../pro/PriceWatch'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TrendingUp } from 'lucide-react'
-import { AIButton, AITag, Badge, Button, Card, CopyId, EmptyState, Field, Input, Progress, Select, StatusBadge, Tabs, Toggle } from '@/shared/ui/base'
+import { AIButton, AITag, Badge, Button, Card, CopyId, EmptyState, Field, Input, Progress, Select, StatusBadge, Tabs, Toggle, cx } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Bars, Donut, LineChart, Waterfall } from '@/shared/ui/charts'
 import { Hint, Modal, toast } from '@/shared/ui/overlay'
-import { fakeCall, mutate, snapshot } from '@/shared/lib/store'
+import { fakeCall, mutate, snapshot, useDB } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { Cell, Money, useLookup, useTab } from './_shared'
 import { MyProfit, PaySales, Receivables } from '../finance/Money'
@@ -38,8 +38,9 @@ export function Pricing() {
             { key: 'm', title: <>حاشیه<Hint k="margin" /></>, align: 'left', render: (u) => { const m = ((u.price - u.cost) / u.price) * 100; return <span className={m < floor ? 'text-danger' : ''}>{pct(m, 1)}</span> }, sort: (u) => (u.price - u.cost) / u.price }, { key: 'mk', title: 'قیمت بازار', align: 'left', hideMobile: true, render: (u) => <Money v={market(u)} compact />, sort: market },
             { key: 'gap', title: 'فاصله با بازار', render: (u) => { const g = ((u.price - market(u)) / market(u)) * 100; return <Badge tone={g > 0 ? 'danger' : 'success'}>{g > 0 ? `${pct(g, 1)} گران‌تر` : `${pct(-g, 1)} ارزان‌تر`}</Badge> }, sort: (u) => u.price - market(u) }, { key: 'age', title: 'سن', hideMobile: true, render: (u) => `${fa(Math.round((Date.now() - new Date(u.received).getTime()) / 864e5))} روز`, sort: (u) => u.received }]}
           bulk={(ids, clear) => <Button size="sm" variant="primary" onClick={() => { setSim(ids); clear() }}>شبیه‌سازی تغییر قیمت {fa(ids.length)} واحد</Button>} /></>}
+      {tab === 'codes' && <CodeTester />}
       {tab === 'codes' && <DataTable name="کدهای تخفیف" rows={d.codes} rowKey={(c) => c.id} search={(c) => c.id} empty={{ title: 'هنوز کد تخفیفی ساخته نشده است.', action: <Button variant="primary" onClick={() => setNewCode(true)}>ساخت کد تخفیف</Button> }}
-        cols={[{ key: 'id', title: 'کد', render: (c) => <CopyId v={c.id} /> }, { key: 't', title: 'نوع', render: (c) => c.type }, { key: 'v', title: 'مقدار', render: (c) => c.value }, { key: 'c', title: 'شرط', hideMobile: true, render: (c) => c.cond }, { key: 'u', title: 'مصرف', render: (c) => <span className="tnum">{fa(c.used)}{c.limit > 0 && ` از ${fa(c.limit)}`}</span>, sort: (c) => c.used },
+        cols={[{ key: 'id', title: 'کد', render: (c) => <CopyId v={c.id} /> }, { key: 't', title: 'نوع', render: (c) => c.type }, { key: 'v', title: 'مقدار', render: (c) => c.value }, { key: 'c', title: 'شرط', hideMobile: true, render: (c) => c.cond }, { key: 'ex', title: 'انقضا', hideMobile: true, render: (c) => c.expires ? new Date(c.expires).toLocaleDateString('fa-IR') : 'بدون انقضا' }, { key: 'pu', title: 'سقف هر مشتری', hideMobile: true, render: (c) => c.perUser ? `${fa(c.perUser)} بار` : '۱ بار' }, { key: 'u', title: 'مصرف', render: (c) => <span className="tnum">{fa(c.used)}{c.limit > 0 && ` از ${fa(c.limit)}`}</span>, sort: (c) => c.used },
           { key: 'on', title: 'فعال', render: (c) => <span onClick={(e) => e.stopPropagation()}><Toggle on={c.active} label={c.id} onChange={(v) => { const undo = snapshot(); mutate((x) => { x.codes.find((y) => y.id === c.id)!.active = v }, { action: v ? 'روشن‌کردن کد' : 'خاموش‌کردن کد', target: c.id }); toast(`کد ${c.id} ${v ? 'روشن' : 'خاموش'} شد.`, { undo }) }} /></span> }]} />}
       {tab === 'rules' && <div className="grid gap-4 md:grid-cols-2"><Card title="قوانین قیمت‌گذاری">{[['حاشیهٔ هدف', '۱۸٪'], ['کف حاشیه', pct(floor)], ['فاصلهٔ هدف با بازار', '۳٪ ارزان‌تر'], ['کاهش پلکانی موجودی راکد', '۲٪ هر ۱۰ روز پس از روز ۳۰'], ['واکنش به نرخ ارز', 'هشدار در تغییر بالای ۱٫۵٪']].map(([k, v]) => <div key={k} className="flex justify-between border-b border-line py-2 text-13 last:border-0"><span className="text-t2">{k}</span><b>{v}</b></div>)}</Card>
         <Card title="بودجهٔ تخفیف این ماه"><p className="tnum text-24 font-bold">{compactToman(184000000)}</p><p className="mb-2 text-12 text-t2">از سقف {compactToman(300000000)}</p><Progress value={61} /><p className="mt-3 text-12 text-t2">با همین روند، بودجه ۴ روز پیش از پایان ماه تمام می‌شود.</p></Card></div>}
@@ -104,4 +105,22 @@ export function Channels() {
       {tab === 'risk' && <Card title="کالاهای در خطر فروش هم‌زمان"><ul className="space-y-2 text-13">{d.syncIssues.map((s) => <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-warning-bg px-3 py-2 text-warning"><span>{s.product}: غنیمت {fa(s.ours)}، {s.source} {fa(s.theirs)}</span><Button size="sm" onClick={() => nav('/admin/warehouse?tab=sync')}>رسیدگی</Button></li>)}{d.syncIssues.length === 0 && <li className="text-t2">ریسکی شناسایی نشده است.</li>}</ul><p className="mt-3 text-12 text-t2">قانون رزرو: واحد از شروع پرداخت {fa(d.rules.find((r) => r.key === 'reserve_minutes')!.value)} دقیقه در همهٔ کانال‌ها قفل می‌شود.</p></Card>}
     </Page>
   )
+}
+
+
+/** شبیه‌ساز ثبت کد در پنل مشتری؛ پیام‌ها دقیقاً همان حالت‌های فیگماست (کد تخفیف › ثبت کد) */
+function CodeTester() {
+  const d = useDB(); const [code, setCode] = useState(''); const [cid, setCid] = useState(d.customers[0]?.id ?? ''); const [res, setRes] = useState<{ ok: boolean; title: string; desc: string } | null>(null)
+  const test = () => {
+    const c = d.codes.find((x) => x.id.toLowerCase() === code.trim().toLowerCase()); const cu = d.customers.find((x) => x.id === cid)
+    if (!c || !c.active) return setRes({ ok: false, title: 'کد نامعتبر', desc: 'این کد تخفیف وجود ندارد یا فعال نیست.' })
+    if (c.expires && new Date(c.expires).getTime() < Date.now()) return setRes({ ok: false, title: 'کد منقضی‌شده', desc: `مهلت استفاده از این کد ${new Date(c.expires).toLocaleDateString('fa-IR')} تمام شده است.` })
+    if (c.limit > 0 && c.used >= c.limit) return setRes({ ok: false, title: 'ظرفیت کد تمام شده', desc: 'سقف استفادهٔ این کد پر شده است.' })
+    if ((c.customerId && c.customerId !== cid) || (/اولین خرید/.test(c.cond) && (cu?.orders ?? 0) > 0)) return setRes({ ok: false, title: 'عدم شمول کاربر', desc: `این کد برای ${c.customerId ? 'مشتری دیگری صادر شده' : 'اولین خرید است و این مشتری قبلاً خرید کرده'}.` })
+    if (d.orders.some((o) => o.customerId === cid && (o.tags ?? []).includes(`کد ${c.id}`))) return setRes({ ok: false, title: 'قبلاً ثبت یا استفاده‌شده', desc: 'این مشتری این کد را پیش‌تر استفاده کرده است.' })
+    setRes({ ok: true, title: 'ثبت موفق', desc: `${c.value} · شرط: ${c.cond}${c.expires ? ` · تا ${new Date(c.expires).toLocaleDateString('fa-IR')}` : ''}` })
+  }
+  return <Card title="آزمایش کد برای یک مشتری" className="mb-4"><div className="flex flex-wrap items-end gap-2"><Field label="کد"><Input className="ltr w-44" value={code} onChange={(e) => { setCode(e.target.value); setRes(null) }} placeholder="WELCOME" /></Field><Field label="مشتری"><Select value={cid} onChange={(v) => { setCid(v); setRes(null) }} options={d.customers.map((c) => [c.id, c.name] as [string, string])} /></Field><Button onClick={test} disabled={!code.trim()}>بررسی</Button></div>
+    {res && <p className={cx('mt-3 rounded-md px-3 py-2 text-13', res.ok ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}><b>{res.title}:</b> {res.desc}</p>}
+    <p className="mt-2 text-11 text-t3">همان پیامی که مشتری هنگام ثبت کد در پنل کاربری می‌بیند.</p></Card>
 }

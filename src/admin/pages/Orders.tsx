@@ -18,6 +18,7 @@ import { OrderAlerts, openEvents } from '../orders/OrderEvents'
 import { PackPhotos } from '../shared/PackPhotos'
 import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
+import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
 import { compactToman, fa, pct, rel, toman, g } from '@/shared/lib/fa'
@@ -180,6 +181,7 @@ export function OrderDetail() {
           <NoteBanner o={o} />
           <OrderAlerts key={o.id} o={o} />
           <DecisionPanel o={o} />
+          <CancelSummary o={o} />
           {o.status === 'order.suspicious' && (
             <Card className="border-danger/50" title={<>سفارش مشکوک · امتیاز ریسک {fa(o.risk)}<Hint k="risk" /></>}>
               <p className="text-13 text-t2">دلایل: دو واحد گران‌قیمت در یک سفارش، نرخ مرجوعی ۴۰٪ مشتری، نشانی تازه. ارسال تا بازبینی متوقف است.</p><AITag confidence="متوسط" />

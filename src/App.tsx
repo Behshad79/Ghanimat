@@ -44,6 +44,7 @@ import { Remote } from './admin/cx/Remote'
 import { ConfirmHost, ToastHost } from './shared/ui/overlay'
 import { currentUser, ROLES, useSession } from './shared/lib/store'
 import { MediaPage } from './admin/media/Media'
+import { TradePage } from './admin/trade/Trade'
 
 export function App() {
   const s = useSession()
@@ -82,6 +83,7 @@ export function App() {
               <Route path="returns" element={<Returns />} />
               <Route path="agents" element={<Agents />} />
               <Route path="media" element={<MediaPage />} />
+              <Route path="trade" element={<TradePage />} />
               <Route path="returns/w/:id" element={<WarrantyCase />} />
               <Route path="returns/:id" element={<ReturnCase />} />
               <Route path="customers" element={<Customers />} />

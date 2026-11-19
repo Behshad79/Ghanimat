@@ -7,6 +7,7 @@ import { mutate, useDB } from '@/shared/lib/store'
 import { fa, num, toman } from '@/shared/lib/fa'
 import { fetchRate, FX_CURS, type FxCur, type FxResult } from '@/shared/lib/fx'
 import type { ImportRoute, Pdp, PricePoint } from '@/shared/data/seed'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 const day = (s?: string) => (s ? s.slice(0, 10) : '')
 const faDate = (s?: string) => (s ? new Date(s).toLocaleDateString('fa-IR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—')
@@ -33,7 +34,7 @@ export function RouteEditor({ pdp, onChange }: { pdp: Pdp; onChange: (p: Pdp) =>
         <Field label={r.inbound === 'baneh' ? 'ورود به انبار بانه' : 'ورود به انبار تهران'} error={order ? 'تاریخ ورود نمی‌تواند پیش از تاریخ خرید باشد.' : undefined}><Input type="date" value={day(r.inAt)} onChange={(e) => set({ inAt: e.target.value })} /></Field>
         {r.inbound === 'baneh' && <Field label="انتقال به انبار تهران"><Input type="date" value={day(r.transferAt)} onChange={(e) => set({ transferAt: e.target.value })} /></Field>}
         <Field label="فاکتور خرید" help="فقط برای سوابق داخلی؛ خود فاکتور در سایت نمایش داده نمی‌شود، فقط عبارت «ثبت‌شده در سوابق کالا».">
-          <div className="flex items-center gap-2"><label className="btn flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-line px-3 text-12"><FileCheck2 size={14} />{r.invoice ? 'تعویض فایل' : 'بارگذاری فاکتور'}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) { set({ invoice: f.name, invoiceOk: false }); toast('فاکتور بارگذاری شد؛ پس از تطبیق مبلغ و سریال، «تأیید فاکتور» را بزنید.') } }} /></label>
+          <div className="flex items-center gap-2"><label className="btn flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-line px-3 text-12"><FileCheck2 size={14} />{r.invoice ? 'تعویض فایل' : 'بارگذاری فاکتور'}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) { set({ invoice: f.name, invoiceOk: false }); toast('فاکتور بارگذاری شد؛ پس از تطبیق مبلغ و سریال، «تأیید فاکتور» را بزنید.') } }} /></label><RemoteFor label="فاکتور خرید" docs compact />
             {r.invoice && <><span className="ltr truncate font-mono text-11 text-t2">{r.invoice}</span><Toggle on={!!r.invoiceOk} onChange={(v) => set({ invoiceOk: v })} text="تأییدشده" /></>}</div>
         </Field>
       </div>

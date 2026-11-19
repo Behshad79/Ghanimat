@@ -10,6 +10,7 @@ import { fa, num, pct, toman } from '@/shared/lib/fa'
 import { tierOf, type StoreCfg } from '@/shared/data/storeCfg'
 import { FX_CURS, refreshAll } from '@/shared/lib/fx'
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout' | 'pdp' | 'fx'
 
@@ -37,7 +38,7 @@ function ImgSlot({ label, help, src, dark, onPick }: { label: string; help: stri
       <span className="min-w-0 flex-1"><b className="block text-13">{label}</b><span className={cx('block text-11', dark ? 'text-white/70' : 'text-t2')}>{help}</span></span>
       <span className={cx('flex items-center gap-1 text-12', dark ? 'text-white' : 'text-brand')}><ImageUp size={14} />انتخاب</span>
       <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) onPick(await fileToImage(f, 400)) }} />
-    </label>
+    <RemoteFor label="لوگو" compact /></label>
   )
 }
 

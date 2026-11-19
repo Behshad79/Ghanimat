@@ -4,7 +4,7 @@ import { BASE_ROLES, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v62'
+const DB_KEY = 'ghanimat-demo-db-v63'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -80,6 +80,8 @@ export function applyTheme() {
 export const currentUser = () => db.team.find((u) => u.id === session.userId) ?? null
 /** نقش مؤثر: اگر مدیر کل «مشاهده به‌جای…» را روشن کرده باشد، نقش همان فرد */
 export const effectiveRole = (s: Session = session) => s.viewAs ?? currentUser()?.role ?? 'super'
+/** مدیر کل: کارهای حساس او بدون تأیید دوم اجرا می‌شود (خودش تأییدکنندهٔ نهایی است) */
+export const isChief = (s: Session = session) => effectiveRole(s) === 'super'
 export const can = (module: string, s: Session = session) => {
   // دسترسی اختصاصی هر فرد بر نقش او مقدم است (افزوده یا گرفته‌شده از نقش)
   const u = s.viewAs ? null : currentUser(); const ov = u ? db.access?.[u.id] : undefined

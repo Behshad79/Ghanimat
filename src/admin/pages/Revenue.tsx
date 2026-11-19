@@ -9,7 +9,7 @@ import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Bars, Donut, LineChart, Waterfall } from '@/shared/ui/charts'
 import { Hint, Modal, toast } from '@/shared/ui/overlay'
-import { fakeCall, mutate, snapshot, useDB } from '@/shared/lib/store'
+import { isChief, fakeCall, mutate, snapshot, useDB } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { Cell, Money, useLookup, useTab } from './_shared'
 import { MyProfit, PaySales, Receivables } from '../finance/Money'
@@ -24,6 +24,7 @@ export function Pricing() {
   const market = (u: (typeof rows)[number]) => Math.round(product(u.productId).priceNew * (u.condition === 'sealed' ? 1 : u.condition === 'openbox' ? 0.93 : 0.88))
   const floor = rule('margin_floor')
   const apply = () => { const ids = sim!; const k = 1 - Number(pctOff) / 100; const below = rows.filter((u) => ids.includes(u.id) && ((u.price * k - u.cost) / (u.price * k)) * 100 < floor).length
+    if (isChief()) { mutate((x) => { x.units.filter((u) => ids.includes(u.id)).forEach((u) => { u.price = Math.round((u.price * k) / 1e4) * 1e4 }) }, { action: 'تغییر قیمت گروهی (مدیر کل)', target: `${ids.length} واحد`, after: `−${pctOff}٪` }); setSim(null); return toast(`قیمت ${fa(ids.length)} واحد ${fa(pctOff)}٪ کم شد${below ? `؛ ${fa(below)} واحد زیر کف حاشیه است` : ''}.`) }
     mutate((x) => { x.approvals.unshift({ id: `AP-${730 + x.approvals.length}`, type: 'تغییر قیمت گروهی', title: `کاهش ${fa(pctOff)}٪ قیمت ${fa(ids.length)} واحد`, ref: 'قیمت‌گذاری', amount: 0, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست تغییر قیمت گروهی', target: `${ids.length} واحد`, after: `−${pctOff}٪` })
     setSim(null); toast(`تغییر قیمت ${fa(ids.length)} واحد به صندوق تأییدها رفت${below ? `؛ ${fa(below)} واحد زیر کف حاشیه می‌رود` : ''}.`) }
   return (

@@ -11,6 +11,7 @@ import { mutate, snapshot, useDB } from '../lib/store'
 import type { Rec } from '../data/entities'
 import { fa, num, toman } from '../lib/fa'
 import type { MenuItem } from './menu'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 export type EField = {
   k: string; label: string; type?: 'text' | 'textarea' | 'number' | 'money' | 'select' | 'toggle' | 'date' | 'files'
@@ -109,7 +110,7 @@ function FilesField({ value, onChange }: { value: Att[]; onChange: (v: Att[]) =>
   return (
     <div className="rounded-xl border border-dashed border-line p-2.5">
       {value.length ? <Attachments list={value} /> : <p className="text-12 text-t2">پیوستی نیست.</p>}
-      <label className="mt-2 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-12 hover:border-brand/50">افزودن عکس یا فایل<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" className="sr-only" onChange={(e) => { if (e.target.files) void add(e.target.files); e.target.value = '' }} /></label>
+      <label className="mt-2 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-12 hover:border-brand/50">افزودن عکس یا فایل<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" className="sr-only" onChange={(e) => { if (e.target.files) void add(e.target.files); e.target.value = '' }} /></label><RemoteFor label="پیوست" docs compact />
     </div>
   )
 }

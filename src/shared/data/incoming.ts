@@ -3,7 +3,7 @@ const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString()
 export const IN_STAGES = ['خرید شد', 'در انبار مبدأ', 'در مسیر اربیل', 'رسیده به اربیل', 'در مرز', 'ترخیص شد', 'رسید به انبار'] as const
 export const IN_ROUTES = ['آمازون → اربیل → مرز', 'خرید مستقیم اربیل', 'خرید مستقیم سلیمانیه', 'دبی → بندر'] 
 export type InItem = { id: string; name: string; qty: number; unitCost?: number; color?: string; amazonUrl?: string; productId?: string; note?: string; arrived?: { qty: number; ean?: string; code?: string; color?: string; note?: string; at: string } }
-export type InBatch = { id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number }
+export type InBatch = { id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
 
 export function makeIncoming(): InBatch[] {
   return [

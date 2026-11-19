@@ -8,7 +8,7 @@ import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress } from '../orders/Progress'
-import { fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
+import { isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
@@ -171,7 +171,7 @@ export function OrderDetail() {
     if (!n) return toast('مبلغ را وارد کنید.', { tone: 'err' })
     if (n > o.total) return toast(`مبلغ بازگشت وجه از مبلغ سفارش (${toman(o.total)}) بیشتر است.`, { tone: 'err' })
     setRefund(false)
-    if (n > cap) { mutate((db) => { db.approvals.unshift({ id: `AP-${710 + db.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(n)} به ${dest} ${c.name}`, ref: o.id, amount: n, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست بازگشت وجه', target: o.id, after: toman(n) }); return toast('مبلغ بالاتر از سقف است. درخواست به صندوق تأییدها رفت.') }
+    if (n > cap && !isChief()) { mutate((db) => { db.approvals.unshift({ id: `AP-${710 + db.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(n)} به ${dest} ${c.name}`, ref: o.id, amount: n, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست بازگشت وجه', target: o.id, after: toman(n) }); return toast('مبلغ بالاتر از سقف است. درخواست به صندوق تأییدها رفت.') }
     mutate((db) => { if (dest === 'کیف پول') db.customers.find((x) => x.id === c.id)!.wallet += n }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(`${toman(n)} به ${dest} ${c.name} واریز شد.`)
   }
   return (

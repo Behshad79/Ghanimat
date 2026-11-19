@@ -6,6 +6,7 @@ import { IconPicker } from '@/shared/ui/IconPicker'
 import { fileToImage } from '@/shared/lib/image'
 import { fa } from '@/shared/lib/fa'
 import type { El, Sec } from '@/shared/data/pages'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 const COLORS: [string, string][] = [['', 'پیش‌فرض'], ['#0000ff', 'آبی برند'], ['#10123d', 'سرمه‌ای'], ['#ffc24b', 'زرد'], ['#c42f2f', 'قرمز تخفیف'], ['#12733f', 'سبز'], ['#ffffff', 'سفید'], ['#f5f6fa', 'خاکستری روشن'], ['#fdecec', 'صورتی کم‌رنگ'], ['#eef0ff', 'آبی کم‌رنگ']]
 const COLOR_WORDS: Record<string, string> = { آبی: '#0000ff', سرمه: '#10123d', زرد: '#ffc24b', قرمز: '#c42f2f', سبز: '#12733f', سفید: '#ffffff', مشکی: '#000000', خاکستری: '#f5f6fa', صورتی: '#fdecec' }
@@ -58,7 +59,7 @@ export function Inspector({ sec, el, onEl, onSec, onAddEl, onDelEl, pageTitle }:
           {el.src && <img src={el.src} alt="" className="w-full rounded-lg" style={{ aspectRatio: `${el.w} / ${el.h}`, objectFit: 'cover' }} />}
           <div className="flex gap-2"><Button size="sm" variant="primary" icon={<ImagePlus size={13} />} onClick={() => file.current?.click()}>{el.src ? 'تعویض تصویر' : 'بارگذاری تصویر'}</Button>{el.src && <Button size="sm" variant="ghost" onClick={() => onEl({ src: '' }, 'حذف تصویر')}>حذف</Button>}</div>
           {dimWarn && <p className="rounded-lg bg-warning-bg px-2 py-1 text-11 text-warning">{dimWarn}</p>}
-          <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f) }} />
+          <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f) }} /><RemoteFor label="تصویر بنر" compact />
           <div className="grid grid-cols-2 gap-2"><Field label="عرض"><Input type="number" value={el.w ?? 0} onChange={(e) => onEl({ w: +e.target.value })} /></Field><Field label="ارتفاع"><Input type="number" value={el.h ?? 0} onChange={(e) => onEl({ h: +e.target.value })} /></Field></div>
         </div>}
         {(el.kind === 'chips' || el.kind === 'list') && <div className="space-y-1.5"><p className="text-12 font-semibold">{el.kind === 'chips' ? 'چیپ‌ها / فیلترها' : 'آیتم‌ها'}</p>{(el.items ?? []).map((x, i) => <div key={i} className="flex gap-1"><Input aria-label={`آیتم ${i + 1}`} className="h-8 text-12" value={x} onChange={(e) => onEl({ items: (el.items ?? []).map((y, j) => (j === i ? e.target.value : y)) })} /><button aria-label="حذف" className="text-danger" onClick={() => onEl({ items: (el.items ?? []).filter((_, j) => j !== i) })}><Trash2 size={13} /></button></div>)}<Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={() => onEl({ items: [...(el.items ?? []), 'آیتم تازه'] })}>افزودن</Button></div>}

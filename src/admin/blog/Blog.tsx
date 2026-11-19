@@ -11,6 +11,7 @@ import { fileToImage } from '@/shared/lib/image'
 import { fa, rel } from '@/shared/lib/fa'
 import { readMin, type Post, type Video } from '@/shared/data/blog'
 import { useTab } from '../pages/_shared'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 const ST: Record<Post['status'], 'success' | 'info' | 'warning' | 'neutral'> = { 'منتشرشده': 'success', 'زمان‌بندی‌شده': 'info', 'در بازبینی': 'warning', 'پیش‌نویس': 'neutral' }
 
@@ -89,7 +90,7 @@ export function Blog() {
       </Card>)}</div>}
       <Drawer open={!!vid} onClose={() => setVid(null)} width={520} title={vid && B.videos.some((v) => v.id === vid.id) ? 'ویرایش ویدیو' : 'ویدیوی تازه'} footer={<div className="flex w-full gap-2"><Button variant="primary" onClick={() => { if (!vid?.title.trim()) return toast('عنوان را بنویسید.', { tone: 'err' }); if (vid.chapters?.some((c) => !c.t.trim() || !c.to.trim())) return toast('عنوان و پایان همهٔ بخش‌های ویدیو را بنویسید.', { tone: 'err' }); mutate((x) => { const i = x.blog.videos.findIndex((v) => v.id === vid.id); if (i >= 0) x.blog.videos[i] = vid; else x.blog.videos.unshift(vid) }, { action: 'ذخیرهٔ ویدیو', target: vid.title }); setVid(null); toast('ویدیو ذخیره شد.') }}>ذخیره</Button>{vid && B.videos.some((v) => v.id === vid.id) && <Button variant="danger" className="mr-auto" onClick={() => { mutate((x) => { x.blog.videos = x.blog.videos.filter((v) => v.id !== vid.id) }, { action: 'حذف ویدیو', target: vid.title }); setVid(null) }}>حذف</Button>}</div>}>
         {vid && <div className="space-y-3">
-          <label className="block cursor-pointer overflow-hidden rounded-xl border border-dashed border-line">{vid.cover ? <img src={vid.cover} alt="" className="aspect-video w-full object-cover" /> : <span className="grid aspect-video place-items-center gap-1 text-12 text-t2"><Upload size={18} />کاور ویدیو (۱۶:۹)</span>}<input type="file" accept="image/*" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setVid({ ...vid, cover: await fileToImage(f, 1280, 0.85) }) }} /></label>
+          <label className="block cursor-pointer overflow-hidden rounded-xl border border-dashed border-line">{vid.cover ? <img src={vid.cover} alt="" className="aspect-video w-full object-cover" /> : <span className="grid aspect-video place-items-center gap-1 text-12 text-t2"><Upload size={18} />کاور ویدیو (۱۶:۹)</span>}<input type="file" accept="image/*" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setVid({ ...vid, cover: await fileToImage(f, 1280, 0.85) }) }} /></label><RemoteFor label="کاور ویدیو" compact />
           <Field label="عنوان"><Input value={vid.title} onChange={(e) => setVid({ ...vid, title: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label="دسته"><Select value={vid.cat} onChange={(v) => setVid({ ...vid, cat: v })} options={B.videoCats} /></Field><Field label="مدت"><Input value={vid.dur} placeholder="۵:۴۰" onChange={(e) => setVid({ ...vid, dur: e.target.value })} /></Field></div>
           <Field label="لینک ویدیو (آپارات، یوتیوب یا فایل)"><Input className="ltr text-left" value={vid.url} onChange={(e) => setVid({ ...vid, url: e.target.value })} /></Field>

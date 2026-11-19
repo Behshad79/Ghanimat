@@ -8,7 +8,8 @@ import { mutate, useDB } from '@/shared/lib/store'
 import { compactToman, fa, pct, toman } from '@/shared/lib/fa'
 import { fetchRate, type FxCur } from '@/shared/lib/fx'
 import type { DB, Product } from '@/shared/data/seed'
-import type { InBatch, InItem } from '@/shared/data/incoming'
+import { IN_STAGES, type InBatch, type InItem } from '@/shared/data/incoming'
+import { NewPO } from './BuyList'
 import { ProductImg } from '../pages/_shared'
 
 const CURS = ['دلار', 'درهم', 'دینار', 'تومان']
@@ -16,8 +17,8 @@ const money = (v?: number) => (v ? v.toLocaleString('en-US') : '')
 const parse = (s: string) => Number(s.replace(/[^\d.]/g, '')) || 0
 
 /** قیمت تمام‌شدهٔ هر قلم: قیمت خرید × نرخ + سهم از هزینه‌های محموله (به نسبت ارزش) */
-export function batchCosts(b: InBatch) {
-  const rate = b.currency === 'تومان' || !b.currency ? 1 : b.rate || 1; const extra = (b.freight ?? 0) + (b.customs ?? 0) + (b.other ?? 0)
+export function batchCosts(b: InBatch, duties = false) {
+  const rate = b.currency === 'تومان' || !b.currency ? 1 : b.rate || 1; const extra = (b.freight ?? 0) + (b.customs ?? 0) + (b.other ?? 0) + (duties ? b.trade?.duties ?? 0 : 0)
   const value = b.items.reduce((a, it) => a + (it.unitCost ?? 0) * it.qty, 0)
   const unit = (it: InItem) => { const base = (it.unitCost ?? 0) * rate; const share = value ? (extra * (((it.unitCost ?? 0) * it.qty) / value)) / Math.max(1, it.qty) : 0; return Math.round(base + share) }
   return { rate, extra, valueFx: value, total: Math.round(value * rate + extra), unit }
@@ -32,8 +33,9 @@ export function itemSales(d: DB, b: InBatch, it: InItem) {
 
 /** «بها تا سود» هر محموله: اقلام، قیمت خرید ارزی، هزینه‌ها، قیمت تمام‌شده، پیش‌ساخت صفحه و محتوا، فروش و سود */
 export function BatchLedger() {
-  const d = useDB(); const nav = useNavigate(); const [open, setOpen] = useState<string | null>(d.incoming[0]?.id ?? null)
-  const all = d.incoming.map((b) => { const c = batchCosts(b); const s = b.items.map((it) => ({ it, ...itemSales(d, b, it), unit: c.unit(it) })); const revenue = s.reduce((a, x) => a + x.revenue, 0); const cogs = s.reduce((a, x) => a + x.sold * x.unit, 0); const remain = s.reduce((a, x) => a + Math.max(0, (x.got || 0) - x.sold) * x.unit, 0); return { b, c, s, revenue, cogs, profit: revenue - cogs, remain } })
+  const d = useDB(); const nav = useNavigate(); const [open, setOpen] = useState<string | null>(d.incoming[0]?.id ?? null); const [newPo, setNewPo] = useState(false)
+  const T = d.storeCfg.trade; const tImp = T.on && T.modules.imports; const tWh = T.on && T.modules.warehouse; const tFin = T.on && T.modules.finance
+  const all = d.incoming.map((b) => { const c = batchCosts(b, tImp); const s = b.items.map((it) => ({ it, ...itemSales(d, b, it), unit: c.unit(it) })); const revenue = s.reduce((a, x) => a + x.revenue, 0); const cogs = s.reduce((a, x) => a + x.sold * x.unit, 0); const remain = s.reduce((a, x) => a + Math.max(0, (x.got || 0) - x.sold) * x.unit, 0); return { b, c, s, revenue, cogs, profit: revenue - cogs, remain } })
   const tot = all.reduce((a, x) => ({ inv: a.inv + x.c.total, rev: a.rev + x.revenue, pr: a.pr + x.profit, rem: a.rem + x.remain }), { inv: 0, rev: 0, pr: 0, rem: 0 })
   const upd = (id: string, fn: (b: InBatch) => void, action: string) => mutate((x) => { fn(x.incoming.find((y) => y.id === id)!) }, { action, target: id })
   return (
@@ -44,6 +46,8 @@ export function BatchLedger() {
         <KPI label="سود ناخالص تا امروز" value={compactToman(tot.pr)} tone={tot.pr < 0 ? 'warning' : undefined} note={tot.rev ? `حاشیه ${pct((tot.pr / tot.rev) * 100, 1)}` : undefined} />
         <KPI label="ارزش موجودی باقی‌مانده" value={compactToman(tot.rem)} note="به قیمت تمام‌شده" />
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-12 text-t2">هر کارت یک سفارش خرید است: از «خرید شد» تا «رسید به انبار» و بعد فروش و سود همان‌جا.</p><Button variant="primary" icon={<Plus size={14} />} onClick={() => setNewPo(true)}>سفارش خرید تازه</Button></div>
+      {newPo && <NewPO onClose={() => setNewPo(false)} />}
       {all.map(({ b, c, s, revenue, cogs, profit, remain }) => { const isOpen = open === b.id; const soldU = s.reduce((a, x) => a + x.sold, 0); const gotU = s.reduce((a, x) => a + (x.got || 0), 0); const qtyU = b.items.reduce((a, it) => a + it.qty, 0)
         return <Card key={b.id} pad={false}>
           <button type="button" onClick={() => setOpen(isOpen ? null : b.id)} className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-right">
@@ -54,11 +58,16 @@ export function BatchLedger() {
             <ChevronDown size={16} className={cx('text-t3 transition-transform', isOpen && 'rotate-180')} />
           </button>
           {isOpen && <div className="space-y-4 border-t border-line p-4">
+            <div className="flex flex-wrap items-center gap-2 text-12"><span className="text-t2">مرحله:</span>{IN_STAGES.map((st, i) => { const cur = IN_STAGES.indexOf(b.stage as typeof IN_STAGES[number]); return <button key={st} type="button" disabled={st === 'رسید به انبار' && !b.receivedAt} title={st === 'رسید به انبار' && !b.receivedAt ? 'رسید انبار از «کالا و کاتالوگ ← در راه و پیش‌ساخت ← ثبت رسید» ثبت می‌شود' : undefined} onClick={() => upd(b.id, (x) => { x.stage = st }, `تغییر مرحلهٔ محموله به «${st}»`)} className={cx('rounded-full border px-2.5 py-0.5 disabled:opacity-40', i === cur ? 'border-transparent bg-brand-solid text-white' : i < cur ? 'border-brand/40 text-brand' : 'border-line text-t2')}>{st}</button> })}{!b.receivedAt && <Button size="sm" variant="ghost" onClick={() => nav('/admin/catalog?tab=incoming')}>ثبت رسید انبار</Button>}</div>
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <Field label="ارز خرید"><Select value={b.currency ?? 'دلار'} other={false} onChange={(v) => upd(b.id, (x) => { x.currency = v }, 'تغییر ارز محموله')} options={CURS} /></Field>
               {b.currency !== 'تومان' && <Field label="نرخ روز خرید (تومان)" hint={<button type="button" className="text-11 text-brand" onClick={async () => { const r = await fetchRate((b.currency ?? 'دلار') as FxCur); upd(b.id, (x) => { x.rate = r.rate }, 'ثبت نرخ روز برای محموله'); toast(`نرخ ${b.currency} ${toman(r.rate)} گذاشته شد.`) }}><RefreshCw size={11} className="ml-0.5 inline" />نرخ روز</button>}><Input className="ltr text-left" inputMode="numeric" value={money(b.rate)} onChange={(e) => upd(b.id, (x) => { x.rate = parse(e.target.value) }, 'تغییر نرخ محموله')} /></Field>}
               {([['freight', 'حمل بین‌المللی'], ['customs', 'ترخیص و گمرک'], ['other', 'سایر (بیمه، انبار، QC)'], ['paid', 'پرداخت‌شده تا الان']] as const).map(([k, l]) => <Field key={k} label={`${l} (تومان)`}><Input className="ltr text-left" inputMode="numeric" value={money(b[k])} onChange={(e) => upd(b.id, (x) => { x[k] = parse(e.target.value) }, `تغییر ${l} محموله`)} /></Field>)}
             </div>
+            {(tImp || tWh) && <div className="grid gap-3 rounded-xl border border-brand/30 bg-brand-tint/20 p-3 sm:grid-cols-3 lg:grid-cols-7"><p className="text-12 font-semibold sm:col-span-3 lg:col-span-7">واردات رسمی (امور بازرگانی)</p>
+              {tImp && ([['ntsw', 'شمارهٔ ثبت سفارش (NTSW)', false], ['sata', 'کد رهگیری تأمین ارز', false], ['kotaj', 'شمارهٔ کوتاژ اظهارنامه', false], ['customsValue', 'ارزش گمرکی (تومان)', true], ['duties', 'حقوق ورودی (تومان)', true], ['customsVat', 'ارزش افزودهٔ گمرکی (تومان)', true]] as const).map(([k, l, n]) => <Field key={k} label={l}><Input className="ltr text-left" inputMode={n ? 'numeric' : undefined} value={n ? money(b.trade?.[k] as number) : (b.trade?.[k] as string) ?? ''} onChange={(e) => upd(b.id, (x) => { x.trade = { ...(x.trade ?? {}), [k]: n ? parse(e.target.value) : e.target.value } }, `ثبت ${l}`)} /></Field>)}
+              {tWh && <Field label="شناسهٔ رسید سامانهٔ جامع انبارها"><Input className="ltr text-left" value={b.trade?.nwms ?? ''} onChange={(e) => upd(b.id, (x) => { x.trade = { ...(x.trade ?? {}), nwms: e.target.value } }, 'ثبت شناسهٔ سامانهٔ جامع انبارها')} /></Field>}
+              <p className="text-11 text-t2 sm:col-span-3 lg:col-span-7">{tImp ? 'حقوق ورودی در قیمت تمام‌شدهٔ اقلام پخش شده است. ' : ''}{tFin && b.trade?.customsVat ? `ارزش افزودهٔ گمرکی ${toman(b.trade.customsVat)} جدا و به‌عنوان اعتبار مالیاتی در سامانهٔ مؤدیان حساب می‌شود (در بهای تمام‌شده نیست).` : ''}</p></div>}
             <div className="overflow-x-auto rounded-xl border border-line"><table className="gh-table w-full text-12"><thead><tr className="bg-surface-2">{['کالا', 'تعداد', `قیمت واحد (${b.currency ?? 'دلار'})`, 'جمع ارزی', 'تمام‌شدهٔ هر عدد', 'قیمت فروش فعلی', 'رسیده', 'فروخته', 'فروش', 'سود', 'مانده', ''].map((h) => <th key={h} className="p-2 text-right font-medium text-t2">{h}</th>)}</tr></thead>
               <tbody>{s.map(({ it, got, sold, revenue: rv, unit }) => { const p = it.productId ? d.products.find((x) => x.id === it.productId) : undefined; const sell = p?.price ?? (p ? d.units.find((u) => u.productId === p.id && u.price > 0)?.price : 0) ?? 0; const pr = rv - sold * unit; const content = it.productId ? d.contentQueue.filter((q) => q.productId === it.productId).length + d.blog.posts.filter((q) => q.related.includes(it.productId!)).length : 0
                 const setIt = (patch: Partial<InItem>, a: string) => upd(b.id, (x) => { Object.assign(x.items.find((y) => y.id === it.id)!, patch) }, a)

@@ -7,7 +7,7 @@ import { Badge, Button, Card, cx, Field, Input, Row, Segmented, Select, StatusBa
 import { Page } from '@/shared/ui/page'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
-import { currentUser, getDB, mutate, sendSms, useDB } from '@/shared/lib/store'
+import { isChief, currentUser, getDB, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fileToImage } from '@/shared/lib/image'
 import { fa, rel, toman, g } from '@/shared/lib/fa'
 import type { CaseReceipt, Ret, War } from '@/shared/data/seed'
@@ -15,6 +15,7 @@ import { CustLink, ProductImg } from '../pages/_shared'
 import { OriginalOrder } from '../orders/ReturnTools'
 import { PackPhotos } from '../shared/PackPhotos'
 import { cardState, COVERED, EXCLUDED, METHODS, QC_CHECKS, refundLabel, RETURN_STEPS, retItems, retStage, SERVICE_CENTER, SHIP_BACK, warStage, WARRANTY_STEPS, type Stage } from './flow'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 type Kind = 'return' | 'warranty'
 type C = Ret & War
@@ -190,7 +191,7 @@ function ReturnNext({ c }: { c: C }) {
     const submit = async () => {
       const text = note.trim() || autoNote
       const next = noneOk ? 'return.rejected' : !allOk ? 'return.partial' : minus > 0 ? 'return.approved_deducted' : 'return.refunding'
-      const needs = !noneOk && total > cap
+      const needs = !noneOk && total > cap && !isChief()
       mutate((x) => { items.forEach((it, i) => { const u = x.units.find((z) => z.id === it.unitId); if (u) u.status = dec[i] ? (fate.startsWith('بازگشت') ? 'unit.qc' : fate === 'تعمیر' ? 'unit.repair' : 'unit.defective') : 'unit.sold' })
         if (needs) x.approvals.unshift({ id: `AP-${720 + x.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(total)} بابت ${id}`, ref: id, amount: total, by: me(), byRole: 'x', status: 'approval.pending', at: now() }) }, { action: 'نتیجهٔ بازرسی مرجوعی', target: id, after: text })
       act('return', id, (x) => { x.checks = checks; x.fate = fate; x.qcNote = text; x.items = items.map((it, i) => ({ ...it, ok: dec[i], why: dec[i] ? undefined : why[i] })); if (deduct) x.returnShipCost = Number(shipCost) || 0
@@ -434,7 +435,7 @@ function ReceiptForm({ kind, c, after, places, event, sms, extra }: { kind: Kind
     <Field label="توضیح دریافت"><Input value={txt} onChange={(e) => setTxt(e.target.value)} placeholder="مثلاً جعبه کمی آسیب دیده" /></Field>
     <Field label="عکس کالا هنگام دریافت" help="دست‌کم یک عکس؛ برای مقایسه با عکس‌های پیش از ارسال.">
       <div className="flex flex-wrap gap-2">{photos.map((p, i) => <img key={i} src={p} alt="" className="size-20 rounded-lg object-cover" />)}
-        <label className="grid size-20 cursor-pointer place-items-center rounded-lg border border-dashed border-brand/50 bg-surface text-12 text-brand"><span className="grid place-items-center gap-1"><Camera size={18} />عکس</span><input type="file" accept="image/*" multiple className="sr-only" onChange={async (e) => { const fs = Array.from(e.target.files ?? []); const imgs = await Promise.all(fs.map((f) => fileToImage(f))); setPhotos((p) => [...p, ...imgs]) }} /></label></div>
+        <label className="grid size-20 cursor-pointer place-items-center rounded-lg border border-dashed border-brand/50 bg-surface text-12 text-brand"><span className="grid place-items-center gap-1"><Camera size={18} />عکس</span><input type="file" accept="image/*" multiple className="sr-only" onChange={async (e) => { const fs = Array.from(e.target.files ?? []); const imgs = await Promise.all(fs.map((f) => fileToImage(f))); setPhotos((p) => [...p, ...imgs]) }} /></label><RemoteFor label="عکس پرونده" compact /></div>
     </Field>
     <Button variant="primary" icon={<Inbox size={16} />} disabled={!photos.length || (!!unit && !serial.trim())} onClick={save}>ثبت دریافت کالا</Button>
   </div>

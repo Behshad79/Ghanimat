@@ -29,6 +29,12 @@ export function makeStoreCfg() {
       minCart: 0, maxCart: 500000000, vpnWarn: true, reserveMin: 15, socialProof: false,
       autoDeliverDays: 7, vat: 10, cashback: 0, walletMinWithdraw: 100000, walletMaxCharge: 50000000,
     },
+    trade: {
+      on: false,
+      card: { no: '', holder: '', kind: 'حقیقی' as 'حقیقی' | 'حقوقی', chamber: 'اتاق بازرگانی تهران', issuedAt: '', expires: '' },
+      modules: { docs: false, imports: false, product: false, warehouse: false, finance: false } as Record<'docs' | 'imports' | 'product' | 'warehouse' | 'finance', boolean>,
+      docs: {} as Record<string, boolean>,
+    },
     fx: {
       rates: { دلار: 61500, درهم: 16700, دینار: 47 } as Record<'دلار' | 'درهم' | 'دینار', number>,
       updatedAt: new Date(Date.now() - 3 * 36e5).toISOString(), source: 'manual' as 'manual' | 'api',

@@ -1,4 +1,4 @@
-import { Images, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -20,6 +20,7 @@ export const NAV: NavItem[] = [
   { id: 'media', label: 'کتابخانهٔ رسانه', icon: Images, path: '/admin/media', group: 'کالا و انبار', count: (d) => d.media.filter((m) => !m.alt).length },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'کالا و انبار', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
   { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'کالا و انبار' },
+  { id: 'trade', label: 'امور بازرگانی', icon: Landmark, path: '/admin/trade', group: 'کالا و انبار' },
   { id: 'readiness', label: 'آمادگی کالا و محتوا', icon: ListChecks, path: '/admin/readiness', group: 'کالا و انبار', count: (d) => d.contentQueue.filter((c) => c.status === 'آماده انتشار').length },
   { id: 'support', label: 'پشتیبانی', icon: Headphones, path: '/admin/support', group: 'مشتری و پشتیبانی', count: (d) => d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length },
   { id: 'calls', label: 'تلفن و تماس‌ها', icon: PhoneCall, path: '/admin/calls', group: 'مشتری و پشتیبانی', count: (d) => (d.calls?.calls ?? []).filter((c) => c.status === 'از دست رفته' && !c.callbackDone).length },

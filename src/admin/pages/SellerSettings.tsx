@@ -4,6 +4,7 @@ import { Badge, Button, Card, Field, Input } from '@/shared/ui/base'
 import { toast } from '@/shared/ui/overlay'
 import { mutate, snapshot, useDB } from '@/shared/lib/store'
 import { makeSeed } from '@/shared/data/seed'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 type Seller = ReturnType<typeof makeSeed>['seller']
 type WH = ReturnType<typeof makeSeed>['warehouses'][number]
@@ -26,7 +27,7 @@ function ImageSlot({ label, help, value, onChange }: { label: string; help: stri
       <div className="min-w-0 flex-1"><p className="text-13 font-medium">{label}</p><p className="text-11 text-t3">{help}</p></div>
       <label className="btn inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-line bg-surface px-3 text-12 font-medium hover:bg-surface-2">
         <ImageUp size={13} />{value ? 'جایگزینی' : 'بارگذاری'}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" onChange={pick} />
-      </label>
+      </label><RemoteFor label="لوگو و مهر" compact />
       {value && <Button size="sm" variant="ghost" aria-label={`حذف ${label}`} icon={<Trash2 size={13} />} onClick={() => onChange('')} />}
     </div>
   )

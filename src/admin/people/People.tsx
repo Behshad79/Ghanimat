@@ -13,6 +13,7 @@ import { compactToman, fa, rel, toman } from '@/shared/lib/fa'
 import { CONTRACT_KINDS, PAY_METHODS, PAY_TYPES, type Employee, type PayItem } from '@/shared/data/people'
 import type { DB } from '@/shared/data/seed'
 import { useTab } from '../pages/_shared'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 const fd = (iso: string) => new Date(iso).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })
 const days = (iso: string) => Math.round((new Date(iso).getTime() - Date.now()) / 864e5)
@@ -121,7 +122,7 @@ export function PersonFile() {
             <Field label="حقوق پایه در قرارداد (تومان)"><Input inputMode="numeric" value={String(c.salary)} onChange={(ev) => up((x) => { x.contracts[i].salary = Number(ev.target.value.replace(/\D/g, '')) }, 'ویرایش مبلغ قرارداد')} /></Field>
             <div className="sm:col-span-2"><Field label="شرایط و توضیح"><Textarea rows={2} value={c.note ?? ''} onChange={(ev) => up((x) => { x.contracts[i].note = ev.target.value }, 'ویرایش شرایط قرارداد')} /></Field></div>
             <div className="flex flex-col justify-end gap-2"><Toggle on={c.signed} onChange={(v) => up((x) => { x.contracts[i].signed = v }, v ? 'ثبت امضای قرارداد' : 'برداشتن امضای قرارداد')} text="امضا شده" />
-              <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-12 hover:bg-neutral-bg"><Paperclip size={13} />{c.file ? 'جایگزینی فایل امضاشده' : 'بارگذاری فایل امضاشده'}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={async (ev) => { const fl = ev.target.files?.[0]; if (!fl) return; const v = fl.type.startsWith('image/') ? await fileToImage(fl, 1400, 0.82) : URL.createObjectURL(fl); up((x) => { x.contracts[i].file = v; x.contracts[i].signed = true }, 'بارگذاری قرارداد امضاشده') }} /></label>
+              <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 text-12 hover:bg-neutral-bg"><Paperclip size={13} />{c.file ? 'جایگزینی فایل امضاشده' : 'بارگذاری فایل امضاشده'}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={async (ev) => { const fl = ev.target.files?.[0]; if (!fl) return; const v = fl.type.startsWith('image/') ? await fileToImage(fl, 1400, 0.82) : URL.createObjectURL(fl); up((x) => { x.contracts[i].file = v; x.contracts[i].signed = true }, 'بارگذاری قرارداد امضاشده') }} /><RemoteFor label="مدرک" docs compact /></label>
               {c.file && <a href={c.file} target="_blank" rel="noreferrer" className="text-12 text-brand underline">مشاهدهٔ فایل</a>}</div>
           </div>
         </Card>)}
@@ -144,7 +145,7 @@ export function PersonFile() {
           <ul className="mt-4 space-y-2">{e.notes.map((n) => <li key={n.id} className="rounded-lg border border-line p-2.5 text-13"><p className="mb-1 flex justify-between text-11 text-t2"><span>{n.kind} · {n.by}</span><span>{fd(n.at)}</span></p>{n.text}</li>)}</ul>
         </Card>
         <Card title={<span className="flex items-center gap-1.5"><FileText size={15} />مدارک</span>}>
-          <div className="mb-3 flex flex-wrap gap-2">{['کپی کارت ملی', 'کپی شناسنامه', 'قرارداد امضاشده', 'سفته یا چک ضمانت', 'گواهی عدم سوءپیشینه', 'مدرک تحصیلی'].map((t) => <label key={t} className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-line px-2.5 text-12 hover:bg-neutral-bg"><Paperclip size={12} />{t}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(ev) => { const fl = ev.target.files?.[0]; if (fl) void upload(fl, t) }} /></label>)}<OtherUpload onFile={(fl, t) => void upload(fl, t)} /></div>
+          <div className="mb-3 flex flex-wrap gap-2">{['کپی کارت ملی', 'کپی شناسنامه', 'قرارداد امضاشده', 'سفته یا چک ضمانت', 'گواهی عدم سوءپیشینه', 'مدرک تحصیلی'].map((t) => <label key={t} className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-line px-2.5 text-12 hover:bg-neutral-bg"><Paperclip size={12} />{t}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(ev) => { const fl = ev.target.files?.[0]; if (fl) void upload(fl, t) }} /><RemoteFor label="مدرک" docs compact /></label>)}<OtherUpload onFile={(fl, t) => void upload(fl, t)} /></div>
           <ul className="divide-y divide-line">{e.docs.map((x) => <li key={x.id} className="flex items-center justify-between gap-2 py-2 text-13"><span className="flex items-center gap-2">{x.file && x.file.startsWith('data:image') ? <img src={x.file} alt="" className="size-10 rounded object-cover" /> : <FileText size={16} className="text-t2" />}{x.title}</span><span className="flex items-center gap-2 text-11 text-t2">{rel(x.at)}{x.file && <a href={x.file} target="_blank" rel="noreferrer" className="text-brand underline">مشاهده</a>}</span></li>)}</ul>
         </Card>
       </div>}

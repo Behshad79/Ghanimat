@@ -8,6 +8,7 @@ import { askReason } from '@/shared/ui/reason'
 import { currentUser, mutate, useDB } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
 import { VAULT_CATS, type VaultDoc } from '@/shared/data/vault'
+import { RemoteFor } from '@/shared/ui/remoteUpload'
 
 const fd = (iso: string) => new Date(iso).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })
 const left = (iso?: string) => (iso ? Math.round((new Date(iso).getTime() - Date.now()) / 864e5) : null)
@@ -47,7 +48,7 @@ export function Vault() {
           <label className={cx('flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed p-5 text-center text-13', open.file || open.fileName ? 'border-success/40 bg-success-bg/40' : 'border-line hover:border-brand/50')}>
             <Upload size={20} className="text-brand" />{open.fileName ? <><b>{open.fileName}</b><span className="text-11 text-t2">{open.size ? `${fa((open.size / 1024 / 1024).toFixed(1))} مگابایت · ` : ''}برای جایگزینی و ساخت نسخهٔ تازه بزنید</span></> : <><b>فایل را بکشید یا انتخاب کنید</b><span className="text-11 text-t2">PDF، عکس، Word یا Excel</span></>}
             <input type="file" className="sr-only" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) void attach(f) }} />
-          </label>
+          </label><RemoteFor label="سند" docs compact />
           {open.file?.startsWith('data:image') && <img src={open.file} alt={open.title} className="max-h-64 w-full rounded-xl object-contain" />}
           <Field label="عنوان"><Input value={open.title} onChange={(e) => setOpen({ ...open, title: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label="دسته"><Select value={open.cat} onChange={(v) => setOpen({ ...open, cat: v })} options={VAULT_CATS} /></Field><Field label="چه کسی ببیند"><Select value={open.access} onChange={(v) => setOpen({ ...open, access: v as VaultDoc['access'] })} options={Object.entries(ACCESS).map(([k, l]) => [k, l] as [string, string])} /></Field></div>

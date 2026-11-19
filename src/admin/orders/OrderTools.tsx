@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Minus, Plus, Scissors, Trash2, UserPlus } from 'lucide-react'
-import { Badge, Button, cx, Field, Input, Segmented, Select, Textarea } from '@/shared/ui/base'
+import { Badge, Button, cx, Field, Input, Segmented, Select, Textarea, Toggle } from '@/shared/ui/base'
 import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
-import { getDB, mutate, snapshot, useDB, currentUser } from '@/shared/lib/store'
+import { getDB, mutate, snapshot, useDB, currentUser, sendSms } from '@/shared/lib/store'
+import { WAREHOUSE } from '@/shared/data/statuses'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
 import { ProductImg, useQuickChips } from '../pages/_shared'
@@ -64,42 +65,129 @@ export function ManualOrder({ open, onClose, channel: ch0 = 'سفارش دستی
   )
 }
 
-/** ویرایش سفارش ثبت‌شده: افزودن یا حذف قلم با محاسبهٔ مابه‌التفاوت، تغییر روش ارسال، تقسیم مرسوله */
+/** ویرایش کامل سفارش ثبت‌شده (تماس مشتری یا تصمیم داخلی): انبار و روش و هزینهٔ ارسال هر مرسوله، قیمت، رنگ یا تنوع و تعداد هر قلم،
+ *  افزودن، حذف، تقسیم و جابه‌جایی قلم، نشانی و تحویل‌گیرنده، تخفیف؛ با منبع و دلیل، تسویهٔ مابه‌التفاوت و پیامک اختیاری به مشتری */
+const SRC = ['تماس تلفنی مشتری', 'پیام‌رسان یا دایرکت', 'حضوری', 'تصمیم داخلی غنیمت']
+const NOTE_SRC: Record<string, 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'> = { 'تماس تلفنی مشتری': 'تماس تلفنی', 'پیام‌رسان یا دایرکت': 'پیام‌رسان', 'حضوری': 'حضوری', 'تصمیم داخلی غنیمت': 'داخلی' }
+const addrText = (a?: Record<string, string>) => (a ? [a.province, a.city, a.district, a.street, a.sub, a.alley, a.plaque && `پلاک ${a.plaque}`, a.floor && `طبقه ${a.floor}`, a.unit && `واحد ${a.unit}`, a.postal && `کد پستی ${a.postal}`].filter(Boolean).join('، ') : '')
 export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void }) {
   const d = useDB(); const opts = useMemo(available, [d.units, d.products])
   const [draft, setDraft] = useState<Order | null>(null)
-  useMemo(() => setDraft(o ? structuredClone(o) : null), [o?.id])
+  const c = o ? d.customers.find((x) => x.id === o.customerId) : undefined
+  const [src, setSrc] = useState(SRC[0]); const [reason, setReason] = useState(''); const [sms, setSms] = useState(true); const [smsEdit, setSmsEdit] = useState<string | null>(null)
+  const [settle, setSettle] = useState('')
+  useMemo(() => { setDraft(o ? { ...structuredClone(o), shipTo: o.shipTo ?? addrText(c?.addr as any), receiver: o.receiver ?? { name: o.buyer === 'legal' ? '' : c?.name ?? '', mobile: c?.mobile ?? '' } } : null); setReason(''); setSmsEdit(null); setSettle('') }, [o?.id])
   if (!o || !draft) return null
-  const editable = (sid: string) => ['ship.pending', 'ship.picking', 'ship.partner_confirm'].includes(draft.shipments.find((s) => s.id === sid)!.status)
-  const sum = (x: Order) => x.shipments.reduce((a, s) => a + s.items.reduce((b, i) => b + i.price * i.qty, 0) + (s.shipFee ?? 0), 0) - x.discount
+  const editable = (sid: string) => !['ship.shipped', 'ship.in_transit', 'ship.delivered', 'ship.cancelled', 'ship.returned'].includes(draft.shipments.find((s) => s.id === sid)?.status ?? '')
+  const live = (x: Order) => x.shipments.flatMap((s) => s.items.filter((i) => !i.cancelled))
+  const sum = (x: Order) => x.shipments.reduce((a, s) => a + s.items.filter((i) => !i.cancelled).reduce((b, i) => b + i.price * i.qty, 0) + (s.shipFee ?? 0), 0) - (x.discount ?? 0)
   const diff = sum(draft) - sum(o)
+  const P = (pid: string) => d.products.find((p) => p.id === pid)
+  const vName = (pid: string, vid?: string) => { const v = P(pid)?.variations?.find((x) => x.id === vid); return v ? Object.values(v.opts).join(' · ') : '' }
+  const setShip = (si: number, fn: (s: Order['shipments'][number]) => void) => setDraft((dr) => { const n = structuredClone(dr!); fn(n.shipments[si]); return n })
+  const setItem = (si: number, ii: number, fn: (it: Order['shipments'][number]['items'][number]) => void) => setShip(si, (s) => fn(s.items[ii]))
+
+  /* فهرست تغییرها برای لاگ، یادداشت سفارش و پیامک */
+  const changes: string[] = []
+  draft.shipments.forEach((s) => {
+    const b = o.shipments.find((x) => x.id === s.id)
+    if (!b) { changes.push(`مرسولهٔ تازهٔ ${s.id} (${WAREHOUSE[s.warehouse] ?? s.warehouse}، ${s.method})`); return }
+    if (b.warehouse !== s.warehouse) changes.push(`انبار ارسال ${s.id}: ${WAREHOUSE[b.warehouse] ?? b.warehouse} ← ${WAREHOUSE[s.warehouse] ?? s.warehouse}`)
+    if (b.method !== s.method) changes.push(`روش ارسال ${s.id}: ${b.method} ← ${s.method}`)
+    if ((b.shipFee ?? 0) !== (s.shipFee ?? 0)) changes.push(`هزینهٔ ارسال ${s.id}: ${toman(b.shipFee ?? 0)} ← ${toman(s.shipFee ?? 0)}`)
+  })
+  const key = (i: { productId: string; unitId: string; variationId?: string }) => `${i.productId}|${i.unitId}`
+  const before = live(o); const after = live(draft)
+  after.forEach((i) => { const b = before.find((x) => key(x) === key(i)); const t = P(i.productId)?.title ?? i.productId
+    if (!b) changes.push(`افزودن ${t}${i.variationId ? ` (${vName(i.productId, i.variationId)})` : ''} × ${fa(i.qty)}`)
+    else { if (b.qty !== i.qty) changes.push(`تعداد ${t}: ${fa(b.qty)} ← ${fa(i.qty)}`); if (b.price !== i.price) changes.push(`قیمت ${t}: ${toman(b.price)} ← ${toman(i.price)}`); if ((b.variationId ?? '') !== (i.variationId ?? '')) changes.push(`تنوع ${t}: ${vName(i.productId, b.variationId) || 'پیش‌فرض'} ← ${vName(i.productId, i.variationId)}`) } })
+  before.filter((b) => !after.some((i) => key(i) === key(b))).forEach((b) => changes.push(`حذف ${P(b.productId)?.title ?? b.productId}`))
+  if ((o.shipTo ?? addrText(c?.addr as any)) !== draft.shipTo) changes.push(`نشانی ارسال: ${draft.shipTo}`)
+  if (o.receiver ? o.receiver.name !== draft.receiver?.name || o.receiver.mobile !== draft.receiver?.mobile : (draft.receiver?.name !== (c?.name ?? '') || draft.receiver?.mobile !== (c?.mobile ?? ''))) changes.push(`تحویل‌گیرنده: ${draft.receiver?.name} · ${draft.receiver?.mobile}`)
+  if ((o.discount ?? 0) !== (draft.discount ?? 0)) changes.push(`تخفیف سفارش: ${toman(o.discount ?? 0)} ← ${toman(draft.discount ?? 0)}`)
+  const settleOpts = diff > 0 ? ['ارسال لینک پرداخت مابه‌التفاوت', 'دریافت شد (کارت‌خوان یا کارت به کارت)', 'رایگان؛ بر عهدهٔ غنیمت'] : diff < 0 ? ['بازگشت به کیف پول', 'بازگشت به کارت بانکی', 'بازگشت به همان روش پرداخت'] : []
+  const how = settle || settleOpts[0] || ''
+  const autoSms = `غنیمت: ${src === 'تصمیم داخلی غنیمت' ? 'سفارش' : 'طبق درخواست شما، سفارش'} ${o.id} ویرایش شد. ${changes.slice(0, 3).join('؛ ')}${changes.length > 3 ? ` و ${fa(changes.length - 3)} تغییر دیگر` : ''}. مبلغ نهایی: ${toman(sum(draft))}.${diff > 0 ? (how.startsWith('ارسال لینک') ? ` لینک پرداخت ${toman(diff)} برایتان ارسال شد.` : '') : diff < 0 ? ` ${toman(-diff)} ${how.replace('بازگشت به', 'به')} برمی‌گردد.` : ''}`
+  const smsText = smsEdit ?? autoSms
+
   const save = async () => {
-    if (!draft.shipments.some((s) => s.items.length)) return toast('سفارش بدون قلم نمی‌ماند؛ برای حذف همهٔ اقلام، سفارش را لغو کنید.', { tone: 'err' })
-    if (diff !== 0 && !(await confirm({ title: diff > 0 ? `دریافت ${toman(diff)} از مشتری؟` : `بازگشت ${toman(-diff)} به مشتری؟`, body: diff > 0 ? 'لینک پرداخت مابه‌التفاوت با پیامک برای مشتری ارسال می‌شود.' : 'مابه‌التفاوت به کیف پول مشتری واریز می‌شود.', confirm: diff > 0 ? 'ذخیره و ارسال لینک پرداخت' : 'ذخیره و بازگشت وجه' }))) return
-    const undo = snapshot()
+    if (!after.length) return toast('سفارش بدون قلم نمی‌ماند؛ برای حذف همهٔ اقلام، سفارش را لغو کنید.', { tone: 'err' })
+    if (!changes.length) return toast('تغییری ثبت نشده است.', { tone: 'err' })
+    if (reason.trim().length < 3) return toast('دلیل یا توضیح ویرایش را بنویسید (برای سوابق).', { tone: 'err' })
+    if (!(await confirm({ title: `ثبت ${fa(changes.length)} تغییر در سفارش ${o.id}؟`, body: `${changes.join('\n')}${diff ? `\nمابه‌التفاوت: ${diff > 0 ? '+' : '−'}${toman(Math.abs(diff))} · ${how}` : ''}${sms ? '\nپیامک تغییرات برای مشتری ارسال می‌شود.' : '\nپیامکی ارسال نمی‌شود.'}`, confirm: 'ثبت تغییرها' }))) return
+    const undo = snapshot(); const who = currentUser()?.name ?? 'کاربر'
     mutate((x) => {
-      const before = x.orders.find((y) => y.id === o.id)!
-      before.shipments.flatMap((s) => s.items).filter((i) => i.unitId && !draft.shipments.some((s) => s.items.some((j) => j.unitId === i.unitId))).forEach((i) => (x.units.find((u) => u.id === i.unitId)!.status = 'unit.published'))
-      draft.shipments.flatMap((s) => s.items).filter((i) => i.unitId).forEach((i) => { const u = x.units.find((y) => y.id === i.unitId)!; if (u.status === 'unit.published') u.status = 'unit.reserved' })
-      draft.total = sum(draft); draft.shipments = draft.shipments.filter((s) => s.items.length)
-      if (diff < 0) x.customers.find((c) => c.id === o.customerId)!.wallet += -diff
-      x.orders[x.orders.findIndex((y) => y.id === o.id)] = draft
-    }, { action: 'ویرایش سفارش', target: o.id, before: toman(sum(o)), after: toman(sum(draft)) })
-    toast(diff > 0 ? `سفارش ویرایش شد؛ لینک پرداخت ${toman(diff)} برای مشتری رفت.` : diff < 0 ? `سفارش ویرایش شد؛ ${toman(-diff)} به کیف پول مشتری برگشت.` : 'سفارش ویرایش شد.', { undo }); onClose()
+      const cur = x.orders.find((y) => y.id === o.id)!
+      cur.shipments.flatMap((s) => s.items).filter((i) => i.unitId && !draft.shipments.some((s) => s.items.some((j) => j.unitId === i.unitId))).forEach((i) => { const u = x.units.find((y) => y.id === i.unitId); if (u) u.status = 'unit.published' })
+      draft.shipments.flatMap((s) => s.items).filter((i) => i.unitId).forEach((i) => { const u = x.units.find((y) => y.id === i.unitId); if (u && u.status === 'unit.published') u.status = 'unit.reserved' })
+      const next = structuredClone(draft); next.shipments = next.shipments.filter((s) => s.items.length); next.total = sum(next)
+      if (diff < 0 && how === 'بازگشت به کیف پول') { x.customers.find((cc) => cc.id === o.customerId)!.wallet += -diff; x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount: -diff, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: 'ویرایش سفارش' }) }
+      next.notes = [...(next.notes ?? []), { id: `N-${Date.now().toString(36)}`, at: new Date().toISOString(), by: who, src: NOTE_SRC[src], text: `ویرایش سفارش (${src}): ${reason.trim()} · ${changes.join('؛ ')}` }]
+      next.edits = [...(next.edits ?? []), { at: new Date().toISOString(), by: who, src, reason: reason.trim(), changes, diff, settle: diff ? how : undefined, sms }]
+      x.orders[x.orders.findIndex((y) => y.id === o.id)] = next
+    }, { action: 'ویرایش سفارش', target: o.id, before: toman(sum(o)), after: `${toman(sum(draft))} · ${changes.join('؛ ')}` })
+    if (sms && c) sendSms(c.mobile, smsText, 'وضعیت سفارش', o.id, c.id)
+    toast(`${fa(changes.length)} تغییر ثبت شد${sms ? ' و برای مشتری پیامک رفت' : '؛ پیامکی ارسال نشد'}.`, { undo }); onClose()
   }
+
   return (
-    <Drawer open onClose={onClose} width={560} title={`ویرایش سفارش ${o.id}`} footer={<><Button variant="primary" onClick={save}>ذخیرهٔ تغییرها{diff ? ` (${diff > 0 ? '+' : '−'}${toman(Math.abs(diff))})` : ''}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
+    <Drawer open onClose={onClose} width={680} title={`ویرایش سفارش ${o.id}`} footer={<><Button variant="primary" onClick={() => void save()}>ثبت تغییرها{changes.length ? ` (${fa(changes.length)})` : ''}{diff ? ` · ${diff > 0 ? '+' : '−'}${toman(Math.abs(diff))}` : ''}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
       <div className="space-y-4">
-        {draft.shipments.map((s, si) => (
+        <div className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-2">
+          <Field label="درخواست از کجا آمد؟"><Select value={src} other={false} onChange={setSrc} options={SRC.map((x) => [x, x] as [string, string])} /></Field>
+          <Field label="دلیل یا توضیح (برای سوابق)"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="مثلاً مشتری تلفنی رنگ را عوض کرد" /></Field>
+        </div>
+
+        {draft.shipments.map((s, si) => { const ed = editable(s.id); return (
           <div key={s.id} className="rounded-xl border border-line p-3">
-            <div className="mb-2 flex items-center justify-between"><b className="ltr font-mono text-13">{s.id}</b>{editable(s.id) ? <Badge tone="info">قابل ویرایش</Badge> : <Badge>ارسال‌شده؛ فقط مشاهده</Badge>}</div>
-            <Field label="روش ارسال"><Select value={s.method} onChange={(v) => { if (!editable(s.id)) return; const f = METHODS.find((m) => m[0] === v)?.[1] ?? 0; setDraft({ ...draft, shipments: draft.shipments.map((x, j) => (j === si ? { ...x, method: v, shipFee: f } : x)) }) }} options={METHODS.map(([m]) => m)} /></Field>
-            <ul className="mt-2 divide-y divide-line">{s.items.map((it, ii) => <li key={ii} className="flex items-center gap-2 py-2"><ProductImg pid={it.productId} size={36} /><span className="min-w-0 flex-1 truncate text-12">{d.products.find((p) => p.id === it.productId)?.title}{it.qty > 1 && ` × ${fa(it.qty)}`}</span><b className="tnum text-12">{toman(it.price * it.qty)}</b>
-              {editable(s.id) && s.items.length > 1 && <Button size="sm" variant="ghost" title="تقسیم به مرسولهٔ جدا" aria-label="تقسیم" icon={<Scissors size={13} />} onClick={() => setDraft({ ...draft, shipments: [...draft.shipments.map((x, j) => (j === si ? { ...x, items: x.items.filter((_, k) => k !== ii) } : x)), { ...s, id: `${o.id}-${draft.shipments.length + 1}`, items: [it], shipFee: 0, status: 'ship.pending' }] })} />}
-              {editable(s.id) && <Button size="sm" variant="ghost" aria-label="حذف قلم" icon={<Trash2 size={13} />} onClick={() => setDraft({ ...draft, shipments: draft.shipments.map((x, j) => (j === si ? { ...x, items: x.items.filter((_, k) => k !== ii) } : x)) })} />}</li>)}</ul>
-            {editable(s.id) && <Select className="mt-2" value="" onChange={(v) => { const op = opts.find((x) => `${x.pid}|${x.uid}` === v); if (!op) return; setDraft({ ...draft, shipments: draft.shipments.map((x, j) => (j === si ? { ...x, items: [...x.items, { productId: op.pid, unitId: op.uid, qty: 1, price: op.price }] } : x)) }) }} options={[['', 'افزودن قلم به این مرسوله…'], ...opts.map((x) => [`${x.pid}|${x.uid}`, `${x.label} · ${toman(x.price)}`] as [string, string])]} />}
-          </div>))}
-        <div className={cx('rounded-lg px-4 py-3 text-13', diff > 0 ? 'bg-warning-bg text-warning' : diff < 0 ? 'bg-success-bg text-success' : 'bg-neutral-bg text-t2')}>{diff > 0 ? `مشتری باید ${toman(diff)} دیگر بپردازد.` : diff < 0 ? `${toman(-diff)} به مشتری برمی‌گردد.` : 'مبلغ سفارش تغییری نکرده است.'}</div>
+            <div className="mb-2 flex items-center justify-between"><b className="ltr font-mono text-13">{s.id}</b>{ed ? <Badge tone="info">قابل ویرایش</Badge> : <Badge>ارسال‌شده؛ فقط مشاهده</Badge>}</div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field label="انبار ارسال (مبدأ)"><Select value={s.warehouse} other={false} onChange={(v) => ed && setShip(si, (x) => { x.warehouse = v; x.allocReason = `تغییر دستی انبار: ${reason || src}` })} options={Object.entries(WAREHOUSE).map(([k, v]) => [k, v] as [string, string])} /></Field>
+              <Field label="روش ارسال"><Select value={s.method} onChange={(v) => { if (!ed) return; const f = METHODS.find((m) => m[0] === v)?.[1]; setShip(si, (x) => { x.method = v; if (f !== undefined) x.shipFee = f }) }} options={[...new Set([s.method, ...METHODS.map(([m]) => m)])]} /></Field>
+              <Field label="هزینهٔ ارسال (تومان)"><Input className="ltr" inputMode="numeric" disabled={!ed} value={String(s.shipFee ?? 0)} onChange={(e) => setShip(si, (x) => { x.shipFee = Number(e.target.value.replace(/\D/g, '')) || 0 })} /></Field>
+            </div>
+            <ul className="mt-2 divide-y divide-line">{s.items.map((it, ii) => { if (it.cancelled) return null; const p = P(it.productId); const vars = p?.variations?.filter((v) => v.enabled) ?? []; const orig = o.shipments.find((x) => x.id === s.id)?.items[ii]; const serial = !!it.unitId
+              return <li key={ii} className="space-y-2 py-2.5">
+                <div className="flex items-center gap-2"><ProductImg pid={it.productId} size={36} /><span className="min-w-0 flex-1 truncate text-12 font-medium">{p?.title}</span>
+                  {ed && s.items.length > 1 && <Button size="sm" variant="ghost" title="تقسیم به مرسولهٔ جدا" aria-label="تقسیم به مرسولهٔ جدا" icon={<Scissors size={13} />} onClick={() => setDraft((dr) => { const n = structuredClone(dr!); const [m] = n.shipments[si].items.splice(ii, 1); n.shipments.push({ ...structuredClone(n.shipments[si]), id: `${o.id}-${n.shipments.length + 1}`, items: [m], shipFee: 0, status: 'ship.pending' }); return n })} />}
+                  {ed && <Button size="sm" variant="ghost" aria-label={`حذف ${p?.title ?? 'قلم'}`} icon={<Trash2 size={13} />} onClick={() => setShip(si, (x) => { x.items.splice(ii, 1) })} />}</div>
+                {ed && <div className="flex flex-wrap items-end gap-2">
+                  {vars.length > 0 && <Field label="رنگ یا تنوع"><Select className="w-44" value={it.variationId ?? ''} other={false} onChange={(v) => setItem(si, ii, (x) => { x.variationId = v; const vv = vars.find((q) => q.id === v); if (vv?.price) x.price = vv.sale ?? vv.price })} options={[['', 'پیش‌فرض'], ...vars.map((v) => [v.id, Object.values(v.opts).join(' · ')] as [string, string])]} /></Field>}
+                  <Field label="تعداد"><span className="flex items-center gap-1"><Button size="sm" variant="ghost" aria-label="کم کردن تعداد" disabled={it.qty <= 1} icon={<Minus size={12} />} onClick={() => setItem(si, ii, (x) => { x.qty = Math.max(1, x.qty - 1) })} /><b className="tnum w-6 text-center text-13">{fa(it.qty)}</b><Button size="sm" variant="ghost" aria-label="زیاد کردن تعداد" disabled={serial} title={serial ? 'کالای سریال‌دار: برای تعداد بیشتر واحد تازه اضافه کنید' : undefined} icon={<Plus size={12} />} onClick={() => setItem(si, ii, (x) => { x.qty += 1 })} /></span></Field>
+                  <Field label="قیمت واحد (تومان)"><Input className="ltr w-36" inputMode="numeric" value={String(it.price)} onChange={(e) => setItem(si, ii, (x) => { x.listPrice ??= orig?.price ?? x.price; x.price = Number(e.target.value.replace(/\D/g, '')) || 0 })} /></Field>
+                  {draft.shipments.length > 1 && <Field label="انتقال به مرسوله"><Select className="w-36" value={s.id} other={false} onChange={(v) => setDraft((dr) => { const n = structuredClone(dr!); const [m] = n.shipments[si].items.splice(ii, 1); n.shipments.find((q) => q.id === v)!.items.push(m); return n })} options={draft.shipments.filter((q) => editable(q.id)).map((q) => [q.id, q.id] as [string, string])} /></Field>}
+                  <b className="tnum mr-auto text-12">{toman(it.price * it.qty)}{orig && orig.price !== it.price && <s className="mr-1 font-normal text-t3">{toman(orig.price * it.qty)}</s>}</b>
+                </div>}
+              </li> })}</ul>
+            {ed && <Select className="mt-2" value="" onChange={(v) => { const op = opts.find((x) => `${x.pid}|${x.uid}` === v); if (!op) return; setShip(si, (x) => { x.items.push({ productId: op.pid, unitId: op.uid, qty: 1, price: op.price }) }) }} options={[['', 'افزودن کالا به این مرسوله…'], ...opts.map((x) => [`${x.pid}|${x.uid}`, `${x.label} · ${toman(x.price)}`] as [string, string])]} />}
+          </div>) })}
+
+        <div className="space-y-2 rounded-xl border border-line p-3">
+          <p className="text-12 font-semibold">نشانی و تحویل‌گیرنده</p>
+          <Field label="نشانی ارسال این سفارش"><Textarea rows={2} value={draft.shipTo ?? ''} onChange={(e) => setDraft({ ...draft, shipTo: e.target.value })} /></Field>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="نام تحویل‌گیرنده"><Input value={draft.receiver?.name ?? ''} onChange={(e) => setDraft({ ...draft, receiver: { name: e.target.value, mobile: draft.receiver?.mobile ?? '' } })} /></Field>
+            <Field label="موبایل تحویل‌گیرنده"><Input className="ltr" inputMode="tel" value={draft.receiver?.mobile ?? ''} onChange={(e) => setDraft({ ...draft, receiver: { name: draft.receiver?.name ?? '', mobile: e.target.value } })} /></Field>
+            <Field label="تخفیف سفارش (تومان)"><Input className="ltr" inputMode="numeric" value={String(draft.discount ?? 0)} onChange={(e) => setDraft({ ...draft, discount: Number(e.target.value.replace(/\D/g, '')) || 0 })} /></Field>
+          </div>
+          <p className="text-11 text-t3">این نشانی فقط روی همین سفارش اعمال می‌شود و دفترچهٔ نشانی مشتری تغییر نمی‌کند.</p>
+        </div>
+
+        <div className={cx('rounded-xl px-4 py-3 text-13', diff > 0 ? 'bg-warning-bg' : diff < 0 ? 'bg-success-bg' : 'bg-neutral-bg')}>
+          <p className={diff > 0 ? 'text-warning' : diff < 0 ? 'text-success' : 'text-t2'}>{diff > 0 ? `مشتری باید ${toman(diff)} دیگر بپردازد.` : diff < 0 ? `${toman(-diff)} به مشتری برمی‌گردد.` : 'مبلغ سفارش تغییری نکرده است.'} مبلغ نهایی: <b>{toman(sum(draft))}</b></p>
+          {diff !== 0 && <Field label="تسویهٔ مابه‌التفاوت"><Segmented size="sm" value={how} onChange={setSettle} options={settleOpts.map((x) => [x, x] as [string, string])} /></Field>}
+        </div>
+
+        <div className="rounded-xl border border-line p-3">
+          <p className="mb-1 text-12 font-semibold">تغییرهای این ویرایش ({fa(changes.length)})</p>
+          {changes.length ? <ul className="list-disc space-y-0.5 pr-5 text-12 text-t2">{changes.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="text-12 text-t3">هنوز چیزی تغییر نکرده است.</p>}
+          <div className="mt-3 border-t border-line pt-3"><Toggle on={sms} onChange={setSms} text="پیامک تغییرات برای مشتری ارسال شود" />
+            {sms && <Field label="متن پیامک (قابل ویرایش)"><Textarea rows={3} value={smsText} onChange={(e) => setSmsEdit(e.target.value)} /></Field>}
+            {sms && smsEdit !== null && <button type="button" className="text-11 text-brand" onClick={() => setSmsEdit(null)}>بازگشت به متن خودکار</button>}
+          </div>
+        </div>
+
+        {(o.edits?.length ?? 0) > 0 && <div className="rounded-xl bg-neutral-bg p-3 text-12"><p className="mb-1 font-semibold">ویرایش‌های قبلی</p><ul className="space-y-1">{o.edits!.slice().reverse().map((e, i) => <li key={i}><b>{new Date(e.at).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' })}</b> · {e.by} · {e.src} · {e.reason}<span className="block text-t2">{e.changes.join('؛ ')}{e.diff ? ` · ${e.diff > 0 ? '+' : '−'}${toman(Math.abs(e.diff))} (${e.settle})` : ''} · {e.sms ? 'پیامک شد' : 'بدون پیامک'}</span></li>)}</ul></div>}
       </div>
     </Drawer>
   )

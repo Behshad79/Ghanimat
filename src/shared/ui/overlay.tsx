@@ -70,7 +70,7 @@ export function ConfirmHost() {
   const done = (ok: boolean) => { c?.resolve(ok); pending = null; cSubs.forEach((f) => f()) }
   return (
     <Modal open={!!c} onClose={() => done(false)} title={c?.title ?? ''} footer={<><Button variant={c?.danger ? 'danger' : 'primary'} onClick={() => done(true)}>{c?.confirm}</Button><Button variant="ghost" onClick={() => done(false)}>انصراف</Button></>}>
-      <div className="leading-6 text-t2">{c?.body}</div>
+      <div className="whitespace-pre-line leading-6 text-t2">{c?.body}</div>
     </Modal>
   )
 }

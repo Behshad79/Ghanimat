@@ -4,6 +4,7 @@ import { Badge, Button, Card, cx, Field, Input, Toggle, copyText } from '@/share
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
+import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 
 const BASE = 'https://ghanimat.ir/api'
 const copy = (t: string) => { copyText(t); toast('کپی شد.') }
@@ -37,7 +38,7 @@ export function FeedsApi() {
       <Card title={<span className="flex items-center gap-1.5"><Rss size={15} />فید مقایسهٔ قیمت و اقساطی</span>} actions={<Toggle on={F.onlyInStock} onChange={(v) => setF('onlyInStock', v)} text="فقط کالای دارای واحد قابل فروش" />}>
         <p className="-mt-1 mb-3 text-12 text-t2">این نشانی‌ها را در پنل هر سرویس ثبت کنید. هر بار که واحدی فروخته یا قیمتش عوض شود، فید همان لحظه به‌روز است. الان {fa(count)} کالا در فید است.</p>
         <div className="grid gap-3 md:grid-cols-2">{FEEDS.map(([k, n, ep, note]) => <div key={k} className={cx('rounded-2xl border p-3', F[k] ? 'border-line' : 'border-dashed border-line opacity-60')}>
-          <div className="flex items-center justify-between"><b className="text-14">{n}</b><Toggle on={F[k]} onChange={(v) => setF(k, v)} label={`فید ${n}`} /></div>
+          <div className="flex items-center justify-between"><b className="flex items-center gap-2 text-14"><BrandLogo name={n} size={24} />{n}</b><Toggle on={F[k]} onChange={(v) => setF(k, v)} label={`فید ${n}`} /></div>
           <p className="mt-1 text-11 text-t2">{note}</p>
           <button onClick={() => copy(BASE + ep)} className="ltr mt-2 flex w-full items-center justify-between gap-2 rounded-xl bg-info-bg px-3 py-2 text-left font-mono text-11 text-info"><span className="truncate">{BASE + ep}</span><Copy size={13} className="shrink-0" /></button>
         </div>)}</div>

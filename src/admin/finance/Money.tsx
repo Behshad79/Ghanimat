@@ -12,6 +12,7 @@ import { counted, orderProfit, providerOf, receivable } from '@/shared/lib/profi
 import { CONDITION, SOURCE, WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
 import { Cell, Money, ProductImg } from '../pages/_shared'
+import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 
 const toneOf = (s: string) => (s === 'واریزشده' ? 'success' : s === 'دیرکرد' ? 'danger' : s === 'اختلاف' ? 'warning' : 'info') as 'success' | 'danger' | 'warning' | 'info'
 const toInput = (iso: string) => new Date(iso).toISOString().slice(0, 10)
@@ -35,7 +36,7 @@ export function Receivables() {
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{provs.map((p) => { const rs = rows.filter((r) => r.prov.id === p.id); const open = rs.filter((r) => !r.paid); const next = open.map((r) => r.due).sort()[0]; return (
         <Card key={p.id} onClick={() => setProv(p.id === prov ? 'all' : p.id)} className={cx(prov === p.id && 'border-brand ring-2 ring-brand/20')}>
-          <div className="flex items-center justify-between"><b className="text-14">{p.name}</b><Badge tone={p.family === 'bnpl' ? 'purple' : 'info'} dot={false}>{p.family === 'bnpl' ? 'اقساطی' : 'نقدی'}</Badge></div>
+          <div className="flex items-center justify-between"><b className="flex items-center gap-2 text-14"><BrandLogo name={p.name} size={26} />{p.name}</b><Badge tone={p.family === 'bnpl' ? 'purple' : 'info'} dot={false}>{p.family === 'bnpl' ? 'اقساطی' : 'نقدی'}</Badge></div>
           <p className="tnum mt-2 text-20 font-bold">{compactToman(open.reduce((a, r) => a + r.net, 0))}</p><p className="text-11 text-t2">باید واریز کند · کارمزد {pct(p.fee ?? 0, 1)} · تسویه هر {fa(p.settleDays ?? 1)} روز</p>
           <p className="mt-2 flex items-center gap-1 text-12"><CalendarClock size={13} className="text-t3" />{next ? `سررسید بعدی ${jday(next)}` : 'طلبی باز نیست'}</p>
         </Card>) })}</div>
@@ -43,7 +44,7 @@ export function Receivables() {
         filters={<Select className="w-40" value={prov} onChange={setProv} options={[['all', 'همهٔ سرویس‌ها'], ...provs.map((p) => [p.id, p.name] as [string, string])]} />}
         empty={{ title: 'طلبی ثبت نشده است.' }}
         cols={[{ key: 'o', title: 'سفارش', render: (r) => <Cell pid={r.o.shipments[0]?.items[0]?.productId} a={<span className="ltr font-mono">{r.o.id}</span>} b={d.customers.find((c) => c.id === r.o.customerId)?.name} /> },
-          { key: 'p', title: 'سرویس', render: (r) => <span className="flex items-center gap-1.5">{r.prov.name}<Badge tone={r.prov.family === 'bnpl' ? 'purple' : 'info'} dot={false}>{r.prov.family === 'bnpl' ? 'اقساطی' : 'نقدی'}</Badge></span>, sort: (r) => r.prov.name },
+          { key: 'p', title: 'سرویس', render: (r) => <span className="flex items-center gap-1.5"><BrandLogo name={r.prov.name} size={18} fallback={false} />{r.prov.name}<Badge tone={r.prov.family === 'bnpl' ? 'purple' : 'info'} dot={false}>{r.prov.family === 'bnpl' ? 'اقساطی' : 'نقدی'}</Badge></span>, sort: (r) => r.prov.name },
           { key: 'sale', title: 'مبلغ فروش', align: 'left', render: (r) => <Money v={r.o.total} />, sort: (r) => r.o.total, text: (r) => r.o.total },
           { key: 'fee', title: 'کارمزد', align: 'left', render: (r) => <Money v={r.fee} />, sort: (r) => r.fee, text: (r) => r.fee },
           { key: 'net', title: 'باید واریز کند', align: 'left', render: (r) => <b><Money v={r.net} /></b>, sort: (r) => r.net, text: (r) => r.net },

@@ -35,7 +35,7 @@ const range = (p: string, from: string, to: string): [string, string] | null => 
 /** چاپ گروهی: سفارش‌های انتخاب‌شده یا سفارش‌های یک بازهٔ تاریخ و وضعیت؛ چند نوع سند با هم، هر سند در صفحهٔ جدا */
 export function BatchPrint() {
   const d = useDB(); const s0 = useSession(); const nav = useNavigate(); const [sp] = useSearchParams()
-  const picked = sp.get('orders')?.split(',').filter(Boolean) ?? []
+  const [picked, setPicked] = useState<string[]>(() => sp.get('orders')?.split(',').filter(Boolean) ?? [])
   const [src, setSrc] = useState<'picked' | 'filter'>(picked.length ? 'picked' : 'filter')
   const [preset, setPreset] = useState(sp.get('range') ?? 'today'); const [from, setFrom] = useState(''); const [to, setTo] = useState('')
   const statuses = [...new Set(d.orders.map((o) => o.status))]
@@ -46,14 +46,16 @@ export function BatchPrint() {
   const paper = sizes.post; const [busy, setBusy] = useState<string | null>(null); const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const opts = (id: string): DocOpts => ({ font: 1, margin: 10, footer: '', seal: true, hide: [], ...(d.docSettings[id] ?? {}) } as DocOpts)
   const printedRefs = (doc: string) => new Set(d.printLog.filter((x) => x.doc === doc).map((x) => x.ref))
-  const orders = useMemo(() => {
+  const found = useMemo(() => {
     let list = src === 'picked' ? d.orders.filter((o) => picked.includes(o.id)) : d.orders
     if (src === 'filter') { const r = range(preset, from, to); if (r) list = list.filter((o) => { const x = o.createdAt.slice(0, 10); return x >= r[0] && x <= r[1] }); if (stSel.length) list = list.filter((o) => stSel.includes(o.status)) }
     if (wh !== 'all') list = list.filter((o) => o.shipments.some((s) => s.warehouse === wh))
     if (method !== 'all') list = list.filter((o) => o.shipments.some((s) => (method === 'post' ? isPost(s) : method === 'courier' ? isCourier(s) : /حضوری/.test(s.method))))
     if (onlyNew) list = list.filter((o) => docs.some((doc) => { const per = BATCH_DOCS.find((b) => b.id === doc)!.per; const done = printedRefs(doc); return per === 'ship' ? o.shipments.some((s) => !done.has(s.id)) : !done.has(o.id) }))
     return [...list].sort((a, b) => (sort === 'old' ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt)))
-  }, [d.orders, d.printLog, src, preset, from, to, stSel, wh, method, onlyNew, docs, sort])
+  }, [d.orders, d.printLog, src, picked, preset, from, to, stSel, wh, method, onlyNew, docs, sort])
+  const [off, setOff] = useState<string[]>([]); const [lq, setLq] = useState('')
+  const orders = found.filter((o) => !off.includes(o.id))
   // سندهای هر سفارش با رعایت قاعده‌ها (لغوشده، روش ارسال)
   const live = (s: Shipment) => s.status !== 'ship.cancelled'
   const perOrder = (o: Order) => docs.flatMap((doc) => { const B = BATCH_DOCS.find((b) => b.id === doc)!; if (B.per === 'all') return []
@@ -106,7 +108,15 @@ export function BatchPrint() {
             {skipped > 0 && <span className="text-warning">{fa(skipped)} سفارش مرسولهٔ پستی ندارد و برچسب پستی نمی‌گیرد.</span>}
             {docs.includes('invoice') && orders.some((o) => o.status === 'order.cancelled') && <span className="text-warning">برای سفارش لغوشده فاکتور چاپ نمی‌شود.</span>}
           </div>
-          {orders.length > 0 && <Card pad={false} className="no-print"><ul className="max-h-48 divide-y divide-line overflow-y-auto overscroll-contain text-12">{orders.map((o) => <li key={o.id} className="flex items-center justify-between gap-2 px-3 py-1.5"><button type="button" className="ltr font-mono text-brand hover:underline" onClick={() => nav(`/admin/orders/${o.id}`)}>{o.id}</button><span className="truncate">{d.customers.find((c) => c.id === o.customerId)?.name}</span><StatusBadge s={o.status} /><span className="tnum text-t2">{new Date(o.createdAt).toLocaleDateString('fa-IR')}</span></li>)}</ul></Card>}
+          {found.length > 0 && <Card pad={false} className="no-print">
+            <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2 text-12"><b>{fa(orders.length)} از {fa(found.length)} سفارش انتخاب شده</b><button type="button" className="text-brand" onClick={() => setOff([])}>همه</button><button type="button" className="text-brand" onClick={() => setOff(found.map((o) => o.id))}>هیچ‌کدام</button>
+              <Input aria-label="جست‌وجو در سفارش‌ها" className="h-8 w-44 text-12" value={lq} onChange={(e) => setLq(e.target.value)} placeholder="شماره یا نام مشتری…" />
+              {src === 'picked' && <span className="w-56"><Select label="افزودن سفارش" value="" placeholder="افزودن سفارش دیگر…" other={false} onChange={(v) => { setPicked([...picked, v]); setOff(off.filter((x) => x !== v)) }} options={d.orders.filter((o) => !picked.includes(o.id)).map((o) => [o.id, `${o.id} · ${d.customers.find((c) => c.id === o.customerId)?.name ?? ''}`] as [string, string])} /></span>}
+              <span className="mr-auto text-11 text-t3">تیک هر سفارش را بردارید تا چاپ نشود.</span></div>
+            <ul className="max-h-72 divide-y divide-line overflow-y-auto overscroll-contain text-12">{found.filter((o) => !lq.trim() || `${o.id} ${d.customers.find((c) => c.id === o.customerId)?.name ?? ''}`.includes(lq.trim())).map((o) => { const on = !off.includes(o.id); return <li key={o.id} className={cx('flex items-center gap-2 px-3 py-1.5', !on && 'opacity-50')}>
+              <input type="checkbox" aria-label={`انتخاب ${o.id}`} checked={on} onChange={() => setOff(on ? [...off, o.id] : off.filter((x) => x !== o.id))} />
+              <button type="button" className="ltr font-mono text-brand hover:underline" onClick={() => nav(`/admin/orders/${o.id}`)}>{o.id}</button><span className="flex-1 truncate">{d.customers.find((c) => c.id === o.customerId)?.name}</span><span className="hidden truncate text-t2 sm:inline">{[...new Set(o.shipments.map((s) => s.method))].join('، ')}</span><StatusBadge s={o.status} /><span className="tnum text-t2">{new Date(o.createdAt).toLocaleDateString('fa-IR')}</span>
+              {d.printLog.some((x) => x.ref === o.id && x.doc === 'invoice') && <Badge dot={false}>چاپ شده</Badge>}</li> })}</ul></Card>}
           <div className="print-area space-y-6 overflow-auto rounded-xl border border-line bg-neutral-bg p-4 md:p-6">
             {pages.length === 0 ? <p className="no-print py-10 text-center text-13 text-t2">با این فیلترها سندی برای چاپ نیست.</p>
               : pages.map((p, i) => <div key={p.key} data-batch-page={i} className={cx('relative', i < pages.length - 1 && 'print-break')}><span className="no-print absolute -top-4 left-0 text-[10px] text-t3">{fa(i + 1)} · {BATCH_DOCS.find((b) => b.id === p.doc)!.label} · {PAPERS[sizes[p.doc]]?.label ?? sizes[p.doc]}</span>{p.el}</div>)}

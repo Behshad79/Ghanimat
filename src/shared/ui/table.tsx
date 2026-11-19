@@ -3,6 +3,7 @@ import { isValidElement, useEffect, useMemo, useState, type ReactNode } from 're
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Filter, Maximize2, Minimize2, Printer, Search, SearchX, X } from 'lucide-react'
 import { Badge, Button, cx, EmptyState, Input } from './base'
+import { STATUS } from '../data/statuses'
 import { DateFilter, inRange, rangeActive, rangeLabel, type DateRange } from './datefilter'
 import { st } from '../data/statuses'
 import { Drawer, toast } from './overlay'
@@ -62,7 +63,7 @@ export function DataTable<R>({ rows, cols, rowKey, name, onRow, search, filters,
   const [vals, setVals] = useState<Record<string, string[]>>({})
   const [nums, setNums] = useState<Record<string, [string, string]>>({})
   // متن هر سلول یک‌بار محاسبه می‌شود
-  const cellText = useMemo(() => { const m = new Map<R, Record<string, string>>(); rows.forEach((r) => { const o: Record<string, string> = {}; cols.forEach((c) => { const t = c.text ? c.text(r) : undefined; o[c.key] = (t !== undefined ? String(t) : nodeText(c.render(r))).replace(/\s+/g, ' ').trim() }); m.set(r, o) }); return m }, [rows, cols])
+  const cellText = useMemo(() => { const m = new Map<R, Record<string, string>>(); rows.forEach((r) => { const o: Record<string, string> = {}; cols.forEach((c) => { const t = c.text ? c.text(r) : undefined; o[c.key] = (t !== undefined ? String(t) : nodeText(c.render(r))).replace(/\s+/g, ' ').trim().replace(/^([a-z]+)\.([a-z_]+)$/, (m) => (STATUS[m] ? STATUS[m].label : m)) }); m.set(r, o) }); return m }, [rows, cols])
   const dateKey = useMemo(() => (noDate ? null : DATE_KEYS.find((k) => rows.some((r) => isIso((r as Record<string, unknown>)[k])))) ?? null, [rows, noDate])
   // ستون‌هایی که مقدارهای محدود دارند (وضعیت، کانال، انبار…) فیلتر انتخابی می‌گیرند؛ ستون‌های عددی بازهٔ حداقل و حداکثر
   // هر ستونِ تکرارشونده (وضعیت، مشتری، کانال، انبار…) فیلتر کشویی با جست‌وجو و شمارش می‌گیرد؛ ستون‌های عددی بازهٔ حداقل و حداکثر. مقدارهای یکتا (کد، شماره) با جست‌وجوی بالای جدول پیدا می‌شوند

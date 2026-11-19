@@ -10,6 +10,7 @@ import { WAREHOUSE } from '@/shared/data/statuses'
 import { ProductImg, useLookup } from '../pages/_shared'
 import { LiveMap } from './LiveMap'
 import { UrgentCard } from './Urgent'
+import { BrandLogo, logoOf } from '@/shared/ui/brandLogo'
 
 const FLOW = ['ship.pending', 'ship.picking', 'ship.packed', 'ship.handed', 'ship.in_transit', 'ship.delivered']
 const FLOW_L = ['ثبت و تأیید سفارش', 'جمع‌آوری از قفسه', 'بسته‌بندی و عکس پیش از ارسال', 'تحویل به حامل', 'در مسیر', 'تحویل به مشتری']
@@ -43,7 +44,7 @@ export function OrdersOverview() {
         </Card>
         <Card title="سفارش‌ها بر اساس روش پرداخت" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/finance?tab=paysales')}>نقدی و اقساطی</Button>}>
           <div className="grid gap-2 sm:grid-cols-2">{Object.entries(live.reduce<Record<string, { n: number; v: number }>>((m, o) => { const k = o.pay; m[k] ??= { n: 0, v: 0 }; m[k].n++; m[k].v += o.total; return m }, {})).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => { const bn = d.providers.some((p) => p.family === 'bnpl' && k.includes(p.name)); return (
-            <button key={k} onClick={() => nav('/admin/finance?tab=paysales')} className="lift flex items-center gap-3 rounded-xl border border-line p-3 text-right"><span className={cx('grid size-9 place-items-center rounded-full', bn ? 'bg-warning-bg text-warning' : 'bg-brand-tint text-brand')}>{bn ? <Timer size={16} /> : <Banknote size={16} />}</span><span className="min-w-0 flex-1"><span className="block truncate text-13 font-medium">{k}</span><span className="text-11 text-t2">{fa(x.n)} سفارش · {bn ? 'اقساطی' : 'نقدی'}</span></span><b className="tnum text-13">{compactToman(x.v)}</b></button>) })}</div>
+            <button key={k} onClick={() => nav('/admin/finance?tab=paysales')} className="lift flex items-center gap-3 rounded-xl border border-line p-3 text-right"><span className={cx('grid size-9 place-items-center rounded-full', bn ? 'bg-warning-bg text-warning' : 'bg-brand-tint text-brand')}>{logoOf(k.split('+')[0]) ? <BrandLogo name={k.split('+')[0]} size={22} /> : bn ? <Timer size={16} /> : <Banknote size={16} />}</span><span className="min-w-0 flex-1"><span className="block truncate text-13 font-medium">{k}</span><span className="text-11 text-t2">{fa(x.n)} سفارش · {bn ? 'اقساطی' : 'نقدی'}</span></span><b className="tnum text-13">{compactToman(x.v)}</b></button>) })}</div>
         </Card>
       </div>
       <Card title="پیگیری مرسوله" actions={cur && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/orders/${cur.o.id}`)}>سفارش</Button>}>

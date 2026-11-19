@@ -9,6 +9,7 @@ import { fileToImage } from '@/shared/lib/image'
 import { fa, num, pct, toman } from '@/shared/lib/fa'
 import { tierOf, type StoreCfg } from '@/shared/data/storeCfg'
 import { FX_CURS, refreshAll } from '@/shared/lib/fx'
+import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 
 type Part = 'identity' | 'media' | 'social' | 'loyalty' | 'checkout' | 'pdp' | 'fx'
 
@@ -238,7 +239,7 @@ export function ProductPageRules() {
           <div className={cx('mt-3 space-y-3', !inst.on && 'pointer-events-none opacity-40')}>
             <div className="grid gap-3 sm:grid-cols-2"><Field label="تعداد قسط"><Segmented value={String(inst.count)} onChange={(x) => setInst({ count: +x, text: `در ${fa(+x)} قسط ماهانه با یکی از سرویس‌های زیر` })} options={[['3', '۳'], ['4', '۴'], ['6', '۶']]} /></Field><Field label="متن کادر"><Input value={inst.text} onChange={(e) => setInst({ text: e.target.value })} /></Field></div>
             <Field label="سرویس‌های نمایش‌داده‌شده" help="فقط سرویسی را روشن کنید که قراردادش امضا و در «مالی ← درگاه‌ها» فعال شده است.">
-              <div className="flex flex-wrap gap-2">{(bnpl.length ? bnpl.map((p) => p.name) : ['اسنپ‌پی', 'ترب‌پی', 'دیجی‌پی']).map((n) => { const on = inst.providers.includes(n); const pv = bnpl.find((p) => p.name === n); const live = pv ? ['prov.active', 'prov.slow'].includes(pv.status) : undefined; return <button key={n} type="button" onClick={() => setInst({ providers: on ? inst.providers.filter((x) => x !== n) : [...inst.providers, n] })} className={cx('flex items-center gap-1.5 rounded-full border px-3 py-1 text-12', on ? 'border-brand bg-brand-tint text-brand' : 'border-line')}>{n}{live === false && <Badge tone="warning" dot={false}>غیرفعال در مالی</Badge>}</button> })}</div>
+              <div className="flex flex-wrap gap-2">{(bnpl.length ? bnpl.map((p) => p.name) : ['اسنپ‌پی', 'ترب‌پی', 'دیجی‌پی']).map((n) => { const on = inst.providers.includes(n); const pv = bnpl.find((p) => p.name === n); const live = pv ? ['prov.active', 'prov.slow'].includes(pv.status) : undefined; return <button key={n} type="button" onClick={() => setInst({ providers: on ? inst.providers.filter((x) => x !== n) : [...inst.providers, n] })} className={cx('flex items-center gap-1.5 rounded-full border px-3 py-1 text-12', on ? 'border-brand bg-brand-tint text-brand' : 'border-line')}><BrandLogo name={n} size={16} fallback={false} />{n}{live === false && <Badge tone="warning" dot={false}>غیرفعال در مالی</Badge>}</button> })}</div>
             </Field>
             <p className="rounded-xl bg-surface-2 px-3 py-2 text-12">نمونه: {toman(sample)} ← ماهی <b>{toman(Math.round(sample / inst.count / 1000) * 1000)}</b> ({fa(inst.count)} ماه). مبلغ دقیق قسط و پیش‌پرداخت را سرویس اقساطی تعیین می‌کند؛ عدد صفحه «تقریبی» است.</p>
           </div>

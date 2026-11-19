@@ -9,6 +9,7 @@ import type { DB, Order } from '@/shared/data/seed'
 import type { OrderEvent } from '@/shared/data/orderEvents'
 import { StartDecision } from './Decision'
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from './Restock'
+import { createRefund } from './Refunds'
 
 const KIND: Record<OrderEvent['kind'], { label: string; icon: typeof BellRing; cls: string }> = {
   cancel: { label: 'درخواست لغو', icon: CircleX, cls: 'border-danger/40 bg-danger-bg/60' },
@@ -74,6 +75,7 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
       else { const [sid, idx] = scope.split('|'); const sh = oo.shipments.find((s) => s.id === sid)!; const it = sh.items[Number(idx)]; it.cancelled = true; it.cancelBy = byUs ? 'غنیمت' : 'مشتری'; if (sh.items.every((i) => i.cancelled)) sh.status = 'ship.cancelled'; oo.total -= amount; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }
       const code = byUs && giveCode ? { code: `GH${o.id.slice(-4)}${Math.random().toString(36).slice(2, 5).toUpperCase()}`, amount: Number(codeAmt) || 0, until: new Date(Date.now() + (Number(codeDays) || 14) * 864e5).toISOString() } : undefined
       oo.cancelInfo = { by: byUs ? 'غنیمت' : 'مشتری', reason: why, at: new Date().toISOString(), amount, to, refund: to === 'کیف پول' ? 'بازگشت داده شد' : 'در جریان', refundAt: to === 'کیف پول' ? new Date().toISOString() : undefined, apology: byUs ? apology : undefined, code, notify: byUs && notifyMe, partial: scope !== 'all' }
+      createRefund(x, { orderId: o.id, customerId: o.customerId, amount, source: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', dest: to })
       if (to === 'کیف پول') x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم' })
     }, { action: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم سفارش', target: o.id, after: `${toman(amount)} به ${to} · ${why} · ${restockLabel(restock)}` })
     if (c) sendSms(c.mobile, `غنیمت: ${byUs ? `${apology} ` : ''}${scope === 'all' ? `سفارش ${o.id} لغو شد` : `یک قلم از سفارش ${o.id} لغو شد`} و ${toman(amount)} به ${to} برمی‌گردد.${byUs && giveCode ? ` کد تخفیف ${toman(Number(codeAmt) || 0)} برای خرید بعدی در پنل شماست.` : ''}`, 'وضعیت سفارش', o.id, c.id)

@@ -27,8 +27,9 @@ export type Unit = { variationId?: string; id: string; productId: string; serial
 export type OrderDecision = { kind: 'unsupplied' | 'out_of_stock' | 'other_warehouse'; items: string[]; alt?: string; deadline: string; at: string; by: string; choice?: 'send_rest' | 'from_other' | 'cancel_all'; chosenBy?: 'مشتری' | 'پشتیبانی' | 'سیستم'; chosenAt?: string; refund?: number; error?: boolean }
 /** جزئیات لغو و بازگشت وجه (فیگما: سفارش‌های لغوشده) */
 export type CancelInfo = { by: 'غنیمت' | 'مشتری'; reason: string; at: string; amount: number; to: string; refund: 'در جریان' | 'بازگشت داده شد' | 'ناموفق'; ref?: string; refundAt?: string; failWhy?: string; apology?: string; code?: { code: string; amount: number; until: string }; notify?: boolean; partial?: boolean }
+export type Refund = { id: string; orderId: string; customerId: string; amount: number; source: string; dest: string; note?: string; at: string; by: string; status: 'requested' | 'approved' | 'sent' | 'done' | 'failed'; via?: string; account?: string; ref?: string; sentAt?: string; doneAt?: string; failWhy?: string; log: { at: string; by: string; step: string; note?: string }[] }
 export type GatewayHold = { id: string; customerId: string; items: { productId: string; unitId: string; qty: number }[]; gateway: string; amount: number; at: string; status: 'in_gateway' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'released'; endedAt?: string; note?: string; orderId?: string }
-export type Order = { payHold?: { amount: number; method: 'لینک پرداخت' | 'کارت به کارت'; at: string; by: string; status: 'pending' | 'paid' | 'released' | 'waived'; ref?: string; note?: string; doneAt?: string; doneBy?: string; reminders?: number }; receiver?: { name: string; mobile: string }; edits?: { at: string; by: string; src: string; reason: string; changes: string[]; diff: number; settle?: string; sms: boolean; prev?: string; undone?: { at: string; by: string } }[]; rollbacks?: { at: string; by: string; shipId: string; from: string; to: string; reason: string; prev: { status: string; orderStatus: string; tracking: string; courier: any }; undone?: { at: string; by: string } }[]; cancelInfo?: CancelInfo; decision?: OrderDecision; customerNote?: string; customerNoteDone?: boolean; notes?: { id: string; at: string; by: string; src: 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'; text: string; act?: boolean; done?: boolean; doneBy?: string }[]; shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
+export type Order = { refunded?: number; refundPending?: number; payHold?: { amount: number; method: 'لینک پرداخت' | 'کارت به کارت'; at: string; by: string; status: 'pending' | 'paid' | 'released' | 'waived'; ref?: string; note?: string; doneAt?: string; doneBy?: string; reminders?: number }; receiver?: { name: string; mobile: string }; edits?: { at: string; by: string; src: string; reason: string; changes: string[]; diff: number; settle?: string; sms: boolean; prev?: string; undone?: { at: string; by: string } }[]; rollbacks?: { at: string; by: string; shipId: string; from: string; to: string; reason: string; prev: { status: string; orderStatus: string; tracking: string; courier: any }; undone?: { at: string; by: string } }[]; cancelInfo?: CancelInfo; decision?: OrderDecision; customerNote?: string; customerNoteDone?: boolean; notes?: { id: string; at: string; by: string; src: 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'; text: string; act?: boolean; done?: boolean; doneBy?: string }[]; shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
@@ -354,6 +355,7 @@ const makeSeedBase = () => ({
   promos: makePromos(),
   pickups: makePickups(),
   gatewayHolds: [] as GatewayHold[],
+  refunds: [] as Refund[],
   docOverrides: {} as Record<string, { html: string; at: string }>,
   newsletter: makeNewsletter(),
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
@@ -403,6 +405,30 @@ export const makeSeed = () => {
     s.orders.unshift(o)
     s.txns.unshift({ ...s.txns[0], id: `TX-S${i}`, orderId: id, amount: total, gateway: pay, ref: '', status: ['order.awaiting_payment'].includes(status) ? 'pay.unknown' : 'pay.success', at: o.createdAt })
   })
+  // ۴۸ سفارش نمونهٔ دیگر برای پوشش همهٔ حالت‌ها: هر وضعیت، روش ارسال، انبار، درگاه، کانال، خریدار و بازهٔ زمانی ۳۰ روزه
+  { const ST: [string, string][] = [['order.awaiting_payment', 'ship.pending'], ['order.awaiting_credit', 'ship.pending'], ['order.paid', 'ship.pending'], ['order.suspicious', 'ship.pending'], ['order.preparing', 'ship.picking'], ['order.preparing', 'ship.packed'], ['order.shipped', 'ship.handed'], ['order.shipped', 'ship.in_transit'], ['order.pickup_ready', 'ship.pickup_ready'], ['order.delivered', 'ship.delivered'], ['order.delivered', 'ship.delivered'], ['order.cancelled', 'ship.cancelled'], ['order.returned', 'ship.delivered'], ['order.delivered', 'ship.delivered']]
+    const PAY = ['زرین‌پال', 'درگاه ملت', 'اسنپ‌پی (۴ قسط)', 'ترب‌پی', 'دیجی‌پی', 'کیف پول', 'کارت به کارت', 'کیف پول + زرین‌پال', 'درگاه سامان']
+    const CH = ['سایت', 'سایت', 'سایت', 'اپلیکیشن', 'اینستاگرام دایرکت', 'تلگرام', 'واتساپ', 'تلفنی', 'ترب', 'باسلام', 'حضوری در شعبه']
+    const M: [string, string, number][] = [['تحویل سریع (پیک)', 'tehran', 185000], ['پست پیشتاز', 'tehran', 90000], ['پست پیشتاز', 'mahabad', 90000], ['تیپاکس', 'tehran', 140000], ['باربری', 'mahabad', 450000], ['دریافت حضوری از شعبه', 'tehran', 0]]
+    const COUR = [['حمید زارعی', 'موتور ۸۷۶-۴۵۲۱۳'], ['رضا احمدی', 'موتور ۱۲۳-۴۵۶۷۸'], ['مجید کریمی', 'سواری ۲۴ ب ۳۶۵ ایران ۱۱']]
+    const pub = s.products.filter((p) => p.status === 'product.published')
+    for (let i = 0; i < 48; i++) {
+      const [os, ss] = ST[i % ST.length]; const pay = PAY[(i * 5) % PAY.length]; const ch = CH[(i * 7) % CH.length]; const [meth, wh, fee] = ch === 'حضوری در شعبه' ? M[5] : M[(i * 3) % 5]
+      const p1 = pub[i % pub.length]; const p2 = i % 4 === 0 ? pub[(i + 3) % pub.length] : null; const pr = (p: typeof p1) => p.price || p.priceNew || 5000000
+      const items = [{ productId: p1.id, unitId: '', qty: i % 6 === 0 ? 2 : 1, price: pr(p1) }, ...(p2 ? [{ productId: p2.id, unitId: '', qty: 1, price: pr(p2) }] : [])]
+      const sub = items.reduce((a, it) => a + it.price * it.qty, 0); const disc = i % 5 === 0 ? Math.round(sub * 0.05 / 10000) * 10000 : 0
+      const created = new Date(Date.now() - ((i * 13 + 2) % 720) * 36e5 - i * 7 * 6e4).toISOString(); const id = `GH-${10300 + i}`
+      const o = structuredClone(base)
+      Object.assign(o, { id, customerId: `c${(i % 9) + 1}`, channel: ch, pay, total: sub + fee - disc, discount: disc, shippingFee: fee, status: os, buyer: i % 9 === 4 ? 'legal' : 'person', legalId: undefined, invoiceNo: undefined, decision: undefined, cancelInfo: undefined, notes: [], createdAt: created, deliveredAt: os === 'order.delivered' ? new Date(+new Date(created) + 2 * 864e5).toISOString() : undefined, tags: i % 8 === 0 ? ['VIP'] : i % 11 === 0 ? ['هدیه'] : [], risk: os === 'order.suspicious' ? 78 : (i * 17) % 40, margin: 6 + (i % 9) })
+      const fast = /پیک/.test(meth); const post = /پست|تیپاکس|باربری/.test(meth); const sent = ['ship.handed', 'ship.in_transit', 'ship.delivered'].includes(ss)
+      o.shipments = [{ ...structuredClone(base.shipments[0]), id: `${id}-1`, warehouse: wh, method: meth, shipFee: fee, status: ss, items, packPhotos: sent ? [{ at: created, by: 'آرش', src: `./products/${p1.id}-500.webp` }] : [], allocReason: wh === 'tehran' ? 'موجودی تهران کافی بود.' : 'فقط در انبار مهاباد موجود بود.',
+        courier: fast && sent ? { name: COUR[i % 3][0], phone: '09120000000', plate: COUR[i % 3][1], vehicle: COUR[i % 3][1].startsWith('موتور') ? 'موتور' : 'سواری', eta: 25, code: `SB-${80000 + i}`, cost: 160000 } : null,
+        tracking: post && sent ? (/تیپاکس/.test(meth) ? String(30000000000 + i * 7919) : `1204${String(59870001245789632155 + i).slice(0, 20)}`) : '', sla: new Date(Date.now() + ((i % 7) - 3) * 6 * 36e5).toISOString() }]
+      if (os === 'order.cancelled') o.cancelInfo = { by: i % 2 ? 'مشتری' : 'غنیمت', reason: i % 2 ? 'از خرید منصرف شدم' : 'کالا در انبار ناموجود شد', at: created, amount: o.total, to: 'کیف پول', refund: 'بازگشت داده شد', refundAt: created }
+      s.orders.push(o)
+      s.txns.push({ ...s.txns[0], id: `TX-G${i}`, orderId: id, amount: o.total, gateway: pay, ref: /اسنپ|ترب|دیجی/.test(pay) ? `SP-${7700000 + i}` : String(48120000000 + i * 911), status: os === 'order.awaiting_payment' ? (i % 2 ? 'pay.unknown' : 'pay.failed') : os === 'order.cancelled' ? 'pay.refunded' : 'pay.success', at: created })
+    }
+  }
   const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
   // سفارش اقساطی در انتظار تأیید اعتبار (فیگما: «در انتظار اعتبار اسنپ‌پی»)
   { const o = structuredClone(base); Object.assign(o, { id: 'GH-10498', customerId: 'c7', channel: 'سایت', pay: 'اسنپ‌پی (۴ قسط)', total: 31000000, discount: 0, status: 'order.awaiting_credit', buyer: 'person', legalId: undefined, invoiceNo: undefined, decision: undefined, createdAt: new Date(Date.now() - 25 * 6e4).toISOString(), tags: ['اقساطی'] }); o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10498-1', status: 'ship.pending', courier: null, packPhotos: [] }]; s.orders.unshift(o) }
@@ -467,6 +493,15 @@ export const makeSeed = () => {
       { id: 'GH-R3', customerId: 'c5', items: [{ productId: 'p5', unitId: '', qty: 1 }], gateway: 'زرین‌پال', amount: 21900000, at: m(58), status: 'expired', endedAt: m(43), note: 'پاسخی از درگاه نیامد؛ پس از ۱۵ دقیقه آزاد شد' },
       { id: 'GH-R4', customerId: 'c2', items: [{ productId: 'p4', unitId: '', qty: 1 }], gateway: 'اسنپ‌پی', amount: 30900000, at: m(190), status: 'paid', endedAt: m(187), orderId: 'GH-10478' },
       { id: 'GH-R5', customerId: 'c6', items: [{ productId: 'p9', unitId: '', qty: 2 }], gateway: 'درگاه ملت', amount: 3000000, at: m(75), status: 'cancelled', endedAt: m(74), note: 'انصراف مشتری داخل درگاه' })
+  }
+  // پرونده‌های بازگشت وجه نمونه در مراحل مختلف
+  { const h = (x: number) => new Date(Date.now() - x * 36e5).toISOString(); const L = (at: string, step: string, note?: string) => ({ at, by: 'بهشاد', step, note })
+    s.refunds.push(
+      { id: 'RF-1004', orderId: 'GH-10479', customerId: s.orders.find((o) => o.id === 'GH-10479')?.customerId ?? 'c3', amount: 9900000, source: 'لغو یک قلم', dest: 'کارت بانکی', at: h(80), by: 'بهشاد', status: 'sent', via: 'پایا (شبا)', account: 'IR12 0120 0000 0000 0123 4567 89', sentAt: h(78), log: [L(h(80), 'ثبت درخواست', 'لغو یک قلم'), L(h(80), 'تأیید'), L(h(78), 'ارسال به بانک', 'پایا (شبا)')] },
+      { id: 'RF-1003', orderId: 'GH-10480', customerId: s.orders.find((o) => o.id === 'GH-10480')?.customerId ?? 'c4', amount: 38500000, source: 'لغو سفارش', dest: 'همان روش پرداخت', at: h(5), by: 'سارا', status: 'requested', log: [L(h(5), 'ثبت درخواست', 'لغو سفارش · بالاتر از سقف تأیید')] },
+      { id: 'RF-1002', orderId: 'GH-10458', customerId: 'c1', amount: 15000000, source: 'مرجوعی', dest: 'کارت بانکی', at: h(30), by: 'بهشاد', status: 'failed', via: 'پایا (شبا)', account: 'IR55 0170 0000 0000 9988 7766 55', failWhy: 'شبا به نام مشتری نیست', log: [L(h(30), 'ثبت درخواست', 'مرجوعی'), L(h(30), 'تأیید'), L(h(28), 'ارسال به بانک', 'پایا (شبا)'), L(h(6), 'ناموفق', 'شبا به نام مشتری نیست')] },
+      { id: 'RF-1001', orderId: 'GH-10466', customerId: s.orders.find((o) => o.id === 'GH-10466')?.customerId ?? 'c2', amount: 2400000, source: 'ویرایش سفارش', dest: 'کیف پول', at: h(50), by: 'بهشاد', status: 'done', ref: 'RF-1001', doneAt: h(50), log: [L(h(50), 'ثبت درخواست', 'ویرایش سفارش'), L(h(50), 'واریز شد', 'به کیف پول مشتری')] })
+    s.refunds.forEach((r) => { const o = s.orders.find((q) => q.id === r.orderId); if (o) { o.refunded = (o.refunded ?? 0) + (r.status === 'done' ? r.amount : 0); o.refundPending = (o.refundPending ?? 0) + (r.status !== 'done' ? r.amount : 0) } })
   }
   // کتابخانهٔ رسانه: همهٔ تصویرهای کالاها یک بار، با ابعاد و حجم نمونه
   { const seen = new Set<string>(); let n = 0

@@ -9,6 +9,7 @@ import { SHIPPED } from './History'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
 import { ProductImg, useQuickChips } from '../pages/_shared'
+import { createRefund } from './Refunds'
 
 const METHODS = [['تحویل سریع (پیک)', 150000], ['پست پیشتاز', 90000], ['تیپاکس', 140000], ['باربری', 450000], ['دریافت حضوری از شعبه', 0]] as const
 type Line = { pid: string; uid: string; qty: number; price: number }
@@ -122,7 +123,8 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
       cur.shipments.flatMap((s) => s.items).filter((i) => i.unitId && !draft.shipments.some((s) => s.items.some((j) => j.unitId === i.unitId))).forEach((i) => { const u = x.units.find((y) => y.id === i.unitId); if (u) u.status = 'unit.published' })
       draft.shipments.flatMap((s) => s.items).filter((i) => i.unitId).forEach((i) => { const u = x.units.find((y) => y.id === i.unitId); if (u && u.status === 'unit.published') u.status = 'unit.reserved' })
       const next = structuredClone(draft); next.shipments = next.shipments.filter((s) => s.items.length); next.total = sum(next)
-      if (diff < 0 && how === 'بازگشت به کیف پول') { x.customers.find((cc) => cc.id === o.customerId)!.wallet += -diff; x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount: -diff, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: 'ویرایش سفارش' }) }
+      if (diff < 0) createRefund(x, { orderId: o.id, customerId: o.customerId, amount: -diff, source: 'ویرایش سفارش', dest: how === 'بازگشت به کیف پول' ? 'کیف پول' : how === 'بازگشت به کارت بانکی' ? 'کارت بانکی' : 'همان روش پرداخت' })
+      if (diff < 0 && how === 'بازگشت به کیف پول') { x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount: -diff, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: 'ویرایش سفارش' }) }
       next.notes = [...(next.notes ?? []), { id: `N-${Date.now().toString(36)}`, at: new Date().toISOString(), by: who, src: NOTE_SRC[src], text: `ویرایش سفارش (${src}): ${reason.trim()} · ${changes.join('؛ ')}` }]
       if (diff > 0 && (how.startsWith('ارسال لینک') || how.startsWith('کارت به کارت'))) next.payHold = { amount: diff + (o.payHold?.status === 'pending' ? o.payHold.amount : 0), method: how.startsWith('ارسال لینک') ? 'لینک پرداخت' : 'کارت به کارت', at: new Date().toISOString(), by: who, status: 'pending' }
       next.edits = [...(next.edits ?? []), { at: new Date().toISOString(), by: who, src, reason: reason.trim(), changes, diff, settle: diff ? how : undefined, sms, prev: JSON.stringify({ ...cur, edits: undefined, rollbacks: undefined, notes: undefined }) }]

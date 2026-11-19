@@ -1,7 +1,7 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -29,6 +29,8 @@ import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
 import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from './_shared'
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../orders/Restock'
+import { createRefund, RefundPanel } from '../orders/Refunds'
+import { OrderPeek } from '../orders/OrderPeek'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
 const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
@@ -46,11 +48,12 @@ const TABS: [string, string, (o: Order) => boolean][] = [
 ]
 export function Orders() {
   const { d, customer, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('all'); const [sp] = useSearchParams()
+  const [peek, setPeek] = useState<string | null>(null)
   const [wh, setWh] = useState('all'); const [manual, setManual] = useState(sp.get('new') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
   const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr))
   const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
   const cols: Col<Order>[] = [
-    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openNotes(o) > 0 && <span title={`${openNotes(o)} درخواست مشتری انجام‌نشده`} className="rounded-full bg-warning-bg px-1.5 text-[10px] font-semibold text-warning">یادداشت</span>}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
+    { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><button type="button" aria-label={`نمای سریع سفارش ${o.id}`} title="نمای سریع" onClick={(e) => { e.stopPropagation(); setPeek(o.id) }} className="grid size-7 place-items-center rounded-md text-t3 hover:bg-brand-tint hover:text-brand"><Eye size={15} /></button><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openNotes(o) > 0 && <span title={`${openNotes(o)} درخواست مشتری انجام‌نشده`} className="rounded-full bg-warning-bg px-1.5 text-[10px] font-semibold text-warning">یادداشت</span>}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={<CustLink v={customer(o.customerId).name} id={o.customerId} />} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
     { key: 'items', title: 'کالاها', hideMobile: true, render: (o) => { const it = o.shipments.flatMap((s) => s.items); return it.length ? <span className="flex items-center" title={it.map((i) => product(i.productId).title).join('، ')}>{it.slice(0, 3).map((i, k) => <ProductImg key={k} pid={i.productId} size={32} className={k ? '-mr-2 ring-2 ring-surface' : ''} />)}{it.length > 3 && <span className="tnum mr-1 text-11 text-t2">+{fa(it.length - 3)}</span>}</span> : '—' } },
     { key: 'total', title: 'مبلغ', align: 'left', render: (o) => <Money v={o.total} />, sort: (o) => o.total, text: (o) => o.total },
@@ -79,6 +82,7 @@ export function Orders() {
       {tab === 'pickup' && <PickupDesk />}
       {tab !== 'pickup' && <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>}
       {tab !== 'pickup' && view === 'kanban' && <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5">{([['در انتظار تأیید', ['order.paid', 'order.awaiting_payment', 'order.suspicious', 'order.needs_decision']], ['در حال آماده‌سازی', ['order.preparing']], ['ارسال یا آماده در شعبه', ['order.shipped', 'order.pickup_ready']], ['تحویل‌شده', ['order.delivered']], ['لغو و مرجوعی', ['order.cancelled', 'order.returned']]] as [string, string[]][]).map(([col, sts]) => { const list = rows.filter((o) => sts.includes(o.status)); return <div key={col} className="min-w-56 rounded-2xl bg-neutral-bg/60 p-2"><p className="mb-2 flex items-center justify-between px-1 text-13 font-semibold">{col}<Badge dot={false}>{fa(list.length)}</Badge></p><div className="space-y-2">{list.map((o) => <button key={o.id} onClick={() => nav(`/admin/orders/${o.id}`)} className="lift block w-full rounded-xl border border-line bg-surface p-2.5 text-right text-12"><span className="flex items-center justify-between"><span className="ltr font-mono">{o.id}</span><StatusBadge s={o.status} /></span><span className="mt-1 block truncate">{customer(o.customerId).name}</span><span className="mt-1 flex justify-between text-t2"><span>{o.channel}</span><b className="tnum text-t1">{compactToman(o.total)}</b></span></button>)}{list.length === 0 && <p className="px-1 py-4 text-center text-11 text-t3">خالی</p>}</div></div> })}</div>}
+      <OrderPeek id={peek} onClose={() => setPeek(null)} />
       {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
         search={(o) => `${o.id} ${customer(o.customerId).name} ${customer(o.customerId).mobile} ${o.pay}`}
         filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
@@ -172,7 +176,7 @@ export function OrderDetail() {
     if (!cancelSh) return; const { sid, total } = cancelSh
     if (!(await askReason({ kind: 'order', ref: o.id, status: `لغو مرسولهٔ ${sid}`, title: 'دلیل لغو (برای مشتری)' }))) return
     const undo = snapshot()
-    mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; const sh = oo.shipments.find((s) => s.id === sid)!; applyRestock(db, sh.items.filter((it) => !it.cancelled).map((it) => ({ it, warehouse: sh.warehouse })), restock); sh.status = 'ship.cancelled'; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }, { action: 'لغو مرسوله', target: sid, after: `${toman(total)} · ${restockLabel(restock)}` })
+    mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; const sh = oo.shipments.find((s) => s.id === sid)!; applyRestock(db, sh.items.filter((it) => !it.cancelled).map((it) => ({ it, warehouse: sh.warehouse })), restock); createRefund(db, { orderId: o.id, customerId: o.customerId, amount: total, source: 'لغو مرسوله', dest: dest === 'کیف پول' ? 'کیف پول' : 'همان روش پرداخت' }); sh.status = 'ship.cancelled'; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }, { action: 'لغو مرسوله', target: sid, after: `${toman(total)} · ${restockLabel(restock)}` })
     toast(`مرسولهٔ ${sid} لغو شد؛ ${restockLabel(restock)}.`, { undo }); setCancelSh(null)
   }
   const doRefund = () => {
@@ -181,7 +185,7 @@ export function OrderDetail() {
     if (n > o.total) return toast(`مبلغ بازگشت وجه از مبلغ سفارش (${toman(o.total)}) بیشتر است.`, { tone: 'err' })
     setRefund(false)
     if (n > cap && !isChief()) { mutate((db) => { db.approvals.unshift({ id: `AP-${710 + db.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(n)} به ${dest} ${c.name}`, ref: o.id, amount: n, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست بازگشت وجه', target: o.id, after: toman(n) }); return toast('مبلغ بالاتر از سقف است. درخواست به صندوق تأییدها رفت.') }
-    mutate((db) => { if (dest === 'کیف پول') db.customers.find((x) => x.id === c.id)!.wallet += n }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(`${toman(n)} به ${dest} ${c.name} واریز شد.`)
+    mutate((db) => { createRefund(db, { orderId: o.id, customerId: c.id, amount: n, source: 'بازگشت دستی', dest: dest === 'کیف پول' ? 'کیف پول' : 'کارت بانکی' }) }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(dest === 'کیف پول' ? `${toman(n)} به کیف پول ${c.name} واریز شد.` : `پروندهٔ بازگشت ${toman(n)} ساخته شد؛ مراحل را در کارت «بازگشت وجه» دنبال کنید.`)
   }
   return (
     <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · فروشنده: غنیمت`}
@@ -201,6 +205,7 @@ export function OrderDetail() {
           <OrderAlerts key={o.id} o={o} />
           <DecisionPanel o={o} />
           <CancelSummary o={o} />
+          <RefundPanel orderId={o.id} />
           {o.status === 'order.suspicious' && (
             <Card className="border-danger/50" title={<>سفارش مشکوک · امتیاز ریسک {fa(o.risk)}<Hint k="risk" /></>}>
               <p className="text-13 text-t2">دلایل: دو واحد گران‌قیمت در یک سفارش، نرخ مرجوعی ۴۰٪ مشتری، نشانی تازه. ارسال تا بازبینی متوقف است.</p><AITag confidence="متوسط" />
@@ -268,6 +273,7 @@ export function OrderDetail() {
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}
             <div className="my-1 border-t border-line" /><Row k={<b className="text-t1">مبلغ پرداختی</b>}><b><Money v={o.total} /></b></Row>
             <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row><Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>
+            {(o.refunded || o.refundPending) ? <><Row k="بازگشت داده‌شده"><span className="text-success">{toman(o.refunded ?? 0)}</span></Row>{o.refundPending ? <Row k="بازگشت در جریان"><span className="text-warning">{toman(o.refundPending)}</span></Row> : null}<Row k={<b className="text-t1">خالص دریافتی</b>}><b>{toman(o.total - (o.refunded ?? 0))}</b></Row></> : null}
             <PaymentInfo orderId={o.id} />
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>

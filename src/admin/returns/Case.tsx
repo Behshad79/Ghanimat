@@ -16,6 +16,7 @@ import { OriginalOrder } from '../orders/ReturnTools'
 import { PackPhotos } from '../shared/PackPhotos'
 import { cardState, COVERED, EXCLUDED, METHODS, QC_CHECKS, refundLabel, RETURN_STEPS, retItems, retStage, SERVICE_CENTER, SHIP_BACK, warStage, WARRANTY_STEPS, type Stage } from './flow'
 import { RemoteFor } from '@/shared/ui/remoteUpload'
+import { createRefund } from '../orders/Refunds'
 
 type Kind = 'return' | 'warranty'
 type C = Ret & War
@@ -447,7 +448,11 @@ function RefundForm({ kind, c, amount, fixedDest, done, pre, extra }: { kind: Ki
   const wallet = dest.startsWith('کیف پول'); const ok = wallet || ref.trim().length >= 4
   const pay = () => {
     const r = ref.trim() || `${Date.now()}`.slice(-10)
-    mutate((x) => { if (wallet) { const cu = x.customers.find((z) => z.id === c.customerId); if (cu) cu.wallet += amount } }, { action: 'بازگشت وجه', target: c.id, after: `${toman(amount)} · ${dest}` })
+    mutate((x) => {
+      const oid = (c as { orderId?: string }).orderId
+      if (oid) { createRefund(x, { orderId: oid, customerId: c.customerId, amount, source: kind === 'return' ? `مرجوعی ${c.id}` : `گارانتی ${c.id}`, dest: wallet ? 'کیف پول' : 'کارت بانکی' }); const rf = x.refunds[0]; if (!wallet && rf) { rf.status = 'done'; rf.ref = r; rf.doneAt = now(); rf.log.push({ at: now(), by: me(), step: 'واریز شد', note: `پیگیری ${r}` }); const o = x.orders.find((q) => q.id === oid); if (o) { o.refunded = (o.refunded ?? 0) + amount; o.refundPending = Math.max(0, (o.refundPending ?? 0) - amount) } } }
+      else if (wallet) { const cu = x.customers.find((z) => z.id === c.customerId); if (cu) cu.wallet += amount }
+    }, { action: 'بازگشت وجه', target: c.id, after: `${toman(amount)} · ${dest}` })
     act(kind, c.id, (x) => { extra?.(x); x.status = done; x.refund = { ...(x.refund ?? { amount }), amount, dest, ref: r, at: now(), by: me() } },
       [...(pre ? [pre] : []), kind === 'warranty' ? 'واریز مبلغ و بستن درخواست' : `${fday(now())} · ${toman(amount)} به ${dest} واریز شد.`],
       `مبلغ ${toman(amount)} بابت ${kind === 'return' ? 'مرجوعی' : 'درخواست'} ${c.id} ${wallet ? 'به کیف پول غنیمت شما واریز شد و آمادهٔ خرید است' : `به ${dest} واریز شد. شمارهٔ پیگیری بازپرداخت: ${r}`}.`)

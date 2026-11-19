@@ -8,6 +8,7 @@ import { currentUser, getDB, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order, OrderDecision } from '@/shared/data/seed'
+import { createRefund } from './Refunds'
 
 const KIND: Record<OrderDecision['kind'], { badge: string; title: (n: number, total: number, alt?: string) => string; sub: string }> = {
   unsupplied: { badge: 'تأمین نشد', title: (n, t) => `${fa(t - n)} کالا تأیید شد و ${fa(n)} کالا تأمین نشد`, sub: 'این کالاها تأمین نشدند و بقیهٔ کالاها تا انتخاب مشتری ارسال نمی‌شوند.' },
@@ -51,6 +52,7 @@ export function applyDecision(oid: string, choice: NonNullable<OrderDecision['ch
       o.status = 'order.preparing'
     }
     dd.choice = choice; dd.chosenBy = by; dd.chosenAt = new Date().toISOString(); dd.refund = refund
+    if (refund) createRefund(d, { orderId: oid, customerId: o.customerId, amount: refund, source: choice === 'cancel_all' ? 'لغو سفارش (تصمیم کمبود)' : 'لغو کالای ناموجود', dest: isBnpl(o) ? 'کسر از اقساط' : 'همان روش پرداخت' })
   }, { action: `تصمیم کمبود تأمین: ${choice === 'cancel_all' ? 'لغو کل سفارش' : choice === 'from_other' ? 'ارسال جدا از انبار دیگر' : 'لغو کالا و ارسال بقیه'}`, target: oid, after: by })
   const c = getDB().customers.find((x) => x.id === o0.customerId)
   const back = isBnpl(o0) ? 'از قسط‌های باقی‌مانده کم می‌شود' : 'به کیف پول یا کارت شما برمی‌گردد'

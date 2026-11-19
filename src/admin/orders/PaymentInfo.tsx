@@ -37,11 +37,15 @@ const Row = ({ k, v }: { k: string; v: React.ReactNode }) => <div className="fle
 const when = (s?: string | null) => (s ? new Date(s).toLocaleString('fa-IR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—')
 
 export function PaymentInfo({ orderId }: { orderId: string }) {
-  const d = useDB(); const T = d.txns.filter((t) => t.orderId === orderId); const [open, setOpen] = useState<string | null>(null)
+  const d = useDB(); const [open, setOpen] = useState<string | null>(null)
+  // اگر سفارشی (مثلاً ثبت دستی یا قدیمی) تراکنش ذخیره‌شده ندارد، پاسخ درگاه از روی خود سفارش ساخته می‌شود
+  const o = d.orders.find((x) => x.id === orderId)
+  const T0 = d.txns.filter((t) => t.orderId === orderId)
+  const T: Txn[] = T0.length || !o || /کارت به کارت/.test(o.pay) ? T0 : [{ ...(d.txns[0] ?? {}), id: `TX-${orderId.replace(/\D/g, '')}`, orderId, amount: o.total, gateway: o.pay, ref: String(48100000000 + (hash(orderId) % 99999999)), status: o.status === 'order.awaiting_payment' ? 'pay.unknown' : o.status === 'order.cancelled' ? 'pay.refunded' : 'pay.success', at: o.createdAt } as Txn]
   const rc = d.bank.receipts.find((r) => r.orderId === orderId); const cr = rc && d.bank.credits.find((c) => c.matched === orderId || c.ref === rc.ref)
   const t = T.find((x) => x.id === open); const b = t ? bankOf(t) : null
   const inquire = async (tx: Txn) => { toast('در حال استعلام وضعیت از درگاه…'); await fakeCall(true).catch(() => null); const ok = hash(tx.id) % 4 !== 0
-    mutate((x) => { const y = x.txns.find((z) => z.id === tx.id)! as Txn & Record<string, any>; y.status = ok ? 'pay.success' : 'pay.failed'; if (ok) y.verified = new Date().toISOString() }, { action: 'استعلام وضعیت تراکنش از درگاه', target: orderId, after: `${tx.id}: ${ok ? 'موفق' : 'ناموفق'}` })
+    mutate((x) => { if (!x.txns.some((z) => z.id === tx.id)) x.txns.push({ ...tx }); const y = x.txns.find((z) => z.id === tx.id)! as Txn & Record<string, any>; y.status = ok ? 'pay.success' : 'pay.failed'; if (ok) y.verified = new Date().toISOString() }, { action: 'استعلام وضعیت تراکنش از درگاه', target: orderId, after: `${tx.id}: ${ok ? 'موفق' : 'ناموفق'}` })
     toast(ok ? 'درگاه پرداخت را تأیید کرد (verify موفق).' : 'درگاه تراکنش را ناموفق اعلام کرد؛ مبلغ حداکثر تا ۷۲ ساعت به کارت مشتری برمی‌گردد.', { tone: ok ? undefined : 'err' }) }
   return <>
     <p className="mt-2 mb-1 text-11 font-medium text-t3">تراکنش‌ها و اطلاعات بانک</p>
@@ -75,7 +79,7 @@ export function PaymentInfo({ orderId }: { orderId: string }) {
           <Row k="طرح" v={b.bnpl.plan} /><Row k="قسط اول (پرداخت مشتری)" v={toman(b.bnpl.first)} /><Row k="وضعیت" v={b.bnpl.status} />
         </div>}
         {isWallet(t.gateway) && <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12">پرداخت از کیف پول مشتری؛ تراکنش داخلی است و بانک در آن نقشی ندارد.</p>}
-        {b.fails.length > 0 && <div><p className="mb-1 text-12 font-semibold">تلاش‌های ناموفق پیش از این تراکنش</p><ul className="space-y-1">{b.fails.map((f, i) => <li key={i} className="rounded-lg bg-danger-bg/50 px-3 py-1.5 text-12"><b className="ltr font-mono">{f.code}</b> · {f.msg}<span className="block text-11 text-t2">{when(f.at)} · کارت <bdi dir="ltr" className="font-mono">{f.pan}</bdi></span></li>)}</ul></div>}
+        {b.fails.length > 0 && <div><p className="mb-1 text-12 font-semibold">تلاش‌های ناموفق پیش از این تراکنش</p><ul className="space-y-1">{b.fails.map((f, i) => <li key={i} className="rounded-lg bg-danger-bg/50 px-3 py-1.5 text-12"><b><bdi dir="ltr" className="font-mono">{f.code}</bdi></b> · {f.msg}<span className="block text-11 text-t2">{when(f.at)} · کارت <bdi dir="ltr" className="font-mono">{f.pan}</bdi></span></li>)}</ul></div>}
         <p className="flex items-start gap-1.5 text-11 leading-5 text-t3"><ShieldCheck size={13} className="mt-0.5 shrink-0" />طبق قوانین شاپرک فقط ۶ رقم اول و ۴ رقم آخر کارت نگهداری و نمایش داده می‌شود. این اطلاعات از پاسخ درگاه در لحظهٔ پرداخت و تأیید (verify) ذخیره می‌شود.</p>
       </div>}
     </Drawer>

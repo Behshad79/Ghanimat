@@ -429,6 +429,10 @@ export const makeSeed = () => {
       s.txns.push({ ...s.txns[0], id: `TX-G${i}`, orderId: id, amount: o.total, gateway: pay, ref: /اسنپ|ترب|دیجی/.test(pay) ? `SP-${7700000 + i}` : String(48120000000 + i * 911), status: os === 'order.awaiting_payment' ? (i % 2 ? 'pay.unknown' : 'pay.failed') : os === 'order.cancelled' ? 'pay.refunded' : 'pay.success', at: created })
     }
   }
+  // هر سفارش پرداخت‌شده‌ای که تراکنش ندارد، تراکنش درگاه خودش را می‌گیرد (پاسخ درگاه برای همهٔ پرداخت‌ها ذخیره می‌شود)
+  s.orders.forEach((o, i) => { if (s.txns.some((t) => t.orderId === o.id)) return
+    const st = o.status === 'order.awaiting_payment' ? 'pay.unknown' : o.status === 'order.cancelled' ? 'pay.refunded' : 'pay.success'
+    s.txns.push({ ...s.txns[0], id: `TX-F${i}`, orderId: o.id, amount: o.total, gateway: /حضوری|کارت‌خوان/.test(o.pay) ? 'کارت‌خوان شعبه' : o.pay, ref: /اسنپ|ترب|دیجی/.test(o.pay) ? `SP-${7600000 + i}` : String(48110000000 + i * 733), status: st, at: o.createdAt }) })
   const cr = s.bank.credits.find((c) => c.id === 'CR-1'); if (cr) cr.matched = 'GH-10490'
   // سفارش اقساطی در انتظار تأیید اعتبار (فیگما: «در انتظار اعتبار اسنپ‌پی»)
   { const o = structuredClone(base); Object.assign(o, { id: 'GH-10498', customerId: 'c7', channel: 'سایت', pay: 'اسنپ‌پی (۴ قسط)', total: 31000000, discount: 0, status: 'order.awaiting_credit', buyer: 'person', legalId: undefined, invoiceNo: undefined, decision: undefined, createdAt: new Date(Date.now() - 25 * 6e4).toISOString(), tags: ['اقساطی'] }); o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10498-1', status: 'ship.pending', courier: null, packPhotos: [] }]; s.orders.unshift(o) }

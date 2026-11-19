@@ -12,7 +12,7 @@ export const CAPITAL: Record<Capital, { label: string; short: string; desc: stri
 
 export type Lot = { id: string; partnerId: string; productId: string; capital: Capital; qty: number; soldOnline: number; soldStore: number; unitCost: number; unitPrice: number; at: string; note?: string }
 export type Contract = { hqCommission: number; platformFee: number; sharedSplit: number; settleDays: number; noStockPenalty: number; deposit: number; returnsBy: string; minMargin: number }
-export type FastZone = { on: boolean; cities: string; hours: number; fee: number; cutoff: string; capacity: number; courier: string }
+export type FastZone = { on: boolean; cities: string; hours: number; fee: number; cutoff: string; capacity: number; courier: string; areas?: string; radiusKm?: number }
 export type PartnerT = {
   id: string; name: string; city: string; owner: string; userId?: string; phone: string; warehouse: string; address: string
   status: 'فعال' | 'در حال راه‌اندازی' | 'متوقف'; color: string; since: string
@@ -30,7 +30,7 @@ export function makePartners(): PartnerT[] {
   return [
     { id: 'mahabad', name: 'شعبهٔ مهاباد', city: 'مهاباد', owner: 'یاسین', userId: 'u4', phone: '0914-000-0004', warehouse: 'mahabad', address: 'مهاباد، خیابان جمهوری، پاساژ نمونه', status: 'فعال', color: '#0e9f6e', since: ago(420),
       contract: { hqCommission: 9, platformFee: 12, sharedSplit: 50, settleDays: 7, noStockPenalty: 1500000, deposit: 800000000, returnsBy: 'صاحب سرمایه', minMargin: 6 },
-      fast: { on: true, cities: 'مهاباد، بوکان، میاندوآب', hours: 3, fee: 90000, cutoff: '17:00', capacity: 25, courier: 'پیک خود شعبه' },
+      fast: { on: false, cities: 'مهاباد', hours: 3, fee: 90000, cutoff: '17:00', capacity: 25, courier: 'پیک خود شعبه', areas: '', radiusKm: 0 },
       services: { pickup: true, test: true, ownProducts: true, storeSales: true },
       couriers: [{ name: 'کاوه احمدی', phone: '09141110000', vehicle: 'موتور', active: true }, { name: 'سیروان', phone: '09142220000', vehicle: 'خودرو', active: true }], iban: 'IR12 0170 0000 0012 3456 7890 01',
       reviews: [
@@ -115,7 +115,7 @@ export type Pause = { until: string; reason: string; at: string; by: string; msg
 export function makeNetwork() {
   return {
     closed: null as Pause | null, fastOff: null as Pause | null,
-    hq: { fast: true, cities: 'تهران، کرج', hours: 3, cutoff: '18:00', paused: null as Pause | null },
+    hq: { fast: true, cities: 'تهران، کرج', hours: 3, cutoff: '18:00', paused: null as Pause | null, areas: 'همهٔ مناطق ۲۲گانهٔ تهران، کرج (عظیمیه، گوهردشت، مهرشهر)', radiusKm: 0 },
     pausedBranches: {} as Record<string, Pause>,
     priority: ['tehran', 'mahabad', 'shiraz', 'mashhad'],
     log: [] as { at: string; by: string; text: string }[],

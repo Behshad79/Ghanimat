@@ -149,13 +149,15 @@ function FastTab({ p, upd }: { p: PartnerT; upd: Upd }) {
       <Toggle on={F.on} onChange={(v) => upd((x) => { x.fast.on = v }, v ? 'فعال‌کردن ارسال سریع شعبه' : 'خاموش‌کردن ارسال سریع شعبه')} text="ارسال سریع از این انبار فعال باشد" />
       <div className={cx('mt-3 grid gap-3 sm:grid-cols-2', !F.on && 'opacity-50')}>
         <Field label="شهرهای تحت پوشش"><Input defaultValue={F.cities} onBlur={(e) => upd((x) => { x.fast.cities = e.target.value }, 'تغییر شهرهای ارسال سریع', e.target.value)} /></Field>
+        <Field label="محدوده داخل شهر" help="مناطق یا محله‌ها با ویرگول؛ خالی یعنی کل شهر."><Input defaultValue={F.areas ?? ''} placeholder="مثلاً مرکز شهر، شهرک‌های اطراف" onBlur={(e) => upd((x) => { x.fast.areas = e.target.value }, 'تغییر محدودهٔ ارسال سریع', e.target.value)} /></Field>
+        <Field label="شعاع از انبار (کیلومتر)" help="۰ یعنی بدون محدودیت شعاع؛ نشانی بیرون از شعاع فقط ارسال پستی می‌گیرد."><Input className="ltr text-left" defaultValue={String(F.radiusKm ?? 0)} onBlur={(e) => upd((x) => { x.fast.radiusKm = num(e.target.value) }, 'تغییر شعاع ارسال سریع')} /></Field>
         <Field label="وعدهٔ تحویل (ساعت)"><Input className="ltr text-left" defaultValue={String(F.hours)} onBlur={(e) => upd((x) => { x.fast.hours = num(e.target.value) }, 'تغییر وعدهٔ تحویل شعبه')} /></Field>
         <Field label="هزینهٔ ارسال (تومان)"><Input className="ltr text-left" defaultValue={String(F.fee)} onBlur={(e) => upd((x) => { x.fast.fee = num(e.target.value) }, 'تغییر هزینهٔ ارسال سریع شعبه')} /></Field>
         <Field label="ساعت قطع سفارش"><Input className="ltr text-left" defaultValue={F.cutoff} onBlur={(e) => upd((x) => { x.fast.cutoff = e.target.value }, 'تغییر ساعت قطع شعبه')} /></Field>
         <Field label="ظرفیت روزانه (سفارش)"><Input className="ltr text-left" defaultValue={String(F.capacity)} onBlur={(e) => upd((x) => { x.fast.capacity = num(e.target.value) }, 'تغییر ظرفیت شعبه')} /></Field>
         <Field label="پیک"><Select value={F.courier} onChange={(v) => upd((x) => { x.fast.courier = v }, 'تغییر پیک شعبه', v)} options={['پیک خود شعبه', 'اسنپ‌باکس', 'الوپیک', 'تپسی پک']} /></Field>
       </div>
-      <p className="mt-2 text-11 text-t2">مشتریان این شهرها در صفحهٔ کالا «تحویل {fa(F.hours)} ساعته از انبار {p.city}» می‌بینند؛ اگر کالا در انبار تهران هم باشد، نزدیک‌ترین انبار انتخاب می‌شود.</p>
+      <p className="mt-2 text-11 text-t2">{F.on ? <>مشتریان {F.cities}{F.areas ? ` (${F.areas})` : ''}{F.radiusKm ? ` تا شعاع ${fa(F.radiusKm)} کیلومتری انبار` : ''} در صفحهٔ کالا «تحویل {fa(F.hours)} ساعته از انبار {p.city}» می‌بینند؛ اگر کالا در انبار تهران هم باشد، نزدیک‌ترین انبار انتخاب می‌شود.</> : <>ارسال سریع از این انبار خاموش است؛ کالایی که فقط در انبار {p.city} موجود است در سایت فقط «ارسال پیشتاز» می‌گیرد. هر وقت پیک و محدوده آماده شد، روشنش کنید.</>}</p>
     </Card>
     <Card title={<span className="flex items-center gap-2"><Package size={15} />انبار و خدمات</span>}>
       <Row k="نشانی انبار">{p.address || '—'}</Row><Row k="تلفن">{p.phone}</Row>

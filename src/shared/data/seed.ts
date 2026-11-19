@@ -27,6 +27,7 @@ export type Unit = { variationId?: string; id: string; productId: string; serial
 export type OrderDecision = { kind: 'unsupplied' | 'out_of_stock' | 'other_warehouse'; items: string[]; alt?: string; deadline: string; at: string; by: string; choice?: 'send_rest' | 'from_other' | 'cancel_all'; chosenBy?: 'مشتری' | 'پشتیبانی' | 'سیستم'; chosenAt?: string; refund?: number; error?: boolean }
 /** جزئیات لغو و بازگشت وجه (فیگما: سفارش‌های لغوشده) */
 export type CancelInfo = { by: 'غنیمت' | 'مشتری'; reason: string; at: string; amount: number; to: string; refund: 'در جریان' | 'بازگشت داده شد' | 'ناموفق'; ref?: string; refundAt?: string; failWhy?: string; apology?: string; code?: { code: string; amount: number; until: string }; notify?: boolean; partial?: boolean }
+export type GatewayHold = { id: string; customerId: string; items: { productId: string; unitId: string; qty: number }[]; gateway: string; amount: number; at: string; status: 'in_gateway' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'released'; endedAt?: string; note?: string; orderId?: string }
 export type Order = { payHold?: { amount: number; method: 'لینک پرداخت' | 'کارت به کارت'; at: string; by: string; status: 'pending' | 'paid' | 'released' | 'waived'; ref?: string; note?: string; doneAt?: string; doneBy?: string; reminders?: number }; receiver?: { name: string; mobile: string }; edits?: { at: string; by: string; src: string; reason: string; changes: string[]; diff: number; settle?: string; sms: boolean; prev?: string; undone?: { at: string; by: string } }[]; rollbacks?: { at: string; by: string; shipId: string; from: string; to: string; reason: string; prev: { status: string; orderStatus: string; tracking: string; courier: any }; undone?: { at: string; by: string } }[]; cancelInfo?: CancelInfo; decision?: OrderDecision; customerNote?: string; customerNoteDone?: boolean; notes?: { id: string; at: string; by: string; src: 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'; text: string; act?: boolean; done?: boolean; doneBy?: string }[]; shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
 import { makeEntities, type Rec } from './entities'
@@ -261,7 +262,7 @@ const makeSeedBase = () => ({
     { key: 'cutoff_hour', group: 'ارسال', name: 'ساعت قطع سفارش تحویل سریع', value: 19, unit: 'ساعت روز', desc: 'سفارش‌های بعد از این ساعت، فردا تحویل می‌شوند.', sensitive: false, usedIn: ['صفحهٔ کالا', 'مرحلهٔ ارسال'], history: [] },
     { key: 'return_days', group: 'مرجوعی', name: 'مهلت مرجوعی', value: 7, unit: 'روز', desc: 'از زمان تحویل تا ثبت درخواست مرجوعی.', sensitive: true, usedIn: ['صفحهٔ کالا', 'صفحهٔ قوانین و مقررات', 'پنل مشتری › مرجوعی', 'زمان واریز هدیهٔ دیدگاه', 'FAQ'], history: [] },
     { key: 'inspection_hours', group: 'مرجوعی', name: 'مهلت بازرسی مرجوعی', value: 48, unit: 'ساعت', desc: 'از رسیدن بسته به انبار تا اعلام نتیجه.', sensitive: false, usedIn: ['صف مرجوعی', 'پیامک وضعیت مرجوعی'], history: [] },
-    { key: 'reserve_minutes', group: 'موجودی و سبد', name: 'مدت رزرو واحد هنگام پرداخت', value: 15, unit: 'دقیقه', desc: 'واحد از شروع پرداخت برای این مدت قفل می‌شود.', sensitive: false, usedIn: ['صفحهٔ پرداخت', 'مانیتور رزروها', 'قفل بین کانال‌ها'], history: [] },
+    { key: 'reserve_minutes', group: 'موجودی و سبد', name: 'مدت رزرو کالا داخل درگاه پرداخت', value: 15, unit: 'دقیقه', desc: 'رزرو فقط از لحظهٔ ورود مشتری به درگاه بانک شروع می‌شود؛ در سبد خرید و صفحهٔ پرداخت سایت رزروی نیست. اگر پرداخت ناموفق شد، مشتری انصراف داد یا از درگاه برگشت، کالا همان لحظه به موجودی سایت برمی‌گردد. اگر در این مدت پاسخی از درگاه نیامد، رزرو خودکار آزاد می‌شود.', sensitive: false, usedIn: ['صفحهٔ پرداخت', 'مانیتور رزروها', 'قفل بین کانال‌ها'], history: [] },
     { key: 'low_stock_threshold', group: 'موجودی و سبد', name: 'آستانهٔ «موجودی محدود»', value: 2, unit: 'عدد', desc: 'کمتر یا مساوی این تعداد، بج «موجودی محدود» نمایش داده می‌شود.', sensitive: false, usedIn: ['بج چرخشی کارت محصول', 'صفحهٔ کالا'], history: [] },
     { key: 'decision_hours', group: 'سفارش', name: 'مهلت تصمیم مشتری در کمبود تأمین', value: 24, unit: 'ساعت', desc: 'پس از پایان مهلت، قلم تأمین‌نشده خودکار لغو می‌شود.', sensitive: true, usedIn: ['پنل مشتری › سفارش جاری', 'پیامک درخواست تصمیم', 'لغو خودکار'], history: [] },
     { key: 'daily_sales_goal', group: 'اهداف', name: 'هدف فروش روزانه', value: 600000000, unit: 'تومان', desc: 'خط هدف نمودار «فروش روزانه در برابر هدف» و یادداشت کارت «فروش امروز».', sensitive: false, usedIn: ['خانه › فروش روزانه در برابر هدف', 'کارت فروش امروز', 'گزارش روزانه'], history: [] },
@@ -352,6 +353,7 @@ const makeSeedBase = () => ({
   hub: makeHub(),
   promos: makePromos(),
   pickups: makePickups(),
+  gatewayHolds: [] as GatewayHold[],
   docOverrides: {} as Record<string, { html: string; at: string }>,
   newsletter: makeNewsletter(),
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
@@ -456,6 +458,16 @@ export const makeSeed = () => {
   { const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
     s.buyList.push({ id: 'bl1', productId: 'p1', name: 'گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت', qty: 4, targetCost: 1500, currency: 'دلار', must: true, reason: 'پرفروش', note: 'فقط تیتانیوم طبیعی و مشکی', status: 'در لیست', addedAt: ago(20), by: 'بهشاد' },
       { id: 'bl2', name: 'کیف ضدآب سامسونت برای مک‌بوک ۱۴ اینچ', qty: 6, targetCost: 35, currency: 'دلار', must: false, reason: 'دستی', note: 'سه مشتری در دایرکت پرسیدند', status: 'در لیست', addedAt: ago(5), by: 'یاسین' }) }
+  // رزرو داخل درگاه: یک مشتری همین حالا در درگاه است و چند رزرو اخیر که آزاد یا نهایی شده‌اند
+  { const m = (x: number) => new Date(Date.now() - x * 6e4).toISOString(); const u = s.units.find((x) => x.id === 'GU-20471')
+    if (u && u.status === 'unit.published') u.status = 'unit.reserved'
+    s.gatewayHolds.push(
+      { id: 'GH-R1', customerId: 'c3', items: [{ productId: 'p2', unitId: u?.id ?? '', qty: 1 }], gateway: 'زرین‌پال', amount: 15000000, at: m(3), status: 'in_gateway' },
+      { id: 'GH-R2', customerId: 'c1', items: [{ productId: 'p2', unitId: '', qty: 1 }], gateway: 'درگاه ملت', amount: 15000000, at: m(26), status: 'failed', endedAt: m(24), note: 'خطای بانک ‎-51: موجودی کافی نیست' },
+      { id: 'GH-R3', customerId: 'c5', items: [{ productId: 'p5', unitId: '', qty: 1 }], gateway: 'زرین‌پال', amount: 21900000, at: m(58), status: 'expired', endedAt: m(43), note: 'پاسخی از درگاه نیامد؛ پس از ۱۵ دقیقه آزاد شد' },
+      { id: 'GH-R4', customerId: 'c2', items: [{ productId: 'p4', unitId: '', qty: 1 }], gateway: 'اسنپ‌پی', amount: 30900000, at: m(190), status: 'paid', endedAt: m(187), orderId: 'GH-10478' },
+      { id: 'GH-R5', customerId: 'c6', items: [{ productId: 'p9', unitId: '', qty: 2 }], gateway: 'درگاه ملت', amount: 3000000, at: m(75), status: 'cancelled', endedAt: m(74), note: 'انصراف مشتری داخل درگاه' })
+  }
   // کتابخانهٔ رسانه: همهٔ تصویرهای کالاها یک بار، با ابعاد و حجم نمونه
   { const seen = new Set<string>(); let n = 0
     s.products.forEach((p) => [p.image, ...(p.images ?? [])].filter(Boolean).forEach((src) => { if (seen.has(src)) return; seen.add(src); n++

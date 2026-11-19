@@ -23,6 +23,7 @@ import { compactToman, fa, minsLeft, pct, toman } from '@/shared/lib/fa'
 import { SlaChip, useLookup } from './_shared'
 import { NAV } from '../shell/nav'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
+import { GatewayHolds } from '../orders/GatewayHolds'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
@@ -139,6 +140,7 @@ export function Live() {
           <KPI label="پرداخت در جریان" tone="warning" priority={false} value={fa(3)} note="میانگین ۴۰ ثانیه در درگاه" to="/admin/finance?tab=txns" />
           <KPI label="ظرفیت بازه‌های امروز" tone="success" value={pct(72)} note="بازهٔ ۱۸ تا ۲۱ تکمیل است" to="/admin/shipping?tab=slots" />
         </div>
+        <GatewayHolds />
         <Pipeline ships={ships} />
         <Card title={<>برج پایش<Hint k="sla" /></>}>
           <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-4">

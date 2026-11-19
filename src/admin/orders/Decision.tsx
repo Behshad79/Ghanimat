@@ -15,6 +15,18 @@ const KIND: Record<OrderDecision['kind'], { badge: string; title: (n: number, to
   other_warehouse: { badge: 'موجود در انبار دیگر', title: (n, _t, alt) => `${fa(n)} کالا در انبار اصلی نیست، ولی در ${WAREHOUSE[alt ?? 'mahabad'] ?? 'انبار دیگر'} موجود است`, sub: 'بقیهٔ کالاها تا انتخاب مشتری ارسال نمی‌شوند.' },
 }
 const key = (shipId: string, i: number) => `${shipId}|${i}`
+type SiteAct = 'keep' | 'out' | 'stop'
+/** وضعیت کالا در سایت پس از اعلام ناموجودی: بماند، ناموجود شود، یا از فهرست محصولات برداشته شود */
+function applySiteAct(pid: string, act: SiteAct, oid: string) {
+  if (act === 'keep') return
+  const reserved = new Set(getDB().orders.flatMap((x) => x.shipments.flatMap((s) => s.items.map((it) => it.unitId))).filter(Boolean))
+  mutate((x) => {
+    const p = x.products.find((y) => y.id === pid); if (!p) return
+    if (p.mode === 'qty' && p.qty) { p.qty.tehran = 0; p.qty.mahabad = 0 }
+    x.units.filter((u) => u.productId === pid && u.status === 'unit.published' && !reserved.has(u.id)).forEach((u) => (u.status = 'unit.ready'))
+    if (act === 'stop') p.status = 'product.draft'
+  }, { action: act === 'stop' ? 'برداشتن کالا از فهرست محصولات (پس از اعلام ناموجودی)' : 'ناموجود کردن کالا در سایت', target: getDB().products.find((y) => y.id === pid)?.title ?? pid, after: oid })
+}
 /** وضعیت‌هایی که هنوز می‌شود کمبود را اعلام کرد (قبل از تحویل به پست یا پیک) */
 export const ACTIVE = ['order.paid', 'order.preparing', 'order.suspicious', 'order.pickup_ready']
 export const SOURCES = ['ما (مدیریت)', 'انبار هنگام جمع‌آوری', 'کنترل کیفیت (معیوب یا ناسالم)', 'تأمین‌کننده یا محموله', 'سیستم (موجودی صفر شد)']
@@ -84,12 +96,16 @@ export function DecisionPanel({ o }: { o: Order }) {
 
 export function StartDecision({ o, open, onClose, preset, onDone }: { o: Order; open: boolean; onClose: () => void; preset?: { kind?: OrderDecision['kind']; items?: string[]; source?: string; note?: string }; onDone?: (txt: string) => void }) {
   const d = useDB(); const hours = Number(d.rules.find((r) => r.key === 'decision_hours')?.value ?? 24)
-  const [kind, setKind] = useState<OrderDecision['kind']>(preset?.kind ?? 'out_of_stock'); const [items, setItems] = useState<string[]>(preset?.items ?? []); const [alt, setAlt] = useState('mahabad'); const [src, setSrc] = useState(preset?.source ?? SOURCES[0])
+  const [kind, setKind] = useState<OrderDecision['kind']>(preset?.kind ?? 'out_of_stock'); const [items, setItems] = useState<string[]>(preset?.items ?? []); const [alt, setAlt] = useState('mahabad'); const [src, setSrc] = useState(preset?.source ?? SOURCES[0]); const [site, setSite] = useState<Record<string, SiteAct>>({})
   const all = o.shipments.flatMap((s) => s.items.map((it, i) => ({ s, it, k: key(s.id, i) }))).filter((x) => !x.it.cancelled)
+  const pickedPids = [...new Set(all.filter((x) => items.includes(x.k)).map((x) => x.it.productId))]
+  const avail = (pid: string) => { const p = d.products.find((y) => y.id === pid); return p?.mode === 'qty' ? (p.qty?.tehran ?? 0) + (p.qty?.mahabad ?? 0) : d.units.filter((u) => u.productId === pid && u.status === 'unit.published' && !o.shipments.some((sh) => sh.items.some((it) => it.unitId === u.id))).length }
+  const actOf = (pid: string): SiteAct => site[pid] ?? (avail(pid) > 0 ? 'keep' : 'out')
   const go = () => {
     if (!items.length) return toast('کالای کم‌آمده را انتخاب کنید.', { tone: 'err' })
     if (items.length === all.length && kind !== 'other_warehouse') return toast('اگر هیچ کالایی تأمین نمی‌شود، سفارش را با دلیل لغو کنید.', { tone: 'err' })
     const deadline = new Date(Date.now() + hours * 36e5).toISOString()
+    if (kind !== 'other_warehouse') pickedPids.forEach((pid) => applySiteAct(pid, actOf(pid), o.id))
     mutate((x) => { const y = x.orders.find((z) => z.id === o.id)!; y.decision = { kind, items, alt: kind === 'other_warehouse' ? alt : undefined, deadline, at: new Date().toISOString(), by: `${currentUser()?.name ?? 'کاربر'} · منبع: ${src}` }; y.status = 'order.needs_decision' }, { action: 'اعلام کمبود تأمین به مشتری', target: o.id, after: `${KIND[kind].badge} · ${items.length} کالا · منبع: ${src}` })
     const c = d.customers.find((z) => z.id === o.customerId)
     if (c) sendSms(c.mobile, `غنیمت: برای سفارش ${o.id} ${kind === 'other_warehouse' ? `${fa(items.length)} کالا در انبار دیگری موجود است` : `${fa(items.length)} کالا ${kind === 'unsupplied' ? 'تأمین نشد' : 'موجود نیست'}`}. تا ${fa(hours)} ساعت در پنل کاربری انتخاب کنید؛ در غیر این صورت این کالا لغو و بقیه ارسال می‌شود.`, 'وضعیت سفارش', o.id, c.id)
@@ -103,6 +119,14 @@ export function StartDecision({ o, open, onClose, preset, onDone }: { o: Order; 
       {kind === 'other_warehouse' && <Field label="انبار دیگر"><Segmented value={alt} onChange={setAlt} options={Object.entries(WAREHOUSE).filter(([k]) => !o.shipments.some((s) => s.warehouse === k)).map(([k, v]) => [k, v]) as [string, string][]} /></Field>}
       <Field label="کدام کالاها؟"><ul className="space-y-1">{all.map((x) => { const on = items.includes(x.k); const p = d.products.find((y) => y.id === x.it.productId)
         return <li key={x.k}><button type="button" aria-pressed={on} onClick={() => setItems(on ? items.filter((z) => z !== x.k) : [...items, x.k])} className={cx('flex w-full items-center justify-between rounded-md border px-3 py-2 text-start text-13', on ? 'border-brand-solid bg-brand-tint' : 'border-line')}><span>{p?.title}</span><span className="text-12 text-t2">{toman(x.it.price * x.it.qty)}</span></button></li> })}</ul></Field>
+      {kind !== 'other_warehouse' && pickedPids.length > 0 && <div className="space-y-2 rounded-xl border border-warning/40 bg-warning-bg/40 p-3">
+        <p className="text-12 font-semibold">این کالا در سایت چه شود؟</p>
+        {pickedPids.map((pid) => { const p = d.products.find((y) => y.id === pid); const n = avail(pid); return <div key={pid} className="space-y-1.5">
+          <p className="text-12"><b>{p?.title}</b> <span className="text-t2">· موجودی دیگر در سایت: {n ? `${fa(n)} عدد` : 'ندارد'}</span></p>
+          <Segmented size="sm" value={actOf(pid)} onChange={(v) => setSite({ ...site, [pid]: v })} options={[['keep', 'در سایت بماند'], ['out', 'ناموجود شود'], ['stop', 'از فهرست محصولات برداشته شود']]} />
+          <p className="text-11 text-t2">{actOf(pid) === 'keep' ? 'کالا و موجودی دیگرش در سایت بدون تغییر می‌ماند.' : actOf(pid) === 'out' ? 'صفحهٔ کالا در سایت می‌ماند ولی «ناموجود» می‌شود و «خبرم کن» فعال است؛ موجودی دیگر این کالا از فروش خارج می‌شود.' : 'فروش متوقف و کالا از فهرست محصولات سایت پنهان می‌شود (پیش‌نویس). از «کالا و کاتالوگ» دوباره منتشر می‌شود.'}</p>
+        </div> })}
+      </div>}
       <p className="flex items-center gap-1 text-12 text-t2"><Truck size={13} />مشتری {fa(hours)} ساعت مهلت انتخاب دارد (قانون «مهلت تصمیم مشتری»).</p>
     </div>
   </Modal>

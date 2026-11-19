@@ -96,6 +96,7 @@
 | `Composer` | `src/shared/ui/chat.tsx` |
 | `Barcode` | `src/shared/ui/codes.tsx` |
 | `QR` | `src/shared/ui/codes.tsx` |
+| `ColorPicker` | `src/shared/ui/colorPicker.tsx` |
 | `useDateRange` | `src/shared/ui/datefilter.tsx` |
 | `inRange` | `src/shared/ui/datefilter.tsx` |
 | `DateFilter` | `src/shared/ui/datefilter.tsx` |
@@ -128,6 +129,8 @@
 | `QuickHost` | `src/shared/ui/quickview.tsx` |
 | `ReasonHost` | `src/shared/ui/reason.tsx` |
 | `ReasonLog` | `src/shared/ui/reason.tsx` |
+| `RemoteUpload` | `src/shared/ui/remoteUpload.tsx` |
+| `RemoteFor` | `src/shared/ui/remoteUpload.tsx` |
 | `ReviewWidget` | `src/shared/ui/review.tsx` |
 | `DataTable` | `src/shared/ui/table.tsx` |
 | `PresetBar` | `src/shared/ui/table.tsx` |

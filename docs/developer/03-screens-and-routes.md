@@ -18,8 +18,10 @@
 | سفارش و ارسال | چاپ و خروجی | `/admin/print` | `print` |
 | سفارش و ارسال | ربات تلگرام و فرمان پیامکی | `/admin/remote` | `remote` |
 | کالا و انبار | کالا و کاتالوگ | `/admin/catalog` | `catalog` |
+| کالا و انبار | کتابخانهٔ رسانه | `/admin/media` | `media` |
 | کالا و انبار | انبار و موجودی | `/admin/warehouse` | `warehouse` |
 | کالا و انبار | تأمین و خرید | `/admin/supply` | `supply` |
+| کالا و انبار | امور بازرگانی | `/admin/trade` | `trade` |
 | کالا و انبار | آمادگی کالا و محتوا | `/admin/readiness` | `readiness` |
 | مشتری و پشتیبانی | پشتیبانی | `/admin/support` | `support` |
 | مشتری و پشتیبانی | تلفن و تماس‌ها | `/admin/calls` | `calls` |
@@ -84,7 +86,9 @@
 | `/admin/shipping` | ارسال و لجستیک | سفارش و ارسال | `Shipping` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات | ![](../screens/admin-shipping.jpg) |
 | `/admin/print` | چاپ و خروجی | سفارش و ارسال | `PrintCenter` · `src/admin/print/PrintCenter.tsx` | مدیر کل، مدیر عملیات، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-print.jpg) |
 | `/admin/returns` | مرجوعی و گارانتی | سفارش و ارسال | `Returns` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر عملیات، کارشناس پشتیبانی، کارشناس مالی | ![](../screens/admin-returns.jpg) |
-| `/admin/agents` | ایجنت‌ها و اتوماسیون | سیستم | `Agents` · `src/admin/agents/Agents.tsx` | مدیر کل |  |
+| `/admin/agents` | ایجنت‌ها و اتوماسیون | سیستم | `Agents` · `src/admin/agents/Agents.tsx` | مدیر کل | ![](../screens/admin-agents.jpg) |
+| `/admin/media` | کتابخانهٔ رسانه | کالا و انبار | `MediaPage` · `src/admin/media/Media.tsx` | مدیر کل، مدیر عملیات، کارشناس کنترل کیفیت و انبار |  |
+| `/admin/trade` | امور بازرگانی | کالا و انبار | `TradePage` · `src/admin/trade/Trade.tsx` | مدیر کل، مدیر عملیات، کارشناس کنترل کیفیت و انبار |  |
 | `/admin/returns/w/:id` | — | — | `WarrantyCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-w-id.jpg) |
 | `/admin/returns/:id` | — | — | `ReturnCase` · `src/admin/returns/Case.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns-id.jpg) |
 | `/admin/customers` | مشتریان | مشتری و پشتیبانی | `Customers` · `src/admin/pages/People.tsx` | مدیر کل، کارشناس پشتیبانی | ![](../screens/admin-customers.jpg) |
@@ -131,10 +135,10 @@
 | کلید | نام | چهره | صفحهٔ شروع | ماژول‌ها |
 |---|---|---|---|---|
 | `super` | مدیر کل | `full` | `/admin` | همه |
-| `ops` | مدیر عملیات | `full` | `/admin/live` | `home`، `live`، `network`، `orders`، `warehouse`، `shipping`، `print`، `returns`، `catalog`، `readiness`، `team`، `trash` |
+| `ops` | مدیر عملیات | `full` | `/admin/live` | `home`، `live`، `network`، `orders`، `warehouse`، `shipping`، `print`، `returns`، `catalog`، `media`، `trade`، `readiness`، `team`، `trash` |
 | `simple` | اپراتور | `simple` | `/simple` | — |
 | `partner` | شریک فروش (شعبه) | `partner` | `/partner` | — |
 | `support` | کارشناس پشتیبانی | `full` | `/admin/support` | `home`، `support`، `customers`، `orders`، `reviews`، `returns` |
 | `finance` | کارشناس مالی | `full` | `/admin/finance` | `home`، `finance`، `people`، `orders`، `pricing`، `returns`، `analytics` |
 | `growth` | مارکتینگ، سئو و رشد | `full` | `/admin/marketing` | `home`، `readiness`، `blog`، `marketing`، `seo`، `growth`، `analytics`، `content`، `channels`، `pricing`، `reviews`، `merch` |
-| `qc` | کارشناس کنترل کیفیت و انبار | `full` | `/admin/warehouse` | `home`، `warehouse`، `catalog`، `print` |
+| `qc` | کارشناس کنترل کیفیت و انبار | `full` | `/admin/warehouse` | `home`، `warehouse`، `catalog`، `media`، `trade`، `print` |

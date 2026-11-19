@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (296 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (319 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -43,23 +43,23 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ساخت مقالهٔ تازه | [20](../../src/admin/blog/Blog.tsx#L20) |
-| تغییر مقالهٔ ویژه | [40](../../src/admin/blog/Blog.tsx#L40) |
-| تکثیر مقاله | [40](../../src/admin/blog/Blog.tsx#L40) |
-| حذف مقاله | [40](../../src/admin/blog/Blog.tsx#L40) |
-| تغییر مطالب ترند | [54](../../src/admin/blog/Blog.tsx#L54) |
-| تغییر بخش صفحهٔ وبلاگ | [56](../../src/admin/blog/Blog.tsx#L56) |
-| تغییر ویدیوی ویژه | [61](../../src/admin/blog/Blog.tsx#L61) |
-| تأیید دیدگاه وبلاگ | [70](../../src/admin/blog/Blog.tsx#L70) |
-| رد دیدگاه وبلاگ | [70](../../src/admin/blog/Blog.tsx#L70) |
-| پاسخ به دیدگاه وبلاگ | [71](../../src/admin/blog/Blog.tsx#L71) |
-| ساخت مقاله از جست‌وجوی بی‌نتیجه | [76](../../src/admin/blog/Blog.tsx#L76) |
-| افزودن برچسب پرطرفدار | [76](../../src/admin/blog/Blog.tsx#L76) |
-| حذف دسته | [87](../../src/admin/blog/Blog.tsx#L87) |
-| افزودن دسته | [88](../../src/admin/blog/Blog.tsx#L88) |
-| ذخیرهٔ ویدیو | [90](../../src/admin/blog/Blog.tsx#L90) |
-| حذف ویدیو | [90](../../src/admin/blog/Blog.tsx#L90) |
-| انتقال محتوا و حذف دسته | [105](../../src/admin/blog/Blog.tsx#L105) |
+| ساخت مقالهٔ تازه | [21](../../src/admin/blog/Blog.tsx#L21) |
+| تغییر مقالهٔ ویژه | [41](../../src/admin/blog/Blog.tsx#L41) |
+| تکثیر مقاله | [41](../../src/admin/blog/Blog.tsx#L41) |
+| حذف مقاله | [41](../../src/admin/blog/Blog.tsx#L41) |
+| تغییر مطالب ترند | [55](../../src/admin/blog/Blog.tsx#L55) |
+| تغییر بخش صفحهٔ وبلاگ | [57](../../src/admin/blog/Blog.tsx#L57) |
+| تغییر ویدیوی ویژه | [62](../../src/admin/blog/Blog.tsx#L62) |
+| تأیید دیدگاه وبلاگ | [71](../../src/admin/blog/Blog.tsx#L71) |
+| رد دیدگاه وبلاگ | [71](../../src/admin/blog/Blog.tsx#L71) |
+| پاسخ به دیدگاه وبلاگ | [72](../../src/admin/blog/Blog.tsx#L72) |
+| ساخت مقاله از جست‌وجوی بی‌نتیجه | [77](../../src/admin/blog/Blog.tsx#L77) |
+| افزودن برچسب پرطرفدار | [77](../../src/admin/blog/Blog.tsx#L77) |
+| حذف دسته | [88](../../src/admin/blog/Blog.tsx#L88) |
+| افزودن دسته | [89](../../src/admin/blog/Blog.tsx#L89) |
+| ذخیرهٔ ویدیو | [91](../../src/admin/blog/Blog.tsx#L91) |
+| حذف ویدیو | [91](../../src/admin/blog/Blog.tsx#L91) |
+| انتقال محتوا و حذف دسته | [106](../../src/admin/blog/Blog.tsx#L106) |
 ### `src/admin/builder/Builder.tsx` — ماژول `pages`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -79,21 +79,35 @@
 | ساخت مقاله | [130](../../src/admin/builder/BuilderTabs.tsx#L130) |
 | انتشار مقاله | [131](../../src/admin/builder/BuilderTabs.tsx#L131) |
 | تغییر اشتراک خبرنامه | [161](../../src/admin/builder/BuilderTabs.tsx#L161) |
+### `src/admin/catalog/BatchLedger.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| پیش‌ساخت صفحهٔ کالا از محموله | [76](../../src/admin/catalog/BatchLedger.tsx#L76) |
+| افزودن محتوای اینستاگرام از محموله | [77](../../src/admin/catalog/BatchLedger.tsx#L77) |
+| مقالهٔ معرفی از محموله | [78](../../src/admin/catalog/BatchLedger.tsx#L78) |
+### `src/admin/catalog/BuyList.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| افزودن به لیست خرید | [33](../../src/admin/catalog/BuyList.tsx#L33) |
+| حذف از لیست خرید | [56](../../src/admin/catalog/BuyList.tsx#L56) |
+| ثبت سفارش خرید | [99](../../src/admin/catalog/BuyList.tsx#L99) |
 ### `src/admin/catalog/Catalog.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| کپی کالا | [34](../../src/admin/catalog/Catalog.tsx#L34) |
-| انتقال کالا به سطل بازیافت | [39](../../src/admin/catalog/Catalog.tsx#L39) |
-| تعدیل موجودی | [66](../../src/admin/catalog/Catalog.tsx#L66) |
-| ویرایش واحد | [77](../../src/admin/catalog/Catalog.tsx#L77) |
-| تغییر وضعیت فروش واحد | [110](../../src/admin/catalog/Catalog.tsx#L110) |
-| انتقال واحد به سطل بازیافت | [112](../../src/admin/catalog/Catalog.tsx#L112) |
-| انتشار گروهی | [152](../../src/admin/catalog/Catalog.tsx#L152) |
-| توقف فروش گروهی | [153](../../src/admin/catalog/Catalog.tsx#L153) |
-| حذف گروهی کالا | [155](../../src/admin/catalog/Catalog.tsx#L155) |
-| چاپ برچسب کالا | [268](../../src/admin/catalog/Catalog.tsx#L268) |
-| حذف دائمی | [289](../../src/admin/catalog/Catalog.tsx#L289) |
+| کپی کالا | [38](../../src/admin/catalog/Catalog.tsx#L38) |
+| انتقال کالا به سطل بازیافت | [43](../../src/admin/catalog/Catalog.tsx#L43) |
+| تعدیل موجودی | [74](../../src/admin/catalog/Catalog.tsx#L74) |
+| ویرایش واحد | [85](../../src/admin/catalog/Catalog.tsx#L85) |
+| تغییر وضعیت فروش واحد | [118](../../src/admin/catalog/Catalog.tsx#L118) |
+| انتقال واحد به سطل بازیافت | [120](../../src/admin/catalog/Catalog.tsx#L120) |
+| انتشار گروهی | [160](../../src/admin/catalog/Catalog.tsx#L160) |
+| توقف فروش گروهی | [161](../../src/admin/catalog/Catalog.tsx#L161) |
+| حذف گروهی کالا | [163](../../src/admin/catalog/Catalog.tsx#L163) |
+| چاپ برچسب کالا | [278](../../src/admin/catalog/Catalog.tsx#L278) |
+| حذف دائمی | [299](../../src/admin/catalog/Catalog.tsx#L299) |
 ### `src/admin/catalog/Choices.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -124,29 +138,50 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت قیمت فعلی در تاریخچه | [88](../../src/admin/catalog/PdpExtras.tsx#L88) |
+| ثبت قیمت فعلی در تاریخچه | [90](../../src/admin/catalog/PdpExtras.tsx#L90) |
+| به‌روزرسانی قیمت با نرخ روز ارز | [123](../../src/admin/catalog/PdpExtras.tsx#L123) |
 ### `src/admin/catalog/Readiness.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
 | تغییر وضعیت محتوا | [75](../../src/admin/catalog/Readiness.tsx#L75) |
 | افزودن به صف محتوا | [76](../../src/admin/catalog/Readiness.tsx#L76) |
+### `src/admin/catalog/Repricing.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| بازقیمت‌گذاری با نرخ ارز | [53](../../src/admin/catalog/Repricing.tsx#L53) |
+### `src/admin/catalog/VariableEditor.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| افزودن مقدار ویژگی | [42](../../src/admin/catalog/VariableEditor.tsx#L42) |
+| ویرایش مقدار ویژگی سراسری | [46](../../src/admin/catalog/VariableEditor.tsx#L46) |
+| حذف مقدار ویژگی سراسری | [54](../../src/admin/catalog/VariableEditor.tsx#L54) |
+| تعدیل موجودی تنوع‌ها | [185](../../src/admin/catalog/VariableEditor.tsx#L185) |
 ### `src/admin/catalog/VariantMatrix.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
 | ساخت تنوع‌های کالا | [37](../../src/admin/catalog/VariantMatrix.tsx#L37) |
+### `src/admin/catalog/VariantProfit.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| به‌روزرسانی قیمت تنوع‌ها با نرخ روز | [66](../../src/admin/catalog/VariantProfit.tsx#L66) |
 ### `src/admin/catalog/Wizard.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| پیش‌ساخت صفحهٔ کالای در راه | [99](../../src/admin/catalog/Wizard.tsx#L99) |
-| بارگذاری آیکون خط کارت | [343](../../src/admin/catalog/Wizard.tsx#L343) |
+| پیش‌ساخت صفحهٔ کالای در راه | [121](../../src/admin/catalog/Wizard.tsx#L121) |
+| بارگذاری تصویر کالا | [164](../../src/admin/catalog/Wizard.tsx#L164) |
+| افزودن ویژگی به قالب | [185](../../src/admin/catalog/Wizard.tsx#L185) |
+| بارگذاری آیکون خط کارت | [390](../../src/admin/catalog/Wizard.tsx#L390) |
 ### `src/admin/customer/Customer360.tsx` — ماژول `customers`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر دستی امتیاز باشگاه | [125](../../src/admin/customer/Customer360.tsx#L125) |
+| تغییر دستی امتیاز باشگاه | [126](../../src/admin/customer/Customer360.tsx#L126) |
 ### `src/admin/cx/Calls.tsx` — ماژول `cx`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -190,13 +225,22 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر دستی موعد تسویه | [55](../../src/admin/finance/Money.tsx#L55) |
-| ثبت واریز سرویس پرداخت | [58](../../src/admin/finance/Money.tsx#L58) |
+| تغییر دستی موعد تسویه | [56](../../src/admin/finance/Money.tsx#L56) |
+| ثبت واریز سرویس پرداخت | [59](../../src/admin/finance/Money.tsx#L59) |
 ### `src/admin/logistics/ZoneMap.tsx` — ماژول `shipping`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
 | تغییر شهرهای منطقهٔ ارسال | [21](../../src/admin/logistics/ZoneMap.tsx#L21) |
+### `src/admin/media/Media.tsx` — ماژول `media`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| بارگذاری در کتابخانهٔ رسانه | [35](../../src/admin/media/Media.tsx#L35) |
+| ویرایش تصویر | [71](../../src/admin/media/Media.tsx#L71) |
+| حذف از کتابخانهٔ رسانه | [121](../../src/admin/media/Media.tsx#L121) |
+| افزودن تصویر از کتابخانه به کالا | [143](../../src/admin/media/Media.tsx#L143) |
+| نوشتن عنوان سئو با AI برای فایل‌های بدون عنوان | [159](../../src/admin/media/Media.tsx#L159) |
 ### `src/admin/merch/Merch.tsx` — ماژول `merch`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -226,15 +270,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت مأمور ارسال و پلاک | [34](../../src/admin/orders/Progress.tsx#L34) |
-| ثبت کد رهگیری پستی | [78](../../src/admin/orders/Progress.tsx#L78) |
-| تغییر روش ارسال | [103](../../src/admin/orders/Progress.tsx#L103) |
+| ثبت مأمور ارسال و پلاک | [43](../../src/admin/orders/Progress.tsx#L43) |
+| ثبت کد رهگیری پستی | [90](../../src/admin/orders/Progress.tsx#L90) |
+| تغییر روش ارسال | [115](../../src/admin/orders/Progress.tsx#L115) |
 ### `src/admin/orders/ReturnTools.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت دستی مرجوعی | [70](../../src/admin/orders/ReturnTools.tsx#L70) |
-| ثبت دستی درخواست گارانتی | [77](../../src/admin/orders/ReturnTools.tsx#L77) |
+| ثبت دستی مرجوعی | [71](../../src/admin/orders/ReturnTools.tsx#L71) |
+| ثبت دستی درخواست گارانتی | [78](../../src/admin/orders/ReturnTools.tsx#L78) |
 ### `src/admin/pages/Catalog.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -252,50 +296,50 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تخصیص هزینهٔ محموله | [37](../../src/admin/pages/Insights.tsx#L37) |
-| دریافت محموله | [37](../../src/admin/pages/Insights.tsx#L37) |
-| ثبت نرخ ارز روز | [39](../../src/admin/pages/Insights.tsx#L39) |
-| ساخت سفارش خرید از فرصت | [40](../../src/admin/pages/Insights.tsx#L40) |
-| جابه‌جایی بلوک خانه | [49](../../src/admin/pages/Insights.tsx#L49) |
-| ذخیرهٔ نوار بالا | [59](../../src/admin/pages/Insights.tsx#L59) |
-| ساخت نسخهٔ تازهٔ متن حقوقی | [64](../../src/admin/pages/Insights.tsx#L64) |
-| تأیید حقوقی متن | [64](../../src/admin/pages/Insights.tsx#L64) |
-| نوشتن توضیح متا با AI | [79](../../src/admin/pages/Insights.tsx#L79) |
-| رفع خطای سئو | [80](../../src/admin/pages/Insights.tsx#L80) |
-| ساخت بریف محتوا | [82](../../src/admin/pages/Insights.tsx#L82) |
-| ساخت کمپین | [103](../../src/admin/pages/Insights.tsx#L103) |
-| اعمال نسخهٔ برنده | [125](../../src/admin/pages/Insights.tsx#L125) |
-| افزودن ویجت به داشبورد | [146](../../src/admin/pages/Insights.tsx#L146) |
-| زمان‌بندی گزارش | [146](../../src/admin/pages/Insights.tsx#L146) |
-| تغییر سطح خودمختاری AI | [158](../../src/admin/pages/Insights.tsx#L158) |
+| تخصیص هزینهٔ محموله | [44](../../src/admin/pages/Insights.tsx#L44) |
+| دریافت محموله | [44](../../src/admin/pages/Insights.tsx#L44) |
+| ثبت دستی نرخ ارز روز | [46](../../src/admin/pages/Insights.tsx#L46) |
+| ساخت سفارش خرید از فرصت | [47](../../src/admin/pages/Insights.tsx#L47) |
+| جابه‌جایی بلوک خانه | [56](../../src/admin/pages/Insights.tsx#L56) |
+| ذخیرهٔ نوار بالا | [66](../../src/admin/pages/Insights.tsx#L66) |
+| ساخت نسخهٔ تازهٔ متن حقوقی | [71](../../src/admin/pages/Insights.tsx#L71) |
+| تأیید حقوقی متن | [71](../../src/admin/pages/Insights.tsx#L71) |
+| نوشتن توضیح متا با AI | [86](../../src/admin/pages/Insights.tsx#L86) |
+| رفع خطای سئو | [87](../../src/admin/pages/Insights.tsx#L87) |
+| ساخت بریف محتوا | [89](../../src/admin/pages/Insights.tsx#L89) |
+| ساخت کمپین | [110](../../src/admin/pages/Insights.tsx#L110) |
+| اعمال نسخهٔ برنده | [132](../../src/admin/pages/Insights.tsx#L132) |
+| افزودن ویجت به داشبورد | [153](../../src/admin/pages/Insights.tsx#L153) |
+| زمان‌بندی گزارش | [153](../../src/admin/pages/Insights.tsx#L153) |
+| تغییر سطح خودمختاری AI | [165](../../src/admin/pages/Insights.tsx#L165) |
 ### `src/admin/pages/Ops.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| اصلاح موجودی طبق سایت شریک | [76](../../src/admin/pages/Ops.tsx#L76) |
-| بازنشستگی ارائه‌دهنده | [140](../../src/admin/pages/Ops.tsx#L140) |
-| تست اتصال | [149](../../src/admin/pages/Ops.tsx#L149) |
-| تغییر پیش‌فرض | [150](../../src/admin/pages/Ops.tsx#L150) |
-| فعال‌سازی ارائه‌دهنده | [151](../../src/admin/pages/Ops.tsx#L151) |
-| افزودن ارائه‌دهنده | [156](../../src/admin/pages/Ops.tsx#L156) |
-| توقف موقت ارائه‌دهنده | [160](../../src/admin/pages/Ops.tsx#L160) |
-| نامعتبر کردن گارانتی | [225](../../src/admin/pages/Ops.tsx#L225) |
-| معتبر کردن دوبارهٔ گارانتی | [226](../../src/admin/pages/Ops.tsx#L226) |
-| الحاق کد رهگیری با اسکن | [274](../../src/admin/pages/Ops.tsx#L274) |
-| ثبت کد رهگیری از فایل باجه | [302](../../src/admin/pages/Ops.tsx#L302) |
+| اصلاح موجودی طبق سایت شریک | [83](../../src/admin/pages/Ops.tsx#L83) |
+| بازنشستگی ارائه‌دهنده | [147](../../src/admin/pages/Ops.tsx#L147) |
+| تست اتصال | [156](../../src/admin/pages/Ops.tsx#L156) |
+| تغییر پیش‌فرض | [157](../../src/admin/pages/Ops.tsx#L157) |
+| فعال‌سازی ارائه‌دهنده | [158](../../src/admin/pages/Ops.tsx#L158) |
+| افزودن ارائه‌دهنده | [163](../../src/admin/pages/Ops.tsx#L163) |
+| توقف موقت ارائه‌دهنده | [167](../../src/admin/pages/Ops.tsx#L167) |
+| نامعتبر کردن گارانتی | [232](../../src/admin/pages/Ops.tsx#L232) |
+| معتبر کردن دوبارهٔ گارانتی | [233](../../src/admin/pages/Ops.tsx#L233) |
+| الحاق کد رهگیری با اسکن | [281](../../src/admin/pages/Ops.tsx#L281) |
+| ثبت کد رهگیری از فایل باجه | [309](../../src/admin/pages/Ops.tsx#L309) |
 ### `src/admin/pages/Orders.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تخصیص سفارش به انباردار | [76](../../src/admin/pages/Orders.tsx#L76) |
-| الحاق کد رهگیری | [95](../../src/admin/pages/Orders.tsx#L95) |
-| ثبت پیک با لینک | [115](../../src/admin/pages/Orders.tsx#L115) |
-| لغو مرسوله | [157](../../src/admin/pages/Orders.tsx#L157) |
-| درخواست بازگشت وجه | [165](../../src/admin/pages/Orders.tsx#L165) |
-| بازگشت وجه | [166](../../src/admin/pages/Orders.tsx#L166) |
-| تأیید سفارش مشکوک | [188](../../src/admin/pages/Orders.tsx#L188) |
-| یادداشت داخلی | [230](../../src/admin/pages/Orders.tsx#L230) |
-| ساخت تیکت | [240](../../src/admin/pages/Orders.tsx#L240) |
+| تخصیص سفارش به انباردار | [85](../../src/admin/pages/Orders.tsx#L85) |
+| الحاق کد رهگیری | [104](../../src/admin/pages/Orders.tsx#L104) |
+| ثبت پیک با لینک | [124](../../src/admin/pages/Orders.tsx#L124) |
+| لغو مرسوله | [166](../../src/admin/pages/Orders.tsx#L166) |
+| درخواست بازگشت وجه | [174](../../src/admin/pages/Orders.tsx#L174) |
+| بازگشت وجه | [175](../../src/admin/pages/Orders.tsx#L175) |
+| تأیید سفارش مشکوک | [197](../../src/admin/pages/Orders.tsx#L197) |
+| یادداشت داخلی | [239](../../src/admin/pages/Orders.tsx#L239) |
+| ساخت تیکت | [249](../../src/admin/pages/Orders.tsx#L249) |
 ### `src/admin/pages/Org.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -327,16 +371,17 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| درخواست تغییر قیمت گروهی | [27](../../src/admin/pages/Revenue.tsx#L27) |
-| استعلام تراکنش | [64](../../src/admin/pages/Revenue.tsx#L64) |
-| تأیید درخواست | [83](../../src/admin/pages/Revenue.tsx#L83) |
-| رد درخواست | [83](../../src/admin/pages/Revenue.tsx#L83) |
-| بازسازی فید کانال | [98](../../src/admin/pages/Revenue.tsx#L98) |
+| تغییر قیمت گروهی (مدیر کل) | [27](../../src/admin/pages/Revenue.tsx#L27) |
+| درخواست تغییر قیمت گروهی | [28](../../src/admin/pages/Revenue.tsx#L28) |
+| استعلام تراکنش | [65](../../src/admin/pages/Revenue.tsx#L65) |
+| تأیید درخواست | [84](../../src/admin/pages/Revenue.tsx#L84) |
+| رد درخواست | [84](../../src/admin/pages/Revenue.tsx#L84) |
+| بازسازی فید کانال | [99](../../src/admin/pages/Revenue.tsx#L99) |
 ### `src/admin/pages/SellerSettings.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ویرایش اطلاعات فروشنده و انبارها | [43](../../src/admin/pages/SellerSettings.tsx#L43) |
+| ویرایش اطلاعات فروشنده و انبارها | [44](../../src/admin/pages/SellerSettings.tsx#L44) |
 ### `src/admin/partner/Network.tsx` — ماژول `partners`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -371,13 +416,18 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ساخت پروندهٔ پرسنلی | [45](../../src/admin/people/People.tsx#L45) |
-| تغییر نرخ حقوق و بیمه | [72](../../src/admin/people/People.tsx#L72) |
+| ساخت پروندهٔ پرسنلی | [46](../../src/admin/people/People.tsx#L46) |
+| تغییر نرخ حقوق و بیمه | [73](../../src/admin/people/People.tsx#L73) |
 ### `src/admin/people/Vault.tsx` — ماژول `people`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| انتقال سند به سطل بازیافت | [26](../../src/admin/people/Vault.tsx#L26) |
+| انتقال سند به سطل بازیافت | [27](../../src/admin/people/Vault.tsx#L27) |
+### `src/admin/print/BatchPrint.tsx` — ماژول `print`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| چاپ گروهی | [72](../../src/admin/print/BatchPrint.tsx#L72) |
 ### `src/admin/print/EditableDoc.tsx` — ماژول `print`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -388,10 +438,10 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| چاپ سند | [52](../../src/admin/print/PrintCenter.tsx#L52) |
-| ذخیرهٔ قالب چاپ | [94](../../src/admin/print/PrintCenter.tsx#L94) |
-| اعمال سبک روی همهٔ اسناد | [94](../../src/admin/print/PrintCenter.tsx#L94) |
-| بازگردانی نسخهٔ قالب چاپ | [102](../../src/admin/print/PrintCenter.tsx#L102) |
+| چاپ سند | [54](../../src/admin/print/PrintCenter.tsx#L54) |
+| ذخیرهٔ قالب چاپ | [100](../../src/admin/print/PrintCenter.tsx#L100) |
+| اعمال سبک روی همهٔ اسناد | [100](../../src/admin/print/PrintCenter.tsx#L100) |
+| بازگردانی نسخهٔ قالب چاپ | [108](../../src/admin/print/PrintCenter.tsx#L108) |
 ### `src/admin/pro/CatalogPro.tsx` — ماژول `integrations`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -442,24 +492,24 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| نتیجهٔ بازرسی مرجوعی | [195](../../src/admin/returns/Case.tsx#L195) |
-| تأیید بازگشت وجه | [231](../../src/admin/returns/Case.tsx#L231) |
-| ارسال مجدد کالای ردشدهٔ مرجوعی | [257](../../src/admin/returns/Case.tsx#L257) |
-| تعویض واحد گارانتی | [396](../../src/admin/returns/Case.tsx#L396) |
-| دریافت واحد مرجوعی | [425](../../src/admin/returns/Case.tsx#L425) |
-| بازگشت وجه | [449](../../src/admin/returns/Case.tsx#L449) |
+| نتیجهٔ بازرسی مرجوعی | [196](../../src/admin/returns/Case.tsx#L196) |
+| تأیید بازگشت وجه | [232](../../src/admin/returns/Case.tsx#L232) |
+| ارسال مجدد کالای ردشدهٔ مرجوعی | [258](../../src/admin/returns/Case.tsx#L258) |
+| تعویض واحد گارانتی | [397](../../src/admin/returns/Case.tsx#L397) |
+| دریافت واحد مرجوعی | [426](../../src/admin/returns/Case.tsx#L426) |
+| بازگشت وجه | [450](../../src/admin/returns/Case.tsx#L450) |
 ### `src/admin/settings/FeedsApi.tsx` — ماژول `settings`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ابطال کلید API | [53](../../src/admin/settings/FeedsApi.tsx#L53) |
-| ساخت کلید API | [69](../../src/admin/settings/FeedsApi.tsx#L69) |
+| ابطال کلید API | [54](../../src/admin/settings/FeedsApi.tsx#L54) |
+| ساخت کلید API | [70](../../src/admin/settings/FeedsApi.tsx#L70) |
 ### `src/admin/shared/PackPhotos.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت عکس پیش از ارسال | [20](../../src/admin/shared/PackPhotos.tsx#L20) |
-| حذف عکس پیش از ارسال | [32](../../src/admin/shared/PackPhotos.tsx#L32) |
+| ثبت عکس پیش از ارسال | [21](../../src/admin/shared/PackPhotos.tsx#L21) |
+| حذف عکس پیش از ارسال | [33](../../src/admin/shared/PackPhotos.tsx#L33) |
 ### `src/admin/shell/Copilot.tsx` — ماژول `shell`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -559,27 +609,32 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت مرسوله | [290](../../src/shared/data/seed.ts#L290) |
-| پیش‌نویس پاسخ تیکت | [291](../../src/shared/data/seed.ts#L291) |
-| درخواست بازگشت وجه | [292](../../src/shared/data/seed.ts#L292) |
-| مشاهدهٔ دادهٔ حساس | [293](../../src/shared/data/seed.ts#L293) |
-| تغییر موجودی | [294](../../src/shared/data/seed.ts#L294) |
+| تغییر وضعیت مرسوله | [300](../../src/shared/data/seed.ts#L300) |
+| پیش‌نویس پاسخ تیکت | [301](../../src/shared/data/seed.ts#L301) |
+| درخواست بازگشت وجه | [302](../../src/shared/data/seed.ts#L302) |
+| مشاهدهٔ دادهٔ حساس | [303](../../src/shared/data/seed.ts#L303) |
+| تغییر موجودی | [304](../../src/shared/data/seed.ts#L304) |
+### `src/shared/lib/fx.ts` — ماژول `(مشترک)`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| به‌روزرسانی نرخ روز ارز از API | [44](../../src/shared/lib/fx.ts#L44) |
 ### `src/shared/lib/store.ts` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| بازگردانی از سطل بازیافت | [111](../../src/shared/lib/store.ts#L111) |
+| بازگردانی از سطل بازیافت | [113](../../src/shared/lib/store.ts#L113) |
 ### `src/shared/ui/base.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| درخواست از مدیر | [195](../../src/shared/ui/base.tsx#L195) |
-| مشاهدهٔ دادهٔ حساس | [223](../../src/shared/ui/base.tsx#L223) |
+| درخواست از مدیر | [199](../../src/shared/ui/base.tsx#L199) |
+| مشاهدهٔ دادهٔ حساس | [227](../../src/shared/ui/base.tsx#L227) |
 ### `src/shared/ui/entity.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| انتقال به سطل بازیافت | [38](../../src/shared/ui/entity.tsx#L38) |
+| انتقال به سطل بازیافت | [39](../../src/shared/ui/entity.tsx#L39) |
 ### `src/shared/ui/exportDialog.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -594,4 +649,4 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| خروجی گرفتن | [101](../../src/shared/ui/table.tsx#L101) |
+| خروجی گرفتن | [102](../../src/shared/ui/table.tsx#L102) |

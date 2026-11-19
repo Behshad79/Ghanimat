@@ -1,6 +1,6 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, CloudRain, Lock, RotateCcw, Truck, Zap } from 'lucide-react'
+import { ArrowDown, ArrowUp, CloudRain, Lock, MapPin, Plus, RotateCcw, Trash2, Truck, Zap } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
 import { toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
@@ -19,9 +19,12 @@ export function fastPct(f: Fast, h: number, day: string, now = Date.now()) {
   const boost = f.boost && new Date(f.boost.until).getTime() > now && h === new Date(now).getHours() ? f.boost.pct : 0
   return { base, manual: manual !== undefined, day: f.dayExtra[day] ?? 0, rain: f.rain ? f.rainPct : 0, boost, total: base + (f.dayExtra[day] ?? 0) + (f.rain ? f.rainPct : 0) + boost }
 }
-export function fastPrice(f: Fast, pct: number) {
-  const raw = f.price * (1 + (pct * f.pass) / 10000)
-  return Math.min(f.cap, Math.round(raw / f.round) * f.round)
+type Zone = Fast['zones'][number]
+/** قیمت نهایی تحویل سریع: قیمت پایهٔ مقصد (یا قیمت پیش‌فرض) + سهم مشتری از افزایش، با سقف همان مقصد */
+export function fastPrice(f: Fast, pct: number, z?: Zone | null) {
+  const base = z?.price ?? f.price; const cap = z?.cap ?? f.cap
+  const raw = base * (1 + (pct * f.pass) / 10000)
+  return Math.min(cap, Math.round(raw / f.round) * f.round)
 }
 
 /** پیک و قیمت تحویل سریع: انتخاب پیک، زنجیرهٔ جایگزین، افزایش خودکار ساعت‌های پرترافیک و تغییر دستی هر ساعت */
@@ -38,18 +41,40 @@ export function FastCourier() {
   const name = (id: string) => f.couriers.find((c) => c.id === id)?.name ?? id
   const max = Math.max(60, ...HOURS.map((h) => fastPct(f, h, day).total))
   const sp = sel !== null ? fastPct(f, sel, day) : null
+  const zones = f.zones ?? []; const [zid, setZid] = useState(zones[0]?.id ?? ''); const z = zones.find((x) => x.id === zid) ?? null
+  const zcost = (id: string, pct: number) => (z ? z.cost * (1 + pct / 100) : cost(id, pct))
+  const setZ = (id: string, fn: (x: Zone) => void, action: string) => set((x) => { const t = x.zones.find((y) => y.id === id); if (t) fn(t) }, action, zones.find((y) => y.id === id)?.name ?? 'مقصد')
 
   return (
     <div className="space-y-4" id="fast-courier">
       <div className="grid gap-3 md:grid-cols-4">
-        <Card><p className="text-12 text-t2">الان ({fa(nowH)}:۰۰) مشتری می‌بیند</p><p className="mt-1 text-22 font-bold tnum text-brand">{toman(fastPrice(f, nowP.total))}</p><p className="mt-1 text-11 text-t2">{nowP.total ? `${fa(nowP.total)}٪ افزایش ساعت پرترافیک` : 'قیمت پایه، بدون افزایش'}</p></Card>
-        <Card><p className="text-12 text-t2">پیکی که الان انتخاب می‌شود</p><p className="mt-1 text-18 font-bold">{name(pick(nowP.total))}</p><p className="mt-1 text-11 text-t2">هزینهٔ تقریبی برای ما: {toman(cost(pick(nowP.total), nowP.total))}</p></Card>
-        <Card><p className="text-12 text-t2">حاشیهٔ هر سفارش در این ساعت</p>{(() => { const m = fastPrice(f, nowP.total) - cost(pick(nowP.total), nowP.total); return <p className={cx('mt-1 text-18 font-bold tnum', m < 0 ? 'text-danger' : 'text-success')}>{m < 0 ? '−' : ''}{toman(Math.abs(m))}</p> })()}<p className="mt-1 text-11 text-t2">قیمت مشتری منهای هزینهٔ پیک</p></Card>
+        <Card><p className="text-12 text-t2">الان ({fa(nowH)}:۰۰) مشتری می‌بیند</p><p className="mt-1 text-22 font-bold tnum text-brand">{toman(fastPrice(f, nowP.total, z))}</p><p className="mt-1 text-11 text-t2">{z ? `${z.name} · ` : ''}{nowP.total ? `${fa(nowP.total)}٪ افزایش ساعت پرترافیک` : 'قیمت پایه، بدون افزایش'}</p></Card>
+        <Card><p className="text-12 text-t2">پیکی که الان انتخاب می‌شود</p><p className="mt-1 text-18 font-bold">{name(pick(nowP.total))}</p><p className="mt-1 text-11 text-t2">هزینهٔ تقریبی برای ما: {toman(zcost(pick(nowP.total), nowP.total))}</p></Card>
+        <Card><p className="text-12 text-t2">حاشیهٔ هر سفارش در این ساعت</p>{(() => { const m = fastPrice(f, nowP.total, z) - zcost(pick(nowP.total), nowP.total); return <p className={cx('mt-1 text-18 font-bold tnum', m < 0 ? 'text-danger' : 'text-success')}>{m < 0 ? '−' : ''}{toman(Math.abs(m))}</p> })()}<p className="mt-1 text-11 text-t2">قیمت مشتری منهای هزینهٔ پیک</p></Card>
         <Card><p className="text-12 text-t2">وضعیت ویژه</p><div className="mt-2 flex flex-wrap gap-1.5">{f.rain && <Badge tone="info">باران +{fa(f.rainPct)}٪</Badge>}{f.boost && new Date(f.boost.until).getTime() > Date.now() ? <Badge tone="warning">افزایش موقت +{fa(f.boost.pct)}٪ تا {rel(f.boost.until)}</Badge> : null}{(f.dayExtra[todayName()] ?? 0) > 0 && <Badge>{todayName()} +{fa(f.dayExtra[todayName()])}٪</Badge>}{!f.rain && !(f.boost && new Date(f.boost.until).getTime() > Date.now()) && !(f.dayExtra[todayName()] ?? 0) && <span className="text-12 text-t2">روال عادی</span>}</div></Card>
       </div>
 
+      <Card title={<span className="flex items-center gap-1.5"><MapPin size={15} />قیمت پیک ۲ ساعته بر اساس مقصد</span>} actions={<Button size="sm" icon={<Plus size={13} />} onClick={() => { const id = `z-${Date.now().toString(36)}`; set((x) => { x.zones.push({ id, name: 'مقصد تازه', kind: 'شهر', areas: '', price: f.price, cap: Math.round(f.price * 1.6), cost: Math.round(f.price * 0.65), on: true }) }, 'افزودن مقصد تحویل سریع'); setZid(id) }}>افزودن منطقه یا شهر</Button>} pad={false}>
+        <p className="px-4 pt-3 text-12 leading-5 text-t2">برای هر منطقهٔ تهران یا هر شهر اطراف، قیمت پایهٔ جدا بگذارید. افزایش ساعت پرترافیک، روز هفته، باران و افزایش موقت روی قیمت همان مقصد حساب می‌شود. مقصدی که اینجا نیست، قیمت پیش‌فرض ({toman(f.price)}) را می‌گیرد.</p>
+        <div className="overflow-x-auto p-3"><table className="w-full min-w-[820px] text-12">
+          <thead><tr className="text-right text-11 text-t2"><th className="px-2 py-1.5 font-medium">مقصد</th><th className="px-2 font-medium">نوع</th><th className="px-2 font-medium">محدوده (محله‌ها، شهرها)</th><th className="px-2 font-medium">قیمت پایه برای مشتری</th><th className="px-2 font-medium">سقف</th><th className="px-2 font-medium">هزینهٔ پیک برای ما</th><th className="px-2 font-medium">الان مشتری می‌بیند</th><th className="px-2 font-medium">فعال</th><th /></tr></thead>
+          <tbody>{zones.map((x) => { const now = fastPrice(f, nowP.total, x); const mg = now - x.cost * (1 + nowP.total / 100); return (
+            <tr key={x.id} className={cx('border-t border-line', zid === x.id && 'bg-brand-tint/40', !x.on && 'opacity-60')}>
+              <td className="px-2 py-1.5"><Input aria-label="نام مقصد" className="h-8 w-32" value={x.name} onFocus={() => setZid(x.id)} onChange={(e) => setZ(x.id, (t) => { t.name = e.target.value }, 'تغییر نام مقصد تحویل سریع')} /></td>
+              <td className="px-2"><Segmented size="sm" value={x.kind} onChange={(v) => setZ(x.id, (t) => { t.kind = v }, 'تغییر نوع مقصد')} options={[['منطقه', 'منطقه'], ['شهر', 'شهر']]} /></td>
+              <td className="px-2"><Input aria-label={`محدودهٔ ${x.name}`} className="h-8 w-56" value={x.areas} placeholder="مثلاً ونک، جردن، سعادت‌آباد" onChange={(e) => setZ(x.id, (t) => { t.areas = e.target.value }, 'تغییر محدودهٔ مقصد')} /></td>
+              <td className="px-2"><Input aria-label={`قیمت پایهٔ ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.price} onChange={(e) => setZ(x.id, (t) => { t.price = Number(e.target.value) }, 'تغییر قیمت پایهٔ مقصد')} /></td>
+              <td className="px-2"><Input aria-label={`سقف قیمت ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.cap} onChange={(e) => setZ(x.id, (t) => { t.cap = Number(e.target.value) }, 'تغییر سقف قیمت مقصد')} /></td>
+              <td className="px-2"><Input aria-label={`هزینهٔ پیک ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.cost} onChange={(e) => setZ(x.id, (t) => { t.cost = Number(e.target.value) }, 'تغییر هزینهٔ پیک مقصد')} /></td>
+              <td className="px-2"><b className="tnum text-brand">{toman(now)}</b><span className={cx('block text-[10px]', mg < 0 ? 'text-danger' : 'text-success')}>حاشیه {mg < 0 ? '−' : ''}{toman(Math.abs(mg))}</span></td>
+              <td className="px-2"><Toggle on={x.on} label={`فعال بودن ${x.name}`} onChange={(v) => setZ(x.id, (t) => { t.on = v }, v ? 'فعال کردن تحویل سریع مقصد' : 'غیرفعال کردن تحویل سریع مقصد')} /></td>
+              <td className="px-2"><button type="button" aria-label={`حذف ${x.name}`} className="grid size-7 place-items-center rounded text-t3 hover:bg-danger-bg hover:text-danger" onClick={() => { set((y) => { y.zones = y.zones.filter((q) => q.id !== x.id) }, 'حذف مقصد تحویل سریع', x.name); if (zid === x.id) setZid(zones.find((q) => q.id !== x.id)?.id ?? '') }}><Trash2 size={13} /></button></td>
+            </tr>) })}</tbody>
+        </table>{zones.length === 0 && <p className="py-4 text-center text-12 text-t2">هنوز مقصدی تعریف نشده؛ همهٔ سفارش‌ها قیمت پیش‌فرض را می‌گیرند.</p>}</div>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-        <Card title="قیمت تحویل سریع در هر ساعت" actions={<Segmented size="sm" value={day} onChange={setDay} options={DAYS.filter((x) => !d.delivery.closedDays.includes(x)).map((x) => [x, x] as [string, string])} />}>
+        <Card title="قیمت تحویل سریع در هر ساعت" actions={<span className="flex flex-wrap items-center gap-2">{zones.length > 0 && <Select className="w-40" value={zid} other={false} onChange={setZid} options={zones.map((x) => [x.id, x.name] as [string, string])} />}<Segmented size="sm" value={day} onChange={setDay} options={DAYS.filter((x) => !d.delivery.closedDays.includes(x)).map((x) => [x, x] as [string, string])} /></span>}>
           <p className="mb-3 text-12 leading-5 text-t2">ستون‌ها درصد افزایش هر ساعت‌اند. روی هر ساعت بزنید تا دستی تغییرش دهید. ساعت‌های دستی قفل دارند و الگوی خودکار رویشان اثر نمی‌گذارد.</p>
           <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-12">
             <Toggle on={f.auto} onChange={(v) => set((x) => { x.auto = v }, v ? 'روشن کردن افزایش خودکار ساعت پرترافیک' : 'خاموش کردن افزایش خودکار')} text="افزایش خودکار در ساعت‌های پرترافیک" />
@@ -57,7 +82,7 @@ export function FastCourier() {
           </div>
           <div className="flex h-56 items-end gap-1.5 border-b border-line pb-1" role="list" aria-label="درصد افزایش قیمت در هر ساعت">
             {HOURS.map((h) => { const p = fastPct(f, h, day); const extra = p.total - p.base; return (
-              <button key={h} role="listitem" type="button" onClick={() => setSel(h)} aria-label={`ساعت ${h}: ${p.total} درصد، ${toman(fastPrice(f, p.total))}`} className={cx('group flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-md pt-1', sel === h ? 'bg-brand-tint' : 'hover:bg-neutral-bg', h === nowH && day === todayName() && 'ring-1 ring-brand')}>
+              <button key={h} role="listitem" type="button" onClick={() => setSel(h)} aria-label={`ساعت ${h}: ${p.total} درصد، ${toman(fastPrice(f, p.total, z))}`} className={cx('group flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-md pt-1', sel === h ? 'bg-brand-tint' : 'hover:bg-neutral-bg', h === nowH && day === todayName() && 'ring-1 ring-brand')}>
                 <span className="mb-1 text-[10px] font-semibold tnum">{p.total ? `+${fa(p.total)}٪` : '۰'}</span>
                 {p.manual && <Lock size={10} className="mb-0.5 text-[#b45309]" aria-hidden />}
                 <span className="flex w-full flex-col justify-end px-0.5" style={{ height: `${Math.max(3, (p.total / max) * 150)}px` }}>
@@ -67,10 +92,10 @@ export function FastCourier() {
                 <span className="mt-1 text-[10px] text-t2 tnum">{fa(h)}</span>
               </button>) })}
           </div>
-          <p className="mt-2 text-11 text-t2">قیمت پایه {toman(f.price)} · سقف {toman(f.cap)} · گرد به {toman(f.round)} · ساعت قطع سفارش سریع {fa(d.delivery.fastCutoff)}</p>
+          <p className="mt-2 text-11 text-t2">{z ? `${z.name}: ` : ''}قیمت پایه {toman(z?.price ?? f.price)} · سقف {toman(z?.cap ?? f.cap)} · گرد به {toman(f.round)} · ساعت قطع سفارش سریع {fa(d.delivery.fastCutoff)}</p>
           {sel !== null && sp && (
             <div className="mt-3 rounded-xl border border-line p-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><b className="text-13">ساعت {fa(sel)} تا {fa(sel + 1)} · {day}</b><span className="text-13">مشتری می‌بیند: <b className="tnum text-brand">{toman(fastPrice(f, sp.total))}</b> · پیک: {name(pick(sp.total))}</span></div>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><b className="text-13">ساعت {fa(sel)} تا {fa(sel + 1)} · {day}</b><span className="text-13">مشتری می‌بیند{z ? ` (${z.name})` : ''}: <b className="tnum text-brand">{toman(fastPrice(f, sp.total, z))}</b> · پیک: {name(pick(sp.total))}</span></div>
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="درصد افزایش این ساعت"><Input type="number" min={-30} max={150} className="w-28" value={f.overrides[sel] ?? f.profile[sel] ?? 0} onChange={(e) => { const v = Number(e.target.value); set((x) => { x.overrides[sel] = v }, 'تغییر دستی قیمت ساعت تحویل سریع', `ساعت ${sel}`) }} /></Field>
                 <div className="flex gap-1">{[-10, 0, 10, 20, 35, 50].map((v) => <Button key={v} size="sm" variant={(f.overrides[sel] ?? -999) === v ? 'primary' : 'secondary'} onClick={() => set((x) => { x.overrides[sel] = v }, 'تغییر دستی قیمت ساعت تحویل سریع', `ساعت ${sel}`)}>{v > 0 ? `+${fa(v)}` : fa(v)}٪</Button>)}</div>
@@ -97,7 +122,7 @@ export function FastCourier() {
 
           <Card title="قیمت پایه و سهم مشتری">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="قیمت پایه (تومان)"><Input type="number" value={f.price} onChange={(e) => set((x) => { x.price = Number(e.target.value) }, 'تغییر قیمت پایهٔ تحویل سریع')} /></Field>
+              <Field label="قیمت پیش‌فرض (مقصد تعریف‌نشده)"><Input type="number" value={f.price} onChange={(e) => set((x) => { x.price = Number(e.target.value) }, 'تغییر قیمت پایهٔ تحویل سریع')} /></Field>
               <Field label="سقف قیمت (تومان)"><Input type="number" value={f.cap} onChange={(e) => set((x) => { x.cap = Number(e.target.value) }, 'تغییر سقف قیمت تحویل سریع')} /></Field>
             </div>
             <Field label={`سهم مشتری از افزایش: ${fa(f.pass)}٪`} help="۱۰۰٪ یعنی کل افزایش روی قیمت مشتری می‌رود؛ ۵۰٪ یعنی نصفش را غنیمت می‌پردازد."><input type="range" min={0} max={100} step={10} value={f.pass} aria-label="سهم مشتری از افزایش" onChange={(e) => set((x) => { x.pass = Number(e.target.value) }, 'تغییر سهم مشتری از افزایش قیمت')} className="w-full accent-[#0000ff]" /></Field>

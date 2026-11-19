@@ -24,6 +24,12 @@ export const makeDelivery = () => ({
     dayExtra: { 'چهارشنبه': 5, 'پنجشنبه': 10 } as Record<string, number>,
     rain: false, rainPct: 25,
     boost: null as null | { pct: number; until: string; why: string },
+    // قیمت پایهٔ هر مقصد (منطقه یا شهر)؛ افزایش ساعت، روز، باران و موقت روی همین قیمت اعمال می‌شود
+    zones: [
+      { id: 'z-teh', name: 'داخل تهران', kind: 'منطقه' as 'منطقه' | 'شهر', areas: 'مناطق ۱ تا ۲۲ شهر تهران', price: 400000, cap: 650000, cost: 260000, on: true },
+      { id: 'z-eslam', name: 'اسلامشهر', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'اسلامشهر، چهاردانگه، واوان', price: 500000, cap: 800000, cost: 330000, on: true },
+      { id: 'z-karaj', name: 'کرج', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'کرج، فردیس، مهرشهر، گوهردشت', price: 700000, cap: 1100000, cost: 470000, on: true },
+    ],
   },
   // سبد چندانباره: اقلام تهران با روش انتخابی، اقلام مهاباد با پست؛ هزینهٔ ارسال و تجمیع قابل تنظیم
   split: { remoteMethod: 'پست پیشتاز', fee: 'both' as 'both' | 'first' | 'max', consolidate: true, notify: true },

@@ -7,6 +7,7 @@ import { currentUser, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB, Order } from '@/shared/data/seed'
 import type { OrderEvent } from '@/shared/data/orderEvents'
+import { StartDecision } from './Decision'
 
 const KIND: Record<OrderEvent['kind'], { label: string; icon: typeof BellRing; cls: string }> = {
   cancel: { label: 'درخواست لغو', icon: CircleX, cls: 'border-danger/40 bg-danger-bg/60' },
@@ -21,7 +22,7 @@ const lines = (o: Order) => o.shipments.flatMap((s) => s.items.map((it, i) => ({
 
 /** هشدار فوری در صفحهٔ سفارش: هر رویداد تازه با توضیح و اقدام مستقیم (تأیید، رد با دلیل، اعمال تغییر، جایگزینی) */
 export function OrderAlerts({ o }: { o: Order }) {
-  const d = useDB(); const E = d.orderEvents.filter((e) => e.orderId === o.id); const [cancel, setCancel] = useState<OrderEvent | 'admin' | null>(null); const [showDone, setShowDone] = useState(false)
+  const d = useDB(); const E = d.orderEvents.filter((e) => e.orderId === o.id); const [cancel, setCancel] = useState<OrderEvent | 'admin' | null>(null); const [askEv, setAskEv] = useState<OrderEvent | null>(null); const [showDone, setShowDone] = useState(false)
   const c = d.customers.find((x) => x.id === o.customerId)
   const close = (e: OrderEvent, status: 'done' | 'rejected', result: string) => mutate((x) => { const y = x.orderEvents.find((z) => z.id === e.id)!; y.status = status; y.result = `${result} · ${currentUser()?.name ?? 'شما'}`; const cr = e.payload?.cr && (x.entities.cancelRequests ?? []).find((r) => r.id === e.payload!.cr); if (cr) cr.status = status === 'done' ? 'تأییدشده' : 'ردشده' }, { action: `رویداد سفارش: ${result}`, target: `${o.id} · ${e.title}` })
   const reject = async (e: OrderEvent) => { const why = await askReason({ kind: 'order', ref: o.id, status: `رد «${e.title}»`, title: 'دلیل رد درخواست (برای مشتری)' }); if (!why) return; close(e, 'rejected', `رد شد: ${why}`); if (c) sendSms(c.mobile, `غنیمت: درخواست شما برای سفارش ${o.id} پذیرفته نشد. دلیل: ${why}`, 'وضعیت سفارش', o.id, c.id); toast('درخواست رد شد و دلیل برای مشتری پیامک شد.') }
@@ -39,13 +40,16 @@ export function OrderAlerts({ o }: { o: Order }) {
           <p className="mb-3 text-13 leading-6 text-t1">{e.body}</p>
           <div className="flex flex-wrap gap-2">
             {e.kind === 'cancel' && <><Button size="sm" variant="danger" icon={<Check size={13} />} onClick={() => setCancel(e)}>{e.payload?.scope === 'کل سفارش' ? 'تأیید لغو و بازگشت وجه' : 'لغو همان قلم و بازگشت وجه'}</Button><Button size="sm" icon={<X size={13} />} onClick={() => void reject(e)}>رد با ذکر دلیل</Button></>}
-            {e.kind === 'stock' && <><Button size="sm" variant="primary" icon={<RefreshCcw size={13} />} onClick={() => moveWh(e)}>تأمین از انبار مهاباد (پست)</Button><Button size="sm" onClick={() => offer(e)}>گزینه‌ها را برای مشتری بفرست</Button><Button size="sm" variant="danger" onClick={() => setCancel(e)}>لغو قلم و بازگشت وجه</Button></>}
+            {e.kind === 'stock' && <><Button size="sm" variant="primary" icon={<RefreshCcw size={13} />} onClick={() => moveWh(e)}>تأمین از انبار مهاباد (پست)</Button><Button size="sm" onClick={() => setAskEv(e)}>اعلام به مشتری برای تصمیم</Button><Button size="sm" variant="danger" onClick={() => setCancel(e)}>لغو قلم و بازگشت وجه</Button></>}
             {e.kind === 'change' && <><Button size="sm" variant="primary" icon={<Check size={13} />} onClick={() => applyAddress(e)}>اعمال تغییر</Button><Button size="sm" icon={<X size={13} />} onClick={() => void reject(e)}>رد با ذکر دلیل</Button></>}
             {c && <Button size="sm" variant="ghost" icon={<Phone size={13} />} onClick={() => { window.location.href = `tel:${c.mobile}` }}>تماس با مشتری</Button>}
           </div>
         </div>) })}</div>}
       {done.length > 0 && <div className="text-12"><button type="button" onClick={() => setShowDone(!showDone)} className="text-t2 hover:text-brand">{showDone ? 'پنهان کردن' : 'نمایش'} {fa(done.length)} رویداد رسیدگی‌شده</button>{showDone && <ul className="mt-2 space-y-1">{done.map((e) => <li key={e.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-3 py-1.5"><Badge tone={e.status === 'done' ? 'success' : 'neutral'}>{e.status === 'done' ? 'انجام شد' : 'رد شد'}</Badge><b>{e.title}</b><span className="text-t2">{e.result}</span></li>)}</ul>}</div>}
       {!dead && <div className="flex justify-end"><Button size="sm" variant="ghost" icon={<Undo2 size={13} />} onClick={() => setCancel('admin')}>لغو سفارش یا یک قلم توسط ما</Button></div>}
+      {askEv && <StartDecision key={askEv.id} o={o} open onClose={() => setAskEv(null)} onDone={(txt) => close(askEv, 'done', txt)}
+        preset={{ kind: /مهاباد|انبار دیگر/.test(askEv.body) ? 'other_warehouse' : 'out_of_stock', source: 'انبار هنگام جمع‌آوری', note: askEv.body,
+          items: lines(o).filter((l) => !l.it.cancelled && askEv.body.includes((d.products.find((p) => p.id === l.it.productId)?.title ?? '###').split(' ').slice(-1)[0])).map((l) => l.key) }} />}
       <CancelModal key={cancel === 'admin' ? 'admin' : cancel?.id ?? 'none'} o={o} ev={cancel} onClose={() => setCancel(null)} onDone={(e, res) => e && close(e, 'done', res)} />
     </>
   )

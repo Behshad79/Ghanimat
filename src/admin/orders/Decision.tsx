@@ -2,7 +2,7 @@
 // سه نوع: تأمین نشد (تأیید بخشی)، ناموجود، موجود در انبار دیگر. انتخاب‌های مشتری و لغو خودکار پس از مهلت.
 import { useState } from 'react'
 import { AlertTriangle, Clock, PackageX, Truck } from 'lucide-react'
-import { Badge, Button, Card, cx, Field, Segmented } from '@/shared/ui/base'
+import { Badge, Button, Card, cx, Field, Segmented, Select } from '@/shared/ui/base'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { currentUser, getDB, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
@@ -15,6 +15,9 @@ const KIND: Record<OrderDecision['kind'], { badge: string; title: (n: number, to
   other_warehouse: { badge: 'موجود در انبار دیگر', title: (n, _t, alt) => `${fa(n)} کالا در انبار اصلی نیست، ولی در ${WAREHOUSE[alt ?? 'mahabad'] ?? 'انبار دیگر'} موجود است`, sub: 'بقیهٔ کالاها تا انتخاب مشتری ارسال نمی‌شوند.' },
 }
 const key = (shipId: string, i: number) => `${shipId}|${i}`
+/** وضعیت‌هایی که هنوز می‌شود کمبود را اعلام کرد (قبل از تحویل به پست یا پیک) */
+export const ACTIVE = ['order.paid', 'order.preparing', 'order.suspicious', 'order.pickup_ready']
+export const SOURCES = ['ما (مدیریت)', 'انبار هنگام جمع‌آوری', 'کنترل کیفیت (معیوب یا ناسالم)', 'تأمین‌کننده یا محموله', 'سیستم (موجودی صفر شد)']
 const isBnpl = (o: Order) => /اسنپ|ترب|دیجی|تارا|کیپا|اقساط/.test(o.pay)
 
 /** اجرای انتخاب: لغو اقلام، مرسولهٔ جدا از انبار دیگر، یا لغو کل سفارش؛ با بازگشت وجه و ثبت رویداد */
@@ -50,7 +53,9 @@ export function DecisionPanel({ o }: { o: Order }) {
   const all = o.shipments.flatMap((s) => s.items.map((it, i) => ({ s, it, k: key(s.id, i) })))
   const live = all.filter((x) => !x.it.cancelled || dec?.items.includes(x.k))
   if (!dec) return <>
-    {['order.paid', 'order.preparing'].includes(o.status) && <div className="flex justify-end"><Button size="sm" variant="ghost" icon={<PackageX size={14} />} onClick={() => setAsk(true)}>اعلام کمبود به مشتری</Button></div>}
+    {ACTIVE.includes(o.status) && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-line px-3 py-2 text-12">
+      <PackageX size={15} className="text-warning" /><span className="min-w-0 flex-1 text-t2">اگر خودتان دیدید کالایی کم است، موجود نیست، تأمین نشد یا در انبار دیگری است، همین‌جا اعلام کنید. مشتری پیامک می‌گیرد و در پنلش انتخاب می‌کند.</span>
+      <Button size="sm" variant="primary" icon={<PackageX size={14} />} onClick={() => setAsk(true)}>اعلام کمبود یا ناموجودی به مشتری</Button></div>}
     <StartDecision o={o} open={ask} onClose={() => setAsk(false)} />
   </>
   const K = KIND[dec.kind]; const n = dec.items.length
@@ -77,21 +82,23 @@ export function DecisionPanel({ o }: { o: Order }) {
   </Card>
 }
 
-function StartDecision({ o, open, onClose }: { o: Order; open: boolean; onClose: () => void }) {
+export function StartDecision({ o, open, onClose, preset, onDone }: { o: Order; open: boolean; onClose: () => void; preset?: { kind?: OrderDecision['kind']; items?: string[]; source?: string; note?: string }; onDone?: (txt: string) => void }) {
   const d = useDB(); const hours = Number(d.rules.find((r) => r.key === 'decision_hours')?.value ?? 24)
-  const [kind, setKind] = useState<OrderDecision['kind']>('out_of_stock'); const [items, setItems] = useState<string[]>([]); const [alt, setAlt] = useState('mahabad')
+  const [kind, setKind] = useState<OrderDecision['kind']>(preset?.kind ?? 'out_of_stock'); const [items, setItems] = useState<string[]>(preset?.items ?? []); const [alt, setAlt] = useState('mahabad'); const [src, setSrc] = useState(preset?.source ?? SOURCES[0])
   const all = o.shipments.flatMap((s) => s.items.map((it, i) => ({ s, it, k: key(s.id, i) }))).filter((x) => !x.it.cancelled)
   const go = () => {
     if (!items.length) return toast('کالای کم‌آمده را انتخاب کنید.', { tone: 'err' })
     if (items.length === all.length && kind !== 'other_warehouse') return toast('اگر هیچ کالایی تأمین نمی‌شود، سفارش را با دلیل لغو کنید.', { tone: 'err' })
     const deadline = new Date(Date.now() + hours * 36e5).toISOString()
-    mutate((x) => { const y = x.orders.find((z) => z.id === o.id)!; y.decision = { kind, items, alt: kind === 'other_warehouse' ? alt : undefined, deadline, at: new Date().toISOString(), by: currentUser()?.name ?? 'کاربر' }; y.status = 'order.needs_decision' }, { action: 'اعلام کمبود تأمین به مشتری', target: o.id, after: `${KIND[kind].badge} · ${items.length} کالا` })
+    mutate((x) => { const y = x.orders.find((z) => z.id === o.id)!; y.decision = { kind, items, alt: kind === 'other_warehouse' ? alt : undefined, deadline, at: new Date().toISOString(), by: `${currentUser()?.name ?? 'کاربر'} · منبع: ${src}` }; y.status = 'order.needs_decision' }, { action: 'اعلام کمبود تأمین به مشتری', target: o.id, after: `${KIND[kind].badge} · ${items.length} کالا · منبع: ${src}` })
     const c = d.customers.find((z) => z.id === o.customerId)
     if (c) sendSms(c.mobile, `غنیمت: برای سفارش ${o.id} ${kind === 'other_warehouse' ? `${fa(items.length)} کالا در انبار دیگری موجود است` : `${fa(items.length)} کالا ${kind === 'unsupplied' ? 'تأمین نشد' : 'موجود نیست'}`}. تا ${fa(hours)} ساعت در پنل کاربری انتخاب کنید؛ در غیر این صورت این کالا لغو و بقیه ارسال می‌شود.`, 'وضعیت سفارش', o.id, c.id)
-    toast('برای مشتری پیامک شد؛ سفارش در «نیازمند تصمیم مشتری» است.'); setItems([]); onClose()
+    toast('برای مشتری پیامک شد؛ سفارش در «نیازمند تصمیم مشتری» است.'); onDone?.(`${KIND[kind].badge} به مشتری اعلام شد؛ منتظر تصمیم مشتری`); setItems([]); onClose()
   }
   return <Modal open={open} onClose={onClose} title={`اعلام کمبود · ${o.id}`} footer={<><Button variant="primary" onClick={go}>اعلام به مشتری</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
     <div className="space-y-3">
+      {preset?.note && <p className="rounded-lg bg-warning-bg/60 px-3 py-2 text-12 leading-5">{preset.note}</p>}
+      <Field label="چه کسی یا چه چیزی کمبود را تشخیص داد؟"><Select value={src} other={false} onChange={setSrc} options={SOURCES.map((x) => [x, x] as [string, string])} /></Field>
       <Field label="چه اتفاقی افتاده؟"><Segmented value={kind} onChange={setKind} options={[['unsupplied', 'تأمین نشد'], ['out_of_stock', 'ناموجود'], ['other_warehouse', 'در انبار دیگر موجود است']]} /></Field>
       {kind === 'other_warehouse' && <Field label="انبار دیگر"><Segmented value={alt} onChange={setAlt} options={Object.entries(WAREHOUSE).filter(([k]) => !o.shipments.some((s) => s.warehouse === k)).map(([k, v]) => [k, v]) as [string, string][]} /></Field>}
       <Field label="کدام کالاها؟"><ul className="space-y-1">{all.map((x) => { const on = items.includes(x.k); const p = d.products.find((y) => y.id === x.it.productId)

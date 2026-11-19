@@ -5,6 +5,7 @@ import { Modal, toast } from '@/shared/ui/overlay'
 import { fakeCall, mutate, sendSms, useDB } from '@/shared/lib/store'
 import type { Order, Shipment } from '@/shared/data/seed'
 import { fa, jday } from '@/shared/lib/fa'
+import { shipBlocked } from './PayHold'
 
 export const STEPS = ['ثبت سفارش', 'آماده‌سازی', 'در حال ارسال', 'تحویل شده'] as const
 /** مرحلهٔ نوار پیشرفت پنل مشتری، خودکار از وضعیت مرسوله */
@@ -37,6 +38,7 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
   const readLink = async () => { const u = f.url.trim(); const prov = /snapp/i.test(u) ? 'اسنپ‌باکس' : /alopeyk/i.test(u) ? 'الوپیک' : /tapsi/i.test(u) ? 'تپسی‌باکس' : ''; if (!/^https?:\/\//.test(u) || !prov) return toast('لینک رصد اسنپ‌باکس، الوپیک یا تپسی‌باکس را کامل بچسبانید.', { tone: 'err' }); setReading(true); try { await fakeCall(true, 900); const h = [...u].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 99991, 7); const names = ['محمد نوری', 'رضا احمدی', 'علی کریمی', 'حسین رستمی', 'مهدی صالحی']; setF((x) => ({ ...x, company: prov, name: names[h % names.length], phone: `0912${String(1000000 + (h * 37) % 8999999)}`, p1: String(10 + (h % 89)), l: LETTERS[h % LETTERS.length], p2: String(100 + (h % 899)), r: String(10 + (h % 89)) })); toast(`اطلاعات مأمور از لینک ${prov} خوانده شد. بررسی کنید و اگر لازم بود اصلاح کنید.`) } catch { toast('لینک خوانده نشد؛ اطلاعات را دستی وارد کنید.', { tone: 'err' }) } finally { setReading(false) } }
   const slot = (s as Shipment & { slot?: string }).slot
   const save = () => {
+    if (shipBlocked(o.id)) return
     const rc = d.bank.receipts.find((r) => r.orderId === o.id)
     if (o.pay === 'کارت به کارت' && rc?.status !== 'تطبیق شد') return toast('رسید کارت به کارت این سفارش هنوز با واریز بانک تطبیق نشده است؛ ارسال قفل است.', { tone: 'err' })
     const plate = plateOf(f)
@@ -85,6 +87,7 @@ function PostTracking({ open, onClose, o, s }: { open: boolean; onClose: () => v
   const [f, setF] = useState({ carrier: s.trackingCarrier ?? (CARRIERS.find(([n]) => s.method.includes(n))?.[0] ?? 'پست پیشتاز'), code: s.tracking ?? '', url: s.trackingUrl ?? '' })
   const auto = (carrier: string, code: string) => CARRIERS.find(([n]) => n === carrier)?.[1](code) ?? ''
   const save = () => {
+    if (shipBlocked(o.id)) return
     if (!/^[\dA-Za-z-]{6,30}$/.test(f.code.trim())) return toast('کد رهگیری معتبر نیست (۶ تا ۳۰ رقم یا حرف).', { tone: 'err' })
     const url = f.url.trim() || auto(f.carrier, f.code.trim())
     mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.tracking = f.code.trim(); sh.trackingUrl = url; sh.trackingCarrier = f.carrier; if (['ship.pending', 'ship.picking', 'ship.packed'].includes(sh.status)) sh.status = 'ship.in_transit' }, { action: 'ثبت کد رهگیری پستی', target: s.id, after: f.code })

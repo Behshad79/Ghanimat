@@ -18,6 +18,7 @@ import { OrderAlerts, openEvents } from '../orders/OrderEvents'
 import { PackPhotos } from '../shared/PackPhotos'
 import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
+import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -62,7 +63,7 @@ export function Orders() {
     { key: 'ships', title: 'ارسال و مرسوله‌ها', render: (o) => <ShipChips o={o} />, text: (o) => o.shipments.map((s) => `${WAREHOUSE[s.warehouse]} ${s.method}`).join(' + ') + (o.shipments.length > 1 ? ' چندمرسوله‌ای' : '') },
     { key: 'channel', title: 'کانال', optional: true, render: (o) => <WithLogo name={o.channel} size={16} />, text: (o) => o.channel },
     { key: 'seller', title: 'فروشنده', optional: true, render: () => 'غنیمت' },
-    { key: 'status', title: 'وضعیت', render: (o) => <StatusBadge s={o.status} />, sort: (o) => o.status, text: (o) => o.status },
+    { key: 'status', title: 'وضعیت', render: (o) => <span className="flex flex-wrap items-center gap-1"><StatusBadge s={o.status} />{holdOf(o) && <Badge tone="danger" dot={false}>قفل: منتظر مابه‌التفاوت</Badge>}</span>, sort: (o) => o.status, text: (o) => o.status },
     { key: 'sla', title: <>مهلت<Hint k="sla" /></>, render: (o) => o.shipments[0] ? <SlaChip at={o.shipments[0].sla} done={['order.delivered', 'order.cancelled', 'order.returned'].includes(o.status)} /> : '—', sort: (o) => o.shipments[0]?.sla ?? '' },
     { key: 'age', title: 'ثبت', hideMobile: true, render: (o) => <span className="text-12 text-t3">{rel(o.createdAt)}</span>, sort: (o) => o.createdAt },
   ]
@@ -101,6 +102,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
       if (x.length !== 24 && x.length !== 11) { setState('err'); return setMsg('کد رهگیری نامعتبر است. کد پست ۲۴ رقم و کد تیپاکس ۱۱ رقم است.') }
       if (used.some((s) => s.tracking === x)) { setState('err'); return setMsg('این کد قبلاً به مرسولهٔ دیگری وصل شده است. کد را بررسی کنید.') }
       if (!getDB().orders.find((o) => o.id === orderId)?.shipments.find((y) => y.id === shipId)?.packPhotos?.length) { setState('err'); return setMsg('اول عکس پیش از ارسال را ثبت کنید.') }
+      if (shipBlocked(orderId)) { setState('idle'); return }
       mutate((db) => { const s = db.orders.find((o) => o.id === orderId)!.shipments.find((s) => s.id === shipId)!; s.tracking = x; s.status = 'ship.in_transit'; db.orders.find((o) => o.id === orderId)!.status = 'order.shipped' }, { action: 'الحاق کد رهگیری', target: shipId, after: x })
       setV(''); setState('idle'); return toast(`کد رهگیری ${x.length === 24 ? 'پست' : 'تیپاکس'} ثبت شد و لینک رهگیری برای مشتری ارسال شد.`)
     }
@@ -119,6 +121,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
   }
   const save = () => {
     const sh = getDB().orders.find((o) => o.id === orderId)?.shipments.find((x) => x.id === shipId)
+    if (shipBlocked(orderId)) return
     if (!sh?.packPhotos?.length) return toast('اول عکس پیش از ارسال را ثبت کنید؛ این عکس‌ها برای مقایسه در مرجوعی بایگانی می‌شوند.', { tone: 'err' })
     const undo = snapshot()
     mutate((db) => { const o = db.orders.find((o) => o.id === orderId)!; const s = o.shipments.find((s) => s.id === shipId)!; s.courier = c; s.status = 'ship.handed'; o.status = 'order.shipped' }, { action: 'ثبت پیک با لینک', target: shipId, after: c.name })
@@ -159,7 +162,7 @@ export function OrderDetail() {
   const c = customer(o.customerId)
   const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
-  const advance = (sid: string, to: string, label: string) => { const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
+  const advance = (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const cancelShip = async (sid: string, total: number) => {
     if (!(await confirm({ title: `لغو مرسولهٔ ${sid}؟`, body: <>این مرسوله لغو و {toman(total)} به {dest} مشتری بازگردانده می‌شود. واحدهای آن دوباره قابل فروش می‌شوند. این کار برگشت‌پذیر نیست.</>, confirm: 'لغو مرسوله', danger: true }))) return
     if (!(await askReason({ kind: 'order', ref: o.id, status: `لغو مرسولهٔ ${sid}`, title: 'دلیل لغو (برای مشتری)' }))) return
@@ -188,6 +191,7 @@ export function OrderDetail() {
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           <NoteBanner o={o} />
+          <PayHoldCard o={o} />
           <OrderAlerts key={o.id} o={o} />
           <DecisionPanel o={o} />
           <CancelSummary o={o} />

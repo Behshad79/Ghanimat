@@ -105,9 +105,9 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
   if ((o.shipTo ?? addrText(c?.addr as any)) !== draft.shipTo) changes.push(`نشانی ارسال: ${draft.shipTo}`)
   if (o.receiver ? o.receiver.name !== draft.receiver?.name || o.receiver.mobile !== draft.receiver?.mobile : (draft.receiver?.name !== (c?.name ?? '') || draft.receiver?.mobile !== (c?.mobile ?? ''))) changes.push(`تحویل‌گیرنده: ${draft.receiver?.name} · ${draft.receiver?.mobile}`)
   if ((o.discount ?? 0) !== (draft.discount ?? 0)) changes.push(`تخفیف سفارش: ${toman(o.discount ?? 0)} ← ${toman(draft.discount ?? 0)}`)
-  const settleOpts = diff > 0 ? ['ارسال لینک پرداخت مابه‌التفاوت', 'دریافت شد (کارت‌خوان یا کارت به کارت)', 'رایگان؛ بر عهدهٔ غنیمت'] : diff < 0 ? ['بازگشت به کیف پول', 'بازگشت به کارت بانکی', 'بازگشت به همان روش پرداخت'] : []
+  const settleOpts = diff > 0 ? ['ارسال لینک پرداخت مابه‌التفاوت', 'کارت به کارت توسط مشتری', 'دریافت شد (کارت‌خوان یا کارت به کارت)', 'رایگان؛ بر عهدهٔ غنیمت'] : diff < 0 ? ['بازگشت به کیف پول', 'بازگشت به کارت بانکی', 'بازگشت به همان روش پرداخت'] : []
   const how = settle || settleOpts[0] || ''
-  const autoSms = `غنیمت: ${src === 'تصمیم داخلی غنیمت' ? 'سفارش' : 'طبق درخواست شما، سفارش'} ${o.id} ویرایش شد. ${changes.slice(0, 3).join('؛ ')}${changes.length > 3 ? ` و ${fa(changes.length - 3)} تغییر دیگر` : ''}. مبلغ نهایی: ${toman(sum(draft))}.${diff > 0 ? (how.startsWith('ارسال لینک') ? ` لینک پرداخت ${toman(diff)} برایتان ارسال شد.` : '') : diff < 0 ? ` ${toman(-diff)} ${how.replace('بازگشت به', 'به')} برمی‌گردد.` : ''}`
+  const autoSms = `غنیمت: ${src === 'تصمیم داخلی غنیمت' ? 'سفارش' : 'طبق درخواست شما، سفارش'} ${o.id} ویرایش شد. ${changes.slice(0, 3).join('؛ ')}${changes.length > 3 ? ` و ${fa(changes.length - 3)} تغییر دیگر` : ''}. مبلغ نهایی: ${toman(sum(draft))}.${diff > 0 ? (how.startsWith('ارسال لینک') ? ` لینک پرداخت ${toman(diff)} برایتان ارسال شد؛ ارسال سفارش پس از پرداخت انجام می‌شود.` : how.startsWith('کارت به کارت') ? ` لطفاً ${toman(diff)} را کارت به کارت کنید و رسید را بفرستید؛ ارسال سفارش پس از تأیید پرداخت انجام می‌شود.` : '') : diff < 0 ? ` ${toman(-diff)} ${how.replace('بازگشت به', 'به')} برمی‌گردد.` : ''}`
   const smsText = smsEdit ?? autoSms
 
   const save = async () => {
@@ -123,6 +123,7 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
       const next = structuredClone(draft); next.shipments = next.shipments.filter((s) => s.items.length); next.total = sum(next)
       if (diff < 0 && how === 'بازگشت به کیف پول') { x.customers.find((cc) => cc.id === o.customerId)!.wallet += -diff; x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount: -diff, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: 'ویرایش سفارش' }) }
       next.notes = [...(next.notes ?? []), { id: `N-${Date.now().toString(36)}`, at: new Date().toISOString(), by: who, src: NOTE_SRC[src], text: `ویرایش سفارش (${src}): ${reason.trim()} · ${changes.join('؛ ')}` }]
+      if (diff > 0 && (how.startsWith('ارسال لینک') || how.startsWith('کارت به کارت'))) next.payHold = { amount: diff + (o.payHold?.status === 'pending' ? o.payHold.amount : 0), method: how.startsWith('ارسال لینک') ? 'لینک پرداخت' : 'کارت به کارت', at: new Date().toISOString(), by: who, status: 'pending' }
       next.edits = [...(next.edits ?? []), { at: new Date().toISOString(), by: who, src, reason: reason.trim(), changes, diff, settle: diff ? how : undefined, sms }]
       x.orders[x.orders.findIndex((y) => y.id === o.id)] = next
     }, { action: 'ویرایش سفارش', target: o.id, before: toman(sum(o)), after: `${toman(sum(draft))} · ${changes.join('؛ ')}` })
@@ -176,6 +177,7 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
         <div className={cx('rounded-xl px-4 py-3 text-13', diff > 0 ? 'bg-warning-bg' : diff < 0 ? 'bg-success-bg' : 'bg-neutral-bg')}>
           <p className={diff > 0 ? 'text-warning' : diff < 0 ? 'text-success' : 'text-t2'}>{diff > 0 ? `مشتری باید ${toman(diff)} دیگر بپردازد.` : diff < 0 ? `${toman(-diff)} به مشتری برمی‌گردد.` : 'مبلغ سفارش تغییری نکرده است.'} مبلغ نهایی: <b>{toman(sum(draft))}</b></p>
           {diff !== 0 && <Field label="تسویهٔ مابه‌التفاوت"><Segmented size="sm" value={how} onChange={setSettle} options={settleOpts.map((x) => [x, x] as [string, string])} /></Field>}
+          {diff > 0 && (how.startsWith('ارسال لینک') || how.startsWith('کارت به کارت')) && <p className="mt-2 flex items-center gap-1.5 text-12 text-danger"><b>قفل ارسال:</b> تا پرداخت تأیید نشود یا شما اجازه ندهید، این سفارش جمع‌آوری، بسته‌بندی و ارسال نمی‌شود.</p>}
         </div>
 
         <div className="rounded-xl border border-line p-3">

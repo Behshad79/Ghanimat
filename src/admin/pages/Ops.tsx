@@ -24,6 +24,8 @@ import { cardState, COVERED, EXCLUDED, inQueue, METHODS, QUEUES, retStage, warSt
 import { SplitRules } from '../orders/Split'
 import { ZoneMap } from '../logistics/ZoneMap'
 import { VariantStockTable } from '../catalog/VariableEditor'
+import { shipBlocked } from '../orders/PayHold'
+import { getDB } from '@/shared/lib/store'
 
 // ───────── انبار و موجودی ─────────
 const QC_LIST = ['دستگاه روشن می‌شود', 'نمایشگر بدون لکه و پیکسل سوخته', 'سلامت باتری بالای ۸۵٪', 'دوربین‌ها و میکروفون', 'اتصال‌ها (وای‌فای، بلوتوث، سیم‌کارت)', 'تطبیق سریال با جعبه و فاکتور']
@@ -278,6 +280,7 @@ function BatchScan({ onClose }: { onClose: () => void }) {
     if (!cur) { setLog((l) => [{ ship: '—', code: t, ok: false, msg: 'اول برچسب مرسوله را اسکن کنید.' }, ...l]); return }
     if (!/^\d{10,26}$/.test(t)) { setLog((l) => [{ ship: cur, code: t, ok: false, msg: 'بارکد پست باید ۱۰ تا ۲۶ رقم باشد.' }, ...l]); return }
     if (ships.some((s) => s.tracking === t && s.id !== cur)) { setLog((l) => [{ ship: cur, code: t, ok: false, msg: 'این کد رهگیری روی مرسولهٔ دیگری ثبت است.' }, ...l]); return }
+    { const oid = getDB().orders.find((o) => o.shipments.some((y) => y.id === cur))?.id; if (oid && shipBlocked(oid, true)) { setLog((l) => [{ ship: cur, code: t, ok: false, msg: 'منتظر پرداخت مابه‌التفاوت؛ ارسال قفل است.' }, ...l]); return } }
     mutate((x) => { const s = x.orders.flatMap((o) => o.shipments).find((y) => y.id === cur)!; s.tracking = t; s.trackingCarrier = 'پست'; if (['ship.packed', 'ship.picking', 'ship.pending'].includes(s.status)) s.status = 'ship.handed' }, { action: 'الحاق کد رهگیری با اسکن', target: cur, after: t })
     setLog((l) => [{ ship: cur, code: t, ok: true, msg: 'الحاق شد و مرسوله «تحویل پست» شد.' }, ...l]); setCur(null)
   }
@@ -302,6 +305,7 @@ function PostFile({ onClose }: { onClose: () => void }) {
     if (hits.length > 1) return { tone: 'warning' as const, label: 'مشکوک', why: `${fa(hits.length)} مرسولهٔ پستی در این سفارش؛ مرسوله را مشخص کنید`, ship: null }
     if (!/^\d{11,26}$/.test(r.code)) return { tone: 'danger' as const, label: 'کد نامعتبر', why: 'کد رهگیری باید ۱۱ تا ۲۶ رقم باشد', ship: null }
     if (ships.some((s) => s.tracking === r.code)) return { tone: 'neutral' as const, label: 'تکراری', why: 'این کد قبلاً ثبت شده است', ship: null }
+    if (hits[0] && shipBlocked(hits[0].order.id, true)) return { tone: 'danger' as const, label: 'قفل پرداخت', why: 'منتظر پرداخت مابه‌التفاوت', ship: null }
     return { tone: 'success' as const, label: 'مطمئن', why: hits[0].tracking ? `کد قبلی ${hits[0].tracking} جایگزین می‌شود` : `${hits[0].cust?.name ?? ''} · ${hits[0].method}`, ship: hits[0] }
   }
   const judged = (rows ?? []).map((r) => ({ r, j: judge(r) })); const ok = judged.filter((x) => x.j.ship)

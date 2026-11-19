@@ -15,6 +15,7 @@ import { fa, rel } from '@/shared/lib/fa'
 import type { Pickup } from '@/shared/data/pickups'
 import { ProductImg, CustLink } from '../pages/_shared'
 import { RemoteFor } from '@/shared/ui/remoteUpload'
+import { shipBlocked } from './PayHold'
 
 const COL: [Pickup['status'], string, string][] = [['preparing', 'در حال آماده‌سازی', 'bg-info-bg text-info'], ['ready', 'آماده تحویل (پیامک ارسال شد)', 'bg-warning-bg text-warning'], ['handed', 'تحویل‌شده با رسید', 'bg-success-bg text-success'], ['expired', 'مهلت تمام‌شده', 'bg-danger-bg text-danger']]
 
@@ -24,8 +25,8 @@ export function PickupDesk() {
   const [hand, setHand] = useState<Pickup | null>(null); const [f, setF] = useState({ code: '', receiver: '', receiverId: '', relation: 'خود مشتری', receipt: '', extra: [] as { title: string; src: string }[] }); const [view, setView] = useState<string | null>(null)
   const name = (id: string) => d.customers.find((c) => c.id === id)?.name ?? id
   const set = (id: string, patch: Partial<Pickup>, action: string) => mutate((x) => { Object.assign(x.pickups.find((p) => p.id === id)!, patch) }, { action, target: id })
-  const ready = (p: Pickup) => { mutate((x) => { const o = x.orders.find((y) => y.id === p.orderId); if (o) { o.status = 'order.pickup_ready'; o.shipments.forEach((sh) => { if (/حضوری/.test(sh.method)) sh.status = 'ship.pickup_ready' }) } }); set(p.id, { status: 'ready', readyAt: new Date().toISOString() }, 'آماده شدن سفارش حضوری'); const c = d.customers.find((x) => x.id === p.customerId); if (c) sendSms(c.mobile, d.delivery.templates.pickupReady.replace('{سفارش}', p.orderId).replace('{شعبه}', p.branch).replace('{زمان}', p.window), 'دریافت حضوری', p.orderId, c.id); toast('سفارش آمادهٔ تحویل شد و پیامک برای مشتری ارسال شد.') }
-  const done = () => { if (!hand) return; if (!f.receiver.trim()) return toast('نام تحویل‌گیرنده را بنویسید.', { tone: 'err' }); if (!f.receipt) return toast('عکس رسید امضاشده را بگیرید تا بایگانی شود.', { tone: 'err' })
+  const ready = (p: Pickup) => { if (shipBlocked(p.orderId)) return; mutate((x) => { const o = x.orders.find((y) => y.id === p.orderId); if (o) { o.status = 'order.pickup_ready'; o.shipments.forEach((sh) => { if (/حضوری/.test(sh.method)) sh.status = 'ship.pickup_ready' }) } }); set(p.id, { status: 'ready', readyAt: new Date().toISOString() }, 'آماده شدن سفارش حضوری'); const c = d.customers.find((x) => x.id === p.customerId); if (c) sendSms(c.mobile, d.delivery.templates.pickupReady.replace('{سفارش}', p.orderId).replace('{شعبه}', p.branch).replace('{زمان}', p.window), 'دریافت حضوری', p.orderId, c.id); toast('سفارش آمادهٔ تحویل شد و پیامک برای مشتری ارسال شد.') }
+  const done = () => { if (!hand) return; if (shipBlocked(hand.orderId)) return; if (!f.receiver.trim()) return toast('نام تحویل‌گیرنده را بنویسید.', { tone: 'err' }); if (!f.receipt) return toast('عکس رسید امضاشده را بگیرید تا بایگانی شود.', { tone: 'err' })
     set(hand.id, { status: 'handed', receiver: f.receiver, receiverId: f.receiverId, relation: f.relation, receipt: f.receipt, handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما' }, 'تحویل حضوری با رسید'); mutate((x) => { const o = x.orders.find((y) => y.id === hand.orderId); if (o) { o.status = 'order.delivered'; o.deliveredAt = new Date().toISOString(); o.shipments.forEach((sh) => { if (/حضوری/.test(sh.method)) sh.status = 'ship.delivered' }) } }); setHand(null); toast('تحویل ثبت شد؛ رسید امضاشده بایگانی شد و سفارش «تحویل‌شده» شد.') }
   const viewP = P.find((p) => p.id === view)
   return (

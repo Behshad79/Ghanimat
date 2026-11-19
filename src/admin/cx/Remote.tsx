@@ -9,6 +9,7 @@ import { STATUS } from '@/shared/data/statuses'
 import { SMS_MENU, type RemoteMsg } from '@/shared/data/remote'
 import type { DB, Order } from '@/shared/data/seed'
 import { useTab } from '../pages/_shared'
+import { shipBlocked } from '../orders/PayHold'
 
 type Act = 'approve' | 'packed' | 'handover' | 'delivered' | 'phone' | 'cancel'
 const ACTS: [Act, string][] = [['approve', 'تأیید و آماده‌سازی'], ['packed', 'بسته‌بندی شد'], ['handover', 'تحویل به پیک یا پست'], ['delivered', 'تحویل شد'], ['phone', 'شمارهٔ مشتری'], ['cancel', 'لغو با دلیل']]
@@ -22,6 +23,7 @@ export const orderAlert = (d: DB, o: Order) => { const s = o.shipments[0]; const
 function run(d: DB, o: Order, a: Act, via: string): { ok: boolean; reply: string } {
   const who = `${currentUser()?.name ?? 'مدیر'} از ${via}`
   const set = (fn: (x: Order) => void, label: string) => mutate((x) => fn(x.orders.find((y) => y.id === o.id)!), { action: `${label} (${via})`, target: o.id, after: who })
+  if (['approve', 'packed', 'handover'].includes(a) && shipBlocked(o.id, true)) return { ok: false, reply: `سفارش ${o.id} منتظر پرداخت مابه‌التفاوت است؛ ارسال قفل است تا پرداخت یا اجازهٔ مدیر از پنل.` }
   if (a === 'approve') { if (!['order.paid', 'order.preparing'].includes(o.status) && !o.shipments.some((s) => ['ship.pending', 'ship.partner_confirm'].includes(s.status))) return { ok: false, reply: `سفارش ${o.id} در این مرحله قابل تأیید نیست (${STATUS[o.status]?.label}).` }; set((x) => { x.status = 'order.preparing'; x.shipments.forEach((s) => { if (['ship.pending', 'ship.partner_confirm'].includes(s.status)) s.status = 'ship.picking' }) }, 'تأیید سفارش'); return { ok: true, reply: `تأیید شد. ${o.id} وارد آماده‌سازی شد.` } }
   if (a === 'packed') { if (!o.shipments.some((s) => s.status === 'ship.picking')) return { ok: false, reply: 'اول باید تأیید و جمع‌آوری شود (۱).' }; set((x) => x.shipments.forEach((s) => { if (s.status === 'ship.picking') s.status = 'ship.packed' }), 'بسته‌بندی'); return { ok: true, reply: `بسته‌بندی ${o.id} ثبت شد. برای تحویل به پیک ۳ را بفرستید.` } }
   if (a === 'handover') { if (!o.shipments.some((s) => s.status === 'ship.packed')) return { ok: false, reply: 'بسته هنوز آماده نیست (۲).' }; set((x) => { x.shipments.forEach((s) => { if (s.status === 'ship.packed') s.status = 'ship.in_transit' }); x.status = 'order.shipped' }, 'تحویل به پیک یا پست'); return { ok: true, reply: `${o.id} تحویل پیک شد؛ پیامک پیگیری برای مشتری رفت.` } }

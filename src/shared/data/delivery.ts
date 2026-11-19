@@ -25,10 +25,15 @@ export const makeDelivery = () => ({
     rain: false, rainPct: 25,
     boost: null as null | { pct: number; until: string; why: string },
     // قیمت پایهٔ هر مقصد (منطقه یا شهر)؛ افزایش ساعت، روز، باران و موقت روی همین قیمت اعمال می‌شود
+    // مبدأ ارسال سریع (انبار تهران) برای محاسبهٔ فاصله و محدودهٔ شعاعی
+    origin: { name: 'انبار تهران · یوسف‌آباد', lat: 35.7286, lng: 51.4061 },
     zones: [
-      { id: 'z-teh', name: 'داخل تهران', kind: 'منطقه' as 'منطقه' | 'شهر', areas: 'مناطق ۱ تا ۲۲ شهر تهران', price: 400000, cap: 650000, cost: 260000, on: true },
-      { id: 'z-eslam', name: 'اسلامشهر', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'اسلامشهر، چهاردانگه، واوان', price: 500000, cap: 800000, cost: 330000, on: true },
-      { id: 'z-karaj', name: 'کرج', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'کرج، فردیس، مهرشهر، گوهردشت', price: 700000, cap: 1100000, cost: 470000, on: true },
+      { id: 'z-teh', name: 'داخل تهران', kind: 'منطقه' as 'منطقه' | 'شهر', areas: 'تهران، مناطق ۱ تا ۲۲', price: 400000, cap: 650000, cost: 260000, on: true, mode: 'polygon' as 'polygon' | 'radius', radiusKm: 18, color: '#0000ff',
+        poly: [[35.805, 51.235], [35.83, 51.42], [35.805, 51.55], [35.74, 51.6], [35.66, 51.56], [35.615, 51.44], [35.63, 51.3], [35.69, 51.2]] as [number, number][] },
+      { id: 'z-eslam', name: 'اسلامشهر', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'اسلامشهر، چهاردانگه، واوان', price: 500000, cap: 800000, cost: 330000, on: true, mode: 'polygon' as 'polygon' | 'radius', radiusKm: 6, color: '#b45309',
+        poly: [[35.585, 51.175], [35.59, 51.285], [35.525, 51.295], [35.505, 51.2], [35.53, 51.16]] as [number, number][] },
+      { id: 'z-karaj', name: 'کرج', kind: 'شهر' as 'منطقه' | 'شهر', areas: 'کرج، فردیس، مهرشهر، گوهردشت', price: 700000, cap: 1100000, cost: 470000, on: true, mode: 'polygon' as 'polygon' | 'radius', radiusKm: 10, color: '#12733f',
+        poly: [[35.875, 50.885], [35.885, 51.06], [35.81, 51.08], [35.775, 50.95], [35.8, 50.88]] as [number, number][] },
     ],
   },
   // سبد چندانباره: اقلام تهران با روش انتخابی، اقلام مهاباد با پست؛ هزینهٔ ارسال و تجمیع قابل تنظیم

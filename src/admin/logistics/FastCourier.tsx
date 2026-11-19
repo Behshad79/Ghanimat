@@ -6,6 +6,7 @@ import { toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 import { DAYS, type Delivery } from '@/shared/data/delivery'
+import { FastZoneMap } from './FastZoneMap'
 
 type Fast = Delivery['fast']
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 8)
@@ -54,10 +55,10 @@ export function FastCourier() {
         <Card><p className="text-12 text-t2">وضعیت ویژه</p><div className="mt-2 flex flex-wrap gap-1.5">{f.rain && <Badge tone="info">باران +{fa(f.rainPct)}٪</Badge>}{f.boost && new Date(f.boost.until).getTime() > Date.now() ? <Badge tone="warning">افزایش موقت +{fa(f.boost.pct)}٪ تا {rel(f.boost.until)}</Badge> : null}{(f.dayExtra[todayName()] ?? 0) > 0 && <Badge>{todayName()} +{fa(f.dayExtra[todayName()])}٪</Badge>}{!f.rain && !(f.boost && new Date(f.boost.until).getTime() > Date.now()) && !(f.dayExtra[todayName()] ?? 0) && <span className="text-12 text-t2">روال عادی</span>}</div></Card>
       </div>
 
-      <Card title={<span className="flex items-center gap-1.5"><MapPin size={15} />قیمت پیک ۲ ساعته بر اساس مقصد</span>} actions={<Button size="sm" icon={<Plus size={13} />} onClick={() => { const id = `z-${Date.now().toString(36)}`; set((x) => { x.zones.push({ id, name: 'مقصد تازه', kind: 'شهر', areas: '', price: f.price, cap: Math.round(f.price * 1.6), cost: Math.round(f.price * 0.65), on: true }) }, 'افزودن مقصد تحویل سریع'); setZid(id) }}>افزودن منطقه یا شهر</Button>} pad={false}>
-        <p className="px-4 pt-3 text-12 leading-5 text-t2">برای هر منطقهٔ تهران یا هر شهر اطراف، قیمت پایهٔ جدا بگذارید. افزایش ساعت پرترافیک، روز هفته، باران و افزایش موقت روی قیمت همان مقصد حساب می‌شود. مقصدی که اینجا نیست، قیمت پیش‌فرض ({toman(f.price)}) را می‌گیرد.</p>
+      <Card title={<span className="flex items-center gap-1.5"><MapPin size={15} />قیمت پیک ۲ ساعته بر اساس مقصد</span>} actions={<Button size="sm" icon={<Plus size={13} />} onClick={() => { const id = `z-${Date.now().toString(36)}`; set((x) => { x.zones.push({ id, name: 'مقصد تازه', kind: 'شهر', areas: '', price: f.price, cap: Math.round(f.price * 1.6), cost: Math.round(f.price * 0.65), on: true, mode: 'polygon', radiusKm: 8, color: ['#7c3aed', '#0e7490', '#be185d', '#4d7c0f'][x.zones.length % 4], poly: [] }) }, 'افزودن مقصد تحویل سریع'); setZid(id) }}>افزودن منطقه یا شهر</Button>} pad={false}>
+        <p className="px-4 pt-3 text-12 leading-5 text-t2">برای هر منطقهٔ تهران یا هر شهر اطراف، قیمت پایهٔ جدا بگذارید و مرزش را روی نقشهٔ پایین بکشید (یا شعاعی از انبار تعیین کنید). سبد خرید از روی پین مشتری، آنی تشخیص می‌دهد در کدام محدوده است. افزایش ساعت پرترافیک، روز هفته، باران و افزایش موقت روی قیمت همان مقصد حساب می‌شود. مقصدی که اینجا نیست، قیمت پیش‌فرض ({toman(f.price)}) را می‌گیرد.</p>
         <div className="overflow-x-auto p-3"><table className="w-full min-w-[820px] text-12">
-          <thead><tr className="text-right text-11 text-t2"><th className="px-2 py-1.5 font-medium">مقصد</th><th className="px-2 font-medium">نوع</th><th className="px-2 font-medium">محدوده (محله‌ها، شهرها)</th><th className="px-2 font-medium">قیمت پایه برای مشتری</th><th className="px-2 font-medium">سقف</th><th className="px-2 font-medium">هزینهٔ پیک برای ما</th><th className="px-2 font-medium">الان مشتری می‌بیند</th><th className="px-2 font-medium">فعال</th><th /></tr></thead>
+          <thead><tr className="text-right text-11 text-t2"><th className="px-2 py-1.5 font-medium">مقصد</th><th className="px-2 font-medium">نوع</th><th className="px-2 font-medium">محدوده (محله‌ها، شهرها)</th><th className="px-2 font-medium">قیمت پایه برای مشتری</th><th className="px-2 font-medium">سقف</th><th className="px-2 font-medium">هزینهٔ پیک برای ما</th><th className="px-2 font-medium">مرز روی نقشه</th><th className="px-2 font-medium">الان مشتری می‌بیند</th><th className="px-2 font-medium">فعال</th><th /></tr></thead>
           <tbody>{zones.map((x) => { const now = fastPrice(f, nowP.total, x); const mg = now - x.cost * (1 + nowP.total / 100); return (
             <tr key={x.id} className={cx('border-t border-line', zid === x.id && 'bg-brand-tint/40', !x.on && 'opacity-60')}>
               <td className="px-2 py-1.5"><Input aria-label="نام مقصد" className="h-8 w-32" value={x.name} onFocus={() => setZid(x.id)} onChange={(e) => setZ(x.id, (t) => { t.name = e.target.value }, 'تغییر نام مقصد تحویل سریع')} /></td>
@@ -66,11 +67,13 @@ export function FastCourier() {
               <td className="px-2"><Input aria-label={`قیمت پایهٔ ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.price} onChange={(e) => setZ(x.id, (t) => { t.price = Number(e.target.value) }, 'تغییر قیمت پایهٔ مقصد')} /></td>
               <td className="px-2"><Input aria-label={`سقف قیمت ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.cap} onChange={(e) => setZ(x.id, (t) => { t.cap = Number(e.target.value) }, 'تغییر سقف قیمت مقصد')} /></td>
               <td className="px-2"><Input aria-label={`هزینهٔ پیک ${x.name}`} type="number" step={10000} className="h-8 w-28" value={x.cost} onChange={(e) => setZ(x.id, (t) => { t.cost = Number(e.target.value) }, 'تغییر هزینهٔ پیک مقصد')} /></td>
+              <td className="px-2"><button type="button" onClick={() => setZid(x.id)} className={cx('flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-11', x.mode === 'radius' || x.poly.length > 2 ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning')}><span className="size-2 rounded-full" style={{ background: x.color }} />{x.mode === 'radius' ? `شعاع ${fa(x.radiusKm)} کیلومتر` : x.poly.length > 2 ? `مرز با ${fa(x.poly.length)} نقطه` : 'مرز ترسیم نشده'}</button></td>
               <td className="px-2"><b className="tnum text-brand">{toman(now)}</b><span className={cx('block text-[10px]', mg < 0 ? 'text-danger' : 'text-success')}>حاشیه {mg < 0 ? '−' : ''}{toman(Math.abs(mg))}</span></td>
               <td className="px-2"><Toggle on={x.on} label={`فعال بودن ${x.name}`} onChange={(v) => setZ(x.id, (t) => { t.on = v }, v ? 'فعال کردن تحویل سریع مقصد' : 'غیرفعال کردن تحویل سریع مقصد')} /></td>
               <td className="px-2"><button type="button" aria-label={`حذف ${x.name}`} className="grid size-7 place-items-center rounded text-t3 hover:bg-danger-bg hover:text-danger" onClick={() => { set((y) => { y.zones = y.zones.filter((q) => q.id !== x.id) }, 'حذف مقصد تحویل سریع', x.name); if (zid === x.id) setZid(zones.find((q) => q.id !== x.id)?.id ?? '') }}><Trash2 size={13} /></button></td>
             </tr>) })}</tbody>
         </table>{zones.length === 0 && <p className="py-4 text-center text-12 text-t2">هنوز مقصدی تعریف نشده؛ همهٔ سفارش‌ها قیمت پیش‌فرض را می‌گیرند.</p>}</div>
+        <FastZoneMap f={f} zid={zid} setZid={setZid} set={set} priceOf={(x) => fastPrice(f, nowP.total, x)} />
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">

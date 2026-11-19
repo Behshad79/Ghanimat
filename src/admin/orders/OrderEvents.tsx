@@ -8,6 +8,7 @@ import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB, Order } from '@/shared/data/seed'
 import type { OrderEvent } from '@/shared/data/orderEvents'
 import { StartDecision } from './Decision'
+import { applyRestock, restockLabel, RestockChoice, type RestockMode } from './Restock'
 
 const KIND: Record<OrderEvent['kind'], { label: string; icon: typeof BellRing; cls: string }> = {
   cancel: { label: 'درخواست لغو', icon: CircleX, cls: 'border-danger/40 bg-danger-bg/60' },
@@ -60,18 +61,21 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
   const d = useDB(); const c = d.customers.find((x) => x.id === o.customerId); const L = lines(o).filter((l) => !['ship.delivered', 'ship.cancelled'].includes(l.s.status))
   const e = ev && ev !== 'admin' ? ev : null
   const [scope, setScope] = useState<string>(e?.payload?.scope === 'کل سفارش' ? 'all' : L[0]?.key ?? 'all'); const [to, setTo] = useState(e?.payload?.refundTo ?? 'کیف پول')
+  const [restock, setRestock] = useState<RestockMode>('site')
   const byUs = !e; const [apology, setApology] = useState('متأسفیم؛ این کالا در انبار به دستمان نرسید و مجبور شدیم سفارش را لغو کنیم.'); const [giveCode, setGiveCode] = useState(true); const [codeAmt, setCodeAmt] = useState('500000'); const [codeDays, setCodeDays] = useState('14'); const [notifyMe, setNotifyMe] = useState(true)
   const amount = scope === 'all' ? L.reduce((a, l) => a + l.it.price * l.it.qty, 0) : (L.find((l) => l.key === scope)?.it.price ?? 0) * (L.find((l) => l.key === scope)?.it.qty ?? 1)
   const go = async () => {
     const why = e ? e.body.slice(0, 80) : await askReason({ kind: 'cancel', ref: o.id, status: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', title: 'دلیل لغو (برای مشتری و سوابق)' }); if (!why) return
     mutate((x) => {
       const oo = x.orders.find((y) => y.id === o.id)!
+      const back = oo.shipments.flatMap((s) => s.status === 'ship.delivered' ? [] : s.items.map((it, i) => ({ it, warehouse: s.warehouse, key: `${s.id}|${i}` }))).filter((r) => !r.it.cancelled && (scope === 'all' || r.key === scope))
+      applyRestock(x, back, restock)
       if (scope === 'all') { oo.status = 'order.cancelled'; oo.shipments.forEach((s) => { if (s.status !== 'ship.delivered') s.status = 'ship.cancelled' }) }
       else { const [sid, idx] = scope.split('|'); const sh = oo.shipments.find((s) => s.id === sid)!; const it = sh.items[Number(idx)]; it.cancelled = true; it.cancelBy = byUs ? 'غنیمت' : 'مشتری'; if (sh.items.every((i) => i.cancelled)) sh.status = 'ship.cancelled'; oo.total -= amount; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }
       const code = byUs && giveCode ? { code: `GH${o.id.slice(-4)}${Math.random().toString(36).slice(2, 5).toUpperCase()}`, amount: Number(codeAmt) || 0, until: new Date(Date.now() + (Number(codeDays) || 14) * 864e5).toISOString() } : undefined
       oo.cancelInfo = { by: byUs ? 'غنیمت' : 'مشتری', reason: why, at: new Date().toISOString(), amount, to, refund: to === 'کیف پول' ? 'بازگشت داده شد' : 'در جریان', refundAt: to === 'کیف پول' ? new Date().toISOString() : undefined, apology: byUs ? apology : undefined, code, notify: byUs && notifyMe, partial: scope !== 'all' }
       if (to === 'کیف پول') x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم' })
-    }, { action: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم سفارش', target: o.id, after: `${toman(amount)} به ${to} · ${why}` })
+    }, { action: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم سفارش', target: o.id, after: `${toman(amount)} به ${to} · ${why} · ${restockLabel(restock)}` })
     if (c) sendSms(c.mobile, `غنیمت: ${byUs ? `${apology} ` : ''}${scope === 'all' ? `سفارش ${o.id} لغو شد` : `یک قلم از سفارش ${o.id} لغو شد`} و ${toman(amount)} به ${to} برمی‌گردد.${byUs && giveCode ? ` کد تخفیف ${toman(Number(codeAmt) || 0)} برای خرید بعدی در پنل شماست.` : ''}`, 'وضعیت سفارش', o.id, c.id)
     onDone(e, scope === 'all' ? `سفارش لغو شد؛ ${toman(amount)} به ${to}` : `قلم لغو شد؛ ${toman(amount)} به ${to}`)
     toast(`${scope === 'all' ? 'سفارش' : 'قلم'} لغو شد. ${toman(amount)} ${to === 'کیف پول' ? 'به کیف پول مشتری واریز شد' : `به ${to} در صف بازگشت است`} و پیامک رفت.`); onClose()
@@ -80,6 +84,7 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
     <Modal open={!!ev} onClose={onClose} title={e ? `رسیدگی به «${e.title}»` : `لغو در سفارش ${o.id}`} footer={<><Button variant="danger" onClick={() => void go()}>تأیید لغو و بازگشت {toman(amount)}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
       <div className="space-y-3">
         <Field label="چه چیزی لغو شود؟"><Select value={scope} onChange={setScope} options={[['all', `کل سفارش (${fa(L.length)} قلم)`], ...L.map((l) => [l.key, `${d.products.find((p) => p.id === l.it.productId)?.title ?? l.it.productId} · ${toman(l.it.price)} · ${l.s.id}`] as [string, string])]} /></Field>
+        <RestockChoice value={restock} onChange={setRestock} />
         <Field label="بازگشت وجه به"><Select value={to} onChange={setTo} options={['کیف پول', 'کارت بانکی', 'همان روش پرداخت']} /></Field>
         {!e && <div className="space-y-2 rounded-xl border border-line p-3"><p className="text-12 font-semibold">لغو از طرف غنیمت (مشتری در «سفارش‌های لغوشده» می‌بیند)</p>
           <Field label="پیام عذرخواهی برای مشتری"><Input value={apology} onChange={(ev2) => setApology(ev2.target.value)} /></Field>

@@ -11,27 +11,36 @@ export const STEPS = ['ثبت سفارش', 'آماده‌سازی', 'در حال
 export const PICKUP_STEPS = ['ثبت سفارش', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] as const
 export const stepOf = (s: Shipment) => ['ship.delivered'].includes(s.status) ? 3 : ['ship.handed', 'ship.in_transit', 'ship.pickup_ready'].includes(s.status) ? 2 : ['ship.picking', 'ship.packed'].includes(s.status) ? 1 : 0
 
-/** پلاک خودروی ایرانی: دو رقم، حرف، سه رقم، کد استان */
+const toEn = (t: string) => t.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g, (c) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))
+const faN = (t: string) => t.replace(/\d/g, (c) => '۰۱۲۳۴۵۶۷۸۹'[+c])
+/** پلاک ایرانی: خودرو «۱۲ ب ۳۴۵ ایران ۶۷» یا موتورسیکلت «موتور ۱۲۳-۴۵۶۷۸» (کد شهر بالا، شماره پایین) */
 export function Plate({ v }: { v: string }) {
-  const m = v.match(/^(\S{2})\s*(\S)\s*(\S{3})\s*ایران\s*(\S{2})$/)
+  const e = toEn(v ?? '').trim()
+  const moto = e.match(/^موتور\s*(\d{3})\s*-?\s*(\d{5})$/)
+  if (moto) return <span dir="ltr" title="پلاک موتورسیکلت" className="inline-flex flex-col items-stretch overflow-hidden rounded-md border-2 border-[#10123d] bg-white text-center font-bold leading-4 text-[#10123d]"><span className="border-b-2 border-[#10123d] px-2 text-12 tracking-widest">{faN(moto[1])}</span><span className="px-2 text-13 tracking-widest">{faN(moto[2])}</span></span>
+  const m = e.match(/^(\d{2})\s*(\S+)\s*(\d{3})\s*ایران\s*(\d{2})$/)
   if (!m) return <span className="rounded-md border border-line px-2 py-0.5 text-12">{v || 'پلاک ثبت نشده'}</span>
-  return <span dir="ltr" className="inline-flex items-stretch overflow-hidden rounded-md border-2 border-[#10123d] bg-white text-13 font-bold text-[#10123d]"><span className="bg-[#0b3fbd] px-1 text-[8px] leading-6 text-white">IR</span><span className="px-1.5 leading-6">{m[1]}</span><span className="px-1 leading-6">{m[2]}</span><span className="px-1.5 leading-6">{m[3]}</span><span className="flex flex-col border-l-2 border-[#10123d] px-1 text-center text-[8px] leading-3"><span>ایران</span><b className="text-11">{m[4]}</b></span></span>
+  return <span dir="ltr" style={{ direction: 'ltr' }} title="پلاک خودرو" className="ltr inline-flex flex-row items-stretch overflow-hidden rounded-md border-2 border-[#10123d] bg-white text-13 font-bold text-[#10123d]"><span className="bg-[#0b3fbd] px-1 text-[8px] leading-6 text-white">IR</span><span className="px-1.5 leading-6">{faN(m[1])}</span><span className="px-1 leading-6">{m[2]}</span><span className="px-1.5 leading-6">{faN(m[3])}</span><span className="flex flex-col border-l-2 border-[#10123d] px-1 text-center text-[8px] leading-3"><span>ایران</span><b className="text-11">{faN(m[4])}</b></span></span>
 }
+const VEHICLES: [string, string][] = [['موتور', 'موتورسیکلت'], ['سواری', 'خودروی سواری'], ['وانت', 'وانت']]
+/** پلاک از ورودی‌ها؛ برای موتور: کد شهر ۳ رقم + شماره ۵ رقم، برای خودرو: ۲ رقم + حرف + ۳ رقم + کد استان ۲ رقم */
+const plateOf = (f: { veh: string; p1: string; l: string; p2: string; r: string; m1: string; m2: string }) => (f.veh === 'موتور' ? `موتور ${f.m1}-${f.m2}` : `${f.p1} ${f.l} ${f.p2} ایران ${f.r}`)
+const plateOk = (f: { veh: string; p1: string; p2: string; r: string; m1: string; m2: string }) => (f.veh === 'موتور' ? /^\d{3}$/.test(f.m1) && /^\d{5}$/.test(f.m2) : /^\d{2}$/.test(f.p1) && /^\d{3}$/.test(f.p2) && /^\d{2}$/.test(f.r))
 const COMPANIES = ['اسنپ‌باکس', 'الوپیک', 'تیپاکس', 'پست پیشتاز']
 const LETTERS = ['الف', 'ب', 'پ', 'ت', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی', 'ژ']
 
 /** نمای همان چیزی که مشتری در «سفارش‌های جاری» می‌بیند + ثبت مأمور ارسال و پلاک */
 export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
   const d = useDB(); const c = d.customers.find((x) => x.id === o.customerId); const step = stepOf(s); const pickup = /حضوری/.test(s.method); const pu = d.pickups.find((x) => x.orderId === o.id); const post = /پست|تیپاکس|باربری/.test(s.method); const [trk, setTrk] = useState(false); const [chg, setChg] = useState(false)
-  const [edit, setEdit] = useState(false); const [f, setF] = useState({ company: s.courier?.company ?? (/اسنپ/.test(s.method) ? 'اسنپ‌باکس' : 'الوپیک'), name: s.courier?.name ?? '', phone: s.courier?.phone ?? '', p1: '', l: 'ب', p2: '', r: '', url: s.trackingUrl ?? '' }); const [reading, setReading] = useState(false)
+  const [edit, setEdit] = useState(false); const [f, setF] = useState({ company: s.courier?.company ?? (/اسنپ/.test(s.method) ? 'اسنپ‌باکس' : 'الوپیک'), name: s.courier?.name ?? '', phone: s.courier?.phone ?? '', ...(() => { const e = toEn(s.courier?.plate ?? ''); const mo = e.match(/^موتور\s*(\d{3})\s*-?\s*(\d{5})$/); const ca = e.match(/^(\d{2})\s*(\S+)\s*(\d{3})\s*ایران\s*(\d{2})$/); return { veh: s.courier?.vehicle && VEHICLES.some(([k]) => k === s.courier?.vehicle) ? s.courier.vehicle : 'موتور', p1: ca?.[1] ?? '', l: ca?.[2] ?? 'ب', p2: ca?.[3] ?? '', r: ca?.[4] ?? '', m1: mo?.[1] ?? '', m2: mo?.[2] ?? '' } })(), url: s.trackingUrl ?? '' }); const [reading, setReading] = useState(false)
   // خواندن اطلاعات مأمور از لینک رصد سفر (اسنپ‌باکس، الوپیک، تپسی‌باکس)؛ نتیجه قابل اصلاح دستی است
   const readLink = async () => { const u = f.url.trim(); const prov = /snapp/i.test(u) ? 'اسنپ‌باکس' : /alopeyk/i.test(u) ? 'الوپیک' : /tapsi/i.test(u) ? 'تپسی‌باکس' : ''; if (!/^https?:\/\//.test(u) || !prov) return toast('لینک رصد اسنپ‌باکس، الوپیک یا تپسی‌باکس را کامل بچسبانید.', { tone: 'err' }); setReading(true); try { await fakeCall(true, 900); const h = [...u].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 99991, 7); const names = ['محمد نوری', 'رضا احمدی', 'علی کریمی', 'حسین رستمی', 'مهدی صالحی']; setF((x) => ({ ...x, company: prov, name: names[h % names.length], phone: `0912${String(1000000 + (h * 37) % 8999999)}`, p1: String(10 + (h % 89)), l: LETTERS[h % LETTERS.length], p2: String(100 + (h % 899)), r: String(10 + (h % 89)) })); toast(`اطلاعات مأمور از لینک ${prov} خوانده شد. بررسی کنید و اگر لازم بود اصلاح کنید.`) } catch { toast('لینک خوانده نشد؛ اطلاعات را دستی وارد کنید.', { tone: 'err' }) } finally { setReading(false) } }
   const slot = (s as Shipment & { slot?: string }).slot
   const save = () => {
     const rc = d.bank.receipts.find((r) => r.orderId === o.id)
     if (o.pay === 'کارت به کارت' && rc?.status !== 'تطبیق شد') return toast('رسید کارت به کارت این سفارش هنوز با واریز بانک تطبیق نشده است؛ ارسال قفل است.', { tone: 'err' })
-    const plate = `${f.p1} ${f.l} ${f.p2} ایران ${f.r}`
-    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.courier = { ...(sh.courier ?? { vehicle: 'موتور', eta: 30, code: '', cost: 0 }), name: f.name, phone: f.phone, plate, company: f.company } as Shipment['courier']; if (f.url.trim()) sh.trackingUrl = f.url.trim(); if (stepOf(sh) < 2) sh.status = 'ship.handed' }, { action: 'ثبت مأمور ارسال و پلاک', target: s.id, after: plate })
+    const plate = plateOf(f)
+    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.courier = { ...(sh.courier ?? { vehicle: 'موتور', eta: 30, code: '', cost: 0 }), vehicle: f.veh, name: f.name, phone: f.phone, plate, company: f.company } as Shipment['courier']; if (f.url.trim()) sh.trackingUrl = f.url.trim(); if (stepOf(sh) < 2) sh.status = 'ship.handed' }, { action: 'ثبت مأمور ارسال و پلاک', target: s.id, after: plate })
     if (c) sendSms(c.mobile, `غنیمت: مرسولهٔ ${s.id} در راه است. ${f.company}: ${f.name}، پلاک ${plate}.${f.url.trim() ? ` رصد زنده: ${f.url.trim()}` : ''}`, 'وضعیت سفارش', o.id, c.id)
     setEdit(false); toast('مأمور ارسال ثبت شد؛ نوار پیشرفت مشتری روی «در حال ارسال» رفت و پیامک ارسال شد.')
   }
@@ -51,15 +60,18 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
       </div>
       <PostTracking open={trk} onClose={() => setTrk(false)} o={o} s={s} />
       <ChangeMethod open={chg} onClose={() => setChg(false)} o={o} s={s} />
-      <Modal open={edit} onClose={() => setEdit(false)} title={`مأمور ارسال مرسولهٔ ${s.id}`} footer={<Button variant="primary" disabled={!f.name || !/^\d{2}$/.test(f.p1) || !/^\d{3}$/.test(f.p2) || !/^\d{2}$/.test(f.r)} onClick={save}>ثبت و اطلاع به مشتری</Button>}>
+      <Modal open={edit} onClose={() => setEdit(false)} title={`مأمور ارسال مرسولهٔ ${s.id}`} footer={<Button variant="primary" disabled={!f.name || !plateOk(f)} onClick={save}>ثبت و اطلاع به مشتری</Button>}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2 rounded-xl border border-dashed border-brand/40 bg-brand-tint/40 p-3"><Field label="لینک رصد سفر (اختیاری)" help="لینک اسنپ‌باکس، الوپیک یا تپسی‌باکس را بچسبانید تا اطلاعات مأمور خودکار پر شود. همین لینک در پنل مشتری با دکمهٔ «رصد زندهٔ پیک» نمایش داده می‌شود."><div className="flex gap-2"><Input className="ltr text-left" placeholder="https://box.snapp.ir/track/..." value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /><Button loading={reading} onClick={() => void readLink()}>خواندن از لینک</Button></div></Field></div>
           <Field label="شرکت ارسال"><Select value={f.company} onChange={(v) => setF({ ...f, company: v })} options={COMPANIES} /></Field>
           <Field label="نام مأمور"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
           <Field label="موبایل مأمور"><Input className="ltr text-left" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
-          <Field label="پلاک" help="دو رقم، حرف، سه رقم، کد استان"><div className="flex items-center gap-1" dir="ltr"><Input aria-label="دو رقم" className="w-14 text-center" maxLength={2} value={f.p1} onChange={(e) => setF({ ...f, p1: e.target.value.replace(/\D/g, '') })} /><Select className="w-20" value={f.l} onChange={(v) => setF({ ...f, l: v })} options={LETTERS} /><Input aria-label="سه رقم" className="w-16 text-center" maxLength={3} value={f.p2} onChange={(e) => setF({ ...f, p2: e.target.value.replace(/\D/g, '') })} /><span className="text-12">ایران</span><Input aria-label="کد استان" className="w-14 text-center" maxLength={2} value={f.r} onChange={(e) => setF({ ...f, r: e.target.value.replace(/\D/g, '') })} /></div></Field>
+          <Field label="وسیلهٔ مأمور"><Select value={f.veh} onChange={(v) => setF({ ...f, veh: v })} other={false} options={VEHICLES} /></Field>
+          {f.veh === 'موتور'
+            ? <Field label="پلاک موتورسیکلت" help="بالا: کد شهر (۳ رقم) · پایین: شماره (۵ رقم)"><div className="inline-flex flex-col items-center gap-1 rounded-lg border-2 border-[#10123d] p-1.5" dir="ltr"><Input aria-label="کد شهر پلاک موتور" inputMode="numeric" className="w-20 text-center font-mono" maxLength={3} value={f.m1} onChange={(e) => setF({ ...f, m1: toEn(e.target.value).replace(/\D/g, '') })} /><Input aria-label="شماره پلاک موتور" inputMode="numeric" className="w-28 text-center font-mono" maxLength={5} value={f.m2} onChange={(e) => setF({ ...f, m2: toEn(e.target.value).replace(/\D/g, '') })} /></div></Field>
+            : <div className="sm:col-span-2"><Field label="پلاک خودرو" help="دو رقم، حرف، سه رقم، کد استان (ایران)"><div className="ltr flex flex-wrap items-center gap-1" dir="ltr"><Input aria-label="دو رقم پلاک" inputMode="numeric" className="w-14 text-center font-mono" maxLength={2} value={f.p1} onChange={(e) => setF({ ...f, p1: toEn(e.target.value).replace(/\D/g, '') })} /><Select className="w-20" value={f.l} onChange={(v) => setF({ ...f, l: v })} options={LETTERS} other={false} /><Input aria-label="سه رقم پلاک" inputMode="numeric" className="w-16 text-center font-mono" maxLength={3} value={f.p2} onChange={(e) => setF({ ...f, p2: toEn(e.target.value).replace(/\D/g, '') })} /><span className="text-12">ایران</span><Input aria-label="کد استان پلاک" inputMode="numeric" className="w-14 text-center font-mono" maxLength={2} value={f.r} onChange={(e) => setF({ ...f, r: toEn(e.target.value).replace(/\D/g, '') })} /></div></Field></div>}
         </div>
-        {f.p1 && f.p2 && f.r && <div className="mt-3"><Plate v={`${f.p1} ${f.l} ${f.p2} ایران ${f.r}`} /></div>}
+        {plateOk(f) && <div className="mt-3 flex items-center gap-2 text-12 text-t2">پیش‌نمایش برای مشتری:<Plate v={plateOf(f)} /></div>}
         
       </Modal>
     </div>

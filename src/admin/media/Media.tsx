@@ -8,6 +8,7 @@ import { RowMenu } from '@/shared/ui/menu'
 import { currentUser, getDB, mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 import { ACCEPT, assess, editImage, GUIDE, kb, processImage, readFile, type EditOpts, type MediaItem, type ProcessOpts, type SquareMode } from '@/shared/lib/media'
+import { RemoteUpload } from '../shared/RemoteUpload'
 
 type Staged = { key: string; file: string; src: string; w: number; h: number; size: number; type: string; alt: string }
 const me = () => currentUser()?.name ?? 'بهشاد'
@@ -39,7 +40,7 @@ function Uploader({ onDone }: { onDone?: (items: MediaItem[]) => void }) {
   return (
     <div onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files) }} className={cx('rounded-2xl border-2 border-dashed p-4 transition-colors', drag ? 'border-brand bg-brand-tint/40' : 'border-line')}>
       <input ref={input} type="file" accept={ACCEPT} multiple className="sr-only" aria-label="انتخاب تصویر" onChange={(e) => { add(e.target.files); e.target.value = '' }} />
-      {!st.length ? <div className="py-4 text-center"><p className="text-14 font-semibold">تصویر خود را برای بارگذاری انتخاب کنید</p><p className="mt-1 text-12 text-t2">(فرمت‌های مجاز: JPG، PNG، WEBP، GIF، SVG) · حداکثر {kb(GUIDE.maxUpload)} برای هر فایل · امکان انتخاب گروهی</p><Button className="mt-3" icon={<Upload size={14} />} onClick={() => input.current?.click()}>انتخاب تصویر</Button></div>
+      {!st.length ? <div className="py-4 text-center"><p className="text-14 font-semibold">تصویر خود را برای بارگذاری انتخاب کنید</p><p className="mt-1 text-12 text-t2">(فرمت‌های مجاز: JPG، PNG، WEBP، GIF، SVG) · حداکثر {kb(GUIDE.maxUpload)} برای هر فایل · امکان انتخاب گروهی</p><div className="mt-3 flex flex-wrap items-center justify-center gap-2"><Button icon={<Upload size={14} />} onClick={() => input.current?.click()}>انتخاب تصویر</Button><RemoteUpload target="media" label="کتابخانهٔ رسانه" sample={d.products.map((p) => p.image).filter(Boolean)} onReceive={(srcs, source) => { if (!srcs.length) return; const made: MediaItem[] = srcs.map((src, i) => ({ id: `M-${Date.now().toString(36)}${i}`, src, name: `${source === 'گوشی' ? 'phone' : 'cloud'}-${Date.now().toString(36)}${i}.webp`, alt: '', w: 500, h: 500, size: 30000, type: 'webp', by: `${me()} (${source})`, at: new Date().toISOString(), optimized: true })); mutate((x) => { x.media.unshift(...made) }, { action: `بارگذاری از ${source} در کتابخانهٔ رسانه`, target: `${fa(made.length)} تصویر` }); onDone?.(made) }} /></div></div>
         : <>
           <ul className="flex flex-wrap gap-3">{st.map((s, i) => { const a = assess(s.w, s.h, s.size); return <li key={s.key} className="w-44 rounded-xl border border-line bg-surface p-2">
             <div className="relative"><img src={s.src} alt="" className="aspect-square w-full rounded-lg bg-white object-contain" /><button type="button" aria-label={`حذف ${s.file}`} onClick={() => setSt(st.filter((_, j) => j !== i))} className="absolute top-1 right-1 grid size-6 place-items-center rounded-md bg-danger-solid text-white"><X size={13} /></button></div>

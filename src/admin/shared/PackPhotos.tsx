@@ -5,6 +5,7 @@ import { Modal, toast } from '@/shared/ui/overlay'
 import { currentUser, mutate, useDB } from '@/shared/lib/store'
 import { fileToImage } from '@/shared/lib/image'
 import { fa, rel } from '@/shared/lib/fa'
+import { RemoteUpload } from './RemoteUpload'
 
 /** عکس پیش از ارسال: از کالا و بستهٔ بازِ هر مرسوله عکس گرفته و بایگانی می‌شود تا در مرجوعی، کالای دیگری پس داده نشود */
 export function PackPhotos({ orderId, shipId, big, readOnly }: { orderId: string; shipId: string; big?: boolean; readOnly?: boolean }) {
@@ -34,6 +35,7 @@ export function PackPhotos({ orderId, shipId, big, readOnly }: { orderId: string
         {!readOnly && <label className={cx('flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-brand/50 bg-brand-tint/40 text-11 font-medium text-brand transition-colors hover:border-brand', size)}>
           <Camera size={big ? 22 : 16} />عکس<input type="file" accept="image/*" capture="environment" multiple className="sr-only" onChange={(e) => { add(e.target.files); e.target.value = '' }} />
         </label>}
+        {!readOnly && <RemoteUpload compact={!big} target={shipId} label={`مرسولهٔ ${shipId}`} sample={s.items.map((i) => d.products.find((p) => p.id === i.productId)?.image ?? '').filter(Boolean)} onReceive={(srcs, source) => { if (!srcs.length) return; const by = `${currentUser()?.name ?? 'کاربر'} (${source})`; mutate((x) => { const t = x.orders.find((o) => o.id === orderId)!.shipments.find((y) => y.id === shipId)!; t.packPhotos = [...(t.packPhotos ?? []), ...srcs.map((src) => ({ src, at: new Date().toISOString(), by }))] }, { action: `ثبت عکس پیش از ارسال از ${source}`, target: `${shipId} (${srcs.length} عکس)` }) }} />}
       </div>
       {!photos.length && <p className="mt-1 text-11 text-t2">{readOnly ? 'عکسی پیش از ارسال ثبت نشده است.' : 'پیش از تحویل، از کالا، سریال و بستهٔ باز عکس بگیرید.'}</p>}
       <Modal open={!!zoom} onClose={() => setZoom(null)} title={<span className="flex items-center gap-1"><ZoomIn size={15} />عکس پیش از ارسال · {shipId}</span>} wide>{zoom && <img src={zoom} alt="" className="mx-auto max-h-[70vh] rounded-lg" />}</Modal>

@@ -19,6 +19,7 @@ import { PackPhotos } from '../shared/PackPhotos'
 import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
 import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
+import { ChangeHistory, RollbackShip } from '../orders/History'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -229,12 +230,15 @@ export function OrderDetail() {
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <Button variant="primary" onClick={() => advance(s.id, 'ship.delivered', 'ثبت تحویل')}>ثبت تحویل</Button>}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
                     <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
+                    <RollbackShip o={o} sid={s.id} />
                     <Button variant="danger" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button>
                   </div>
                 </div>
               )}
+              {s.status === 'ship.delivered' && <div className="flex justify-end"><RollbackShip o={o} sid={s.id} /></div>}
             </Card>) })}
           <Card title="تاریخچه و یادداشت‌ها">
+            <ChangeHistory o={o} />
             <Timeline items={[
               ...d.audit.filter((a) => a.target.startsWith(o.id)).map((a) => ({ at: a.at, who: a.who, text: <>{a.action}{a.after !== '-' && <>: <b>{a.after}</b></>}</>, tone: a.ai ? 'ai' as const : 'ok' as const })),
               { at: o.createdAt, who: 'سیستم', text: `پیامک «سفارش شما ثبت شد» برای مشتری ارسال شد.` },

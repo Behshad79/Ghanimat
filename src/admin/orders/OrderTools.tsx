@@ -5,6 +5,7 @@ import { Badge, Button, cx, Field, Input, Segmented, Select, Textarea, Toggle } 
 import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
 import { getDB, mutate, snapshot, useDB, currentUser, sendSms } from '@/shared/lib/store'
 import { WAREHOUSE } from '@/shared/data/statuses'
+import { SHIPPED } from './History'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
 import { ProductImg, useQuickChips } from '../pages/_shared'
@@ -78,7 +79,7 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
   const [settle, setSettle] = useState('')
   useMemo(() => { setDraft(o ? { ...structuredClone(o), shipTo: o.shipTo ?? addrText(c?.addr as any), receiver: o.receiver ?? { name: o.buyer === 'legal' ? '' : c?.name ?? '', mobile: c?.mobile ?? '' } } : null); setReason(''); setSmsEdit(null); setSettle('') }, [o?.id])
   if (!o || !draft) return null
-  const editable = (sid: string) => !['ship.shipped', 'ship.in_transit', 'ship.delivered', 'ship.cancelled', 'ship.returned'].includes(draft.shipments.find((s) => s.id === sid)?.status ?? '')
+  const editable = (sid: string) => !SHIPPED.includes(draft.shipments.find((s) => s.id === sid)?.status ?? '')
   const live = (x: Order) => x.shipments.flatMap((s) => s.items.filter((i) => !i.cancelled))
   const sum = (x: Order) => x.shipments.reduce((a, s) => a + s.items.filter((i) => !i.cancelled).reduce((b, i) => b + i.price * i.qty, 0) + (s.shipFee ?? 0), 0) - (x.discount ?? 0)
   const diff = sum(draft) - sum(o)
@@ -124,7 +125,7 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
       if (diff < 0 && how === 'بازگشت به کیف پول') { x.customers.find((cc) => cc.id === o.customerId)!.wallet += -diff; x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount: -diff, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: 'ویرایش سفارش' }) }
       next.notes = [...(next.notes ?? []), { id: `N-${Date.now().toString(36)}`, at: new Date().toISOString(), by: who, src: NOTE_SRC[src], text: `ویرایش سفارش (${src}): ${reason.trim()} · ${changes.join('؛ ')}` }]
       if (diff > 0 && (how.startsWith('ارسال لینک') || how.startsWith('کارت به کارت'))) next.payHold = { amount: diff + (o.payHold?.status === 'pending' ? o.payHold.amount : 0), method: how.startsWith('ارسال لینک') ? 'لینک پرداخت' : 'کارت به کارت', at: new Date().toISOString(), by: who, status: 'pending' }
-      next.edits = [...(next.edits ?? []), { at: new Date().toISOString(), by: who, src, reason: reason.trim(), changes, diff, settle: diff ? how : undefined, sms }]
+      next.edits = [...(next.edits ?? []), { at: new Date().toISOString(), by: who, src, reason: reason.trim(), changes, diff, settle: diff ? how : undefined, sms, prev: JSON.stringify({ ...cur, edits: undefined, rollbacks: undefined, notes: undefined }) }]
       x.orders[x.orders.findIndex((y) => y.id === o.id)] = next
     }, { action: 'ویرایش سفارش', target: o.id, before: toman(sum(o)), after: `${toman(sum(draft))} · ${changes.join('؛ ')}` })
     if (sms && c) sendSms(c.mobile, smsText, 'وضعیت سفارش', o.id, c.id)
@@ -134,6 +135,7 @@ export function OrderEdit({ o, onClose }: { o: Order | null; onClose: () => void
   return (
     <Drawer open onClose={onClose} width={680} title={`ویرایش سفارش ${o.id}`} footer={<><Button variant="primary" onClick={() => void save()}>ثبت تغییرها{changes.length ? ` (${fa(changes.length)})` : ''}{diff ? ` · ${diff > 0 ? '+' : '−'}${toman(Math.abs(diff))}` : ''}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
       <div className="space-y-4">
+        {draft.shipments.every((s) => !editable(s.id)) && <p className="rounded-xl bg-warning-bg px-3 py-2 text-12 text-warning">همهٔ مرسوله‌های این سفارش به پیک یا پست تحویل شده‌اند؛ اقلام، قیمت و ارسال دیگر قابل تغییر نیست. در موارد بحرانی، مدیر کل می‌تواند از کارت مرسوله وضعیت را به مرحلهٔ قبل برگرداند.</p>}
         <div className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-2">
           <Field label="درخواست از کجا آمد؟"><Select value={src} other={false} onChange={setSrc} options={SRC.map((x) => [x, x] as [string, string])} /></Field>
           <Field label="دلیل یا توضیح (برای سوابق)"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="مثلاً مشتری تلفنی رنگ را عوض کرد" /></Field>

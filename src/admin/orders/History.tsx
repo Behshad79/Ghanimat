@@ -58,13 +58,12 @@ export function ChangeHistory({ o }: { o: Order }) {
   const last = rows.find((r) => !r.undone)
   const undo = async (r: Row) => {
     if (!isChief()) return toast('واگرد سوابق فقط برای مدیر کل است.', { tone: 'err' })
-    if (!(await confirm({ title: 'واگرد این تغییر؟', body: r.kind === 'edit' ? 'سفارش به حالت پیش از این ویرایش برمی‌گردد (اقلام، قیمت‌ها، ارسال، نشانی). اگر وجهی به کیف پول برگشته بود، از کیف پول کسر می‌شود.' : 'وضعیت مرسوله، کد رهگیری و اطلاعات پیک به حالت پیش از برگرداندن بازمی‌گردد.', confirm: 'واگرد' }))) return
+    if (!(await confirm({ title: 'واگرد این تغییر؟', body: r.kind === 'edit' ? 'سفارش به حالت پیش از این ویرایش برمی‌گردد (اقلام، قیمت‌ها، ارسال، نشانی). پرونده‌های بازگشت وجهِ این ویرایش در کارت «بازگشت وجه» می‌مانند و جداگانه رسیدگی می‌شوند.' : 'وضعیت مرسوله، کد رهگیری و اطلاعات پیک به حالت پیش از برگرداندن بازمی‌گردد.', confirm: 'واگرد' }))) return
     const who = currentUser()?.name ?? 'مدیر کل'
     mutate((x) => {
       const idx = x.orders.findIndex((y) => y.id === o.id); const cur = x.orders[idx]
       if (r.kind === 'edit') {
         const e = cur.edits![r.i]; const prev = JSON.parse(e.prev ?? 'null') as Order | null; if (!prev) return
-        if (e.diff < 0 && e.settle === 'بازگشت به کیف پول') { const cc = x.customers.find((c) => c.id === cur.customerId); if (cc) cc.wallet -= -e.diff }
         e.undone = { at: new Date().toISOString(), by: who }
         x.orders[idx] = { ...prev, edits: cur.edits, rollbacks: cur.rollbacks, notes: cur.notes }
       } else {

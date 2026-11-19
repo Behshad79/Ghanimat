@@ -29,7 +29,7 @@ import { WAREHOUSE } from '@/shared/data/statuses'
 import type { Order } from '@/shared/data/seed'
 import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from './_shared'
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../orders/Restock'
-import { createRefund, RefundPanel } from '../orders/Refunds'
+import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
@@ -163,7 +163,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
 export function OrderDetail() {
   const { id } = useParams(); const { d, customer, product, unit, rule } = useLookup(); const nav = useNavigate()
   const [refund, setRefund] = useState(false); const [amount, setAmount] = useState(''); const [dest, setDest] = useState('کیف پول')
-  const [cancelSh, setCancelSh] = useState<{ sid: string; total: number } | null>(null); const [restock, setRestock] = useState<RestockMode>('site')
+  const [cancelSh, setCancelSh] = useState<{ sid: string; total: number } | null>(null); const [restock, setRestock] = useState<RestockMode>('site'); const [rdest, setRdest] = useState('کیف پول'); const [racct, setRacct] = useState('')
   const [editOpen, setEditOpen] = useState(false); const [addrOpen, setAddrOpen] = useState(false); const [msg, setMsg] = useState<string | null>(null)
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
@@ -171,13 +171,13 @@ export function OrderDetail() {
   const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
   const advance = (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
-  const cancelShip = (sid: string, total: number) => { setRestock('site'); setCancelSh({ sid, total }) }
+  const cancelShip = (sid: string, total: number) => { setRestock('site'); setRdest('کیف پول'); setRacct(''); setCancelSh({ sid, total }) }
   const doCancelShip = async () => {
     if (!cancelSh) return; const { sid, total } = cancelSh
     if (!(await askReason({ kind: 'order', ref: o.id, status: `لغو مرسولهٔ ${sid}`, title: 'دلیل لغو (برای مشتری)' }))) return
     const undo = snapshot()
-    mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; const sh = oo.shipments.find((s) => s.id === sid)!; applyRestock(db, sh.items.filter((it) => !it.cancelled).map((it) => ({ it, warehouse: sh.warehouse })), restock); createRefund(db, { orderId: o.id, customerId: o.customerId, amount: total, source: 'لغو مرسوله', dest: dest === 'کیف پول' ? 'کیف پول' : 'همان روش پرداخت' }); sh.status = 'ship.cancelled'; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }, { action: 'لغو مرسوله', target: sid, after: `${toman(total)} · ${restockLabel(restock)}` })
-    toast(`مرسولهٔ ${sid} لغو شد؛ ${restockLabel(restock)}.`, { undo }); setCancelSh(null)
+    mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; const sh = oo.shipments.find((s) => s.id === sid)!; applyRestock(db, sh.items.filter((it) => !it.cancelled).map((it) => ({ it, warehouse: sh.warehouse })), restock); createRefund(db, { orderId: o.id, customerId: o.customerId, amount: total, source: 'لغو مرسوله', dest: rdest, account: racct.trim() || undefined }); sh.status = 'ship.cancelled'; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }, { action: 'لغو مرسوله', target: sid, after: `${toman(total)} · ${restockLabel(restock)}` })
+    toast(`مرسولهٔ ${sid} لغو شد؛ ${restockLabel(restock)}. پروندهٔ بازگشت ${toman(total)} به ${rdest} باز شد.`, { undo }); setCancelSh(null)
   }
   const doRefund = () => {
     const n = Number(amount.replace(/\D/g, '')); const cap = rule('refund_cap')
@@ -185,7 +185,7 @@ export function OrderDetail() {
     if (n > o.total) return toast(`مبلغ بازگشت وجه از مبلغ سفارش (${toman(o.total)}) بیشتر است.`, { tone: 'err' })
     setRefund(false)
     if (n > cap && !isChief()) { mutate((db) => { db.approvals.unshift({ id: `AP-${710 + db.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(n)} به ${dest} ${c.name}`, ref: o.id, amount: n, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست بازگشت وجه', target: o.id, after: toman(n) }); return toast('مبلغ بالاتر از سقف است. درخواست به صندوق تأییدها رفت.') }
-    mutate((db) => { createRefund(db, { orderId: o.id, customerId: c.id, amount: n, source: 'بازگشت دستی', dest: dest === 'کیف پول' ? 'کیف پول' : 'کارت بانکی' }) }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(dest === 'کیف پول' ? `${toman(n)} به کیف پول ${c.name} واریز شد.` : `پروندهٔ بازگشت ${toman(n)} ساخته شد؛ مراحل را در کارت «بازگشت وجه» دنبال کنید.`)
+    mutate((db) => { createRefund(db, { orderId: o.id, customerId: c.id, amount: n, source: 'بازگشت دستی', dest: dest === 'کیف پول' ? 'کیف پول' : 'شبا (پایا)' }) }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(`پروندهٔ بازگشت ${toman(n)} ساخته شد؛ از کارت «بازگشت وجه» تأیید و اعمال کنید.`)
   }
   return (
     <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · فروشنده: غنیمت`}
@@ -280,7 +280,7 @@ export function OrderDetail() {
         </div>
       </div>
       <Modal open={!!cancelSh} onClose={() => setCancelSh(null)} title={`لغو مرسولهٔ ${cancelSh?.sid ?? ''}`} footer={<><Button variant="danger" onClick={() => void doCancelShip()}>لغو مرسوله</Button><Button variant="ghost" onClick={() => setCancelSh(null)}>انصراف</Button></>}>
-        <div className="space-y-3 text-13"><p>این مرسوله لغو و {toman(cancelSh?.total ?? 0)} به {dest} مشتری بازگردانده می‌شود.</p><RestockChoice value={restock} onChange={setRestock} /></div>
+        <div className="space-y-3 text-13"><p>این مرسوله لغو می‌شود. مقصد بازگشت وجه را انتخاب کنید؛ پرونده تا تأیید و اعمال شما باز می‌ماند.</p><RefundDest dest={rdest} setDest={setRdest} account={racct} setAccount={setRacct} amount={cancelSh?.total ?? 0} /><RestockChoice value={restock} onChange={setRestock} /></div>
       </Modal>
       <OrderEdit o={editOpen ? o : null} onClose={() => setEditOpen(false)} />
       <AddressEdit o={addrOpen ? o : null} onClose={() => setAddrOpen(false)} />

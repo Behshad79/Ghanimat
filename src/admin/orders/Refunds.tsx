@@ -10,22 +10,22 @@ import { currentUser, getDB, isChief, mutate, sendSms, useDB } from '@/shared/li
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB, Refund } from '@/shared/data/seed'
 
-export const DESTS = ['کیف پول', 'کارت بانکی', 'همان روش پرداخت', 'کسر از اقساط'] as const
+export const DESTS = ['کیف پول', 'کارت به کارت', 'شبا (پایا)', 'بازگشت به حساب مبدأ'] as const
+const VIA_OF: Record<string, string> = { 'کارت به کارت': 'کارت به کارت', 'شبا (پایا)': 'پایا (شبا)', 'کارت بانکی': 'پایا (شبا)', 'بازگشت به حساب مبدأ': 'برگشت از درگاه', 'همان روش پرداخت': 'برگشت از درگاه' }
 const STEPS: [Refund['status'], string][] = [['requested', 'ثبت درخواست'], ['approved', 'تأیید'], ['sent', 'ارسال به بانک'], ['done', 'واریز شد']]
-export const REFUND_LABEL: Record<Refund['status'], [string, 'neutral' | 'info' | 'warning' | 'success' | 'danger']> = { requested: ['منتظر تأیید', 'warning'], approved: ['تأییدشده؛ منتظر ارسال', 'info'], sent: ['در صف بانک', 'info'], done: ['واریز شد', 'success'], failed: ['ناموفق', 'danger'] }
+const W_STEPS: [Refund['status'], string][] = [['requested', 'ثبت درخواست'], ['approved', 'تأیید'], ['done', 'واریز به کیف پول']]
+export const REFUND_LABEL: Record<Refund['status'], [string, 'neutral' | 'info' | 'warning' | 'success' | 'danger']> = { requested: ['منتظر تأیید', 'warning'], approved: ['تأییدشده؛ منتظر اعمال', 'info'], sent: ['در صف بانک', 'info'], done: ['واریز شد', 'success'], failed: ['ناموفق', 'danger'] }
 const SLA_H = 72
 const who = () => currentUser()?.name ?? 'کاربر'
 const now = () => new Date().toISOString()
 
 /** ساخت پروندهٔ بازگشت وجه داخل یک mutate؛ کیف پول فوری انجام می‌شود */
-export function createRefund(x: DB, r: { orderId: string; customerId: string; amount: number; source: string; dest: string; note?: string }) {
+export function createRefund(x: DB, r: { orderId: string; customerId: string; amount: number; source: string; dest: string; note?: string; account?: string }) {
   if (!r.amount || r.amount <= 0) return
   x.refunds ??= []
-  const wallet = r.dest === 'کیف پول'; const id = `RF-${String(1000 + x.refunds.length + 1)}`; const at = now(); const by = who()
-  const needOk = !wallet && r.amount > Number(x.rules.find((q) => q.key === 'refund_cap')?.value ?? 20000000) && !isChief()
-  const rf: Refund = { id, ...r, at, by, status: wallet ? 'done' : needOk ? 'requested' : 'approved', log: [{ at, by, step: 'ثبت درخواست', note: r.source }] }
-  if (!needOk && !wallet) rf.log.push({ at, by, step: 'تأیید', note: 'زیر سقف تأیید دوم یا توسط مدیر کل' })
-  if (wallet) { const c = x.customers.find((q) => q.id === r.customerId); if (c) c.wallet += r.amount; rf.log.push({ at, by, step: 'واریز شد', note: 'به کیف پول مشتری' }); rf.doneAt = at; rf.ref = id }
+  // هیچ بازگشتی خودکار تأیید یا اجرا نمی‌شود؛ پرونده باز می‌ماند تا خودمان تأیید و اعمال کنیم
+  const id = `RF-${String(1000 + x.refunds.length + 1)}`; const at = now(); const by = who()
+  const rf: Refund = { id, ...r, at, by, status: 'requested', log: [{ at, by, step: 'ثبت درخواست', note: `${r.source} · مقصد: ${r.dest}${r.account ? ` · ${r.account}` : ''}` }] }
   x.refunds.unshift(rf); syncOrder(x, r.orderId)
 }
 /** جمع بازگشت‌های انجام‌شده و در جریان روی خود سفارش، و هماهنگی خلاصهٔ لغو */
@@ -44,17 +44,19 @@ function step(id: string, fn: (r: Refund) => void, label: string, note?: string,
 
 function RefundRow({ r }: { r: Refund }) {
   const [send, setSend] = useState(false); const [done, setDone] = useState(false)
-  const [via, setVia] = useState('پایا (شبا)'); const [acct, setAcct] = useState(r.account ?? ''); const [ref, setRef] = useState('')
-  const idx = r.status === 'failed' ? 2 : STEPS.findIndex(([s]) => s === r.status)
+  const [via, setVia] = useState(VIA_OF[r.dest] ?? 'پایا (شبا)'); const [acct, setAcct] = useState(r.account ?? ''); const [ref, setRef] = useState('')
+  const FLOW = r.dest === 'کیف پول' ? W_STEPS : STEPS
+  const idx = r.status === 'failed' ? 2 : FLOW.findIndex(([s]) => s === r.status)
   const late = !['done'].includes(r.status) && Date.now() - +new Date(r.at) > SLA_H * 36e5
   const [lab, tone] = REFUND_LABEL[r.status]
   return <li className="rounded-xl border border-line p-3">
     <div className="flex flex-wrap items-center gap-2 text-13"><b className="ltr font-mono text-12">{r.id}</b><b>{toman(r.amount)}</b><span className="text-t2">به {r.dest}</span><Badge tone={tone}>{lab}</Badge>{late && <Badge tone="danger" dot={false}>بیش از {fa(SLA_H)} ساعت</Badge>}<span className="mr-auto text-11 text-t3">{r.source} · {rel(r.at)}</span></div>
-    <ol className="mt-2 flex items-center gap-1 text-11">{STEPS.map(([s, l], i) => <li key={s} className="flex flex-1 items-center gap-1"><span className={cx('grid size-5 shrink-0 place-items-center rounded-full text-[10px]', i < idx || r.status === 'done' ? 'bg-success-solid text-white' : i === idx ? (r.status === 'failed' ? 'bg-danger-solid text-white' : 'bg-brand-solid text-white') : 'bg-neutral-bg text-t3')}>{i < idx || r.status === 'done' ? '✓' : fa(i + 1)}</span><span className={cx('truncate', i === idx ? 'font-semibold' : 'text-t3')}>{i === idx && r.status === 'failed' ? 'ناموفق' : l}</span>{i < STEPS.length - 1 && <span className="h-px flex-1 bg-line" />}</li>)}</ol>
+    <ol className="mt-2 flex items-center gap-1 text-11">{FLOW.map(([s, l], i) => <li key={s} className="flex flex-1 items-center gap-1"><span className={cx('grid size-5 shrink-0 place-items-center rounded-full text-[10px]', i < idx || r.status === 'done' ? 'bg-success-solid text-white' : i === idx ? (r.status === 'failed' ? 'bg-danger-solid text-white' : 'bg-brand-solid text-white') : 'bg-neutral-bg text-t3')}>{i < idx || r.status === 'done' ? '✓' : fa(i + 1)}</span><span className={cx('truncate', i === idx ? 'font-semibold' : 'text-t3')}>{i === idx && r.status === 'failed' ? 'ناموفق' : l}</span>{i < FLOW.length - 1 && <span className="h-px flex-1 bg-line" />}</li>)}</ol>
     {(r.ref || r.via || r.account || r.failWhy) && <p className="mt-1.5 text-11 text-t2">{r.via && `روش: ${r.via}`}{r.account && <> · مقصد: <bdi dir="ltr" className="font-mono">{r.account}</bdi></>}{r.ref && <> · پیگیری: <bdi dir="ltr" className="font-mono">{r.ref}</bdi></>}{r.failWhy && <span className="text-danger"> · علت ناموفق: {r.failWhy}</span>}</p>}
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {r.status === 'requested' && <Button size="sm" variant="primary" icon={<CheckCircle2 size={12} />} onClick={() => { if (!isChief()) return toast('این مبلغ از سقف بیشتر است و فقط مدیر کل تأیید می‌کند.', { tone: 'err' }); step(r.id, (q) => { q.status = 'approved' }, 'تأیید', 'تأیید دوم مدیر کل') }}>تأیید</Button>}
-      {(r.status === 'approved' || r.status === 'failed') && <Button size="sm" variant="primary" icon={<Send size={12} />} onClick={() => setSend(true)}>{r.status === 'failed' ? 'ارسال دوباره به بانک' : 'ارسال به بانک'}</Button>}
+      {r.status === 'requested' && <Button size="sm" variant="primary" icon={<CheckCircle2 size={12} />} onClick={() => { const cap = Number(getDB().rules.find((q) => q.key === 'refund_cap')?.value ?? 20000000); if (r.amount > cap && !isChief()) return toast(`مبلغ از سقف ${toman(cap)} بیشتر است و فقط مدیر کل تأیید می‌کند.`, { tone: 'err' }); step(r.id, (q) => { q.status = 'approved' }, 'تأیید', r.amount > cap ? 'تأیید دوم مدیر کل' : undefined) }}>تأیید</Button>}
+      {(r.status === 'approved' || r.status === 'failed') && r.dest !== 'کیف پول' && <Button size="sm" variant="primary" icon={<Send size={12} />} onClick={() => setSend(true)}>{r.status === 'failed' ? 'ارسال دوباره به بانک' : 'ارسال به بانک'}</Button>}
+      {r.status === 'approved' && r.dest === 'کیف پول' && <Button size="sm" variant="primary" icon={<Wallet size={12} />} onClick={async () => { if (!(await confirm({ title: `واریز ${toman(r.amount)} به کیف پول مشتری؟`, body: 'مبلغ همین حالا در کیف پول مشتری قابل خرید می‌شود.', confirm: 'اعمال در کیف پول' }))) return; mutate((x) => { const c = x.customers.find((q) => q.id === r.customerId); if (c) c.wallet += r.amount; x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: r.customerId, type: 'بازگشت وجه', amount: r.amount, at: now(), ref: r.orderId, status: 'انجام شد', note: r.source }) }, { action: 'واریز بازگشت وجه به کیف پول', target: r.orderId }); step(r.id, (q) => { q.status = 'done'; q.doneAt = now(); q.ref = q.id }, 'واریز شد', 'به کیف پول مشتری', (q) => `${toman(q.amount)} بابت سفارش ${q.orderId} به کیف پول شما واریز شد.`) }}>اعمال در کیف پول</Button>}
       {r.status === 'sent' && <Button size="sm" variant="primary" icon={<Banknote size={12} />} onClick={() => setDone(true)}>ثبت واریز</Button>}
       {r.status === 'sent' && <Button size="sm" variant="ghost" icon={<XCircle size={12} />} onClick={async () => { const w = await askReason({ kind: 'order', ref: r.orderId, status: 'بازگشت وجه ناموفق', title: 'علت برگشت خوردن واریز' }); if (w) step(r.id, (q) => { q.status = 'failed'; q.failWhy = w }, 'ناموفق', w, (q) => `واریز ${toman(q.amount)} سفارش ${q.orderId} انجام نشد (${w}). برای ثبت شبای درست یا انتقال به کیف پول با پشتیبانی تماس بگیرید.`) }}>ناموفق</Button>}
       {['approved', 'failed', 'requested'].includes(r.status) && r.dest !== 'کیف پول' && <Button size="sm" variant="ghost" icon={<Wallet size={12} />} onClick={async () => { if (!(await confirm({ title: 'انتقال به کیف پول مشتری؟', body: `${toman(r.amount)} همین حالا به کیف پول مشتری واریز می‌شود.`, confirm: 'واریز به کیف پول' }))) return; step(r.id, (q) => { q.dest = 'کیف پول'; q.status = 'done'; q.doneAt = now(); q.ref = q.id }, 'واریز شد', 'تغییر مقصد به کیف پول', (q) => `${toman(q.amount)} بابت سفارش ${q.orderId} به کیف پول شما واریز شد.`); mutate((x) => { const c = x.customers.find((q) => q.id === r.customerId); if (c) c.wallet += r.amount }, { action: 'واریز بازگشت وجه به کیف پول', target: r.orderId }) }}>واریز به کیف پول</Button>}
@@ -69,6 +71,15 @@ function RefundRow({ r }: { r: Refund }) {
       <Field label="شمارهٔ پیگیری بانک"><Input className="ltr" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="مثلاً 140508231245" /></Field>
     </Modal>
   </li>
+}
+
+/** انتخاب مقصد بازگشت وجه در پنجره‌های لغو و ویرایش */
+export function RefundDest({ dest, setDest, account, setAccount, amount }: { dest: string; setDest: (v: string) => void; account: string; setAccount: (v: string) => void; amount: number }) {
+  return <div className="space-y-2 rounded-xl border border-line p-3">
+    <Field label={`بازگشت ${toman(amount)} به`}><Segmented size="sm" value={dest} onChange={setDest} options={DESTS.map((x) => [x, x] as [string, string])} /></Field>
+    {(dest === 'کارت به کارت' || dest === 'شبا (پایا)') && <Field label={dest === 'کارت به کارت' ? 'شمارهٔ کارت مشتری (اختیاری؛ در مرحلهٔ ارسال هم ثبت می‌شود)' : 'شمارهٔ شبای مشتری (اختیاری)'}><Input className="ltr" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={dest === 'کارت به کارت' ? '6037-99xx-xxxx-1234' : 'IR00 0000 0000 0000 0000 0000 00'} /></Field>}
+    <p className="text-11 text-t2">{dest === 'کیف پول' ? 'پس از تأیید، با دکمهٔ «اعمال در کیف پول» واریز می‌شود.' : dest === 'بازگشت به حساب مبدأ' ? 'به همان کارتی که با آن پرداخت شده (از طریق درگاه) برمی‌گردد.' : 'پس از تأیید، به بانک ارسال و با شمارهٔ پیگیری ثبت می‌شود.'} بازگشت وجه خودکار انجام نمی‌شود و تا اعمال شما در کارت «بازگشت وجه» باز می‌ماند.</p>
+  </div>
 }
 
 /** پنل بازگشت وجه در صفحهٔ سفارش */

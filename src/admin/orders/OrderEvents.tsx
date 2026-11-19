@@ -9,7 +9,7 @@ import type { DB, Order } from '@/shared/data/seed'
 import type { OrderEvent } from '@/shared/data/orderEvents'
 import { StartDecision } from './Decision'
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from './Restock'
-import { createRefund } from './Refunds'
+import { createRefund, RefundDest } from './Refunds'
 
 const KIND: Record<OrderEvent['kind'], { label: string; icon: typeof BellRing; cls: string }> = {
   cancel: { label: 'درخواست لغو', icon: CircleX, cls: 'border-danger/40 bg-danger-bg/60' },
@@ -61,8 +61,8 @@ export function OrderAlerts({ o }: { o: Order }) {
 function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'admin' | null; onClose: () => void; onDone: (e: OrderEvent | null, res: string) => void }) {
   const d = useDB(); const c = d.customers.find((x) => x.id === o.customerId); const L = lines(o).filter((l) => !['ship.delivered', 'ship.cancelled'].includes(l.s.status))
   const e = ev && ev !== 'admin' ? ev : null
-  const [scope, setScope] = useState<string>(e?.payload?.scope === 'کل سفارش' ? 'all' : L[0]?.key ?? 'all'); const [to, setTo] = useState(e?.payload?.refundTo ?? 'کیف پول')
-  const [restock, setRestock] = useState<RestockMode>('site')
+  const [scope, setScope] = useState<string>(e?.payload?.scope === 'کل سفارش' ? 'all' : L[0]?.key ?? 'all'); const [to, setTo] = useState(e?.payload?.refundTo === 'کیف پول' || !e?.payload?.refundTo ? 'کیف پول' : 'بازگشت به حساب مبدأ')
+  const [restock, setRestock] = useState<RestockMode>('site'); const [acct, setAcct] = useState('')
   const byUs = !e; const [apology, setApology] = useState('متأسفیم؛ این کالا در انبار به دستمان نرسید و مجبور شدیم سفارش را لغو کنیم.'); const [giveCode, setGiveCode] = useState(true); const [codeAmt, setCodeAmt] = useState('500000'); const [codeDays, setCodeDays] = useState('14'); const [notifyMe, setNotifyMe] = useState(true)
   const amount = scope === 'all' ? L.reduce((a, l) => a + l.it.price * l.it.qty, 0) : (L.find((l) => l.key === scope)?.it.price ?? 0) * (L.find((l) => l.key === scope)?.it.qty ?? 1)
   const go = async () => {
@@ -74,25 +74,24 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
       if (scope === 'all') { oo.status = 'order.cancelled'; oo.shipments.forEach((s) => { if (s.status !== 'ship.delivered') s.status = 'ship.cancelled' }) }
       else { const [sid, idx] = scope.split('|'); const sh = oo.shipments.find((s) => s.id === sid)!; const it = sh.items[Number(idx)]; it.cancelled = true; it.cancelBy = byUs ? 'غنیمت' : 'مشتری'; if (sh.items.every((i) => i.cancelled)) sh.status = 'ship.cancelled'; oo.total -= amount; if (oo.shipments.every((s) => s.status === 'ship.cancelled')) oo.status = 'order.cancelled' }
       const code = byUs && giveCode ? { code: `GH${o.id.slice(-4)}${Math.random().toString(36).slice(2, 5).toUpperCase()}`, amount: Number(codeAmt) || 0, until: new Date(Date.now() + (Number(codeDays) || 14) * 864e5).toISOString() } : undefined
-      oo.cancelInfo = { by: byUs ? 'غنیمت' : 'مشتری', reason: why, at: new Date().toISOString(), amount, to, refund: to === 'کیف پول' ? 'بازگشت داده شد' : 'در جریان', refundAt: to === 'کیف پول' ? new Date().toISOString() : undefined, apology: byUs ? apology : undefined, code, notify: byUs && notifyMe, partial: scope !== 'all' }
-      createRefund(x, { orderId: o.id, customerId: o.customerId, amount, source: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', dest: to })
-      if (to === 'کیف پول') x.journey.walletTx.unshift({ id: `WT-${600 + x.journey.walletTx.length}`, customerId: o.customerId, type: 'بازگشت وجه', amount, at: new Date().toISOString(), ref: o.id, status: 'انجام شد', note: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم' })
+      oo.cancelInfo = { by: byUs ? 'غنیمت' : 'مشتری', reason: why, at: new Date().toISOString(), amount, to, refund: 'در جریان', refundAt: undefined, apology: byUs ? apology : undefined, code, notify: byUs && notifyMe, partial: scope !== 'all' }
+      createRefund(x, { orderId: o.id, customerId: o.customerId, amount, source: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', dest: to, account: acct.trim() || undefined })
     }, { action: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم سفارش', target: o.id, after: `${toman(amount)} به ${to} · ${why} · ${restockLabel(restock)}` })
     if (c) sendSms(c.mobile, `غنیمت: ${byUs ? `${apology} ` : ''}${scope === 'all' ? `سفارش ${o.id} لغو شد` : `یک قلم از سفارش ${o.id} لغو شد`} و ${toman(amount)} به ${to} برمی‌گردد.${byUs && giveCode ? ` کد تخفیف ${toman(Number(codeAmt) || 0)} برای خرید بعدی در پنل شماست.` : ''}`, 'وضعیت سفارش', o.id, c.id)
     onDone(e, scope === 'all' ? `سفارش لغو شد؛ ${toman(amount)} به ${to}` : `قلم لغو شد؛ ${toman(amount)} به ${to}`)
-    toast(`${scope === 'all' ? 'سفارش' : 'قلم'} لغو شد. ${toman(amount)} ${to === 'کیف پول' ? 'به کیف پول مشتری واریز شد' : `به ${to} در صف بازگشت است`} و پیامک رفت.`); onClose()
+    toast(`${scope === 'all' ? 'سفارش' : 'قلم'} لغو شد. پروندهٔ بازگشت ${toman(amount)} به ${to} باز شد؛ از کارت «بازگشت وجه» تأیید و اعمال کنید.`); onClose()
   }
   return (
     <Modal open={!!ev} onClose={onClose} title={e ? `رسیدگی به «${e.title}»` : `لغو در سفارش ${o.id}`} footer={<><Button variant="danger" onClick={() => void go()}>تأیید لغو و بازگشت {toman(amount)}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
       <div className="space-y-3">
         <Field label="چه چیزی لغو شود؟"><Select value={scope} onChange={setScope} options={[['all', `کل سفارش (${fa(L.length)} قلم)`], ...L.map((l) => [l.key, `${d.products.find((p) => p.id === l.it.productId)?.title ?? l.it.productId} · ${toman(l.it.price)} · ${l.s.id}`] as [string, string])]} /></Field>
         <RestockChoice value={restock} onChange={setRestock} />
-        <Field label="بازگشت وجه به"><Select value={to} onChange={setTo} options={['کیف پول', 'کارت بانکی', 'همان روش پرداخت']} /></Field>
+        <RefundDest dest={to} setDest={setTo} account={acct} setAccount={setAcct} amount={amount} />
         {!e && <div className="space-y-2 rounded-xl border border-line p-3"><p className="text-12 font-semibold">لغو از طرف غنیمت (مشتری در «سفارش‌های لغوشده» می‌بیند)</p>
           <Field label="پیام عذرخواهی برای مشتری"><Input value={apology} onChange={(ev2) => setApology(ev2.target.value)} /></Field>
           <div className="flex flex-wrap items-end gap-3"><Toggle on={giveCode} onChange={setGiveCode} text="کد تخفیف جبرانی" />{giveCode && <><Field label="مبلغ (تومان)"><Input className="ltr w-32" inputMode="numeric" value={codeAmt} onChange={(ev2) => setCodeAmt(ev2.target.value.replace(/\D/g, ''))} /></Field><Field label="مهلت (روز)"><Input className="ltr w-20" inputMode="numeric" value={codeDays} onChange={(ev2) => setCodeDays(ev2.target.value.replace(/\D/g, ''))} /></Field></>}</div>
           <Toggle on={notifyMe} onChange={setNotifyMe} text="«موجود شد، خبرم کن» برای همین کالا خودکار فعال شود" /></div>}
-        <p className="rounded-xl bg-neutral-bg px-3 py-2 text-12 text-t2">مبلغ بازگشتی: <b className="text-t1">{toman(amount)}</b>. {to === 'کیف پول' ? 'فوری به کیف پول مشتری واریز می‌شود.' : 'در صف بازگشت وجه مالی قرار می‌گیرد (حداکثر ۷۲ ساعت).'}</p>
+        <p className="rounded-xl bg-neutral-bg px-3 py-2 text-12 text-t2">مبلغ بازگشتی: <b className="text-t1">{toman(amount)}</b>. پروندهٔ بازگشت وجه باز می‌شود و تا تأیید و اعمال شما باز می‌ماند.</p>
       </div>
     </Modal>
   )
@@ -113,7 +112,8 @@ export function CancelSummary({ o }: { o: Order }) {
       {ci.notify && <p><span className="text-t3">خبرم کن: </span>برای کالای لغوشده فعال است</p>}
       {ci.failWhy && <p className="text-danger sm:col-span-2">علت ناموفق: {ci.failWhy}</p>}
     </div>
-    {ci.refund !== 'بازگشت داده شد' && <div className="mt-3 flex flex-wrap items-end gap-2">
+    {(d.refunds ?? []).some((r) => r.orderId === o.id) && ci.refund !== 'بازگشت داده شد' && <p className="mt-3 rounded-lg bg-brand-tint/50 px-3 py-2 text-12 text-brand">مراحل بازگشت وجه (تأیید، ارسال به بانک یا اعمال در کیف پول، ثبت پیگیری) در کارت «بازگشت وجه» همین صفحه است.</p>}
+    {ci.refund !== 'بازگشت داده شد' && !(d.refunds ?? []).some((r) => r.orderId === o.id) && <div className="mt-3 flex flex-wrap items-end gap-2">
       {ci.refund === 'در جریان' && <><Input className="ltr w-48" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="شمارهٔ پیگیری" aria-label="شمارهٔ پیگیری بازگشت وجه" />
         <Button size="sm" variant="primary" disabled={ref.trim().length < 4} onClick={() => { set((x) => { x.refund = 'بازگشت داده شد'; x.ref = ref.trim(); x.refundAt = new Date().toISOString() }, 'ثبت بازگشت وجه لغو', `مبلغ ${toman(ci.amount)} سفارش ${o.id} به ${ci.to} واریز شد. شمارهٔ پیگیری: ${ref.trim()}`); toast('بازگشت وجه ثبت شد.') }}>ثبت واریز</Button>
         <Button size="sm" variant="ghost" onClick={async () => { const w = await askReason({ kind: 'cancel', ref: o.id, status: 'بازگشت وجه ناموفق', title: 'علت ناموفق بودن واریز' }); if (w) set((x) => { x.refund = 'ناموفق'; x.failWhy = w }, 'بازگشت وجه ناموفق', `واریز مبلغ سفارش ${o.id} به ${ci.to} انجام نشد. از پنل مقصد دیگری انتخاب کنید یا تیکت ثبت کنید.`) }}>ثبت ناموفق</Button></>}

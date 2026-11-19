@@ -61,7 +61,7 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
     <div className="space-y-4">
       {/* ── ویژگی‌ها ── */}
       <div className="space-y-3 rounded-2xl border border-line p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><p className="flex items-center gap-1.5 text-13 font-semibold"><Layers size={15} />ویژگی‌ها</p><p className="text-11 text-t2">اطلاعات توصیفی که مشتری با آن جست‌وجو و فیلتر می‌کند؛ ویژگی‌هایی که «استفاده برای تنوع‌ها» دارند، تنوع می‌سازند.</p></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><p className="flex items-center gap-1.5 text-13 font-semibold"><Layers size={15} />ویژگی‌ها</p><p className="text-11 text-t2">ویژگی‌هایی که مشتری انتخاب می‌کند (رنگ، حافظه…) و تنوع می‌سازند. مشخصات ثابت مثل تراشه یا وزن در گام «مشخصات» است. ویژگی بدون «استفاده برای تنوع‌ها» فقط برای نمایش و فیلتر است.</p></div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="w-60"><Select label="افزودن ویژگی سراسری" value="" placeholder="افزودن ویژگی سراسری…" onChange={(v) => set({ attrs: [...A, { axis: v, values: [], forVar: true, visible: true }] })} options={d.axes.filter((x) => !used.has(x.id)).map((x) => [x.id, x.name] as [string, string])} other={false} /></div>
           {newAttr === null ? <Button icon={<Plus size={14} />} onClick={() => setNewAttr('')}>ویژگی اختصاصی تازه</Button>

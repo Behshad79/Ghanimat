@@ -20,6 +20,7 @@ import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
 import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
 import { ChangeHistory, RollbackShip } from '../orders/History'
+import { PaymentInfo } from '../orders/PaymentInfo'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -263,8 +264,7 @@ export function OrderDetail() {
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}
             <div className="my-1 border-t border-line" /><Row k={<b className="text-t1">مبلغ پرداختی</b>}><b><Money v={o.total} /></b></Row>
             <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row><Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>
-            <p className="mt-2 mb-1 text-11 font-medium text-t3">تراکنش‌ها</p>
-            {d.txns.filter((t) => t.orderId === o.id).map((t) => <div key={t.id} className="flex items-center justify-between py-1 text-12"><span><CopyId v={t.ref} /> · <WithLogo name={t.gateway} /></span><StatusBadge s={t.status} /></div>)}
+            <PaymentInfo orderId={o.id} />
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>
         </div>

@@ -514,6 +514,12 @@ export const makeSeed = () => {
     s.products.splice(s.products.indexOf(base) + 1, 0, pga)
     const o0 = s.orders.find((o) => o.id === 'GH-10510')!
     s.orders.unshift({ ...structuredClone(o0), id: 'GH-10512', customerId: 'c3', createdAt: ago(0.4), total: 26900000 + 26900000, tags: ['چند ویژگی'], shipments: [{ ...structuredClone(o0.shipments[0]), id: 'GH-10512-1', status: 'ship.picking', pack: undefined, items: [{ productId: 'pga', unitId: '', qty: 1, price: 26900000, variationId: 'var-pga-2' }, { productId: 'pga', unitId: '', qty: 1, price: 26900000, variationId: 'var-pga-1' }], allocReason: 'سفید ۱۲۸ و سبز ۱۲۸ نسخهٔ خاورمیانه در تهران موجود بود.' }] }) }
+  // فروش‌های نمونهٔ سایت غنیمت در دفتر شرکا، سفارش واقعی خودشان را دارند تا از صورت‌حساب به سفارش رفت
+  { const base = s.orders.find((o) => o.id === 'GH-10412')!; let n = 0
+    s.stock.sales.filter((x) => x.channel === 'gh-site' && !x.orderId).forEach((x) => { n++; const id = `GH-${10519 + n}`; const shipId = `${id}-1`
+      s.orders.push({ ...structuredClone(base), id, customerId: ['c2', 'c5', 'c6', 'c7'][n % 4], createdAt: x.at, status: 'order.delivered', total: x.price * x.qty, discount: 0, shippingFee: 0, fee: Math.round(x.price * x.qty * 0.01), tags: [], edits: undefined, payHold: undefined, cancelInfo: undefined, refunded: undefined, refundPending: undefined,
+        shipments: [{ ...structuredClone(base.shipments[0]), id: shipId, warehouse: x.warehouse, method: x.warehouse === 'mahabad' ? 'پست پیشتاز' : 'تحویل سریع (پیک)', status: 'ship.delivered', items: [{ productId: x.productId, unitId: '', qty: x.qty, price: x.price, variationId: x.variationId }], allocReason: x.warehouse === 'mahabad' ? 'کالا در انبار مهاباد بود.' : 'موجودی تهران کافی بود.', pack: { at: x.at, by: x.warehouse === 'mahabad' ? 'یاسین' : 'نیما', station: x.warehouse, scans: [{ at: x.at, code: `${x.owner.toUpperCase()}-${x.productId}`, productId: x.productId, variationId: x.variationId, owner: x.owner, ok: true }] } }] })
+      x.orderId = id; x.shipId = shipId }) }
   // پرتال شرکای مستقل فعلاً غیرفعال است؛ یاسین جزئی از غنیمت است و از «مالکیت و تسویه» مدیریت می‌شود
   s.partners.forEach((p) => { p.status = 'در انتظار تأیید' })
   // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)

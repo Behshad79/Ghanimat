@@ -9,6 +9,7 @@ import { fa, rel, toman } from '@/shared/lib/fa'
 import { shareOf, split, type StockSale } from '@/shared/data/stock'
 import { chName, PartyChip, partyName, pv, whName } from './common'
 import { SaleBreakdown } from './Ownership'
+import { OrderPeek } from '../orders/OrderPeek'
 
 const PERIODS: [string, string][] = [['7', '۷ روز'], ['30', '۳۰ روز'], ['90', '۹۰ روز'], ['all', 'همه']]
 type Line = { kind: 'sale'; x: StockSale; role: string; earns: number; net: number; at: string } | { kind: 'pay'; id: string; at: string; from: string; to: string; amount: number; ref: string; net: number; earns: 0; role: string }
@@ -17,7 +18,7 @@ type Line = { kind: 'sale'; x: StockSale; role: string; earns: number; net: numb
 export function StatementTab() {
   const d = useDB(); const s = d.stock; const nav = useNavigate()
   const mine = s.parties.find((p) => p.userId === currentUser()?.id)?.id ?? 'gh'; const sec = canSecret()
-  const [viewer, setViewer] = useState(mine); const [other, setOther] = useState('all'); const [period, setPeriod] = useState('30'); const [open, setOpen] = useState<StockSale | null>(null)
+  const [viewer, setViewer] = useState(mine); const [other, setOther] = useState('all'); const [period, setPeriod] = useState('30'); const [open, setOpen] = useState<StockSale | null>(null); const [peek, setPeek] = useState<string | null>(null)
   const since = period === 'all' ? 0 : Date.now() - Number(period) * 864e5
   const me = partyName(s, viewer); const you = viewer === mine
   const lines: Line[] = useMemo(() => {
@@ -50,11 +51,13 @@ export function StatementTab() {
     <Card pad={false} title={you ? 'ریز حساب تو' : `ریز حساب ${me}`} hint="هر ردیف یک فروش یا پرداخت است؛ روی ردیف فروش بزنید تا محاسبهٔ کامل و لینک سفارش را ببینید.">
       <DataTable name={`صورت‌حساب ${me}`} empty={{ title: 'در این دوره ردیفی نیست.' }} rows={inP} rowKey={(l) => (l.kind === 'sale' ? l.x.id : l.id)} onRow={(l) => l.kind === 'sale' && setOpen(l.x)} search={(l) => (l.kind === 'sale' ? `${l.x.orderId ?? ''} ${pv(d, l.x.productId, l.x.variationId).full} ${chName(s, l.x.channel)}` : `${l.ref} تسویه`)}
         cols={[{ key: 'at', title: 'زمان', render: (l) => <span className="text-12">{rel(l.at)}</span>, sort: (l) => +new Date(l.at) },
-          { key: 'o', title: 'سفارش', render: (l) => l.kind === 'sale' ? (l.x.orderId ? <button className="font-mono text-12 text-brand underline" onClick={(e) => { e.stopPropagation(); nav(`/admin/orders/${l.x.orderId}`) }}>{l.x.orderId}</button> : <span className="text-12 text-t2">{chName(s, l.x.channel)}</span>) : <Badge tone="success">پرداخت تسویه</Badge> },
+          { key: 'o', title: 'سفارش یا سند', render: (l) => l.kind === 'sale' ? (l.x.orderId ? <span className="flex items-center gap-1"><button className="font-mono text-12 text-brand underline" onClick={(e) => { e.stopPropagation(); nav(`/admin/orders/${l.x.orderId}`) }}>{l.x.orderId}</button><button aria-label={`نمای سریع ${l.x.orderId}`} title="نمای سریع سفارش" className="grid size-6 place-items-center rounded text-t2 hover:bg-neutral-bg hover:text-brand" onClick={(e) => { e.stopPropagation(); setPeek(l.x.orderId!) }}><Eye size={13} /></button></span> : <span className="text-12"><span className="font-mono text-t2">{l.x.ext ?? l.x.id}</span><span className="block text-11 text-t3">{chName(s, l.x.channel)}{l.x.ext ? ' · از اتصال سایت' : ' · ثبت دستی در دفتر'}</span></span>) : <Badge tone="success">پرداخت تسویه</Badge> },
           { key: 'p', title: 'شرح', render: (l) => l.kind === 'sale' ? <span className="text-12">{pv(d, l.x.productId, l.x.variationId).full} ×{fa(Math.abs(l.x.qty))}{l.x.qty < 0 && <Badge tone="danger">برگشت</Badge>}<span className="block text-11 text-t2">مالک {partyName(s, l.x.owner)} · از {whName(s, l.x.warehouse)} · {chName(s, l.x.channel)}</span></span> : <span className="text-12">{partyName(s, l.from)} به {partyName(s, l.to)} · پیگیری <bdi dir="ltr" className="font-mono">{l.ref}</bdi></span> },
           { key: 'r', title: 'نقش', render: (l) => <span className="text-12">{l.role}</span> },
           { key: 'e', title: you ? 'سهم تو' : 'سهم او', render: (l) => l.earns ? <span className={l.earns > 0 ? 'text-success' : 'text-danger'}>{toman(l.earns)}</span> : '—', sort: (l) => l.earns },
-          { key: 'n', title: 'اثر بر حساب', render: (l) => l.net ? <span className={l.net > 0 ? 'font-medium text-success' : 'font-medium text-danger'}>{l.net > 0 ? 'طلب ' : 'بدهی '}{toman(Math.abs(l.net))}</span> : <span className="text-12 text-t2">بی‌اثر</span>, sort: (l) => l.net }]} />
+          { key: 'n', title: 'اثر بر حساب', render: (l) => l.net ? <span className={l.net > 0 ? 'font-medium text-success' : 'font-medium text-danger'}>{l.net > 0 ? 'طلب ' : 'بدهی '}{toman(Math.abs(l.net))}</span> : <span className="text-12 text-t2">بی‌اثر</span>, sort: (l) => l.net },
+          { key: 'd', title: '', render: (l) => l.kind === 'sale' ? <button className="whitespace-nowrap text-12 text-brand underline" onClick={(e) => { e.stopPropagation(); setOpen(l.x) }}>جزئیات</button> : null }]} />
+    <OrderPeek id={peek} onClose={() => setPeek(null)} />
     </Card>
     <Modal open={!!open} onClose={() => setOpen(null)} title={open ? `ریز فروش ${open.orderId ?? open.id}` : ''} wide>{open && <SaleBreakdown x={open} />}</Modal>
   </div>

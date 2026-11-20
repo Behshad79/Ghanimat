@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
+import { waitItems } from '../home/tasks'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
 import { CommandPalette } from './CommandPalette'
@@ -171,7 +172,8 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
 
 /** ناوبری پایین موبایل با ۵ آیتم (بخش ۵.۸) */
 function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
-  const d = useDB()
+  const d = useDB(); useSession(); const nav = useNavigate(); const [tasks, setTasks] = useState(false)
+  const mine = waitItems(d).filter((x) => x.count > 0).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent))
   const Item = ({ to, icon, label, n }: { to: string; icon: ReactNode; label: string; n?: number }) => (
     <NavLink to={to} end className={({ isActive }) => cx('relative flex flex-1 flex-col items-center justify-center gap-0.5 text-11', isActive ? 'text-brand' : 'text-t2')}>{icon}{label}{!!n && <span className="tnum absolute top-1 right-1/4 rounded-full bg-danger-solid px-1 text-[10px] text-white">{fa(n)}</span>}</NavLink>
   )
@@ -181,10 +183,14 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
       <nav className="no-print flex h-16 shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="ناوبری موبایل">
         <Item to="/admin" icon={<HomeIcon size={20} />} label="خانه" />
         <Item to="/admin/orders" icon={<ShoppingBag size={20} />} label="سفارش‌ها" n={NAV.find((x) => x.id === 'orders')!.count!(d)} />
-        <Item to="/admin/warehouse" icon={<ListChecks size={20} />} label="کارهای من" n={NAV.find((x) => x.id === 'warehouse')!.count!(d)} />
+        <button onClick={() => setTasks(true)} className="relative flex flex-1 flex-col items-center justify-center gap-0.5 text-11 text-t2"><ListChecks size={20} />کارهای من{mine.length > 0 && <span className="tnum absolute top-1 right-1/4 rounded-full bg-danger-solid px-1 text-[10px] text-white">{fa(mine.reduce((a, x) => a + x.count, 0))}</span>}</button>
         <Item to="/admin/live" icon={<Bell size={20} />} label="هشدارها" n={d.alerts.filter((a) => !a.read).length} />
         <button onClick={onMore} className="flex flex-1 flex-col items-center justify-center gap-0.5 text-11 text-t2"><MoreHorizontal size={20} />بیشتر</button>
       </nav>
+      <Drawer open={tasks} onClose={() => setTasks(false)} title="کارهای من">
+        <p className="mb-3 text-12 text-t2">فقط کارهایی که همین حالا منتظر اقدام شماست، از بخش‌هایی که به آن دسترسی دارید. فوری‌ها بالاترند.</p>
+        {mine.length ? <ul className="space-y-2">{mine.map((x) => { const I = x.icon; return <li key={x.label}><button onClick={() => { setTasks(false); nav(x.to) }} className="flex w-full items-center gap-3 rounded-xl border border-line p-3 text-right hover:border-brand"><span className={cx('grid size-10 shrink-0 place-items-center rounded-xl', x.urgent ? 'bg-danger-bg text-danger' : 'bg-brand-tint text-brand')}><I size={18} /></span><span className="flex-1 text-13 font-medium">{x.label}</span><b className={cx('tnum text-18', x.urgent && 'text-danger')}>{fa(x.count)}</b></button></li> })}</ul> : <p className="rounded-xl bg-success-bg p-4 text-13 text-success">کاری منتظر شما نیست.</p>}
+      </Drawer>
     </>
   )
 }

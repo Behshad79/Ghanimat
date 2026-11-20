@@ -24,6 +24,7 @@ import { SlaChip, useLookup } from './_shared'
 import { NAV } from '../shell/nav'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 import { GatewayHolds } from '../orders/GatewayHolds'
+import { waitItems } from '../home/tasks'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
@@ -51,17 +52,7 @@ export function Home() {
       empty={{ title: 'هنوز داده‌ای برای داشبورد نیست.', desc: 'با ثبت اولین کالا و اولین سفارش، شاخص‌ها اینجا نمایش داده می‌شوند.', action: <Button variant="primary" onClick={() => nav('/admin/settings?tab=setup')}>چک‌لیست راه‌اندازی فروشگاه</Button> }}
       actions={<><Button icon={<Download size={14} />} onClick={() => setExp(true)}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
-        <WelcomeHero items={[
-          { label: 'سفارش منتظر اقدام', count: cnt('orders'), to: '/admin/orders?tab=action', icon: ShoppingBag, urgent: true },
-          { label: 'تراکنش نامشخص', count: cnt('finance'), to: '/admin/finance?tab=txns&st=pay.unknown&fl=تراکنش‌های نامشخص', icon: CircleDollarSign, urgent: true },
-          { label: 'واحد منتظر QC، عکاسی یا انتشار', count: cnt('warehouse'), to: '/admin/warehouse?tab=qc', icon: Package },
-          { label: 'مرجوعی و گارانتی منتظر بررسی', count: cnt('returns'), to: '/admin/returns?st=return.inspecting|warranty.pending&fl=مرجوعی و گارانتی منتظر بررسی', icon: RotateCcw },
-          { label: 'تیکت باز', count: cnt('support'), to: '/admin/support?fl=تیکت‌های باز', icon: Headphones },
-          { label: 'دیدگاه و پرسش منتظر تأیید', count: cnt('reviews') + d.questions.filter((q) => q.status === 'pending' || q.answers.some((a) => a.status === 'pending')).length + d.blog.comments.filter((c) => c.status === 'pending').length, to: '/admin/reviews?tab=pending&fl=دیدگاه‌ها و پرسش‌های منتظر تأیید', icon: MessageSquare },
-          { label: 'مقالهٔ منتظر انتشار', count: d.blog.posts.filter((p) => p.status === 'در بازبینی').length, to: '/admin/blog?tab=posts&st=در بازبینی&fl=مقاله‌های منتظر انتشار', icon: FileText },
-          { label: 'کالای شریک منتظر تأیید', count: d.partnerQueue.length, to: '/admin/catalog?tab=partner', icon: Store },
-          { label: 'تأیید منتظر من', count: d.approvals.filter((a) => a.status === 'approval.pending').length, to: '/admin/team?tab=approvals', icon: CheckCheck },
-        ]} />
+        <WelcomeHero items={waitItems(d)} />
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note={`هدف روزانه: ${compactToman(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 0))}`} />
           <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit&p=today" />

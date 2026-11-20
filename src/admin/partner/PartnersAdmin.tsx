@@ -10,6 +10,7 @@ import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { CAPITAL, statement, type Capital, type PartnerT } from '@/shared/data/partners'
 import { ProductImg } from '../pages/_shared'
 import { PartnerLedger, PartnerReviews } from './PartnerOps'
+import { CityChips, NEAR } from './Network'
 
 const ST_TONE = { 'فعال': 'success', 'در حال راه‌اندازی': 'warning', 'متوقف': 'danger', 'در انتظار تأیید': 'warning' } as const
 const num = (v: string) => +v.replace(/[^\d.]/g, '') || 0
@@ -154,7 +155,7 @@ function FastTab({ p, upd }: { p: PartnerT; upd: Upd }) {
     <Card title={<span className="flex items-center gap-2"><Truck size={15} />ارسال سریع از انبار {p.city}</span>}>
       <Toggle on={F.on} onChange={(v) => upd((x) => { x.fast.on = v }, v ? 'فعال‌کردن ارسال سریع شعبه' : 'خاموش‌کردن ارسال سریع شعبه')} text="ارسال سریع از این انبار فعال باشد" />
       <div className={cx('mt-3 grid gap-3 sm:grid-cols-2', !F.on && 'opacity-50')}>
-        <Field label="شهرهای تحت پوشش"><Input defaultValue={F.cities} onBlur={(e) => upd((x) => { x.fast.cities = e.target.value }, 'تغییر شهرهای ارسال سریع', e.target.value)} /></Field>
+        <div className="sm:col-span-2"><CityChips label={`شهرهای ارسال سریع ${p.name}`} value={F.cities} suggest={NEAR[p.warehouse] ?? []} onChange={(v) => upd((x) => { x.fast.cities = v }, 'تغییر شهرهای ارسال سریع', v)} /></div>
         <Field label="محدوده داخل شهر" help="مناطق یا محله‌ها با ویرگول؛ خالی یعنی کل شهر."><Input defaultValue={F.areas ?? ''} placeholder="مثلاً مرکز شهر، شهرک‌های اطراف" onBlur={(e) => upd((x) => { x.fast.areas = e.target.value }, 'تغییر محدودهٔ ارسال سریع', e.target.value)} /></Field>
         <Field label="شعاع از انبار (کیلومتر)" help="۰ یعنی بدون محدودیت شعاع؛ نشانی بیرون از شعاع فقط ارسال پستی می‌گیرد."><Input className="ltr text-left" defaultValue={String(F.radiusKm ?? 0)} onBlur={(e) => upd((x) => { x.fast.radiusKm = num(e.target.value) }, 'تغییر شعاع ارسال سریع')} /></Field>
         <Field label="وعدهٔ تحویل (ساعت)"><Input className="ltr text-left" defaultValue={String(F.hours)} onBlur={(e) => upd((x) => { x.fast.hours = num(e.target.value) }, 'تغییر وعدهٔ تحویل شعبه')} /></Field>

@@ -1,7 +1,7 @@
 // کنترل شعب و ارسال سریع: تعطیلی فوری، توقف ارسال سریع، توقف یا ویرایش هر شعبه، شهرهای ارسال سریع و ترتیب برداشت موجودی
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Ban, Pause, Play, Plus, Power, Store, Truck, Zap } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, Pause, Play, Plus, Power, Store, Truck, X, Zap } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { Modal, toast } from '@/shared/ui/overlay'
@@ -54,10 +54,10 @@ export function Network() {
             <div className="flex items-center gap-1"><span className="grid size-7 place-items-center rounded-full bg-brand-tint text-12 font-bold text-brand" title="اولویت برداشت موجودی">{fa(i + 1)}</span><div className="flex flex-col"><button aria-label={`اولویت بالاتر ${n.name}`} disabled={i === 0} onClick={() => move(n.id, -1)} className="text-t3 hover:text-brand disabled:opacity-30"><ArrowUp size={13} /></button><button aria-label={`اولویت پایین‌تر ${n.name}`} disabled={i === ordered.length - 1} onClick={() => move(n.id, 1)} className="text-t3 hover:text-brand disabled:opacity-30"><ArrowDown size={13} /></button></div></div>
             <div><p className="flex flex-wrap items-center gap-2 text-13 font-semibold">{n.name}<Badge tone={paused ? 'danger' : n.status === 'فعال' ? 'success' : 'warning'}>{paused ? `متوقف · ${untilLabel(n.paused!.until)}` : n.status}</Badge></p><p className="mt-0.5 text-11 text-t2">{paused ? `دلیل: ${n.paused!.reason}` : n.partner ? 'شعبهٔ همکار' : 'انبار مرکزی غنیمت'}</p></div>
             <div className="flex flex-wrap items-center gap-2 text-12"><label className="flex items-center gap-1.5"><Toggle on={n.fast} label={`ارسال سریع ${n.name}`} disabled={n.partner && n.status !== 'فعال'} onChange={(v) => setFast(n, { on: v })} /><Truck size={13} />ارسال سریع</label>
-              <Input aria-label={`شهرهای ارسال سریع ${n.name}`} className="h-8 w-40 text-12" value={n.cities} onChange={(e) => setFast(n, { cities: e.target.value })} />
               <Input aria-label={`مهلت ارسال سریع ${n.name}`} className="h-8 w-16 text-center text-12" inputMode="numeric" value={String(n.hours)} onChange={(e) => setFast(n, { hours: +e.target.value.replace(/\D/g, '') || 1 })} /><span className="text-11 text-t3">ساعته · تا ساعت</span>
               <Input aria-label={`ساعت پایان سفارش ${n.name}`} className="h-8 w-20 ltr text-center text-12" value={n.cutoff} onChange={(e) => setFast(n, { cutoff: e.target.value })} />
-              <Badge tone={fOn ? 'success' : 'neutral'} dot={false}>{fOn ? 'در سایت نمایش داده می‌شود' : 'در سایت نیست'}</Badge></div>
+              <Badge tone={fOn ? 'success' : 'neutral'} dot={false}>{fOn ? 'در سایت نمایش داده می‌شود' : 'در سایت نیست'}</Badge>
+              <CityChips label={`شهرهای ارسال سریع ${n.name}`} value={n.cities} suggest={NEAR[n.wh] ?? []} onChange={(v) => setFast(n, { cities: v })} /></div>
             <div className="flex gap-1.5">{paused ? <Button size="sm" variant="primary" icon={<Play size={12} />} onClick={() => resume('branch', n.id, n.name)}>ادامه</Button> : <Button size="sm" icon={<Pause size={12} />} disabled={n.status === 'در حال راه‌اندازی'} onClick={() => { setAsk({ kind: 'branch', id: n.id, name: n.name }); setUntil('eod') }}>توقف</Button>}{n.partner && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/sellers?p=${n.id}`)}>جزئیات</Button>}</div>
           </li>) })}</ul>
         <p className="border-t border-line px-4 py-2.5 text-11 text-t2">ترتیب بالا «اولویت برداشت موجودی» است: سفارش تازه از اولین نقطهٔ فعالی که کالا را دارد برداشته می‌شود و اگر موجودی آن تمام شده یا متوقف است، از نقطهٔ بعدی. الان: {ordered.filter((n) => !isLive(n.paused) && n.status === 'فعال').map((n) => n.city).join(' ← ')}.</p>
@@ -74,4 +74,31 @@ export function Network() {
       </div>
     </Modal>
   </Page>
+}
+
+/** شهرهای پیشنهادی نزدیک هر انبار برای افزودن سریع */
+export const NEAR: Record<string, string[]> = {
+  tehran: ['تهران', 'کرج', 'اسلامشهر', 'شهریار', 'قدس', 'پردیس', 'رباط‌کریم', 'ورامین', 'پاکدشت', 'لواسان', 'دماوند', 'هشتگرد'],
+  mahabad: ['مهاباد', 'بوکان', 'میاندوآب', 'نقده', 'سردشت', 'پیرانشهر', 'اشنویه', 'ارومیه', 'سقز', 'شاهین‌دژ'],
+}
+const splitCities = (v: string) => v.split(/[،,]/).map((c) => c.trim()).filter(Boolean)
+
+/** فهرست شهرهای تحت پوشش به‌صورت برچسب: همه دیده می‌شوند، با × حذف و با تایپ یا پیشنهاد اضافه می‌شوند */
+export function CityChips({ label, value, suggest, onChange }: { label: string; value: string; suggest: string[]; onChange: (v: string) => void }) {
+  const list = splitCities(value); const [q, setQ] = useState(''); const [open, setOpen] = useState(false)
+  const add = (c: string) => { const t = c.trim(); if (!t) return; if (list.includes(t)) { toast(`«${t}» از قبل در فهرست است.`); return } onChange([...list, t].join('، ')); setQ('') }
+  const rest = suggest.filter((c) => !list.includes(c) && (!q || c.includes(q.trim())))
+  return <div className="w-full rounded-lg border border-line bg-neutral-bg/40 p-2" role="group" aria-label={label}>
+    <p className="mb-1.5 flex items-center gap-1.5 text-11 text-t2">شهرهای تحت پوشش ارسال سریع<Badge dot={false}>{fa(list.length)} شهر</Badge></p>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {list.length === 0 && <span className="text-11 text-warning">هنوز شهری ثبت نشده؛ ارسال سریع برای هیچ شهری نمایش داده نمی‌شود.</span>}
+      {list.map((c) => <span key={c} className="inline-flex h-7 items-center gap-1 rounded-full border border-brand/30 bg-brand-tint/50 pr-2.5 pl-1 text-12 text-brand">{c}<button type="button" aria-label={`حذف ${c}`} title={`حذف ${c}`} onClick={() => onChange(list.filter((x) => x !== c).join('، '))} className="grid size-5 place-items-center rounded-full text-brand/70 hover:bg-brand/10 hover:text-danger"><X size={12} /></button></span>)}
+      <span className="relative">
+        <input aria-label={`افزودن شهر به ${label}`} value={q} onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === '،' || e.key === ',') { e.preventDefault(); add(q) } if (e.key === 'Backspace' && !q && list.length) onChange(list.slice(0, -1).join('، ')) }}
+          placeholder="+ افزودن شهر" className="h-7 w-32 rounded-full border border-dashed border-line bg-surface px-2.5 text-12 outline-none focus:border-brand" />
+        {open && rest.length > 0 && <span className="absolute top-8 right-0 z-20 flex max-h-48 w-44 flex-col overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">{rest.map((c) => <button key={c} type="button" onMouseDown={(e) => { e.preventDefault(); add(c) }} className="rounded px-2 py-1.5 text-right text-12 hover:bg-neutral-bg">{c}</button>)}</span>}
+      </span>
+    </div>
+  </div>
 }

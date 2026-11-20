@@ -21,7 +21,7 @@ export type Product = { id: string; image: string; images?: string[]; imagePos?:
 /** ویژگی کالای متغیر: سراسری (از ویژگی‌های فروشگاه) یا اختصاصی همین کالا */
 export type PAttr = { axis: string; name?: string; values: string[]; forVar: boolean; visible: boolean }
 /** یک تنوع کالای متغیر (مثل هدفون آبی): کد، بارکد، قیمت، موجودی و تصویر جدا */
-export type Variation = { id: string; opts: Record<string, string>; suffix: string; ean?: string; price?: number; sale?: number; saleUntil?: string; qty: { tehran: number; mahabad: number }; low?: number; enabled: boolean; image?: string; backorder?: boolean; weight?: number; costFx?: number; extra?: number }
+export type Variation = { id: string; opts: Record<string, string>; suffix: string; ean?: string; price?: number; sale?: number; saleFrom?: string; saleUntil?: string; qty: { tehran: number; mahabad: number }; low?: number; enabled: boolean; image?: string; backorder?: boolean; weight?: number; costFx?: number; extra?: number }
 /** هر اقدام ثبت‌شده؛ changes سند خودکار تغییرهاست (چه رکوردی، چه فیلدی، از چه به چه) */
 export type AuditEntry = { at: string; who: string; action: string; target: string; before: string; after: string; ai: boolean; role?: string; changes?: string[]; sensitive?: boolean }
 export type Unit = { variationId?: string; owner?: string; id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }

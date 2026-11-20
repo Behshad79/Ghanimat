@@ -10,6 +10,7 @@ import type { PAttr, Unit, Variation } from '@/shared/data/seed'
 import { attrKey, axisOf, combos, deliveryFor, effPrice, LOCAL, priceRange, sameOpts, skuOf, totalQty, valHex, valLabel, varLabel, varStock, type Delivery } from '@/shared/lib/variants'
 import { fastOn } from '@/shared/data/partners'
 import { Truck, Zap, Bell } from 'lucide-react'
+import { SaleWindow } from './VariantProfit'
 
 export type VarDraft = { fastEligible?: boolean; title?: string; code: string; images: string[]; price: number; mode: 'qty' | 'serial'; attrs: PAttr[]; variations: Variation[]; defaultVar: string; units: { serial: string; variationId?: string }[]; id?: string }
 const money = (v?: number) => (v ? v.toLocaleString('en-US') : '')
@@ -129,7 +130,7 @@ export function VariableEditor({ f, set }: { f: VarDraft; set: (p: Partial<VarDr
                   <Field label="بارکد کارخانه (EAN-13)" error={eBad ? 'بارکد ۱۳ رقمی معتبر نیست.' : undefined}><Input className="ltr text-left font-mono" inputMode="numeric" maxLength={13} value={v.ean ?? ''} placeholder="اختیاری" onChange={(e) => setVar(v.id, { ean: e.target.value.replace(/\D/g, '') })} /></Field>
                   <Field label="قیمت عادی (تومان)" help={v.price ? undefined : `خالی = قیمت پایه ${f.price ? toman(f.price) : 'ثبت نشده'}`}><Num label="قیمت عادی تنوع" value={v.price} placeholder={money(f.price)} onChange={(n) => setVar(v.id, { price: n || undefined })} /></Field>
                   <Field label="قیمت فروش ویژه (تومان)" error={v.sale && v.sale >= (v.price || f.price) ? 'قیمت ویژه باید کمتر از قیمت عادی باشد.' : undefined}><Num label="قیمت ویژهٔ تنوع" value={v.sale} placeholder="اختیاری" onChange={(n) => setVar(v.id, { sale: n || undefined })} /></Field>
-                  {v.sale ? <Field label="پایان قیمت ویژه"><Input type="date" value={(v.saleUntil ?? '').slice(0, 10)} onChange={(e) => setVar(v.id, { saleUntil: e.target.value || undefined })} /></Field> : null}
+                  {v.sale ? <Field label="زمان‌بندی قیمت ویژه"><SaleWindow v={v} label={varLabel(d, f.attrs, v)} onChange={(p) => setVar(v.id, p)} /></Field> : null}
                   {f.mode === 'qty' ? <>
                     <Field label="موجودی انبار تهران"><Input type="number" min={0} className="ltr text-left font-mono" value={v.qty.tehran} onChange={(e) => setVar(v.id, { qty: { ...v.qty, tehran: Math.max(0, +e.target.value) } })} /></Field>
                     <Field label="موجودی انبار مهاباد"><Input type="number" min={0} className="ltr text-left font-mono" value={v.qty.mahabad} onChange={(e) => setVar(v.id, { qty: { ...v.qty, mahabad: Math.max(0, +e.target.value) } })} /></Field>

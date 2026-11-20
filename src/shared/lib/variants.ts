@@ -26,7 +26,10 @@ export function combos(attrs: PAttr[]): Record<string, string>[] {
 export const sameOpts = (a: Record<string, string>, b: Record<string, string>) => { const k = new Set([...Object.keys(a), ...Object.keys(b)]); return [...k].every((x) => a[x] === b[x]) }
 
 export const skuOf = (code: string, v: Variation) => `${code || 'GH-P-…'}-${v.suffix}`
-export const effPrice = (v: Variation, base: number) => (v.sale && v.sale > 0 && (!v.saleUntil || new Date(v.saleUntil) > new Date()) ? v.sale : v.price || base)
+/** قیمت ویژه فقط در بازهٔ زمان‌بندی‌شده فعال است؛ تاریخ پایانِ بدون ساعت تا آخر همان روز حساب می‌شود */
+const saleEnd = (u: string) => new Date(u.length <= 10 ? `${u}T23:59:59` : u)
+export const saleState = (v: Pick<Variation, 'sale' | 'saleFrom' | 'saleUntil'>, now = new Date()): 'none' | 'scheduled' | 'active' | 'ended' => !v.sale || v.sale <= 0 ? 'none' : v.saleFrom && new Date(v.saleFrom) > now ? 'scheduled' : v.saleUntil && saleEnd(v.saleUntil) <= now ? 'ended' : 'active'
+export const effPrice = (v: Variation, base: number) => (saleState(v) === 'active' ? v.sale! : v.price || base)
 export const varStock = (v: Variation) => v.qty.tehran + v.qty.mahabad
 export const totalQty = (vs: Variation[]) => vs.filter((v) => v.enabled).reduce((a, v) => ({ tehran: a.tehran + v.qty.tehran, mahabad: a.mahabad + v.qty.mahabad }), { tehran: 0, mahabad: 0 })
 export function priceRange(vs: Variation[], base: number): [number, number] {

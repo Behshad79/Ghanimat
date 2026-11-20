@@ -5,7 +5,7 @@ import { confirm, toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, pct, toman } from '@/shared/lib/fa'
 import { fetchRate, FX_CURS, type FxCur } from '@/shared/lib/fx'
-import { effPrice, landedVar, marginOf, priceForMargin, skuOf, varLabel, type CostBase } from '@/shared/lib/variants'
+import { effPrice, landedVar, marginOf, priceForMargin, saleState, skuOf, varLabel, type CostBase } from '@/shared/lib/variants'
 import type { PAttr, Variation } from '@/shared/data/seed'
 import { logPrice } from './PdpExtras'
 
@@ -36,7 +36,8 @@ export function VariantProfit({ attrs, variations, base, currency, price, floor,
           <td className="p-2"><Input aria-label={`هزینهٔ جانبی ${varLabel(d, attrs, v)}`} className="ltr h-8 w-28 text-left font-mono" inputMode="numeric" value={v.extra != null ? money(v.extra) : ''} placeholder={money(base.extra)} onChange={(e) => up(v.id, { extra: e.target.value === '' ? undefined : parse(e.target.value) })} /></td>
           <td className="tnum p-2">{toman(cost)}</td>
           <td className="p-2"><Input aria-label={`قیمت عادی ${varLabel(d, attrs, v)}`} className="ltr h-8 w-32 text-left font-mono" inputMode="numeric" value={money(v.price)} placeholder={money(price)} onChange={(e) => up(v.id, { price: parse(e.target.value) || undefined })} /></td>
-          <td className="p-2"><Input aria-label={`قیمت ویژه ${varLabel(d, attrs, v)}`} className="ltr h-8 w-32 text-left font-mono" inputMode="numeric" value={money(v.sale)} placeholder="—" onChange={(e) => up(v.id, { sale: parse(e.target.value) || undefined })} /></td>
+          <td className="p-2"><Input aria-label={`قیمت ویژه ${varLabel(d, attrs, v)}`} className="ltr h-8 w-32 text-left font-mono" inputMode="numeric" value={money(v.sale)} placeholder="—" onChange={(e) => up(v.id, { sale: parse(e.target.value) || undefined })} />
+            {v.sale ? <SaleWindow v={v} label={varLabel(d, attrs, v)} onChange={(p) => up(v.id, p)} /> : null}</td>
           <td className={cx('tnum p-2 font-semibold', profit < 0 ? 'text-danger' : 'text-success')}>{sell ? toman(profit) : '—'}</td>
           <td className="p-2">{sell ? <Badge tone={profit < 0 ? 'danger' : m < floor ? 'warning' : 'success'} dot={false}>{pct(m, 1)}</Badge> : <span className="text-11 text-warning">بدون قیمت</span>}</td>
           <td className="p-2"><Button size="sm" variant="ghost" title={`قیمت برای حاشیهٔ ${target}٪`} onClick={() => applyTarget(v.id)}>حاشیهٔ هدف</Button></td>
@@ -78,4 +79,18 @@ export function VariantFxRevalue({ pid }: { pid: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-11 text-t2">قیمت سایت با تغییر نرخ خودکار عوض نمی‌شود؛ فقط با «اعمال». قیمت تمام‌شدهٔ حسابداری (روز خرید) دست نمی‌خورد.</p><Button size="sm" variant="primary" disabled={!changed.length} onClick={() => apply(changed.map((r) => r.v.id))}>اعمال قیمت پیشنهادی همه ({fa(changed.length)})</Button></div>
     </div>
   )
+}
+
+/** زمان‌بندی قیمت ویژه: از کی تا کی، با وضعیت فعلی و میانبرهای رایج */
+export function SaleWindow({ v, label, onChange }: { v: Variation; label: string; onChange: (p: Partial<Variation>) => void }) {
+  const st = saleState(v); const at = (iso?: string) => iso ? new Date(iso.length <= 10 ? `${iso}T23:59` : iso).toLocaleString('fa-IR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
+  const until = (h: number) => onChange({ saleFrom: new Date().toISOString(), saleUntil: new Date(Date.now() + h * 36e5).toISOString() })
+  const toLocal = (iso?: string) => { if (!iso) return ''; if (iso.length <= 10) return `${iso}T23:59`; const x = new Date(iso); const p = (n: number) => String(n).padStart(2, '0'); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}T${p(x.getHours())}:${p(x.getMinutes())}` }
+  return <div className="mt-1.5 w-56 space-y-1.5 rounded-lg bg-neutral-bg/60 p-2">
+    <div className="grid grid-cols-[auto_1fr] items-center gap-x-1.5 gap-y-1 text-11"><span className="text-t2">از</span><Input type="datetime-local" aria-label={`شروع قیمت ویژه ${label}`} className="h-7 text-11" value={toLocal(v.saleFrom)} onChange={(e) => onChange({ saleFrom: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
+      <span className="text-t2">تا</span><Input type="datetime-local" aria-label={`پایان قیمت ویژه ${label}`} className="h-7 text-11" value={toLocal(v.saleUntil)} onChange={(e) => onChange({ saleUntil: e.target.value ? new Date(e.target.value).toISOString() : undefined })} /></div>
+    {v.saleFrom && v.saleUntil && new Date(v.saleUntil.length <= 10 ? `${v.saleUntil}T23:59` : v.saleUntil) <= new Date(v.saleFrom) && <p className="text-[11px] text-danger">پایان باید بعد از شروع باشد.</p>}
+    <div className="flex flex-wrap gap-1">{([['۲۴ ساعت', 24], ['۳ روز', 72], ['یک هفته', 168]] as [string, number][]).map(([l, h]) => <button key={l} type="button" onClick={() => until(h)} className="h-6 rounded-full border border-line bg-surface px-2 text-[11px] hover:border-brand hover:text-brand">{l}</button>)}{(v.saleFrom || v.saleUntil) && <button type="button" onClick={() => onChange({ saleFrom: undefined, saleUntil: undefined })} className="h-6 rounded-full px-2 text-[11px] text-t3 hover:text-danger">بدون محدودیت</button>}</div>
+    <p className={cx('text-[11px]', st === 'active' ? 'text-success' : st === 'scheduled' ? 'text-info' : st === 'ended' ? 'text-danger' : 'text-t3')}>{st === 'active' ? (v.saleUntil ? `فعال تا ${at(v.saleUntil)}` : 'فعال، بدون تاریخ پایان') : st === 'scheduled' ? `شروع از ${at(v.saleFrom)}${v.saleUntil ? ` تا ${at(v.saleUntil)}` : ''}` : st === 'ended' ? 'تمام شده؛ قیمت عادی نمایش داده می‌شود' : ''}</p>
+  </div>
 }

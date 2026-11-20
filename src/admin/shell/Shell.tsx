@@ -1,13 +1,13 @@
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
-import { NAV, NAV_CLOSED_DEFAULT } from './nav'
+import { NAV } from './nav'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
 import { CommandPalette } from './CommandPalette'
 import { Avatar, Badge, Button, cx, Kbd, Light, Segmented, Select, StatusBadge } from '@/shared/ui/base'
 import { Drawer, Modal, toast } from '@/shared/ui/overlay'
-import { can, currentUser, effectiveRole, mutate, resetDB, ROLES, setSession, useDB, useSession, type ViewState } from '@/shared/lib/store'
+import { can, currentUser, effectiveRole, getSession, mutate, resetDB, ROLES, setSession, useDB, useSession, type ViewState } from '@/shared/lib/store'
 import { compactToman, fa, rel } from '@/shared/lib/fa'
 import { StorePreview } from '@/storefront/Preview'
 
@@ -43,42 +43,52 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   const s = useSession(); const d = useDB()
   const mini = s.collapsed && !mobile
   const items = NAV.filter((n) => can(n.id, s) && (!n.soon || d.flags.showSoon))
-  const groups = [...new Set(items.map((n) => n.group))]
+  const core = items.filter((n) => n.group === 'امروز')
+  const groups = [...new Set(items.filter((n) => n.group !== 'امروز').map((n) => n.group))]
   const loc = useLocation(); const [q, setQ] = useState('')
-  const closed = s.navClosed ?? NAV_CLOSED_DEFAULT
   const activeG = items.filter((n) => n.path !== '/admin' && loc.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.group
-  const toggle = (g: string) => setSession({ navClosed: closed.includes(g) ? closed.filter((x) => x !== g) : [...closed, g] })
+  // آکاردئون: فقط یک گروه باز است؛ گروه صفحهٔ فعلی خودکار باز می‌شود
+  const [open, setOpen] = useState<string | null>(activeG ?? null)
+  useEffect(() => { if (activeG && activeG !== 'امروز') setOpen(activeG) }, [activeG])
   const shown = q.trim() ? items.filter((n) => n.label.includes(q.trim()) || n.group.includes(q.trim())) : null
+  const pins = items.filter((i) => s.pinned.includes(i.id) && i.group !== 'امروز')
   const link = (n: (typeof NAV)[number]) => { const c = n.count?.(d) ?? 0; return (
-    <NavLink key={n.id} to={n.path} end={n.path === '/admin'} onClick={onNav} title={mini ? n.label : undefined}
-      className={({ isActive }) => cx('group relative flex h-10 items-center gap-2.5 rounded-xl px-3 text-13 transition-colors', isActive ? 'bg-brand-solid font-semibold text-white shadow-sm [&_.navcount]:bg-white/20 [&_.navcount]:text-white' : 'text-t2 hover:bg-neutral-bg hover:text-t1', mini && 'justify-center px-0')}>
+    <NavLink key={n.id} to={n.path} end={n.path === '/admin'} onClick={onNav} title={mini ? `${n.label}${c ? ` (${fa(c)})` : ''}` : undefined}
+      className={({ isActive }) => cx('group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-13 transition-colors', isActive ? 'bg-brand-solid font-semibold text-white shadow-sm [&_.navcount]:bg-white/20 [&_.navcount]:text-white' : 'text-t2 hover:bg-neutral-bg hover:text-t1', mini && 'h-10 justify-center px-0')}>
       <n.icon size={17} className="shrink-0" />
       {!mini && <span className="flex-1 truncate">{n.label}</span>}
       {!mini && n.soon && <Badge dot={false}>به‌زودی</Badge>}
-      {c > 0 && <span className={cx('navcount tnum rounded-full bg-danger-bg px-1.5 text-11 font-semibold text-danger', mini && 'absolute top-0.5 left-1 px-1')}>{fa(c)}</span>}
-      {!mini && !n.soon && c === 0 && <button aria-label="سنجاق" onClick={(e) => { e.preventDefault(); setSession({ pinned: s.pinned.includes(n.id) ? s.pinned.filter((x) => x !== n.id) : [...s.pinned, n.id] }) }} className={cx('text-t3 hover:text-brand', s.pinned.includes(n.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}><Pin size={12} /></button>}
+      {c > 0 && <span className={cx('navcount tnum rounded-full px-1.5 text-11 font-semibold', n.urgent ? 'bg-danger-bg text-danger' : 'bg-neutral-bg text-t2', mini && 'absolute top-0.5 left-1 px-1')}>{fa(c)}</span>}
+      {!mini && !n.soon && c === 0 && n.group !== 'امروز' && <button aria-label={s.pinned.includes(n.id) ? 'برداشتن سنجاق' : 'سنجاق به بالای منو'} title={s.pinned.includes(n.id) ? 'برداشتن سنجاق' : 'سنجاق به بالای منو'} onClick={(e) => { e.preventDefault(); setSession({ pinned: s.pinned.includes(n.id) ? s.pinned.filter((x) => x !== n.id) : [...s.pinned, n.id] }) }} className={cx('text-t3 hover:text-brand', s.pinned.includes(n.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100')}><Pin size={12} /></button>}
     </NavLink>
   ) }
+  const Head = ({ children }: { children: ReactNode }) => mini ? <div className="mx-3 my-1 border-t border-line" /> : <p className="px-2.5 pt-1 pb-1 text-11 font-medium text-t3">{children}</p>
   return (
-    <aside className={cx('no-print flex h-full shrink-0 flex-col border-l border-line bg-surface transition-[width] duration-200', mobile ? 'w-72' : mini ? 'w-[72px]' : 'w-[264px]')}>
+    <aside className={cx('no-print flex h-full shrink-0 flex-col border-l border-line bg-surface transition-[width] duration-200', mobile ? 'w-72' : mini ? 'w-[72px]' : 'w-[256px]')}>
       <div className={cx('flex h-14 shrink-0 items-center border-b border-line px-4', mini && 'justify-center px-0')}>
         {mini ? <img src="./brand/logo-mark.png" alt="غنیمت" className="h-7" /> : s.theme === 'dark'
           ? <span className="flex items-center gap-2 text-20 font-bold"><img src="./brand/logo-mark.png" alt="" className="h-7" />غنیمت</span>
           : <img src="./brand/logo-full.png" alt="غنیمت" className="h-8" />}
       </div>
-      <nav className="flex-1 space-y-3 overflow-y-auto p-2" aria-label="منوی اصلی">
-        {!mini && <div className="relative px-0.5"><Search size={13} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-t3" /><input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ('') }} aria-label="جست‌وجو در منو" placeholder="جست‌وجو در منو" className="h-8 w-full rounded-lg border border-line bg-neutral-bg/60 pe-2 ps-8 text-12 outline-none focus:border-brand" /></div>}
-        {!mini && !shown && s.pinned.some((p) => items.find((i) => i.id === p)) && (
-          <div><p className="px-2.5 pb-1 text-11 font-medium text-t3">سنجاق‌شده</p>{items.filter((i) => s.pinned.includes(i.id)).map(link)}</div>
-        )}
-        {shown ? (shown.length ? <div>{shown.map(link)}</div> : <p className="px-3 py-2 text-12 text-t3">موردی پیدا نشد.</p>)
-          : groups.map((g) => { const gi = items.filter((i) => i.group === g); const isOpen = mini || g === activeG || !closed.includes(g) || g === 'امروز'; const sum = gi.reduce((a, n) => a + (n.count?.(d) ?? 0), 0); return (
-            <div key={g}>
-              {!mini && g !== 'امروز' && <button onClick={() => toggle(g)} aria-expanded={isOpen} className="flex w-full items-center gap-1 rounded-md px-2.5 pb-1 text-11 font-medium text-t3 hover:text-t1"><span className="flex-1 text-right">{g}</span>{!isOpen && sum > 0 && <span className="tnum rounded-full bg-danger-bg px-1.5 text-[10px] font-semibold text-danger">{fa(sum)}</span>}<ChevronDown size={12} className={cx('transition-transform', !isOpen && 'rotate-90')} /></button>}
-              {isOpen && gi.map(link)}
-            </div>) })}
+      {!mini && <div className="relative shrink-0 px-2.5 pt-2.5"><Search size={13} className="pointer-events-none absolute top-1/2 right-5 mt-[5px] -translate-y-1/2 text-t3" /><input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ('') }} aria-label="جست‌وجو در منو" placeholder="پیدا کردن بخش…" className="h-8 w-full rounded-lg border border-line bg-neutral-bg/60 pe-2 ps-8 text-12 outline-none focus:border-brand" /></div>}
+      <nav className="flex-1 space-y-2 overflow-y-auto p-2" aria-label="منوی اصلی">
+        {shown ? (shown.length ? <div className="space-y-0.5">{shown.map(link)}</div> : <p className="px-3 py-2 text-12 text-t3">بخشی با این نام نیست.</p>) : <>
+          <div className="space-y-0.5">{core.map(link)}</div>
+          {pins.length > 0 && <div className="space-y-0.5"><Head>سنجاق‌شده‌های من</Head>{pins.map(link)}</div>}
+          <div className={cx(!mini && 'border-t border-line pt-2')}>
+            {groups.map((g) => { const gi = items.filter((i) => i.group === g); const isOpen = mini || open === g; const urgent = gi.filter((n) => n.urgent).reduce((a, n) => a + (n.count?.(d) ?? 0), 0); const here = activeG === g; return (
+              <div key={g} className="mb-0.5">
+                {!mini ? <button onClick={() => setOpen(open === g ? null : g)} aria-expanded={isOpen} className={cx('flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-12 font-semibold hover:bg-neutral-bg', here ? 'text-brand' : 'text-t1')}>
+                  <span className="flex-1 text-right">{g}</span>
+                  {!isOpen && urgent > 0 && <span className="tnum rounded-full bg-danger-bg px-1.5 text-[10px] font-semibold text-danger">{fa(urgent)}</span>}
+                  <ChevronDown size={13} className={cx('text-t3 transition-transform', !isOpen && 'rotate-90')} />
+                </button> : <div className="mx-3 my-1.5 border-t border-line" />}
+                {isOpen && <div className={cx('space-y-0.5', !mini && 'mt-0.5 mb-1.5 border-r-2 border-line pr-1.5 mr-3')}>{gi.map(link)}</div>}
+              </div>) })}
+          </div>
+        </>}
       </nav>
-      {!mobile && <button onClick={() => setSession({ collapsed: !s.collapsed })} className="flex h-10 items-center justify-center gap-2 border-t border-line text-12 text-t3 hover:text-t1"><ChevronsRight size={15} className={cx('transition-transform', mini && 'rotate-180')} />{!mini && 'جمع‌کردن منو'}</button>}
+      {!mobile && <button onClick={() => setSession({ collapsed: !s.collapsed })} title="جمع و باز کردن منو (کلید [ )" className="flex h-10 shrink-0 items-center justify-center gap-2 border-t border-line text-12 text-t3 hover:text-t1"><ChevronsRight size={15} className={cx('transition-transform', mini && 'rotate-180')} />{!mini && <>جمع‌کردن منو<Kbd>[</Kbd></>}</button>}
     </aside>
   )
 }
@@ -98,31 +108,34 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
     <button aria-label={label} title={label} onClick={onClick} className="relative grid size-9 shrink-0 place-items-center rounded-md text-t2 hover:bg-neutral-bg hover:text-t1">{children}{!!n && <span className="tnum absolute top-0.5 left-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-danger-solid px-1 text-[10px] font-bold text-white">{fa(n)}</span>}</button>
   )
   return (
-    <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-3">
+    <header className="no-print relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
       <button aria-label="منو" onClick={onMenu} className="grid size-9 place-items-center rounded-md text-t2 hover:bg-neutral-bg lg:hidden"><Menu size={18} /></button>
-      <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-sm"><Search size={15} /><span className="truncate">جست‌وجو یا اجرای دستور</span><span className="mr-auto hidden whitespace-nowrap 2xl:block"><Kbd>Ctrl K</Kbd></span></button>
-      {['super', 'ops'].includes(me.role) && !s.viewAs && <Button variant="ghost" icon={<Zap size={15} />} onClick={() => nav('/simple')} className="max-sm:!hidden">حالت سریع</Button>}
-      <div className="relative hidden md:block">
-        <Button icon={<Plus size={15} />} onClick={() => setPanel(panel === 'quick' ? null : 'quick')}>ایجاد سریع</Button>
-        {panel === 'quick' && <div className="anim-pop absolute top-10 right-0 w-44 rounded-md border border-line bg-surface p-1 shadow-float">{QUICK.map(([l, p]) => <button key={l} onClick={() => { nav(p); setPanel(null) }} className="block w-full rounded-sm px-3 py-1.5 text-right text-13 hover:bg-neutral-bg">{l}</button>)}</div>}
-      </div>
-      <div className="mr-auto hidden xl:block"><Select value={s.scope} onChange={(v) => setSession({ scope: v as any })} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="h-9 w-36" /></div>
-      <div className="mr-auto flex items-center xl:mr-0">
-        {(() => { const n = d.network; const c = n?.closed && new Date(n.closed.until).getTime() > Date.now(); const f = n?.fastOff && new Date(n.fastOff.until).getTime() > Date.now(); if (!c && !f) return null; return <button onClick={() => nav('/admin/network')} className={cx('btn ml-1 flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-12 font-semibold', c ? 'bg-danger-bg text-danger' : 'bg-warning-bg text-warning')}><span className="size-2 animate-pulse rounded-full bg-current" />{c ? 'تعطیل' : 'ارسال سریع متوقف'}</button> })()}
+      {/* راست: پیدا کردن و دامنهٔ داده */}
+      <button onClick={onCmd} className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-13 text-t3 hover:border-brand md:max-w-md"><Search size={15} /><span className="truncate">جست‌وجوی سفارش، کالا، مشتری یا دستور</span><span className="mr-auto hidden whitespace-nowrap lg:block"><Kbd>Ctrl K</Kbd></span></button>
+      <div className="hidden xl:block"><Select value={s.scope} onChange={(v) => setSession({ scope: v as any })} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="h-9 w-36" /></div>
+      {/* چپ: وضعیت فقط وقتی مشکلی هست، بعد اقدام، اعلان‌ها و حساب */}
+      <div className="mr-auto flex items-center gap-1">
+        {(() => { const n = d.network; const c = n?.closed && new Date(n.closed.until).getTime() > Date.now(); const f = n?.fastOff && new Date(n.fastOff.until).getTime() > Date.now(); if (!c && !f) return null; return <button onClick={() => nav('/admin/network')} className={cx('btn flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-12 font-semibold', c ? 'bg-danger-bg text-danger' : 'bg-warning-bg text-warning')}><span className="size-2 animate-pulse rounded-full bg-current" />{c ? 'تعطیل' : 'ارسال سریع متوقف'}</button> })()}
         {(() => { const lv = bad.some((b) => b.status === 'prov.error') ? 'crit' : bad.length ? 'warn' : 'ok'; return (
-          <button onClick={() => setPanel('status')} title="وضعیت سیستم" className="btn flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-12 text-t2 hover:bg-neutral-bg hover:text-t1">
-            <Light s={lv} /><span className="hidden md:inline">{lv === 'ok' ? 'سیستم سالم' : lv === 'warn' ? `${fa(bad.length)} هشدار` : `${fa(bad.filter((b) => b.status === 'prov.error').length)} سرویس قطع`}</span>
+          <button onClick={() => setPanel('status')} title={lv === 'ok' ? 'همهٔ سرویس‌ها سالم است' : 'وضعیت سیستم'} className={cx('btn flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-12', lv === 'ok' ? 'text-t3 hover:bg-neutral-bg' : lv === 'warn' ? 'bg-warning-bg text-warning' : 'bg-danger-bg text-danger')}>
+            <Light s={lv} /><span className={cx(lv === 'ok' ? 'hidden 2xl:inline' : 'hidden md:inline')}>{lv === 'ok' ? 'سیستم سالم' : lv === 'warn' ? `${fa(bad.length)} هشدار سرویس` : `${fa(bad.filter((b) => b.status === 'prov.error').length)} سرویس قطع`}</span>
           </button>) })()}
-        <button onClick={() => window.dispatchEvent(new Event('site-preview'))} className="btn mx-1 hidden h-9 shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 text-12 hover:border-brand hover:text-brand xl:flex"><ExternalLink size={14} />مشاهدهٔ فروشگاه</button>
-        <span className="hidden xl:block"><IconBtn label="تمام‌صفحه" onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}) }}><Maximize size={17} /></IconBtn></span>
+        <div className="relative z-10 hidden md:block">
+          <Button variant="primary" icon={<Plus size={15} />} onClick={() => setPanel(panel === 'quick' ? null : 'quick')} aria-expanded={panel === 'quick'}>ایجاد</Button>
+          {panel === 'quick' && <div className="anim-pop absolute top-10 left-0 z-10 w-52 rounded-lg border border-line bg-surface p-1 shadow-float">{QUICK.map(([l, p]) => <button key={l} onClick={() => { nav(p); setPanel(null) }} className="block w-full rounded-md px-3 py-2 text-right text-13 hover:bg-neutral-bg">{l}</button>)}</div>}
+        </div>
+        <span className="mx-1 hidden h-6 w-px bg-line md:block" />
         <IconBtn label="صندوق تأییدها" n={pend.length} onClick={() => setPanel('approvals')}><CheckCheck size={18} /></IconBtn>
         <IconBtn label="هشدارها" n={unread} onClick={() => setPanel('alerts')}><Bell size={18} /></IconBtn>
-        <span className="hidden sm:block"><IconBtn label="تغییر تم" onClick={() => setSession({ theme: s.theme === 'dark' ? 'light' : 'dark' })}>{s.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</IconBtn></span>
-        <Button variant="ai" icon={<Sparkles size={15} />} onClick={onAI} className="mx-1"><span className="hidden md:inline">دستیار غنیمت</span></Button>
-        <button onClick={() => setPanel(panel === 'me' ? null : 'me')} className="flex items-center gap-2 rounded-md p-1 hover:bg-neutral-bg"><Avatar name={me.name} /><span className="hidden text-right leading-4 lg:block"><span className="block text-12 font-semibold">{me.name}</span><span className="block text-11 text-t3">{ROLES[role].label}</span></span></button>
+        <span className="hidden xl:block"><IconBtn label="مشاهدهٔ فروشگاه" onClick={() => window.dispatchEvent(new Event('site-preview'))}><ExternalLink size={17} /></IconBtn></span>
+        <Button variant="ai" icon={<Sparkles size={15} />} onClick={onAI} className="mx-1"><span className="hidden lg:inline">دستیار</span></Button>
+        <button onClick={() => setPanel(panel === 'me' ? null : 'me')} aria-expanded={panel === 'me'} className="flex items-center gap-2 rounded-lg p-1 hover:bg-neutral-bg"><Avatar name={me.name} /><span className="hidden text-right leading-4 lg:block"><span className="block text-12 font-semibold">{me.name}</span><span className="block text-11 text-t3">{ROLES[role].label}</span></span><ChevronDown size={13} className="hidden text-t3 lg:block" /></button>
       </div>
+      {(panel === 'me' || panel === 'quick') && <div className="fixed inset-0" aria-hidden onClick={() => setPanel(null)} />}
       {panel === 'me' && (
         <div className="anim-pop absolute top-14 left-3 w-64 rounded-lg border border-line bg-surface p-3 text-13 shadow-float">
+          {['super', 'ops'].includes(me.role) && !s.viewAs && <button onClick={() => { setPanel(null); nav('/simple') }} className="mb-2 flex w-full items-center gap-2 rounded-md bg-neutral-bg px-2 py-2 text-right font-medium hover:text-brand"><Zap size={15} />رفتن به حالت سریع<span className="mr-auto text-11 font-normal text-t3">برای اپراتور</span></button>}
+          <div className="mb-3 flex gap-1"><button onClick={() => setSession({ theme: s.theme === 'dark' ? 'light' : 'dark' })} className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line py-1.5 text-12 hover:border-brand">{s.theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}{s.theme === 'dark' ? 'تم روشن' : 'تم تیره'}</button><button onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}) }} className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line py-1.5 text-12 hover:border-brand"><Maximize size={14} />تمام‌صفحه</button></div>
           <p className="mb-2 text-11 text-t3">تراکم جدول</p>
           <Segmented size="sm" value={s.density} onChange={(v) => setSession({ density: v })} options={[['comfortable', 'راحت'], ['normal', 'معمولی'], ['compact', 'فشرده']]} />
           {me.role === 'super' && <><p className="mt-3 mb-1 flex items-center gap-1 text-11 text-t3"><Eye size={12} />مشاهده به‌جای… (فقط مشاهده)</p>
@@ -185,6 +198,7 @@ export function Shell() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCmd((v) => !v) }
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)
       if (!typing && e.key === '?') setKeys(true)
+      if (!typing && e.key === '[') setSession({ collapsed: !getSession().collapsed })
       if (!typing && e.key === 'g') { const once = (k: KeyboardEvent) => { ({ o: '/admin/orders', h: '/admin', c: '/admin/catalog', w: '/admin/warehouse', s: '/admin/support' } as Record<string, string>)[k.key] && nav(({ o: '/admin/orders', h: '/admin', c: '/admin/catalog', w: '/admin/warehouse', s: '/admin/support' } as Record<string, string>)[k.key]); window.removeEventListener('keydown', once) }; window.addEventListener('keydown', once) }
     }
     const openAI = () => setAI(true)

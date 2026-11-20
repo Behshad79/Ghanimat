@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (359 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (367 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -97,17 +97,17 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| کپی کالا | [39](../../src/admin/catalog/Catalog.tsx#L39) |
-| انتقال کالا به سطل بازیافت | [44](../../src/admin/catalog/Catalog.tsx#L44) |
-| تعدیل موجودی | [75](../../src/admin/catalog/Catalog.tsx#L75) |
-| ویرایش واحد | [86](../../src/admin/catalog/Catalog.tsx#L86) |
-| تغییر وضعیت فروش واحد | [119](../../src/admin/catalog/Catalog.tsx#L119) |
-| انتقال واحد به سطل بازیافت | [121](../../src/admin/catalog/Catalog.tsx#L121) |
-| انتشار گروهی | [161](../../src/admin/catalog/Catalog.tsx#L161) |
-| توقف فروش گروهی | [162](../../src/admin/catalog/Catalog.tsx#L162) |
-| حذف گروهی کالا | [164](../../src/admin/catalog/Catalog.tsx#L164) |
-| چاپ برچسب کالا | [281](../../src/admin/catalog/Catalog.tsx#L281) |
-| حذف دائمی | [302](../../src/admin/catalog/Catalog.tsx#L302) |
+| کپی کالا | [40](../../src/admin/catalog/Catalog.tsx#L40) |
+| انتقال کالا به سطل بازیافت | [45](../../src/admin/catalog/Catalog.tsx#L45) |
+| تعدیل موجودی | [76](../../src/admin/catalog/Catalog.tsx#L76) |
+| ویرایش واحد | [87](../../src/admin/catalog/Catalog.tsx#L87) |
+| تغییر وضعیت فروش واحد | [120](../../src/admin/catalog/Catalog.tsx#L120) |
+| انتقال واحد به سطل بازیافت | [122](../../src/admin/catalog/Catalog.tsx#L122) |
+| انتشار گروهی | [162](../../src/admin/catalog/Catalog.tsx#L162) |
+| توقف فروش گروهی | [163](../../src/admin/catalog/Catalog.tsx#L163) |
+| حذف گروهی کالا | [165](../../src/admin/catalog/Catalog.tsx#L165) |
+| چاپ برچسب کالا | [283](../../src/admin/catalog/Catalog.tsx#L283) |
+| حذف دائمی | [304](../../src/admin/catalog/Catalog.tsx#L304) |
 ### `src/admin/catalog/Choices.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -134,6 +134,12 @@
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
 | افزودن نظرات آمازون به کالا | [41](../../src/admin/catalog/LinkExtras.tsx#L41) |
+### `src/admin/catalog/NewItemsQueue.tsx` — ماژول `products`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| واگذاری تکمیل کالای تازه | [38](../../src/admin/catalog/NewItemsQueue.tsx#L38) |
+| انتشار کالای تازه از صف تکمیل | [39](../../src/admin/catalog/NewItemsQueue.tsx#L39) |
 ### `src/admin/catalog/PdpExtras.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -176,7 +182,7 @@
 | پیش‌ساخت صفحهٔ کالای در راه | [127](../../src/admin/catalog/Wizard.tsx#L127) |
 | بارگذاری تصویر کالا | [174](../../src/admin/catalog/Wizard.tsx#L174) |
 | افزودن ویژگی به قالب | [195](../../src/admin/catalog/Wizard.tsx#L195) |
-| بارگذاری آیکون خط کارت | [403](../../src/admin/catalog/Wizard.tsx#L403) |
+| بارگذاری آیکون خط کارت | [404](../../src/admin/catalog/Wizard.tsx#L404) |
 ### `src/admin/customer/Customer360.tsx` — ماژول `customers`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -227,6 +233,15 @@
 |---|---|
 | تغییر دستی موعد تسویه | [56](../../src/admin/finance/Money.tsx#L56) |
 | ثبت واریز سرویس پرداخت | [59](../../src/admin/finance/Money.tsx#L59) |
+### `src/admin/finance/Treasury.tsx` — ماژول `finance`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| تطبیق پیامک بانک با ردیف دفتر | [113](../../src/admin/finance/Treasury.tsx#L113) |
+| حذف ردیف خزانه | [153](../../src/admin/finance/Treasury.tsx#L153) |
+| پرداخت دورهٔ اشتراک | [208](../../src/admin/finance/Treasury.tsx#L208) |
+| یادآوری پرداخت تکراری در برنامه‌ریزی | [209](../../src/admin/finance/Treasury.tsx#L209) |
+| تغییر بودجهٔ دسته | [261](../../src/admin/finance/Treasury.tsx#L261) |
 ### `src/admin/logistics/ZoneMap.tsx` — ماژول `shipping`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -602,25 +617,26 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ورود موجودی با مالک مشخص | [88](../../src/admin/stock/Ownership.tsx#L88) |
-| انتقال موجودی بین انبارها | [107](../../src/admin/stock/Ownership.tsx#L107) |
-| ثبت فروش خارج از سایت | [142](../../src/admin/stock/Ownership.tsx#L142) |
-| ثبت پرداخت تسویه بین شرکا | [181](../../src/admin/stock/Ownership.tsx#L181) |
-| تغییر قاعدهٔ کد تنوع | [197](../../src/admin/stock/Ownership.tsx#L197) |
-| حذف بارکد اختصاصی | [204](../../src/admin/stock/Ownership.tsx#L204) |
-| ثبت بارکد اختصاصی شریک | [205](../../src/admin/stock/Ownership.tsx#L205) |
-| تغییر قرارداد سهم | [215](../../src/admin/stock/Ownership.tsx#L215) |
-| تغییر قاعدهٔ اولویت برداشت | [221](../../src/admin/stock/Ownership.tsx#L221) |
-| تغییر قاعدهٔ تخفیف در تسویه | [222](../../src/admin/stock/Ownership.tsx#L222) |
-| تغییر قاعدهٔ کارمزد در تسویه | [223](../../src/admin/stock/Ownership.tsx#L223) |
-| نگاشت کانال سفارش به کانال تسویه | [227](../../src/admin/stock/Ownership.tsx#L227) |
-| افزودن انبار تازه | [233](../../src/admin/stock/Ownership.tsx#L233) |
-| افزودن کانال فروش | [238](../../src/admin/stock/Ownership.tsx#L238) |
-| تغییر مدل قرارداد سهم | [243](../../src/admin/stock/Ownership.tsx#L243) |
-| افزودن قاعدهٔ زمان رسیدن پول | [254](../../src/admin/stock/Ownership.tsx#L254) |
-| تغییر زمان رسیدن پول روش پرداخت | [278](../../src/admin/stock/Ownership.tsx#L278) |
-| حذف قاعدهٔ زمان رسیدن پول | [283](../../src/admin/stock/Ownership.tsx#L283) |
-| برگشت کالا به مالک | [311](../../src/admin/stock/Ownership.tsx#L311) |
+| ورود گروهی کالای تازه (هنوز در سایت نیست) | [120](../../src/admin/stock/Ownership.tsx#L120) |
+| ورود موجودی با مالک مشخص | [125](../../src/admin/stock/Ownership.tsx#L125) |
+| انتقال موجودی بین انبارها | [182](../../src/admin/stock/Ownership.tsx#L182) |
+| ثبت فروش خارج از سایت | [217](../../src/admin/stock/Ownership.tsx#L217) |
+| ثبت پرداخت تسویه بین شرکا | [256](../../src/admin/stock/Ownership.tsx#L256) |
+| تغییر قاعدهٔ کد تنوع | [272](../../src/admin/stock/Ownership.tsx#L272) |
+| حذف بارکد اختصاصی | [279](../../src/admin/stock/Ownership.tsx#L279) |
+| ثبت بارکد اختصاصی شریک | [280](../../src/admin/stock/Ownership.tsx#L280) |
+| تغییر قرارداد سهم | [290](../../src/admin/stock/Ownership.tsx#L290) |
+| تغییر قاعدهٔ اولویت برداشت | [296](../../src/admin/stock/Ownership.tsx#L296) |
+| تغییر قاعدهٔ تخفیف در تسویه | [297](../../src/admin/stock/Ownership.tsx#L297) |
+| تغییر قاعدهٔ کارمزد در تسویه | [298](../../src/admin/stock/Ownership.tsx#L298) |
+| نگاشت کانال سفارش به کانال تسویه | [302](../../src/admin/stock/Ownership.tsx#L302) |
+| افزودن انبار تازه | [308](../../src/admin/stock/Ownership.tsx#L308) |
+| افزودن کانال فروش | [313](../../src/admin/stock/Ownership.tsx#L313) |
+| تغییر مدل قرارداد سهم | [318](../../src/admin/stock/Ownership.tsx#L318) |
+| افزودن قاعدهٔ زمان رسیدن پول | [329](../../src/admin/stock/Ownership.tsx#L329) |
+| تغییر زمان رسیدن پول روش پرداخت | [353](../../src/admin/stock/Ownership.tsx#L353) |
+| حذف قاعدهٔ زمان رسیدن پول | [358](../../src/admin/stock/Ownership.tsx#L358) |
+| برگشت کالا به مالک | [386](../../src/admin/stock/Ownership.tsx#L386) |
 ### `src/admin/stock/Packing.tsx` — ماژول `stock`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -692,11 +708,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت مرسوله | [308](../../src/shared/data/seed.ts#L308) |
-| پیش‌نویس پاسخ تیکت | [309](../../src/shared/data/seed.ts#L309) |
-| درخواست بازگشت وجه | [310](../../src/shared/data/seed.ts#L310) |
-| مشاهدهٔ دادهٔ حساس | [311](../../src/shared/data/seed.ts#L311) |
-| تغییر موجودی | [312](../../src/shared/data/seed.ts#L312) |
+| تغییر وضعیت مرسوله | [309](../../src/shared/data/seed.ts#L309) |
+| پیش‌نویس پاسخ تیکت | [310](../../src/shared/data/seed.ts#L310) |
+| درخواست بازگشت وجه | [311](../../src/shared/data/seed.ts#L311) |
+| مشاهدهٔ دادهٔ حساس | [312](../../src/shared/data/seed.ts#L312) |
+| تغییر موجودی | [313](../../src/shared/data/seed.ts#L313) |
 ### `src/shared/lib/fx.ts` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

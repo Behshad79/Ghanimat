@@ -272,7 +272,7 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
         <Field label="قیمت مرجع کالای نو" help="ردیف «قیمت نو» و درصد ارزان‌تر روی کارت."><MoneyIn value={f.priceNew} onChange={(n) => set({ priceNew: n })} /></Field>
       </div>
       <Card className="self-start bg-surface-2 xl:sticky xl:top-20" title={<>{f.kind === 'variable' ? 'سود قیمت پایه' : 'سود هر واحد'}<Hint k="margin" /></>}>
-        {f.kind === 'variable' && <p className="mb-2 rounded-lg bg-brand-tint/60 px-2 py-1.5 text-11">کالای متغیر: قیمت خرید، قیمت فروش و سود هر رنگ یا حافظه در جدول «قیمت، هزینه و سود هر تنوع» زیر همین صفحه است.</p>}
+        {f.kind === 'variable' && <p className="mb-2 rounded-lg bg-brand-tint/60 px-2 py-1.5 text-11">کالای متغیر: قیمت خرید، قیمت فروش و سود هر تنوع (هر ترکیب ویژگی‌ها) در جدول «قیمت، هزینه و سود هر تنوع» زیر همین صفحه است.</p>}
         {[['قیمت خرید', f.costFx * (f.currency === 'تومان' ? 1 : f.rate)], ['هزینه‌های جانبی', f.freight + f.customs + f.other]].map(([l, v]) => <div key={l as string} className="flex justify-between py-1 text-13"><span className="text-t2">{l}</span><span className="tnum">{toman(v as number)}</span></div>)}
         <div className="flex justify-between border-t border-line py-1.5 text-13 font-semibold"><span>قیمت تمام‌شده</span><span className="tnum">{toman(landed)}</span></div>
         <div className="flex justify-between py-1 text-13"><span className="text-t2">قیمت نهایی فروش</span><span className="tnum">{toman(finalPrice)}</span></div>

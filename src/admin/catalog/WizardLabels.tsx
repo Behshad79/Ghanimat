@@ -13,7 +13,7 @@ import type { SplitRow } from '../stock/OwnerSplit'
 
 type F = { kind: 'simple' | 'variable'; mode: 'qty' | 'serial'; code: string; title: string; en: string; brand: string; category: string; model: string; attrs: PAttr[]; variations: Variation[]; qtyTehran: number; qtyMahabad: number; owner?: string; ownSplit?: SplitRow[]; units: { serial: string }[] }
 
-/** برچسب‌های همین کالا در مرحلهٔ «بارکد و برچسب»: هر کالای متمایز (رنگ) و هر مالک یک کد؛ چاپ مستقیم از همین صفحه */
+/** برچسب‌های همین کالا در مرحلهٔ «بارکد و برچسب»: هر کالای متمایز (هر ترکیب ویژگی‌ها) و هر مالک یک کد؛ چاپ مستقیم از همین صفحه */
 export function WizardLabels({ f, set }: { f: F; set: (p: { code: string }) => void }) {
   const d = useDB(); const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState('50x30'); const [bg, setBg] = useState('white'); const [copies, setCopies] = useState<Record<string, number>>({})
@@ -25,7 +25,7 @@ export function WizardLabels({ f, set }: { f: F; set: (p: { code: string }) => v
     : f.ownSplit?.length ? f.ownSplit.filter((r) => r.qty > 0).map((r, i) => { const v = vars.find((x) => x.id === r.variationId); return { k: `s${i}`, title: [f.title, vname(v)].filter(Boolean).join(' · '), sub: [vname(v), oname(r.owner)].filter(Boolean).join(' · '), code: labelCode(d.stock, r.owner, base, v ?? null), qty: r.qty } })
     : vars.length ? vars.map((v) => ({ k: v.id, title: `${f.title} · ${vname(v)}`, sub: `${vname(v)} · ${oname(owner)}`, code: labelCode(d.stock, owner, base, v), qty: v.qty.tehran + v.qty.mahabad })).filter((r) => r.qty > 0)
     : [{ k: 'p', title: f.title, code: labelCode(d.stock, owner, base, null), qty: Math.max(1, f.qtyTehran + f.qtyMahabad) }]
-  // برچسب‌های هم‌کد (مثلاً یک رنگ در دو انبار) یکی می‌شوند
+  // برچسب‌های هم‌کد (مثلاً یک تنوع در دو انبار) یکی می‌شوند
   const merged = Object.values(rows.reduce<Record<string, (typeof rows)[number]>>((a, r) => { a[r.code] = a[r.code] ? { ...a[r.code], qty: a[r.code].qty + r.qty } : r; return a }, {}))
   const n = (r: (typeof merged)[number]) => copies[r.code] ?? r.qty
   const total = merged.reduce((a, r) => a + n(r), 0)
@@ -47,7 +47,7 @@ export function WizardLabels({ f, set }: { f: F; set: (p: { code: string }) => v
       <div className="min-w-0 flex-1 space-y-1.5 text-12"><p className="font-semibold">{r.sub || 'برچسب کالا'}</p><p className="text-t2">موجودی {fa(r.qty)} عدد</p>
         <label className="flex items-center gap-1.5 text-t2">تعداد چاپ<Input type="number" min={0} max={500} className="ltr h-8 w-20 text-center font-mono" value={n(r)} onChange={(e) => setCopies({ ...copies, [r.code]: Math.max(0, Math.min(500, +e.target.value)) })} aria-label={`تعداد چاپ ${r.code}`} /></label></div>
     </li>)}</ul>
-    <p className="text-11 text-t2">برای هر رنگ و هر مالک یک کد جداست تا هنگام بسته‌بندی، اسکن رنگ و مالک را درست تشخیص دهد. برچسب واحدهای سریال‌دار پس از ثبت از صفحهٔ هر واحد هم چاپ می‌شود.</p>
+    <p className="text-11 text-t2">برای هر تنوع (هر ترکیب رنگ، حافظه و ویژگی‌های دیگر) و هر مالک یک کد جداست تا هنگام بسته‌بندی، اسکن تنوع و مالک را درست تشخیص دهد. برچسب واحدهای سریال‌دار پس از ثبت از صفحهٔ هر واحد هم چاپ می‌شود.</p>
     <div ref={box} className="hidden">{merged.flatMap((r) => Array.from({ length: n(r) }, (_, i) => <ProductLabel key={r.code + i} p={prod(r)} size={size} bg={bg} />))}</div>
   </div>
 }

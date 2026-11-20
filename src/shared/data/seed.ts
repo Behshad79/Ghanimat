@@ -501,6 +501,19 @@ export const makeSeed = () => {
       mk('GH-10511', 'c2', 'mahabad', [{ productId: 'prx', unitId: '', qty: 2, price: 2900000, variationId: 'var-prx-blk' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }], 25),
       mk('GH-10510', 'c5', 'tehran', [{ productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-blk' }], 40))
     s.txns.unshift(...['GH-10511', 'GH-10510'].map((oid, i) => ({ ...structuredClone(s.txns.find((t) => t.orderId === 'GH-10480') ?? s.txns[0]), id: `TX-PK${i + 1}`, orderId: oid, amount: s.orders.find((o) => o.id === oid)!.total, status: 'pay.success' }))) }
+  // کالای متغیر با چند ویژگی: تنوع‌ها ممکن است در رنگ، حافظه، رم یا نسخهٔ منطقه فرق کنند؛ هر ترکیب یک کالای متمایز با کد خودش است
+  { const base = s.products.find((x) => x.id === 'prx')!; const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
+    const combos: [string, string, string, string, string, string][] = [['var-pga-1', 'green', '128', '8', 'me', '1'], ['var-pga-2', 'white', '128', '8', 'me', '2'], ['var-pga-3', 'white', '64', '4', 'me', '3'], ['var-pga-4', 'white', '128', '8', 'vn', '4']]
+    const lots: [string, string, string, number][] = [['var-pga-1', 'gh', 'tehran', 4], ['var-pga-2', 'gh', 'tehran', 6], ['var-pga-3', 'gh', 'tehran', 3], ['var-pga-2', 'ys', 'mahabad', 3], ['var-pga-4', 'ys', 'mahabad', 5]]
+    lots.forEach(([vid, owner, wh, qty], i) => s.stock.lots.push({ id: `L-2${i}1`, productId: 'pga', variationId: vid, owner, warehouse: wh, qty, cost: vid === 'var-pga-3' ? 17800000 : 21500000, at: ago(120 - i * 10), ref: owner === 'ys' ? 'خرید یاسین از اربیل' : 'IN-1405-08' }))
+    const q = (vid: string, wh: string) => lots.filter((l) => l[0] === vid && l[2] === wh).reduce((a, l) => a + l[3], 0)
+    const pga = { ...structuredClone(base), id: 'pga', code: 'GH-P-000202', title: 'گوشی سامسونگ Galaxy A55', en: 'Samsung Galaxy A55', brand: 'سامسونگ', category: 'موبایل', priceNew: 26900000, price: 26900000, cost: 21500000, image: '', images: [], rating: 4.5, reviews: 21, views: 2140, health: 81, seller: 'غنیمت و یاسین',
+      attrs: [{ axis: 'color', values: ['green', 'white'], forVar: true, visible: true }, { axis: 'storage', values: ['64', '128'], forVar: true, visible: true }, { axis: 'ram', values: ['4', '8'], forVar: true, visible: true }, { axis: 'region', values: ['me', 'vn'], forVar: true, visible: true }],
+      variations: combos.map(([id, color, storage, ram, region, suffix]) => ({ id, opts: { color, storage, ram, region }, suffix, qty: { tehran: q(id, 'tehran'), mahabad: q(id, 'mahabad') }, enabled: true, price: storage === '64' ? 22900000 : region === 'vn' ? 25900000 : 26900000 })), defaultVar: 'var-pga-2' } as Product
+    pga.qty = { tehran: pga.variations!.reduce((a, v) => a + v.qty.tehran, 0), mahabad: pga.variations!.reduce((a, v) => a + v.qty.mahabad, 0) }
+    s.products.splice(s.products.indexOf(base) + 1, 0, pga)
+    const o0 = s.orders.find((o) => o.id === 'GH-10510')!
+    s.orders.unshift({ ...structuredClone(o0), id: 'GH-10512', customerId: 'c3', createdAt: ago(0.4), total: 26900000 + 26900000, tags: ['چند ویژگی'], shipments: [{ ...structuredClone(o0.shipments[0]), id: 'GH-10512-1', status: 'ship.picking', pack: undefined, items: [{ productId: 'pga', unitId: '', qty: 1, price: 26900000, variationId: 'var-pga-2' }, { productId: 'pga', unitId: '', qty: 1, price: 26900000, variationId: 'var-pga-1' }], allocReason: 'سفید ۱۲۸ و سبز ۱۲۸ نسخهٔ خاورمیانه در تهران موجود بود.' }] }) }
   // پرتال شرکای مستقل فعلاً غیرفعال است؛ یاسین جزئی از غنیمت است و از «مالکیت و تسویه» مدیریت می‌شود
   s.partners.forEach((p) => { p.status = 'در انتظار تأیید' })
   // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)

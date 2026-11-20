@@ -11,12 +11,18 @@ import { currentUser, getDB, mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 import type { DB, Order, Shipment } from '@/shared/data/seed'
 import { scanLookup } from '@/shared/data/stock'
+import { attrKey, axisOf, valLabel } from '@/shared/lib/variants'
 import { recordShipment, suggestOwners } from '@/shared/data/ledger'
 import { codeFor, ownersAt, PartyChip, partyName, pv, syncQty, takeLots, whName } from './common'
 import { shipBlocked } from '../orders/PayHold'
 import { StartDecision } from '../orders/Decision'
 
 type Scan = NonNullable<Shipment['pack']>['scans'][number]
+/** کدام ویژگی‌ها (رنگ، حافظه، رم، نسخه و…) بین تنوع اسکن‌شده و تنوع سفارش فرق دارد */
+function optDiff(d: DB, pid: string, got?: string, want?: string) {
+  const p = d.products.find((x) => x.id === pid && x.variations?.length); const A = p?.variations?.find((v) => v.id === got); const B = p?.variations?.find((v) => v.id === want); if (!p || !A || !B) return []
+  return (p.attrs ?? []).filter((a) => a.forVar && A.opts[attrKey(a)] !== B.opts[attrKey(a)]).map((a) => ({ axis: axisOf(d, a).name, got: valLabel(d, a, A.opts[attrKey(a)] ?? '—'), want: valLabel(d, a, B.opts[attrKey(a)] ?? '—') }))
+}
 type Line = { k: string; idx: number; productId: string; variationId?: string; unitId?: string; qty: number; price: number }
 const OPEN = ['ship.pending', 'ship.picking']
 
@@ -66,7 +72,8 @@ export function PackSession({ shipId, inline, sound = true, onDone, onClose, onO
     const same = lines.filter((l) => l.productId === r.productId)
     if (!same.length) { const brand = d.products.find((p) => p.id === r.productId)?.brand; const want = lines.map((l) => d.products.find((p) => p.id === l.productId)?.brand); return push({ at, code: c, ...r, ok: false, why: `«${name}» در این سفارش نیست.${brand && !want.includes(brand) ? ' برند هم فرق دارد.' : ''}` }, 'کالای اشتباه') }
     const line = same.find((l) => (l.variationId ?? '') === (r.variationId ?? ''))
-    if (!line) return push({ at, code: c, ...r, ok: false, why: `این «${pv(d, r.productId, r.variationId).vname || 'تنوع دیگر'}» است؛ سفارش «${same.map((l) => pv(d, l.productId, l.variationId).vname).join('، ')}» می‌خواهد.` }, 'رنگ یا تنوع اشتباه')
+    if (!line) { const diff = same.map((l) => optDiff(d, r.productId, r.variationId, l.variationId)).sort((a, b) => a.length - b.length)[0] ?? []
+      return push({ at, code: c, ...r, ok: false, why: diff.length ? `فرق در ${diff.map((x) => `${x.axis}: «${x.got}» به جای «${x.want}»`).join('، ')}. بقیهٔ ویژگی‌ها درست است.` : `این «${pv(d, r.productId, r.variationId).vname || 'تنوع دیگر'}» است؛ سفارش «${same.map((l) => pv(d, l.productId, l.variationId).vname).join('، ')}» می‌خواهد.` }, diff.length === 1 ? `${diff[0].axis} اشتباه` : 'تنوع اشتباه (چند ویژگی فرق دارد)') }
     if (line.unitId && r.unitId && r.unitId !== line.unitId) return push({ at, code: c, ...r, ok: false, why: `این واحد ${r.unitId} است؛ برای این سفارش واحد ${line.unitId} (با سریال و گارانتی ثبت‌شده) تخصیص داده شده است.` }, 'سریال دیگر')
     if (okFor(line) >= line.qty) return push({ at, code: c, ...r, ok: false, why: `از این کالا فقط ${fa(line.qty)} عدد سفارش داده شده و همه اسکن شده است.` }, 'بیشتر از تعداد سفارش')
     const has = ownersAt(s, r.productId, r.variationId, station).get(r.owner) ?? 0
@@ -91,7 +98,7 @@ export function PackSession({ shipId, inline, sound = true, onDone, onClose, onO
   }
 
   const testCodes = lines.flatMap((l) => { const m = [...ownersAt(s, l.productId, l.variationId, station)].filter(([, n]) => n > 0).map(([o]) => o); const owners = m.length ? m : [d.products.find((p) => p.id === l.productId)?.owner ?? 'gh']; return l.unitId ? [{ c: l.unitId, t: 'برچسب واحد' }] : owners.map((o) => ({ c: codeFor(d, o, l.productId, l.variationId), t: `${pv(d, l.productId, l.variationId).vname || 'کالا'} · ${partyName(s, o)}` })) })
-  const wrong = (() => { const L = lines[0]; const p = d.products.find((x) => x.id === L?.productId); const other = p?.variations?.find((v) => v.id !== L?.variationId); const otherP = d.products.find((x) => x.id !== L?.productId && x.mode !== 'serial' && x.code); return [other ? { c: codeFor(d, 'gh', p!.id, other.id), t: 'رنگ اشتباه' } : null, otherP ? { c: otherP.code!, t: 'کالای دیگر' } : null, { c: 'XX-0000', t: 'کد ناشناخته' }].filter(Boolean) as { c: string; t: string }[] })()
+  const wrong = (() => { const L = lines[0]; const p = d.products.find((x) => x.id === L?.productId); const other = p?.variations?.find((v) => v.id !== L?.variationId); const otherP = d.products.find((x) => x.id !== L?.productId && x.mode !== 'serial' && x.code); return [other ? { c: codeFor(d, 'gh', p!.id, other.id), t: `تنوع اشتباه (${optDiff(d, p!.id, other.id, L?.variationId).map((x) => x.axis).join('، ') || 'ویژگی دیگر'})` } : null, otherP ? { c: otherP.code!, t: 'کالای دیگر' } : null, { c: 'XX-0000', t: 'کد ناشناخته' }].filter(Boolean) as { c: string; t: string }[] })()
 
   const scanBox = <>
     <form onSubmit={(e) => { e.preventDefault(); handle(code) }} className="flex flex-wrap items-center gap-2">

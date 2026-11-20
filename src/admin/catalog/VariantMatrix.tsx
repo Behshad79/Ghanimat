@@ -51,7 +51,7 @@ export function VariantMatrix({ selfId, draftGroup, onGroup }: { selfId?: string
         <td className="tnum p-2">{fa(soldOf(p.id))}</td>
         <td className="p-2">{p.id !== selfId && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/catalog/${p.id}/edit?step=4`)}>ویرایش</Button>}</td>
       </tr> })}</tbody></table></div>
-    <p className="flex items-start gap-1.5 text-11 leading-5 text-t2"><ScanBarcode size={13} className="mt-0.5 shrink-0" />اسکن بارکد در انبار، رسید و میز فروش مستقیم همان تنوع را پیدا می‌کند؛ موجودی و فروش هر رنگ جدا حساب می‌شود و تنوع ناموجود در سایت غیرفعال نشان داده می‌شود.</p>
+    <p className="flex items-start gap-1.5 text-11 leading-5 text-t2"><ScanBarcode size={13} className="mt-0.5 shrink-0" />اسکن بارکد در انبار، رسید و میز فروش مستقیم همان تنوع را پیدا می‌کند؛ موجودی و فروش هر تنوع (هر ترکیب رنگ، حافظه و ویژگی‌های دیگر) جدا حساب می‌شود و تنوع ناموجود در سایت غیرفعال نشان داده می‌شود.</p>
     <Modal open={open} onClose={() => setOpen(false)} wide title={`ساخت چند ${A?.name ?? ''} یک‌جا از «${base.title}»`} footer={<><Button variant="primary" disabled={!chosen.length || chosen.some((r) => err(r))} onClick={create}>ساخت {chosen.length ? fa(chosen.length) : ''} تنوع</Button><Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button></>}>
       <p className="mb-3 text-12 text-t2">همهٔ اطلاعات (عکس، توضیح، قیمت، گارانتی، سئو) از همین کالا کپی می‌شود و بعدا برای هر تنوع قابل تغییر است. هر تنوع کالای جدا با کد، بارکد و موجودی خودش است.</p>
       <Field label="ویژگی"><Select value={ax} onChange={startAdd} options={d.axes.map((a) => [a.id, a.name] as [string, string])} other={false} /></Field>

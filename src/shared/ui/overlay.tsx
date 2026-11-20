@@ -82,8 +82,17 @@ export function Hint({ k }: { k: keyof typeof HINTS | string }) {
   const s = useSession()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState<string | null>(null); const [full, setFull] = useState(false)
-  const ref = useRef<HTMLSpanElement>(null)
-  useEffect(() => { if (!open) return; const f = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false); document.addEventListener('mousedown', f); return () => document.removeEventListener('mousedown', f) }, [open])
+  const ref = useRef<HTMLSpanElement>(null); const pop = useRef<HTMLDivElement>(null)
+  // جای حباب راهنما روی خود صفحه (نه داخل کارت) حساب می‌شود تا در کارت‌های کوچک یا با لبهٔ بریده نصفه نماند
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number }>({ left: 0, top: 0 })
+  useEffect(() => { if (!open) return; const place = () => { const r = ref.current?.getBoundingClientRect(); if (!r) return; const W = Math.min(288, window.innerWidth - 16); const H = pop.current?.offsetHeight ?? 220
+      const left = Math.max(8, Math.min(window.innerWidth - W - 8, r.right - W)); const below = window.innerHeight - r.bottom
+      setPos(below < H + 12 && r.top > below ? { left, bottom: window.innerHeight - r.top + 6 } : { left, top: r.bottom + 6 }) }
+    place(); const raf = requestAnimationFrame(place)
+    const f = (e: MouseEvent) => { const t = e.target as Node; if (!ref.current?.contains(t) && !pop.current?.contains(t)) setOpen(false) }
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', f); window.addEventListener('keydown', k); window.addEventListener('resize', place); document.addEventListener('scroll', place, true)
+    return () => { cancelAnimationFrame(raf); document.removeEventListener('mousedown', f); window.removeEventListener('keydown', k); window.removeEventListener('resize', place); document.removeEventListener('scroll', place, true) } }, [open, q])
   if (!h || s.hints === 'off') return null
   return (
     <span ref={ref} className="relative inline-flex align-middle" onClick={(e) => e.stopPropagation()}>
@@ -91,8 +100,8 @@ export function Hint({ k }: { k: keyof typeof HINTS | string }) {
       <Modal open={full} onClose={() => setFull(false)} title={`راهنمای کامل: ${h.title}`}>
         <div className="space-y-3 text-13 leading-7"><p>{h.def}</p>{h.here && <p><b>در غنیمت یعنی:</b> {h.here}</p>}{h.formula && <p className="rounded-md bg-neutral-bg px-3 py-2"><b>فرمول:</b> {h.formula}</p>}{h.effect && <p><b>اثر:</b> {h.effect}</p>}<p className="text-12 text-t2">پرسش بیشتر؟ از «از AI بپرس» در همین راهنما استفاده کنید یا مرکز راهنمای داخلی را ببینید.</p></div>
       </Modal>
-      {open && (
-        <div role="tooltip" className="anim-pop absolute top-5 right-0 z-30 w-72 rounded-lg border border-line bg-surface p-3 text-right text-12 font-normal leading-5 text-t2 shadow-float">
+      {open && createPortal(
+        <div ref={pop} role="tooltip" dir="rtl" onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', left: pos.left, top: pos.top, bottom: pos.bottom, width: 'min(18rem, calc(100vw - 16px))' }} className="anim-pop z-[80] max-h-[70vh] overflow-y-auto rounded-lg border border-line bg-surface p-3 text-right text-12 font-normal leading-5 text-t2 shadow-float">
           <p className="mb-1 text-13 font-semibold text-t1">{h.title}</p>
           <p>{h.def}</p>
           {h.here && <p className="mt-1.5"><b className="text-t1">در غنیمت یعنی:</b> {h.here}</p>}
@@ -110,7 +119,7 @@ export function Hint({ k }: { k: keyof typeof HINTS | string }) {
               <Button size="sm" variant="ghost" icon={<BookOpen size={12} />} onClick={() => { setOpen(false); setFull(true) }}>راهنمای کامل</Button>
             </div>
           )}
-        </div>
+        </div>, document.body
       )}
     </span>
   )

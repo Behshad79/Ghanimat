@@ -13,7 +13,7 @@ import { NAV } from '../shell/nav'
 const FACE: [Face, string][] = [['full', 'پنل کامل'], ['simple', 'حالت سادهٔ اپراتور'], ['partner', 'پرتال شریک']]
 const GROUPS = [...new Set(NAV.map((n) => n.group))]
 const label = (id: string) => NAV.find((n) => n.id === id)?.label ?? id
-const roleHas = (r: RoleDef | undefined, m: string) => !!r && (r.modules === '*' || r.modules.includes(m))
+const roleHas = (r: RoleDef | undefined, m: string) => !!r && !r.deny?.includes(m) && (r.modules === '*' || r.modules.includes(m))
 
 /** فهرست ماژول‌ها به تفکیک گروه با تیک؛ برای نقش و برای دسترسی اختصاصی هر فرد */
 function ModulePicker({ value, onToggle, base, disabled }: { value: (m: string) => boolean; onToggle: (m: string, on: boolean) => void; base?: (m: string) => boolean; disabled?: boolean }) {
@@ -116,7 +116,8 @@ export function MemberAccess({ uid }: { uid: string }) {
       </Card>
       {r?.face === 'full' && <div>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><p className="flex items-center gap-1.5 text-13 font-semibold"><ShieldCheck size={15} />ماژول‌هایی که {u.name} می‌بیند</p>{changes > 0 ? <Button size="sm" variant="ghost" icon={<RotateCcw size={12} />} onClick={() => mutate((x) => { delete x.access[uid] }, { action: 'برگرداندن دسترسی به نقش', target: u.name })}>برگرداندن به دسترسی نقش ({fa(changes)} تغییر)</Button> : <Badge dot={false}>عین نقش «{r.label}»</Badge>}</div>
-        <ModulePicker value={has} onToggle={toggle} base={(m) => roleHas(r, m)} disabled={r.modules === '*'} />
+        <ModulePicker value={has} onToggle={toggle} base={(m) => roleHas(r, m)} disabled={r.modules === '*' && !r.deny?.length} />
+        {u.role !== 'super' && <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line p-3 text-12"><div><p className="font-semibold">دادهٔ محرمانهٔ مدیر کل</p><p className="text-t2">سود و حاشیهٔ سود کل، بهای تمام‌شدهٔ کالای غنیمت، صورت‌حساب و عملکرد شرکای دیگر</p></div><Toggle on={!!ov.add.includes('secrets')} onChange={(v) => mutate((x) => { const o = (x.access[uid] ??= { add: [], remove: [] }); o.add = o.add.filter((y) => y !== 'secrets'); if (v) o.add.push('secrets') }, { action: v ? 'باز کردن دادهٔ محرمانهٔ مدیر کل' : 'بستن دادهٔ محرمانهٔ مدیر کل', target: u.name })} /></div>}
       </div>}
     </div>
   )

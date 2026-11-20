@@ -5,7 +5,7 @@ import { CONDITION, SOURCE } from '../data/statuses'
 import { ledgerHook } from '../data/ledger'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v75'
+const DB_KEY = 'ghanimat-demo-db-v76'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -123,8 +123,13 @@ export const can = (module: string, s: Session = session) => {
   const u = s.viewAs ? null : currentUser(); const ov = u ? db.access?.[u.id] : undefined
   if (ov?.remove.includes(module)) return false
   if (ov?.add.includes(module)) return true
-  const m = ROLES[effectiveRole(s)]?.modules; return m === '*' || (m ?? []).includes(module)
+  const R = ROLES[effectiveRole(s)]; if (R?.deny?.includes(module)) return false
+  const m = R?.modules; return m === '*' || (m ?? []).includes(module)
 }
+/** دیدن دادهٔ محرمانهٔ مدیر کل (سود کل، بهای تمام‌شدهٔ کالای غنیمت، حاشیهٔ سود، صورت‌حساب دیگران): فقط مدیر کل، یا کسی که مدیر کل «secrets» را برایش باز کرده */
+export const canSecret = (s: Session = session) => { if (effectiveRole(s) === 'super') return true; const u = s.viewAs ? null : currentUser(); return !!(u && db.access?.[u.id]?.add.includes('secrets')) }
+/** طرف (شریک) کاربر فعلی در دفتر شرکا */
+export const myParty = () => db.stock?.parties.find((p) => p.userId === currentUser()?.id)?.id ?? 'gh'
 /** شبیه‌سازی سرویس بیرونی با نتیجهٔ قابل انتخاب از نوار نمایشی */
 export const fakeCall = <T,>(ok: T, ms = 900) => new Promise<T>((res, rej) => setTimeout(() => (session.simulate === 'fail' ? rej(new Error('سرویس پاسخ نداد')) : res(ok)), session.simulate === 'slow' ? ms * 4 : ms))
 

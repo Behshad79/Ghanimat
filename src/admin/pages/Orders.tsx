@@ -8,7 +8,7 @@ import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress } from '../orders/Progress'
-import { isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
+import { canSecret, isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
@@ -323,13 +323,13 @@ export function OrderDetail() {
             <Row k="جمع کالاها"><Money v={sub} /></Row><Row k="هزینهٔ ارسال">{o.shippingFee ? <Money v={o.shippingFee} /> : 'رایگان'}</Row>
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}
             <div className="my-1 border-t border-line" /><Row k={<b className="text-t1">مبلغ پرداختی</b>}><b><Money v={o.total} /></b></Row>
-            <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row><Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>
+            <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row>{canSecret() && <Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>}
             {(o.refunded || o.refundPending) ? <><Row k="بازگشت داده‌شده"><span className="text-success">{toman(o.refunded ?? 0)}</span></Row>{o.refundPending ? <Row k="بازگشت در جریان"><span className="text-warning">{toman(o.refundPending)}</span></Row> : null}<Row k={<b className="text-t1">خالص دریافتی</b>}><b>{toman(o.total - (o.refunded ?? 0))}</b></Row></> : null}
             <PaymentInfo orderId={o.id} />
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>
           <OrderLedger o={o} />
-          <OrderProfitCard o={o} />
+          {canSecret() && <OrderProfitCard o={o} />}
           <Card><ReasonLog kind="order" refId={o.id} /></Card>
         </div>
       </div>

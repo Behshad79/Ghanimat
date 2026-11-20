@@ -4,7 +4,7 @@ import { ArrowDownLeft, ArrowUpLeft, BarChart3, Eye } from 'lucide-react'
 import { Badge, Card, Select, Segmented } from '@/shared/ui/base'
 import { DataTable } from '@/shared/ui/table'
 import { Modal } from '@/shared/ui/overlay'
-import { currentUser, useDB } from '@/shared/lib/store'
+import { canSecret, currentUser, myParty, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import { shareOf, split, type StockSale } from '@/shared/data/stock'
 import { chName, PartyChip, partyName, pv, whName } from './common'
@@ -16,7 +16,7 @@ type Line = { kind: 'sale'; x: StockSale; role: string; earns: number; net: numb
 /** صورت‌حساب از دید هر طرف: «از این فروش‌ها به تو این‌قدر می‌رسد و با هر شریک این‌قدر طلب یا بدهی داری» */
 export function StatementTab() {
   const d = useDB(); const s = d.stock; const nav = useNavigate()
-  const mine = s.parties.find((p) => p.userId === currentUser()?.id)?.id ?? 'gh'
+  const mine = s.parties.find((p) => p.userId === currentUser()?.id)?.id ?? 'gh'; const sec = canSecret()
   const [viewer, setViewer] = useState(mine); const [other, setOther] = useState('all'); const [period, setPeriod] = useState('30'); const [open, setOpen] = useState<StockSale | null>(null)
   const since = period === 'all' ? 0 : Date.now() - Number(period) * 864e5
   const me = partyName(s, viewer); const you = viewer === mine
@@ -37,7 +37,7 @@ export function StatementTab() {
   return <div className="space-y-4">
     <Card>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="text-12"><span className="mb-1 block text-t2">صورت‌حساب از دید</span><Select className="w-48" value={viewer} onChange={(v) => { setViewer(v); setOther('all') }} options={s.parties.map((p) => [p.id, `${p.name}${p.id === mine ? ' (من)' : ''}`] as [string, string])} /></label>
+        <label className="text-12"><span className="mb-1 block text-t2">صورت‌حساب از دید</span><Select className="w-48" value={viewer} onChange={(v) => { setViewer(v); setOther('all') }} options={s.parties.filter((p) => sec || p.id === mine).map((p) => [p.id, `${p.name}${p.id === mine ? ' (من)' : ''}`] as [string, string])} /></label>
         <label className="text-12"><span className="mb-1 block text-t2">با چه کسی</span><Select className="w-44" value={other} onChange={setOther} options={[['all', 'همهٔ طرف‌ها'], ...s.parties.filter((p) => p.id !== viewer).map((p) => [p.id, p.name] as [string, string])]} /></label>
         <Segmented value={period} onChange={setPeriod} options={PERIODS} />
         {!you && <Badge tone="info"><Eye size={12} /> نمای {me}؛ همان چیزی که او در پنل خودش می‌بیند</Badge>}
@@ -64,7 +64,7 @@ export function StatementTab() {
 export function PerformanceTab() {
   const d = useDB(); const s = d.stock; const [by, setBy] = useState<'owner' | 'seller' | 'warehouse' | 'channel'>('owner'); const [period, setPeriod] = useState('30')
   const since = period === 'all' ? 0 : Date.now() - Number(period) * 864e5
-  const rows = s.sales.filter((x) => +new Date(x.at) >= since)
+  const me = myParty(); const rows = s.sales.filter((x) => +new Date(x.at) >= since && (canSecret() || shareOf(s, x, me).involved))
   const keyOf = (x: StockSale) => by === 'owner' ? x.owner : by === 'seller' ? split(s, x).seller : by === 'warehouse' ? x.warehouse : x.channel
   const nameOf = (k: string) => by === 'warehouse' ? whName(s, k) : by === 'channel' ? chName(s, k) : partyName(s, k)
   const groups = [...new Set(rows.map(keyOf))].map((k) => { const R = rows.filter((x) => keyOf(x) === k); const prod = new Map<string, number>(); R.forEach((x) => { const n = pv(d, x.productId, x.variationId).full; prod.set(n, (prod.get(n) ?? 0) + x.qty) })

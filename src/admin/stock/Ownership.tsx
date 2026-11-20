@@ -6,10 +6,10 @@ import { Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { Barcode } from '@/shared/ui/codes'
-import { currentUser, mutate, useDB } from '@/shared/lib/store'
+import { can, canSecret, currentUser, myParty, mutate, useDB } from '@/shared/lib/store'
 import { fa, num, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
-import { balances, split, type StockSale } from '@/shared/data/stock'
+import { balances, shareOf, split, type StockSale } from '@/shared/data/stock'
 import { chName, codeFor, ownersAt, PartyChip, partyName, pv, productsWithLots, syncQty, takeLots, whName } from './common'
 import { useTab } from '../pages/_shared'
 import { PartyManager } from './Parties'
@@ -22,15 +22,16 @@ const by = () => currentUser()?.name ?? 'پنل'
 /** مالکیت، محل و تسویهٔ موجودی میان غنیمت و شرکا */
 export function Ownership() {
   const d = useDB(); const s = d.stock; const [tab, setTab] = useTab('stock'); const nav = useNavigate()
-  const bal = balances(s).filter((b) => Math.abs(b.net) > 0)
+  const sec = canSecret(); const me = myParty()
+  const bal = balances(s).filter((b) => Math.abs(b.net) > 0 && (sec || b.a === me || b.b === me))
   const units = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty, 0)
   const value = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty * l.cost, 0)
   return (
     <Page module="warehouse" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
-      actions={<><Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
+      actions={<>{can('team') && <Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button>}<Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {s.parties.filter((p) => p.active).map((p) => <Card key={p.id} onClick={() => setTab('stock')}><div className="flex items-center justify-between"><PartyChip s={s} id={p.id} /><span className="text-11 text-t2">{p.kind === 'self' ? 'خودمان' : 'شریک'}</span></div><p className="mt-2 text-20 font-bold">{fa(units(p.id))} <span className="text-12 font-normal text-t2">عدد موجود</span></p><p className="text-12 text-t2">ارزش به بهای تمام‌شده: {toman(value(p.id))}</p></Card>)}
+        {s.parties.filter((p) => p.active && (sec || p.id === me)).map((p) => <Card key={p.id} onClick={() => setTab('stock')}><div className="flex items-center justify-between"><PartyChip s={s} id={p.id} /><span className="text-11 text-t2">{p.kind === 'self' ? 'خودمان' : 'شریک'}</span></div><p className="mt-2 text-20 font-bold">{fa(units(p.id))} <span className="text-12 font-normal text-t2">عدد موجود</span></p><p className="text-12 text-t2">ارزش به بهای تمام‌شده: {toman(value(p.id))}</p></Card>)}
         <Card onClick={() => setTab('settle')}><p className="flex items-center gap-1.5 text-12 text-t2"><HandCoins size={14} />ماندهٔ تسویه</p>{bal.length ? bal.map((b) => <p key={b.a + b.b} className="mt-1.5 text-13"><b>{partyName(s, b.net > 0 ? b.a : b.b)}</b> به <b>{partyName(s, b.net > 0 ? b.b : b.a)}</b> <span className="font-bold text-warning">{toman(Math.abs(b.net))}</span></p>) : <p className="mt-2 text-13 text-success">همه تسویه است.</p>}</Card>
       </div>
       {tab === 'stock' && <StockTab />}
@@ -65,7 +66,7 @@ function StockTab() {
       </Card>
       <Card title="ورودها و لات‌های موجودی" pad={false}>
         <DataTable name="لات‌های موجودی" empty={{ title: 'لاتی ثبت نشده است' }} rows={[...s.lots].sort((a, b) => +new Date(b.at) - +new Date(a.at))} rowKey={(l) => l.id} search={(l) => `${l.id} ${pv(d, l.productId, l.variationId).full} ${partyName(s, l.owner)} ${l.ref ?? ''}`}
-          cols={[{ key: 'id', title: 'شناسه', render: (l) => <span className="font-mono text-12">{l.id}</span> }, { key: 'p', title: 'کالا', render: (l) => pv(d, l.productId, l.variationId).full }, { key: 'o', title: 'مالک', render: (l) => <PartyChip s={s} id={l.owner} /> }, { key: 'w', title: 'انبار', render: (l) => whName(s, l.warehouse) }, { key: 'q', title: 'مانده', render: (l) => fa(l.qty), sort: (l) => l.qty }, { key: 'c', title: 'بهای تمام‌شدهٔ واحد', render: (l) => toman(l.cost), sort: (l) => l.cost }, { key: 'code', title: 'کد برچسب', render: (l) => <bdi dir="ltr" className="font-mono text-12">{codeFor(d, l.owner, l.productId, l.variationId)}</bdi> }, { key: 'r', title: 'منشأ', render: (l) => <span className="text-12 text-t2">{l.ref ?? '—'} · {rel(l.at)}</span> }]} />
+          cols={[{ key: 'id', title: 'شناسه', render: (l) => <span className="font-mono text-12">{l.id}</span> }, { key: 'p', title: 'کالا', render: (l) => pv(d, l.productId, l.variationId).full }, { key: 'o', title: 'مالک', render: (l) => <PartyChip s={s} id={l.owner} /> }, { key: 'w', title: 'انبار', render: (l) => whName(s, l.warehouse) }, { key: 'q', title: 'مانده', render: (l) => fa(l.qty), sort: (l) => l.qty }, { key: 'c', title: 'بهای تمام‌شدهٔ واحد', render: (l) => (canSecret() || l.owner === myParty() ? toman(l.cost) : <span className="text-t3">محرمانه</span>), sort: (l) => l.cost }, { key: 'code', title: 'کد برچسب', render: (l) => <bdi dir="ltr" className="font-mono text-12">{codeFor(d, l.owner, l.productId, l.variationId)}</bdi> }, { key: 'r', title: 'منشأ', render: (l) => <span className="text-12 text-t2">{l.ref ?? '—'} · {rel(l.at)}</span> }]} />
       </Card>
       <IntakeModal open={intake} onClose={() => setIntake(false)} />
       <MoveModal open={move} onClose={() => setMove(false)} />
@@ -118,7 +119,7 @@ export function SaleBreakdown({ x }: { x: StockSale }) {
 
 function SalesTab() {
   const d = useDB(); const s = d.stock; const [open, setOpen] = useState<StockSale | null>(null); const [add, setAdd] = useState(false)
-  const rows = [...s.sales].sort((a, b) => +new Date(b.at) - +new Date(a.at))
+  const rows = [...s.sales].filter((x) => canSecret() || shareOf(s, x, myParty()).involved).sort((a, b) => +new Date(b.at) - +new Date(a.at))
   return <Card pad={false} title="هر فروش: مالک، انبار، فروشنده و سهم هر طرف" hint="فروش سایت غنیمت هنگام «تأیید بسته‌بندی با اسکن» خودکار ثبت می‌شود؛ فروش حضوری یا سایت ve1 را اینجا ثبت کنید." actions={<Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setAdd(true)}>ثبت فروش خارج از سایت</Button>}>
     <DataTable name="فروش و سهم‌ها" empty={{ title: 'فروشی ثبت نشده است' }} rows={rows} rowKey={(x) => x.id} onRow={setOpen} search={(x) => `${x.id} ${x.orderId ?? ''} ${pv(d, x.productId, x.variationId).full} ${partyName(s, x.owner)} ${chName(s, x.channel)}`}
       cols={[{ key: 'id', title: 'شناسه', render: (x) => <span className="font-mono text-12">{x.orderId ?? x.id}</span> }, { key: 'p', title: 'کالا', render: (x) => <span>{pv(d, x.productId, x.variationId).full} <span className="text-t2">×{fa(x.qty)}</span></span> }, { key: 'o', title: 'مالک', render: (x) => <PartyChip s={s} id={x.owner} /> }, { key: 'w', title: 'از انبار', render: (x) => whName(s, x.warehouse) }, { key: 'c', title: 'فروشنده و کانال', render: (x) => <span className="flex items-center gap-1"><PartyChip s={s} id={split(s, x).seller} /><span className="text-12 text-t2">{chName(s, x.channel)}</span></span> }, { key: 'r', title: 'مبلغ', render: (x) => toman(x.price * x.qty), sort: (x) => x.price * x.qty }, { key: 'pr', title: 'سود', render: (x) => toman(split(s, x).profit), sort: (x) => split(s, x).profit }, { key: 'f', title: 'تسویه', render: (x) => { const f = split(s, x).flows; return f.length ? <span className="text-12 text-warning">{f.map((y) => `${partyName(s, y.from)} ← ${partyName(s, y.to)}: ${num(y.amount)}`).join(' · ')}</span> : <Badge tone="success">ندارد</Badge> } }, { key: 'at', title: 'زمان', render: (x) => <span className="text-12 text-t2">{rel(x.at)}</span>, sort: (x) => +new Date(x.at) }]} />
@@ -143,7 +144,7 @@ function OfflineSale({ open, onClose }: { open: boolean; onClose: () => void }) 
 /* ───────── تسویه ───────── */
 function SettleTab() {
   const d = useDB(); const s = d.stock; const [pay, setPay] = useState<{ from: string; to: string; amount: number } | null>(null)
-  const pairs = balances(s)
+  const pairs = balances(s).filter((b) => canSecret() || b.a === myParty() || b.b === myParty())
   return <div className="space-y-4">
     <div className="grid gap-3 lg:grid-cols-2">{pairs.map((b) => { const from = b.net >= 0 ? b.a : b.b; const to = b.net >= 0 ? b.b : b.a; const flows = s.sales.flatMap((x) => split(s, x).flows.filter((f) => (f.from === b.a && f.to === b.b) || (f.from === b.b && f.to === b.a)).map((f) => ({ ...f, x })))
       return <Card key={b.a + b.b} title={<span className="flex items-center gap-2"><PartyChip s={s} id={b.a} />و<PartyChip s={s} id={b.b} /></span>} actions={b.net !== 0 && <Button size="sm" variant="primary" icon={<HandCoins size={13} />} onClick={() => setPay({ from, to, amount: Math.abs(b.net) })}>ثبت پرداخت تسویه</Button>}>

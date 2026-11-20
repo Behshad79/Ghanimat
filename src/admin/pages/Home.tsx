@@ -12,7 +12,7 @@ import { CountUp } from '@/shared/ui/motion'
 import { Boxes, Download, LayoutGrid, Package, Percent, Receipt, RotateCcw, ShoppingBag, TrendingUp, Truck } from 'lucide-react'
 import { Modal } from '@/shared/ui/overlay'
 import { Toggle } from '@/shared/ui/base'
-import { currentUser } from '@/shared/lib/store'
+import { canSecret, currentUser } from '@/shared/lib/store'
 import { counted, orderProfit } from '@/shared/lib/profit'
 import { ProductImg } from './_shared'
 import { useState } from 'react'
@@ -55,7 +55,7 @@ export function Home() {
         <WelcomeHero items={waitItems(d)} />
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note={`هدف روزانه: ${compactToman(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 0))}`} />
-          <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit&p=today" />
+          {canSecret() && <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit&p=today" />}
           <KPI icon={<Package size={17} />} label="تعداد سفارش امروز" num={today.length} fmt={(n) => fa(Math.round(n))} delta={8.1} spark={[3, 4, 4, 6, 5, 6, 7]} to="/admin/orders" />
           <KPI icon={<Percent size={17} />} label="نرخ تبدیل" hint="cvr" value={pct(2.1, 1)} delta={-6.2} spark={[9, 8, 8, 7, 8, 6, 6]} to="/admin/growth" />
           <KPI icon={<Receipt size={17} />} label="AOV" hint="aov" num={gmv / Math.max(1, today.length)} fmt={compactToman} delta={3.9} to="/admin/analytics" />
@@ -81,7 +81,7 @@ export function Home() {
           {on('orders') && <Card className="xl:col-span-2" title="سفارش‌های اخیر" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/orders')}>همهٔ سفارش‌ها</Button>} pad={false}><ul className="divide-y divide-line">{d.orders.slice(0, 6).map((o) => { const c = d.customers.find((x) => x.id === o.customerId)!; return <li key={o.id}><button onClick={() => nav(`/admin/orders/${o.id}`)} className="flex w-full items-center gap-3 px-5 py-3 text-right hover:bg-surface-2"><span className="flex">{o.shipments.flatMap((s) => s.items).slice(0, 2).map((i, k) => <ProductImg key={k} pid={i.productId} size={40} className={k ? '-mr-3 ring-2 ring-surface' : ''} />)}</span><span className="min-w-0 flex-1"><span className="block text-13 font-medium">{c.name}</span><span className="ltr block text-right font-mono text-11 text-t2">{o.id}</span></span><span className="hidden text-12 text-t2 sm:block">{rel(o.createdAt)}</span><span className="tnum text-13 font-semibold">{compactToman(o.total)}</span><StatusBadge s={o.status} /></button></li> })}</ul></Card>}
           <div className="space-y-4">
             {on('goal') && <Card title="هدف این ماه"><Gauge value={72} label={pct(72)} sub="از هدف ۱۵ میلیارد تومان" /><div className="mt-3 grid grid-cols-3 gap-2 text-center">{[['هدف', '۱۵ میلیارد'], ['فروش', '۱۰٫۸ میلیارد'], ['امروز', compactToman(gmv)]].map(([k, v]) => <div key={k} className="rounded-xl bg-neutral-bg p-2"><p className="text-11 text-t2">{k}</p><p className="tnum text-12 font-bold">{v}</p></div>)}</div></Card>}
-            {on('profit') && <Card onClick={() => nav('/admin/finance?tab=profit')} title="سود من"><p className="tnum text-24 font-bold text-success"><CountUp value={profitMonth} format={compactToman} /></p><p className="text-12 text-t2">سود خالص ۳۰ روز اخیر، پس از کسر خرید، کارمزد، ارسال و بسته‌بندی</p></Card>}
+            {on('profit') && canSecret() && <Card onClick={() => nav('/admin/finance?tab=profit')} title="سود من"><p className="tnum text-24 font-bold text-success"><CountUp value={profitMonth} format={compactToman} /></p><p className="text-12 text-t2">سود خالص ۳۰ روز اخیر، پس از کسر خرید، کارمزد، ارسال و بسته‌بندی</p></Card>}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

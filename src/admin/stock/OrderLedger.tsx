@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { HandCoins } from 'lucide-react'
 import { Badge, Card, Select } from '@/shared/ui/base'
-import { mutate, useDB } from '@/shared/lib/store'
+import { canSecret, mutate, myParty, useDB } from '@/shared/lib/store'
 import { fa, toman } from '@/shared/lib/fa'
 import type { Order } from '@/shared/data/seed'
-import { split } from '@/shared/data/stock'
+import { shareOf, split } from '@/shared/data/stock'
 import { channelOf } from '@/shared/data/ledger'
 import { PartyChip, partyName, pv, whName } from './common'
 
@@ -20,8 +20,8 @@ export function OrderLedger({ o }: { o: Order }) {
       : <ul className="space-y-2">{rows.map((x) => { const b = split(s, x); return <li key={x.id} className={x.qty < 0 ? 'rounded-lg bg-danger-bg/60 p-2 text-12' : 'rounded-lg bg-neutral-bg p-2 text-12'}>
         <p className="flex flex-wrap items-center gap-1.5"><b>{pv(d, x.productId, x.variationId).full}</b><span>×{fa(Math.abs(x.qty))}</span>{x.qty < 0 && <Badge tone="danger">برگشت</Badge>}{x.auto && <Badge tone="warning">بدون اسکن</Badge>}</p>
         <p className="mt-1 flex flex-wrap items-center gap-1.5 text-t2">مالک <PartyChip s={s} id={x.owner} /> از {whName(s, x.warehouse)} · فروشنده <PartyChip s={s} id={b.seller} /></p>
-        <p className="mt-1 text-t2">سود {toman(b.profit)} · سهم فروشنده {toman(b.sellerShare)} · سهم مالک {toman(b.ownerTotal)}</p>
+        {(canSecret() || shareOf(s, x, myParty()).involved) ? <p className="mt-1 text-t2">سود {toman(b.profit)} · سهم فروشنده {toman(b.sellerShare)} · سهم مالک {toman(b.ownerTotal)}</p> : <p className="mt-1 text-t3">جزئیات مالی این قلم محرمانه است.</p>}
       </li> })}</ul>}
-    {net.size > 0 && <div className="mt-3 space-y-1 border-t border-line pt-2">{[...net].filter(([, v]) => v).map(([k, v]) => { const [a, b] = k.split('>'); return <p key={k} className="text-12"><b>{partyName(s, a)}</b> از این سفارش <b className="text-warning">{toman(v)}</b> به <b>{partyName(s, b)}</b> بدهکار است.</p> })}</div>}
+    {net.size > 0 && (canSecret() || [...net.keys()].some((k) => k.split('>').includes(myParty()))) && <div className="mt-3 space-y-1 border-t border-line pt-2">{[...net].filter(([, v]) => v).map(([k, v]) => { const [a, b] = k.split('>'); return <p key={k} className="text-12"><b>{partyName(s, a)}</b> از این سفارش <b className="text-warning">{toman(v)}</b> به <b>{partyName(s, b)}</b> بدهکار است.</p> })}</div>}
   </Card>
 }

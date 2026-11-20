@@ -1,6 +1,6 @@
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
+import { ArrowUp, Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
 import { waitItems } from '../home/tasks'
 import { Copilot } from './Copilot'
@@ -170,6 +170,13 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
   )
 }
 
+/** دکمهٔ بازگشت به بالا در صفحه‌های بلند */
+function BackToTop({ main }: { main: React.RefObject<HTMLElement | null> }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => { const m = main.current; if (!m) return; const f = () => setOn(m.scrollTop > 900); m.addEventListener('scroll', f, { passive: true }); return () => m.removeEventListener('scroll', f) }, [main])
+  return <button type="button" aria-label="بازگشت به بالای صفحه" title="بازگشت به بالا" onClick={() => main.current?.scrollTo({ top: 0, behavior: 'smooth' })} className={cx('no-print fixed bottom-24 left-6 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface text-t1 shadow-float transition-all duration-200 hover:text-brand lg:bottom-28', on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0')}><ArrowUp size={18} /></button>
+}
+
 /** ناوبری پایین موبایل با ۵ آیتم (بخش ۵.۸) */
 function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
   const d = useDB(); useSession(); const nav = useNavigate(); const [tasks, setTasks] = useState(false)
@@ -196,7 +203,8 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
 }
 
 export function Shell() {
-  const s = useSession(); const loc = useLocation(); const nav = useNavigate()
+  const s = useSession(); const loc = useLocation(); const nav = useNavigate(); const mainRef = useRef<HTMLElement>(null)
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }) }, [loc.pathname])
   const [menu, setMenu] = useState(false); const [cmd, setCmd] = useState(false); const [ai, setAI] = useState(false); const [keys, setKeys] = useState(false); const [site, setSite] = useState(false)
   useEffect(() => { const f = () => setSite(true); window.addEventListener('site-preview', f); return () => window.removeEventListener('site-preview', f) }, [])
   useEffect(() => {
@@ -221,7 +229,7 @@ export function Shell() {
         {menu && <div className="anim-fade fixed inset-0 z-40 bg-[#10123d]/40 lg:hidden" onClick={() => setMenu(false)}><div className="absolute inset-y-0 right-0" onClick={(e) => e.stopPropagation()}><Sidebar mobile onNav={() => setMenu(false)} /></div></div>}
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar onMenu={() => setMenu(true)} onCmd={() => setCmd(true)} onAI={() => setAI(true)} />
-          <main className="min-h-0 flex-1 overflow-y-auto"><Outlet /></main>
+          <main ref={mainRef} className="relative min-h-0 flex-1 overflow-y-auto"><Outlet /><BackToTop main={mainRef} /></main>
           <MobileNav onMore={() => setMenu(true)} onAI={() => setAI(true)} />
         </div>
       </div>

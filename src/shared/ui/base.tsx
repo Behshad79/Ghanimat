@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { JDateInput } from './jdate'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Copy, Eye, Inbox, Lock, RotateCcw, Search, Sparkles, TriangleAlert, Loader2 } from 'lucide-react'
@@ -25,7 +25,7 @@ export function Button({ variant = 'secondary', size = 'md', icon, loading, clas
   }[variant]
   const s = { sm: 'h-7 px-2 text-12 gap-1', md: 'h-9 px-3 text-13 gap-1.5', lg: 'h-11 px-4 text-14 gap-2' }[size]
   return (
-    <button {...p} disabled={p.disabled || loading} className={cx('btn inline-flex items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors duration-150 disabled:opacity-50', v, s, className)}>
+    <button {...p} disabled={p.disabled || loading} className={cx('btn inline-flex items-center justify-center rounded-md font-medium whitespace-nowrap transition-[color,background-color,border-color,transform,box-shadow] duration-150 active:scale-[.97] disabled:opacity-50 disabled:active:scale-100', v, s, className)}>
       {loading ? <Loader2 size={14} className="animate-spin" /> : icon}
       {children}
     </button>
@@ -148,14 +148,18 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
   )
 }
 export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: string; count?: number }[]; value: string; onChange: (id: string) => void }) {
+  // نشانگر زیر تب فعال با حرکت نرم جابه‌جا می‌شود تا تغییر تب حس شود
+  const box = useRef<HTMLDivElement>(null); const [bar, setBar] = useState<{ x: number; w: number } | null>(null)
+  useLayoutEffect(() => { const el = box.current?.querySelector<HTMLElement>('[aria-selected="true"]'); if (!el || !box.current) return setBar(null); setBar({ x: el.offsetLeft, w: el.offsetWidth }); el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }) }, [value, tabs.length])
   return (
-    <div role="tablist" className="scroll-fade flex gap-1 overflow-x-auto border-b border-line">
+    <div ref={box} role="tablist" className="scroll-fade relative flex gap-1 overflow-x-auto border-b border-line">
       {tabs.map((t) => (
-        <button key={t.id} role="tab" aria-selected={t.id === value} onClick={() => onChange(t.id)} className={cx('-mb-px flex h-10 shrink-0 items-center gap-1.5 border-b-2 px-3 text-13 font-medium transition-colors', t.id === value ? 'border-brand text-brand' : 'border-transparent text-t2 hover:text-t1')}>
+        <button key={t.id} role="tab" aria-selected={t.id === value} onClick={() => onChange(t.id)} className={cx('-mb-px flex h-10 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 text-13 font-medium transition-colors', t.id === value ? 'text-brand' : 'text-t2 hover:text-t1', !bar && t.id === value && 'border-brand')}>
           {t.label}
-          {t.count !== undefined && <span className={cx('tnum rounded-full px-1.5 text-11', t.id === value ? 'bg-brand-tint' : 'bg-neutral-bg')}>{fa(t.count)}</span>}
+          {t.count !== undefined && <span className={cx('tnum rounded-full px-1.5 text-11 transition-colors', t.id === value ? 'bg-brand-tint' : 'bg-neutral-bg')}>{fa(t.count)}</span>}
         </button>
       ))}
+      {bar && <span aria-hidden className="tab-bar pointer-events-none absolute bottom-0 h-0.5 rounded-full bg-brand" style={{ left: bar.x, width: bar.w }} />}
     </div>
   )
 }

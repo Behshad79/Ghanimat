@@ -1,7 +1,8 @@
 import { inRange, useDateRange } from '@/shared/ui/datefilter'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Banknote, Check, MapPin, PackageCheck, RotateCcw, ShoppingBag, Timer, Truck, Warehouse } from 'lucide-react'
+import { setSession, useSession } from '@/shared/lib/store'
+import { Banknote, Check, ChevronDown, MapPin, PackageCheck, RotateCcw, ShoppingBag, Timer, Truck, Warehouse } from 'lucide-react'
 import { Badge, Button, Card, cx, Select, StatusBadge } from '@/shared/ui/base'
 import { KPI } from '@/shared/ui/page'
 import { AreaFunnel } from '@/shared/ui/charts'
@@ -28,6 +29,8 @@ export function OrdersOverview() {
   const at = (i: number) => cur ? new Date(new Date(cur.o.createdAt).getTime() + i * 3.2 * 36e5).toISOString() : ''
   const city = cur ? customer(cur.o.customerId)?.city ?? 'مقصد' : ''
   const prog = idx / (FLOW.length - 1)
+  // تحلیل‌ها جمع‌شونده‌اند تا جدول سفارش‌ها (کار اصلی صفحه) بالاتر بیاید؛ انتخاب کاربر به خاطر سپرده می‌شود
+  const open = !!useSession().ordersInsights
   return (
     <div className="mb-4 space-y-3">
         <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -36,7 +39,8 @@ export function OrdersOverview() {
           <UrgentCard onOpen={(id) => nav(`/admin/orders/${id}`)} onAll={() => nav('/admin/orders?tab=action')} />
           <KPI icon={<RotateCcw size={17} />} label="مرجوعی" value={fa(d.returns.length)} delta={-1.2} goodDown to="/admin/returns" />
         </div>
-    <div className="grid gap-3 xl:grid-cols-[1fr_380px]">
+    <div className="flex items-center justify-between"><button type="button" onClick={() => setSession({ ordersInsights: !open })} aria-expanded={open} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-12 font-medium text-t2 hover:border-brand hover:text-brand"><ChevronDown size={14} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />{open ? 'بستن تحلیل‌ها (قیف فروش، پیگیری مرسوله، روش پرداخت)' : 'نمایش تحلیل‌ها (قیف فروش، پیگیری مرسوله، روش پرداخت)'}</button></div>
+    {open && <div className="anim-pop grid gap-3 xl:grid-cols-[1fr_380px]">
       <div className="space-y-3">
         <Card title="قیف فروش این ماه" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/analytics?tab=funnel')}>تحلیل کامل</Button>}>
           <AreaFunnel onPick={() => nav('/admin/analytics?tab=funnel')} steps={[{ label: 'بازدید کالا', value: 48200, note: 'از همهٔ کانال‌ها' }, { label: 'افزودن به سبد', value: 6120 }, { label: 'شروع پرداخت', value: 2380 }, { label: 'خرید موفق', value: 1460 }]} />
@@ -61,7 +65,7 @@ export function OrdersOverview() {
             </li>) })}</ol>
         </>}
       </Card>
-    </div>
+    </div>}
     </div>
   )
 }

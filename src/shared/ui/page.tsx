@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Sparkles, WifiOff } from 'lucide-react'
 import { CountUp } from './motion'
@@ -19,9 +19,11 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   const nav = useNavigate(); const loc = useLocation()
   const denied = (module && !can(module, s)) || s.viewState === 'noaccess'
   const qs = new URLSearchParams(loc.search); const fromCard = qs.get('fl'); const hasSt = qs.has('st')
+  const head = useRef<HTMLElement>(null); const [stuck, setStuck] = useState(false)
+  useEffect(() => { const main = head.current?.closest('main'); if (!main) return; const f = () => setStuck(main.scrollTop > 24); f(); main.addEventListener('scroll', f, { passive: true }); return () => main.removeEventListener('scroll', f) }, [])
   return (
     <div key={typeof title === 'string' ? title : undefined} className="page-enter mx-auto w-full max-w-[1600px] p-4 md:p-6">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <header ref={head} className={cx('page-head -mx-4 mb-4 flex flex-wrap items-start justify-between gap-3 bg-bg/90 px-4 py-2 backdrop-blur md:-mx-6 md:px-6', stuck && 'stuck')}>
         <div className="min-w-0">
           {back && <button type="button" onClick={() => (loc.key !== 'default' ? nav(-1) : nav(back))} className="mb-2 inline-flex h-8 items-center gap-1 rounded-full border border-line bg-surface pl-3 pr-2 text-12 font-medium text-t1 transition-colors hover:border-brand/50 hover:text-brand"><ChevronRight size={15} />بازگشت</button>}
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-20 font-bold">{title}</h1>{badge}</div>

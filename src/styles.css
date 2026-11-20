@@ -147,6 +147,13 @@ button:disabled { cursor: not-allowed; }
 .check-draw { stroke-dasharray: 18; animation: check-draw .3s .15s ease-out both; }
 .rot-in { animation: rot-in .32s cubic-bezier(.2,.7,.2,1) both; }
 /* کارت پیونددار: ۲ پیکسل بالا آمدن در هاور (taste-skill) */
+table td .font-mono, table td bdi.font-mono { white-space: nowrap; }
+.tab-bar { transition: left .28s cubic-bezier(.2,.7,.2,1), width .28s cubic-bezier(.2,.7,.2,1); }
+/* سربرگ صفحه هنگام اسکرول بالای صفحه می‌چسبد تا عنوان و اقدام‌ها همیشه در دسترس باشند */
+.page-head { position: sticky; top: 0; z-index: 15; transition: box-shadow .2s ease, padding .2s ease; }
+.page-head.stuck { box-shadow: 0 8px 18px -14px rgba(16,18,61,.35); }
+.ph-placeholder { background: linear-gradient(135deg, color-mix(in oklab, var(--ph) 16%, #fff), color-mix(in oklab, var(--ph) 6%, #fff)); }
+[data-theme='dark'] .ph-placeholder { background: linear-gradient(135deg, color-mix(in oklab, var(--ph) 30%, #12142a), #12142a); }
 .lift { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(16,18,61,.22); }
 .btn:active:not(:disabled) { transform: scale(.98); }

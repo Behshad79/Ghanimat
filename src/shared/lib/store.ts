@@ -91,6 +91,7 @@ export type Session = {
   pinned: string[]
   navClosed?: string[]
   pinMig?: number
+  ordersInsights?: boolean
 }
 const defaults: Session = { userId: null, viewAs: null, theme: 'light', density: 'normal', collapsed: false, hints: 'hover', askAI: true, google: true, level: 'معمولی', viewState: 'normal', simulate: 'success', scope: 'all', revealed: [], pinned: ['catalog', 'warehouse', 'ownership'], pinMig: 1 }
 // تم پیش‌فرض از ترجیح سیستم‌عامل خوانده می‌شود؛ از لحظه‌ای که کاربر تم را عوض کند، انتخاب او منبع حقیقت است.

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { BookOpen, Clock, Headphones, Laptop, Package, PlugZap, Smartphone, Tablet, Watch, type LucideIcon } from 'lucide-react'
+import { BookOpen, Clock, Headphones, Laptop, Package, PlugZap, Smartphone, Tablet, Watch, type LucideIcon, Speaker, Gamepad2, Camera, SprayCan, Scissors, Sparkles } from 'lucide-react'
 import { cx } from '@/shared/ui/base'
 import { QuickText } from '@/shared/ui/quickview'
 import { useDB } from '@/shared/lib/store'
@@ -24,14 +24,17 @@ export function SlaChip({ at, done }: { at: string; done?: boolean }) {
   return <span className={cx('tnum inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-11 font-medium whitespace-nowrap', m < 0 ? 'bg-danger-bg text-danger' : m < 45 ? 'bg-warning-bg text-warning' : 'bg-success-bg text-success')}><Clock size={11} />{left(at)}</span>
 }
 export const Money = ({ v, compact: c }: { v: number; compact?: boolean }) => <span className="tnum" title={toman(v)}>{c ? compactToman(v) : toman(v)}</span>
-const CAT_ICON: Record<string, LucideIcon> = { 'گوشی موبایل': Smartphone, هدفون: Headphones, 'لپ‌تاپ': Laptop, 'ساعت هوشمند': Watch, تبلت: Tablet, 'کتاب‌خوان': BookOpen, 'لوازم جانبی': PlugZap }
+/** رنگ ملایم هر دسته برای جای خالی عکس، تا کالای بی‌عکس هم در فهرست خوانا و متمایز باشد */
+const CAT_TINTS = ['#0000ff', '#12733f', '#b45309', '#7c3aed', '#0e7490', '#be185d', '#4d7c0f', '#c2410c']
+export const catColor = (c?: string) => { if (!c) return '#5a5e78'; let h = 0; for (const ch of c) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CAT_TINTS[h % CAT_TINTS.length] }
+const CAT_ICON: Record<string, LucideIcon> = { 'اسپیکر': Speaker, 'کنسول بازی': Gamepad2, 'دوربین': Camera, 'عطر': SprayCan, 'لوازم شخصی': Scissors, 'آرایشی و بهداشتی': Sparkles, 'گوشی موبایل': Smartphone, هدفون: Headphones, 'لپ‌تاپ': Laptop, 'ساعت هوشمند': Watch, تبلت: Tablet, 'کتاب‌خوان': BookOpen, 'لوازم جانبی': PlugZap }
 /** عکس کالا با اندازهٔ ثابت؛ کالای بی‌عکس آیکون دسته‌اش را می‌گیرد، نه حروف لاتین */
 export function ProductImg({ pid, size = 40, className, rounded = 'rounded-lg' }: { pid: string; size?: number; className?: string; rounded?: string }) {
   const d = useDB(); const p = d.products.find((x) => x.id === pid)
   const Icon = (p && CAT_ICON[p.category]) || Package
   return (
-    <span className={cx('relative grid shrink-0 place-items-center overflow-hidden border border-line bg-white', rounded, className)} style={{ width: size, height: size }}>
-      {p?.image ? <img src={p.image} alt={p.title} loading="lazy" decoding="async" className="size-full object-cover" style={{ objectPosition: p.imagePos ?? '50% 50%' }} /> : <Icon size={Math.round(size * 0.45)} strokeWidth={1.6} className="text-t3" aria-label={p?.category ?? 'کالا'} />}
+    <span className={cx('relative grid shrink-0 place-items-center overflow-hidden border border-line', p?.image ? 'bg-white' : 'ph-placeholder', rounded, className)} style={{ width: size, height: size, ['--ph' as string]: catColor(p?.category) }}>
+      {p?.image ? <img src={p.image} alt={p.title} loading="lazy" decoding="async" className="size-full object-cover" style={{ objectPosition: p.imagePos ?? '50% 50%' }} /> : <Icon size={Math.round(size * 0.45)} strokeWidth={1.6} style={{ color: catColor(p?.category) }} className="opacity-80" aria-label={p?.category ?? 'کالا'} />}
     </span>
   )
 }

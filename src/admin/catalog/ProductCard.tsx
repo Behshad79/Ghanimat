@@ -1,3 +1,4 @@
+import { ProductImg } from '../pages/_shared'
 import { KIND_DEFAULT, LineIcon } from '@/shared/ui/lineIcons'
 import { fastOn } from '@/shared/data/partners'
 import { liveDeal } from '@/shared/data/merch'
@@ -57,7 +58,7 @@ export function ProductCard({ p, u, mini, hover, out, skeleton, cfg: cfgIn, flui
   return (
     <div className={cx('group relative w-full overflow-hidden rounded-2xl border bg-white text-[#10123d] transition-shadow', hover ? 'border-[#0000ff]/40 shadow-float' : 'border-[#e6e8f0]', fluid ? '' : mini ? 'max-w-[176px]' : 'max-w-[236px]')}>
       <div className={cx('relative overflow-hidden bg-white', cfg?.ratio === '4/5' ? 'aspect-[4/5]' : 'aspect-square')}>
-        {p.image ? <img src={p.image} alt={p.title} style={{ objectPosition: p.imagePos ?? '50% 50%' }} className={cx('absolute inset-0 size-full object-cover transition-transform duration-300', hover && 'scale-[1.03]', isOut && 'opacity-50 grayscale')} /> : <div className="absolute inset-0 grid place-items-center text-12 text-[#5a5e78]">تصویر کالا</div>}
+        {p.image ? <img src={p.image} alt={p.title} style={{ objectPosition: p.imagePos ?? '50% 50%' }} className={cx('absolute inset-0 size-full object-cover transition-transform duration-300', hover && 'scale-[1.03]', isOut && 'opacity-50 grayscale')} /> : <div className="absolute inset-0 grid place-items-center"><ProductImg pid={p.id} size={96} rounded="rounded-2xl" className="border-0" /></div>}
         {show('showTimer') && timer && !isOut && <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-[#c42f2f] px-2 py-1 text-12 font-bold text-white"><span>غنی‌آف</span><span className="tnum ltr">{timer}</span></span>}
         {show('showHot') && on('hot') && p.cvr > 2.5 && !isOut && <span className="absolute top-2.5 right-2.5 grid size-8 place-items-center rounded-lg bg-[#fdecec] text-[#c42f2f]"><Flame size={17} /></span>}
         {hover && !isOut && <span className="absolute inset-x-2.5 bottom-2.5 flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#0000ff] text-13 font-medium text-white"><ShoppingCart size={14} />{cfg?.cta || 'افزودن به سبد خرید'}</span>}

@@ -295,6 +295,7 @@ const makeSeedBase = () => ({
     { id: 'u6', name: 'مریم', role: 'finance', phone: '09000000006', status: 'استراحت', twoFA: true },
     { id: 'u7', name: 'پویا', role: 'growth', phone: '09000000007', status: 'آنلاین', twoFA: true },
     { id: 'u8', name: 'هستی', role: 'qc', phone: '09000000008', status: 'آنلاین', twoFA: false },
+    { id: 'u9', name: 'دستیار بهشاد', role: 'assistant', phone: '09000000009', status: 'آنلاین', twoFA: true },
   ],
   // مجوزهای سه‌حالته برای هر فرد (بخش ۲.۳): allow | approve | deny + سقف اختیاری
   perms: {

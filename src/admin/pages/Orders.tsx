@@ -34,6 +34,7 @@ import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
 import { OrderLedger } from '../stock/OrderLedger'
+import { guardForeign, myWarehouses } from '../stock/foreign'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
 const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
@@ -174,8 +175,9 @@ export function OrderDetail() {
   const c = customer(o.customerId)
   const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
-  const advance = (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
-  const cancelShip = (sid: string, total: number) => { setRestock('site'); setRdest('کیف پول'); setRacct(''); setCancelSh({ sid, total }) }
+  const advance = async (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, label, sid))) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
+  const openPack = async (sid: string) => { const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, 'بسته‌بندی با اسکن', sid))) return; setPacking(sid); setTimeout(() => document.getElementById(`pack-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }
+  const cancelShip = async (sid: string, total: number) => { const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, 'لغو مرسوله', sid))) return; setRestock('site'); setRdest('کیف پول'); setRacct(''); setCancelSh({ sid, total }) }
   const doCancelShip = async () => {
     if (!cancelSh) return; const { sid, total } = cancelSh
     if (!(await askReason({ kind: 'order', ref: o.id, status: `لغو مرسولهٔ ${sid}`, title: 'دلیل لغو (برای مشتری)' }))) return
@@ -198,7 +200,7 @@ export function OrderDetail() {
     : o.status === 'order.suspicious' ? { label: 'بازبینی سفارش مشکوک', hint: 'ارسال تا تأیید شما متوقف است.', run: () => document.getElementById('order-attention')?.scrollIntoView({ behavior: 'smooth' }) }
     : !live ? { label: o.status === 'order.cancelled' ? 'سفارش لغو شده است' : 'همهٔ مرسوله‌ها تحویل شد', hint: o.status === 'order.cancelled' ? 'بازگشت وجه را از کارت «بازگشت وجه» پیگیری کنید.' : 'کار دیگری روی این سفارش باقی نمانده است.', tone: 'done' }
     : live.status === 'ship.pending' ? { label: 'شروع جمع‌آوری', hint: `مرسولهٔ ${live.id} از ${WAREHOUSE[live.warehouse]}`, run: () => advance(live.id, 'ship.picking', 'شروع جمع‌آوری') }
-    : live.status === 'ship.picking' ? { label: 'بسته‌بندی با اسکن', hint: `مرسولهٔ ${live.id}: هر قلم را اسکن کنید`, run: () => { setPacking(live.id); setTimeout(() => document.getElementById(`pack-${live.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) } }
+    : live.status === 'ship.picking' ? { label: 'بسته‌بندی با اسکن', hint: `مرسولهٔ ${live.id}: هر قلم را اسکن کنید`, run: () => void openPack(live.id) }
     : live.status === 'ship.partner_confirm' ? { label: 'منتظر تأیید موجودی شریک', hint: 'پیامک و پیام‌رسان برای او ارسال شده است.', tone: 'wait' }
     : live.status === 'ship.packed' ? { label: /پست|تیپاکس|باربری/.test(live.method) ? 'ثبت تحویل به پست و کد رهگیری' : 'ثبت پیک و تحویل بسته', hint: `مرسولهٔ ${live.id} آمادهٔ ارسال است`, run: () => goShip(live.id) }
     : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است`, run: () => goShip(live.id) }
@@ -257,7 +259,7 @@ export function OrderDetail() {
           {o.shipments.map((s, i) => { const total = s.items.reduce((a, x) => a + x.price * x.qty, 0); const dead = ['ship.cancelled', 'ship.delivered'].includes(s.status); const post = /پست|تیپاکس|باربری/.test(s.method); const isNext = live?.id === s.id; return (
             <section key={s.id} id={`ship-${s.id}`} className={cx('scroll-mt-24 rounded-2xl border bg-surface', isNext ? 'border-brand/50 shadow-sm' : 'border-line')}>
               <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-                <b className="text-14">مرسولهٔ {fa(i + 1)}</b><CopyId v={s.id} /><StatusBadge s={s.status} />{isNext && <Badge tone="brand" dot={false}>در جریان</Badge>}
+                <b className="text-14">مرسولهٔ {fa(i + 1)}</b><CopyId v={s.id} /><StatusBadge s={s.status} />{isNext && <Badge tone="brand" dot={false}>در جریان</Badge>}{myWarehouses().length > 0 && !myWarehouses().includes(s.warehouse) && <Badge tone="warning" dot={false}>انبار دیگر · مال {d.stock.parties.find((p) => p.id === d.stock.warehouses.find((w) => w.id === s.warehouse)?.operator)?.name ?? '—'}</Badge>}
                 <span className="flex-1" /><SlaChip at={s.sla} done={dead} />
               </header>
               <div className="p-4">
@@ -277,7 +279,7 @@ export function OrderDetail() {
                   {s.status === 'ship.packed' && !s.courier && !s.tracking && /سریع|پیک|اسنپ/.test(s.method) && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.delivery.fast.couriers.find((c) => c.id === d.delivery.fast.primary)?.name ?? 'سرویس پیک'} />}
                   <div className="flex flex-wrap items-center gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
-                    {['ship.pending', 'ship.picking'].includes(s.status) && packing !== s.id && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => { setPacking(s.id); setTimeout(() => document.getElementById(`pack-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>بسته‌بندی با اسکن</Button>}
+                    {['ship.pending', 'ship.picking'].includes(s.status) && packing !== s.id && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => void openPack(s.id)}>بسته‌بندی با اسکن</Button>}
                     {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')} title="مالک هر قلم طبق قاعدهٔ اولویت برداشت تعیین و ثبت می‌شود">تأیید بدون اسکن</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>

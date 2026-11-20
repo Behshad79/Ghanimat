@@ -17,6 +17,7 @@ import { codeFor, ownersAt, PartyChip, partyName, pv, syncQty, takeLots, whName 
 import { shipBlocked } from '../orders/PayHold'
 import { StartDecision } from '../orders/Decision'
 import { Inspect } from './Inspect'
+import { guardForeign } from './foreign'
 
 type Scan = NonNullable<Shipment['pack']>['scans'][number]
 /** کدام ویژگی‌ها (رنگ، حافظه، رم، نسخه و…) بین تنوع اسکن‌شده و تنوع سفارش فرق دارد */
@@ -173,6 +174,7 @@ export function Packing() {
   const methodOf = (m: string) => (/حضوری/.test(m) ? 'pickup' : /پیک|سریع|اسنپ|تیپاکس/.test(m) ? 'courier' : 'post')
   const queue = all.filter(({ o, x }) => (fm === 'all' || methodOf(x.method) === fm) && (fs === 'all' || x.status === fs) && (!late || +new Date(x.sla) - Date.now() < 2 * 36e5) && (!fq.trim() || `${o.id} ${x.id} ${x.items.map((i) => d.products.find((p) => p.id === i.productId)?.title ?? '').join(' ')}`.toLowerCase().includes(fq.trim().toLowerCase())))
   const open = (id: string) => { setSid(id); setFlash(''); setSp((p) => { if (id) p.set('ship', id); else p.delete('ship'); return p }, { replace: true }) }
+  const pick = async (id: string) => { const x = d.orders.flatMap((o) => o.shipments).find((y) => y.id === id); if (x && !(await guardForeign(x.warehouse, 'بسته‌بندی با اسکن', id))) return; open(id) }
   const byLabel = (c: string) => {
     const ord = d.orders.find((o) => o.id.toUpperCase() === c.toUpperCase() || o.shipments.some((x) => x.id.toUpperCase() === c.toUpperCase())); if (!ord) { if (resolveCode(d, c)) { setProbe(c); setTab('inspect'); sound && beep(true); return true } setFlash('این برچسب سفارش یا کالا شناخته نشد.'); sound && beep(false); return false }
     const x = ord.shipments.find((y) => y.id.toUpperCase() === c.toUpperCase()) ?? ord.shipments.find((y) => OPEN.includes(y.status)); if (!x) return false
@@ -191,7 +193,7 @@ export function Packing() {
             <div className="flex flex-wrap gap-1">{([['all', 'همه'], ['courier', 'پیک'], ['post', 'پست'], ['pickup', 'حضوری']] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFm(k)} className={cx('h-7 rounded-full border px-2.5 text-11', fm === k ? 'border-brand bg-brand text-white' : 'border-line')}>{l}</button>)}</div>
             <div className="flex flex-wrap items-center gap-1">{([['all', 'همهٔ وضعیت‌ها'], ['ship.pending', 'در انتظار'], ['ship.picking', 'در حال جمع‌آوری']] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFs(k)} className={cx('h-7 rounded-full border px-2.5 text-11', fs === k ? 'border-brand bg-brand text-white' : 'border-line')}>{l}</button>)}<button type="button" onClick={() => setLate(!late)} className={cx('h-7 rounded-full border px-2.5 text-11', late ? 'border-danger bg-danger text-white' : 'border-line')}>مهلت زیر ۲ ساعت</button></div>
             <p className="text-11 text-t2">{fa(queue.length)} از {fa(all.length)} مرسوله</p></div>
-          {queue.length ? <ul className="max-h-[70vh] divide-y divide-line overflow-y-auto">{queue.map(({ o, x }) => <li key={x.id}><button className={cx('flex w-full flex-col gap-0.5 px-4 py-3 text-right hover:bg-neutral-bg', sid === x.id && 'bg-brand/5')} onClick={() => open(x.id)}>
+          {queue.length ? <ul className="max-h-[70vh] divide-y divide-line overflow-y-auto">{queue.map(({ o, x }) => <li key={x.id}><button className={cx('flex w-full flex-col gap-0.5 px-4 py-3 text-right hover:bg-neutral-bg', sid === x.id && 'bg-brand/5')} onClick={() => void pick(x.id)}>
             <span className="flex items-center justify-between"><b className="font-mono text-13">{x.id}</b><Badge>{fa(x.items.filter((i) => !i.cancelled).reduce((a, i) => a + i.qty, 0))} قلم</Badge></span>
             <span className="text-12 text-t2">{x.method} · مهلت {rel(x.sla)}</span>
             {shipBlocked(o.id, true) && <span className="text-11 text-danger">منتظر پرداخت مابه‌التفاوت</span>}

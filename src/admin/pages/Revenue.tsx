@@ -9,7 +9,7 @@ import { KPI, Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Bars, Donut, LineChart, Waterfall } from '@/shared/ui/charts'
 import { Hint, Modal, toast } from '@/shared/ui/overlay'
-import { isChief, fakeCall, mutate, snapshot, useDB } from '@/shared/lib/store'
+import { isChief, fakeCall, mutate, snapshot, useDB , canSecret } from '@/shared/lib/store'
 import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { Cell, Money, useLookup, useTab } from './_shared'
 import { MyProfit, PaySales, Receivables } from '../finance/Money'
@@ -68,15 +68,16 @@ export function Finance() {
   return (
     <Page title="مالی" module="finance" empty={{ title: 'هنوز تراکنشی ثبت نشده است.', desc: 'پرداخت‌ها، طلب از درگاه‌ها، بازگشت وجه‌ها و سود اینجا نمایش داده می‌شوند.' }}
       primary={unknown.length > 0 ? <Button variant="primary" onClick={() => nav(`/admin/finance?tab=txns&st=pay.unknown&fl=${encodeURIComponent('تراکنش‌های نامشخص')}`)}>رسیدگی به {fa(unknown.length)} تراکنش نامشخص</Button> : <Button variant="primary" onClick={() => setTab('receivables')}>طلب از سرویس‌ها</Button>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'dash', label: 'داشبورد' }, { id: 'profit', label: 'سود من' }, { id: 'receivables', label: 'طلب از سرویس‌ها', count: late.length || undefined }, { id: 'paysales', label: 'فروش بر اساس روش پرداخت' }, { id: 'txns', label: 'تراکنش‌ها', count: unknown.length }, { id: 'refunds', label: 'بازگشت وجه و تأییدها', count: d.approvals.filter((a) => a.status === 'approval.pending' && a.amount > 0).length }, { id: 'gateways', label: 'درگاه‌ها و سرویس‌های اقساطی' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'dash', label: 'داشبورد' }, ...(canSecret() ? [{ id: 'profit', label: 'سود من' }] : []), { id: 'receivables', label: 'طلب از سرویس‌ها', count: late.length || undefined }, { id: 'paysales', label: 'فروش بر اساس روش پرداخت' }, { id: 'txns', label: 'تراکنش‌ها', count: unknown.length }, { id: 'refunds', label: 'بازگشت وجه و تأییدها', count: d.approvals.filter((a) => a.status === 'approval.pending' && a.amount > 0).length }, { id: 'gateways', label: 'درگاه‌ها و سرویس‌های اقساطی' }]} />}>
       {tab === 'dash' && <div className="space-y-4"><div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KPI label="سود خالص ۳۰ روز اخیر" value={compactToman(profit)} to="/admin/finance?tab=profit" delta={9.4} spark={[3, 4, 5, 5, 7, 8, 9]} />
+        {canSecret() && <KPI label="سود خالص ۳۰ روز اخیر" value={compactToman(profit)} to="/admin/finance?tab=profit" delta={9.4} spark={[3, 4, 5, 5, 7, 8, 9]} />}
         <KPI label="طلب از درگاه‌ها و سرویس‌ها" hint="receivable" value={compactToman(owed)} note={late.length ? `${fa(late.length)} مورد دیرکرد` : 'بدون دیرکرد'} to="/admin/finance?tab=receivables" />
         <KPI label="بدهی کیف پول" value={compactToman(d.customers.reduce((a, c) => a + c.wallet, 0))} note="موجودی مشتریان نزد غنیمت" to="/admin/customers" />
         <KPI label="بازگشت وجه معوق" value={compactToman(d.returns.filter((r) => ['return.refunding', 'return.approved'].includes(r.status)).reduce((a, r) => a + r.amount, 0))} to="/admin/returns" /></div>
         <div className="grid gap-4 lg:grid-cols-2"><Card title="جریان نقدی ۱۴ روز آینده چطور است؟"><LineChart labels={['امروز', '۲', '۴', '۶', '۸', '۱۰', '۱۲', '۱۴']} series={[{ name: 'پیش‌بینی موجودی نقد', color: 'var(--brand)', data: [820, 760, 910, 880, 1040, 990, 1120, 1210] }]} /><p className="mt-2 text-11 text-t2">واحد: میلیون تومان · شامل سررسید طلب از سرویس‌ها · پیش‌بینی AI؛ اطمینان: متوسط</p></Card>
           <Card title="سهم روش‌های پرداخت از فروش" actions={<Button size="sm" variant="ghost" onClick={() => setTab('paysales')}>جزئیات</Button>}><Donut data={pays.filter((p) => p.share > 0).map((p, i) => ({ label: `${p.name}${p.family === 'bnpl' ? ' (اقساطی)' : ''}`, value: p.share, color: ['var(--brand)', 'var(--info)', 'var(--purple)', 'var(--warning)', 'var(--success)', 'var(--danger)'][i % 6] }))} center={<span>اقساطی<br />{pct(pays.filter((p) => p.family === 'bnpl').reduce((a, p) => a + p.share, 0))}</span>} /></Card></div></div>}
-      {tab === 'profit' && <MyProfit />}
+      {tab === 'profit' && !canSecret() && <Card><p className="p-4 text-13 text-t2">سود کل غنیمت جزو دادهٔ محرمانهٔ مدیر کل است.</p></Card>}
+      {tab === 'profit' && canSecret() && <MyProfit />}
       {tab === 'receivables' && <Receivables />}
       {tab === 'paysales' && <PaySales />}
       {tab === 'txns' && <DataTable name="تراکنش‌ها" rows={d.txns} rowKey={(t) => t.id} search={(t) => `${t.id} ${t.ref} ${t.orderId} ${t.gateway}`} onRow={(t) => t.orderId && nav(`/admin/orders/${t.orderId}`)} empty={{ title: 'تراکنشی نیست.' }}

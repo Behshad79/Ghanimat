@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, BellPlus, Check, FileText, Landmark, MessageSquare, PiggyBank, Plus, Printer, Receipt, RefreshCw, Scale, TrendingDown, Wallet, X } from 'lucide-react'
+import { ArrowLeftRight, BellPlus, Check, FileText, Landmark, Paperclip, Pencil, MessageSquare, PiggyBank, Plus, Printer, Receipt, RefreshCw, Scale, TrendingDown, Wallet, X } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Tabs, Textarea, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
@@ -24,7 +24,7 @@ const usdRate = (d: DB) => Math.round(((d.storeCfg?.fx?.rates?.['دلار'] ?? 6
 
 /** حسابداری و خزانه */
 export function Treasury() {
-  const d = useDB(); const T = d.treasury; const [tab, setTab] = useTab('overview'); const [modal, setModal] = useState<null | { kind: TEntry['kind']; pre?: Partial<TEntry> }>(null)
+  const d = useDB(); const T = d.treasury; const [tab, setTab] = useTab('overview'); const [modal, setModal] = useState<null | { kind: TEntry['kind']; pre?: Partial<TEntry>; edit?: TEntry }>(null)
   const pend = T.entries.filter((e) => e.status === 'approval'); const unmatched = T.sms.filter((s) => !s.entry && s.dir === 'out')
   const dueSoon = T.recurring.filter((r) => r.active && +new Date(r.next) - Date.now() < 14 * 864e5)
   return <Page module="treasury" title="حسابداری و خزانه" sub="پولِ خودِ کسب‌وکار: حساب‌ها، هزینه‌ها و مستندها، اشتراک‌ها، سرمایه و برداشت شرکا، بودجه و سود و زیان واقعی"
@@ -33,7 +33,7 @@ export function Treasury() {
     tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'overview', label: 'نمای کلی' }, { id: 'accounts', label: 'حساب‌ها و پیامک بانک', count: unmatched.length || undefined }, { id: 'ledger', label: 'دفتر هزینه و درآمد', count: pend.length || undefined }, { id: 'recurring', label: 'اشتراک‌ها و پرداخت‌های تکراری', count: dueSoon.length || undefined }, { id: 'capital', label: 'سرمایه و شرکا' }, { id: 'budget', label: 'بودجه و برآورد' }, { id: 'pnl', label: 'سود و زیان' }]} />}>
     {tab === 'overview' && <Overview onAdd={(k, pre) => setModal({ kind: k, pre })} go={setTab} />}
     {tab === 'accounts' && <Accounts onAdd={(k, pre) => setModal({ kind: k, pre })} />}
-    {tab === 'ledger' && <Ledger onAdd={(k) => setModal({ kind: k })} />}
+    {tab === 'ledger' && <Ledger onAdd={(k) => setModal({ kind: k })} onEdit={(e) => setModal({ kind: e.kind, edit: e })} />}
     {tab === 'recurring' && <Recurring />}
     {tab === 'capital' && <Capital onAdd={(k) => setModal({ kind: k })} />}
     {tab === 'budget' && <Budget />}
@@ -130,7 +130,7 @@ function AccountModal({ a, onClose }: { a: TAccount; onClose: () => void }) {
   </Modal>
 }
 
-function Ledger({ onAdd }: { onAdd: (k: TEntry['kind']) => void }) {
+function Ledger({ onAdd, onEdit }: { onAdd: (k: TEntry['kind']) => void; onEdit: (e: TEntry) => void }) {
   const d = useDB(); const T = d.treasury; const [kind, setKind] = useState('all'); const [cat, setCat] = useState('all'); const [acc, setAcc] = useState('all'); const [m, setM] = useState('all'); const [open, setOpen] = useState<TEntry | null>(null)
   const rows = T.entries.filter((e) => (kind === 'all' || e.kind === kind) && (cat === 'all' || e.category === cat) && (acc === 'all' || e.from === acc || e.to === acc) && (m === 'all' || monthKey(e.at) === m)).sort((a, b) => b.at.localeCompare(a.at))
   const an = (id?: string) => T.accounts.find((a) => a.id === id)?.name ?? '—'
@@ -149,17 +149,28 @@ function Ledger({ onAdd }: { onAdd: (k: TEntry['kind']) => void }) {
         { key: 'c', title: 'دسته', render: (e) => <span className="text-12">{e.category ?? '—'}</span> },
         { key: 'a', title: 'حساب', render: (e) => <span className="text-12">{e.kind === 'transfer' ? `${an(e.from)} ← ${an(e.to)}` : an(e.from ?? e.to)}</span> },
         { key: 'm', title: 'مبلغ', render: (e) => <span className={cx('font-medium', e.kind === 'expense' || e.kind === 'draw' ? 'text-danger' : e.kind === 'transfer' ? '' : 'text-success')}>{e.kind === 'expense' || e.kind === 'draw' ? '−' : e.kind === 'transfer' ? '' : '+'}{toman(e.amount)}</span>, sort: (e) => e.amount },
-        { key: 's', title: 'وضعیت', render: (e) => e.status === 'paid' ? <span className="flex items-center gap-1 text-12">{e.doc ? <FileText size={13} className="text-success" /> : <span className="text-11 text-warning">بی‌مستند</span>}{e.tax && <Badge dot={false}>قابل قبول مالیاتی</Badge>}</span> : <Badge tone={e.status === 'approval' ? 'warning' : 'danger'}>{e.status === 'approval' ? 'منتظر تأیید' : 'رد شد'}</Badge> }]} /></Card>
-    <Drawer open={!!open} onClose={() => setOpen(null)} title={open ? `${KIND_LABEL[open.kind]} · ${open.id}` : ''} footer={open && isChiefNow() && <Button variant="ghost" onClick={async () => { if (!(await confirm({ title: 'حذف این ردیف؟', body: 'به سطل بازیافت می‌رود و از موجودی حساب‌ها برداشته می‌شود.', confirm: 'حذف', danger: true }))) return; mutate((x) => { const e = x.treasury.entries.find((q) => q.id === open.id)!; x.trash.unshift({ id: e.id, type: 'ردیف خزانه', title: `${e.vendor ?? e.category ?? ''} ${toman(e.amount)}`, at: new Date().toISOString(), by: me() } as never); x.treasury.entries = x.treasury.entries.filter((q) => q.id !== open.id) }, { action: 'حذف ردیف خزانه', target: open.id }); setOpen(null); toast('به سطل بازیافت رفت.') }}>حذف</Button>}>
-      {open && <div className="space-y-2 text-13">{([['مبلغ', toman(open.amount)], ['تاریخ', day(open.at)], ['از حساب', an(open.from)], ['به حساب', an(open.to)], ['دسته', open.category], ['طرف حساب', open.vendor], ['ارز', open.fx && `${fa(open.fx.amount)} ${open.fx.cur} × نرخ ${num(open.fx.rate)} + کارمزد ${fa(open.fx.fee)}٪`], ['سرمایه‌گذار', T.investors.find((v) => v.id === open.investor)?.name], ['مستند', open.doc], ['ثبت‌کننده', open.by], ['تأییدکننده', open.approvedBy], ['قابل قبول مالیاتی', open.tax ? 'بله' : undefined], ['توضیح', open.note]] as [string, string | undefined][]).filter(([, v]) => v).map(([k, v]) => <p key={k} className="flex justify-between gap-3 border-b border-line pb-1.5"><span className="text-t2">{k}</span><b className="text-left">{v}</b></p>)}</div>}
+        { key: 's', title: 'وضعیت و مستند', render: (e) => <span className="flex flex-wrap items-center gap-1 text-12" onClick={(ev) => ev.stopPropagation()}>{e.status !== 'paid' && <Badge tone={e.status === 'approval' ? 'warning' : 'danger'}>{e.status === 'approval' ? 'منتظر تأیید' : 'رد شد'}</Badge>}<DocChip e={e} />{e.tax && <Badge dot={false}>قابل قبول مالیاتی</Badge>}{(e.edits?.length ?? 0) > 0 && <span className="text-11 text-t3" title={e.edits!.map((x) => `${x.by}: ${x.changes}`).join('\n')}>ویرایش‌شده</span>}</span> },
+        { key: 'x', title: '', render: (e) => <span onClick={(ev) => ev.stopPropagation()}><Button size="sm" variant="ghost" icon={<Pencil size={13} />} onClick={() => onEdit(e)}>ویرایش</Button></span> }]} /></Card>
+    <Drawer open={!!open} onClose={() => setOpen(null)} title={open ? `${KIND_LABEL[open.kind]} · ${open.id}` : ''} footer={open && <><Button variant="primary" icon={<Pencil size={13} />} onClick={() => { onEdit(open); setOpen(null) }}>ویرایش</Button>{isChiefNow() && <Button variant="ghost" onClick={async () => { if (!(await confirm({ title: 'حذف این ردیف؟', body: 'به سطل بازیافت می‌رود و از موجودی حساب‌ها برداشته می‌شود.', confirm: 'حذف', danger: true }))) return; mutate((x) => { const e = x.treasury.entries.find((q) => q.id === open.id)!; x.trash.unshift({ id: e.id, type: 'ردیف خزانه', title: `${e.vendor ?? e.category ?? ''} ${toman(e.amount)}`, at: new Date().toISOString(), by: me() } as never); x.treasury.entries = x.treasury.entries.filter((q) => q.id !== open.id) }, { action: 'حذف ردیف خزانه', target: open.id }); setOpen(null); toast('به سطل بازیافت رفت.') }}>حذف</Button>}</>}>
+      {open && <div className="space-y-2 text-13">{([['مبلغ', toman(open.amount)], ['تاریخ', day(open.at)], ['از حساب', an(open.from)], ['به حساب', an(open.to)], ['دسته', open.category], ['طرف حساب', open.vendor], ['ارز', open.fx && `${fa(open.fx.amount)} ${open.fx.cur} × نرخ ${num(open.fx.rate)} + کارمزد ${fa(open.fx.fee)}٪`], ['سرمایه‌گذار', T.investors.find((v) => v.id === open.investor)?.name], ['مستند', open.doc], ['ثبت‌کننده', open.by], ['تأییدکننده', open.approvedBy], ['قابل قبول مالیاتی', open.tax ? 'بله' : undefined], ['توضیح', open.note]] as [string, string | undefined][]).filter(([, v]) => v).map(([k, v]) => <p key={k} className="flex justify-between gap-3 border-b border-line pb-1.5"><span className="text-t2">{k}</span><b className="text-left">{v}</b></p>)}
+        {(open.edits?.length ?? 0) > 0 && <div className="pt-2"><p className="mb-1 text-12 font-semibold">سابقهٔ ویرایش</p><ol className="space-y-1 border-r-2 border-line pr-3 text-12">{open.edits!.map((x, i) => <li key={i}><span className="text-t3">{day(x.at)} · {x.by}:</span> {x.changes}</li>)}</ol></div>}</div>}
     </Drawer>
   </div>
 }
 
-function EntryModal({ m, onClose }: { m: null | { kind: TEntry['kind']; pre?: Partial<TEntry> }; onClose: () => void }) {
+/** مستند ردیف: بدون مستند یعنی دکمهٔ پیوست؛ با مستند یعنی نام فایل و جایگزینی */
+function DocChip({ e }: { e: TEntry }) {
+  const attach = (name: string) => { mutate((x) => { const q = x.treasury.entries.find((y) => y.id === e.id); if (q) { q.edits = [...(q.edits ?? []), { at: new Date().toISOString(), by: me(), changes: `مستند: ${e.doc ?? 'ندارد'} ← ${name}` }]; q.doc = name } }, { action: 'خزانه: پیوست مستند', target: e.id, after: name }); toast('مستند پیوست شد.') }
+  return <label className={cx('inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-11', e.doc ? 'border-success/40 text-success hover:border-brand' : 'border-warning/50 text-warning hover:border-brand hover:text-brand')} title={e.doc ? `${e.doc} · برای جایگزینی بزنید` : 'پیوست فاکتور، رسید یا قرارداد'}>
+    {e.doc ? <FileText size={12} /> : <Paperclip size={12} />}{e.doc ? <span className="max-w-24 truncate">{e.doc}</span> : 'بی‌مستند · پیوست'}
+    <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(ev) => { const fl = ev.target.files?.[0]; if (fl) attach(fl.name); ev.target.value = '' }} /></label>
+}
+
+function EntryModal({ m, onClose }: { m: null | { kind: TEntry['kind']; pre?: Partial<TEntry>; edit?: TEntry }; onClose: () => void }) {
   const d = useDB(); const T = d.treasury; const [f, setF] = useState<TEntry | null>(null); const [fx, setFx] = useState(false); const [fxA, setFxA] = useState({ amount: 20, rate: 0, fee: 6 }); const [rec, setRec] = useState<'' | TRecurring['every']>(''); const [key, setKey] = useState('')
-  const k = m ? `${m.kind}|${JSON.stringify(m.pre ?? {})}` : ''
-  if (m && k !== key) { setKey(k); const pre = m.pre ?? {}; setF({ id: '', at: new Date().toISOString(), kind: m.kind, amount: 0, status: 'paid', by: me(), from: m.kind === 'expense' || m.kind === 'transfer' || m.kind === 'draw' ? 'ops' : undefined, to: m.kind === 'capital' ? 'cap' : m.kind === 'income' || m.kind === 'loan' ? 'ops' : m.kind === 'transfer' ? 'petty' : undefined, category: m.kind === 'expense' ? T_CATS[0] : undefined, ...pre }); setFx(false); setFxA({ amount: 20, rate: usdRate(d), fee: T.feePct }); setRec('') }
+  const k = m ? `${m.kind}|${m.edit?.id ?? ''}|${JSON.stringify(m.pre ?? {})}` : ''
+  if (m && k !== key && m.edit) { setKey(k); setF({ ...m.edit }); setFx(!!m.edit.fx); setFxA(m.edit.fx ? { amount: m.edit.fx.amount, rate: m.edit.fx.rate, fee: m.edit.fx.fee } : { amount: 20, rate: usdRate(d), fee: T.feePct }); setRec('') }
+  else if (m && k !== key) { setKey(k); const pre = m.pre ?? {}; setF({ id: '', at: new Date().toISOString(), kind: m.kind, amount: 0, status: 'paid', by: me(), from: m.kind === 'expense' || m.kind === 'transfer' || m.kind === 'draw' ? 'ops' : undefined, to: m.kind === 'capital' ? 'cap' : m.kind === 'income' || m.kind === 'loan' ? 'ops' : m.kind === 'transfer' ? 'petty' : undefined, category: m.kind === 'expense' ? T_CATS[0] : undefined, ...pre }); setFx(false); setFxA({ amount: 20, rate: usdRate(d), fee: T.feePct }); setRec('') }
   if (!m || !f) return null
   const set = (p: Partial<TEntry>) => setF({ ...f, ...p }); const amount = fx ? fxToman(fxA.amount, fxA.rate, fxA.fee) : f.amount
   const accs = T.accounts.filter((a) => a.active).map((a) => [a.id, `${a.name} (${toman(balanceOf(T, a.id))})`] as [string, string])
@@ -168,6 +179,19 @@ function EntryModal({ m, onClose }: { m: null | { kind: TEntry['kind']; pre?: Pa
     if (!amount) return toast('مبلغ را وارد کنید.', { tone: 'err' })
     if ((m.kind === 'expense' || m.kind === 'draw') && T.accounts.find((a) => a.id === f.from)?.restricted) return toast('از حساب سرمایه مستقیم خرج نمی‌شود؛ اول به حساب جاری «انتقال» بدهید.', { tone: 'err' })
     if (m.kind === 'transfer' && f.from === f.to) return toast('حساب مبدأ و مقصد یکی است.', { tone: 'err' })
+    if (m.edit) {
+      const o = m.edit; const an = (id?: string) => T.accounts.find((a) => a.id === id)?.name ?? '—'
+      const ch = ([['مبلغ', toman(o.amount), toman(amount)], ['تاریخ', day(o.at), day(f.at)], ['از حساب', an(o.from), an(f.from)], ['به حساب', an(o.to), an(f.to)], ['دسته', o.category ?? '—', f.category ?? '—'], ['طرف حساب', o.vendor ?? '—', f.vendor ?? '—'], ['توضیح', o.note ?? '—', f.note ?? '—'], ['مستند', o.doc ?? 'ندارد', f.doc ?? 'ندارد'], ['قابل قبول مالیاتی', o.tax ? 'بله' : 'خیر', f.tax ? 'بله' : 'خیر'], ['سرمایه‌گذار', o.investor ?? '—', f.investor ?? '—']] as [string, string, string][]).filter(([, a, b]) => a !== b)
+      if (!ch.length) { onClose(); return }
+      const reApprove = !isChiefNow() && m.kind !== 'transfer' && amount > T.cap && amount !== o.amount
+      const changes = ch.map(([k0, a, b]) => `${k0}: ${a} ← ${b}`).join('؛ ')
+      mutate((x) => { const e = x.treasury.entries.find((q) => q.id === o.id); if (!e) return
+        Object.assign(e, { at: f.at, from: f.from, to: f.to, category: f.category, vendor: f.vendor, note: f.note, doc: f.doc, tax: f.tax, investor: f.investor, amount, fx: fx ? { amount: fxA.amount, cur: 'دلار', rate: fxA.rate, fee: fxA.fee } : undefined })
+        if (reApprove) { e.status = 'approval'; e.approvedBy = undefined; x.approvals.unshift({ id: `AP-${700 + x.approvals.length + 3}`, type: 'ویرایش هزینهٔ خزانه', title: `${e.vendor ?? e.category} · ${changes}`, ref: e.id, amount, by: me(), byRole: effectiveRole(), status: 'approval.pending', at: new Date().toISOString() } as never) }
+        e.edits = [...(e.edits ?? []), { at: new Date().toISOString(), by: me(), changes }] },
+        { action: 'خزانه: ویرایش ردیف', target: `${o.id} · ${o.vendor ?? o.category ?? ''}`, before: ch.map(([k0, a]) => `${k0}: ${a}`).join('؛ '), after: ch.map(([k0, , b]) => `${k0}: ${b}`).join('؛ '), sensitive: true } as never)
+      toast(reApprove ? `ویرایش ثبت شد؛ مبلغ تازه بیش از ${compactToman(T.cap)} است و تا تأیید مدیر کل از موجودی کم نمی‌شود.` : 'ویرایش ثبت شد؛ موجودی حساب‌ها و گزارش‌ها به‌روز شد و سابقه‌اش در ردیف ماند.'); onClose(); return
+    }
     const id = uid('TR'); const e: TEntry = { ...f, id, amount, fx: fx ? { amount: fxA.amount, cur: 'دلار', rate: fxA.rate, fee: fxA.fee } : undefined, status: needApproval ? 'approval' : 'paid', by: me() }
     mutate((x) => { x.treasury.entries.unshift(e); if (f.sms) { const s = x.treasury.sms.find((q) => q.id === f.sms); if (s) s.entry = id }
       if (needApproval) x.approvals.unshift({ id: `AP-${700 + x.approvals.length + 3}`, type: 'هزینهٔ خزانه', title: `${e.vendor ?? e.category} · ${e.note ?? ''}`, ref: id, amount, by: me(), byRole: effectiveRole(), status: 'approval.pending', at: e.at } as never)
@@ -175,7 +199,7 @@ function EntryModal({ m, onClose }: { m: null | { kind: TEntry['kind']; pre?: Pa
       { action: `خزانه: ${KIND_LABEL[m.kind]}`, target: `${e.vendor ?? e.category ?? ''} · ${toman(amount)}`, sensitive: true } as never)
     toast(needApproval ? `ثبت شد و چون بیش از ${compactToman(T.cap)} است، منتظر تأیید مدیر کل ماند.` : 'ثبت شد؛ موجودی حساب‌ها به‌روز شد.'); onClose()
   }
-  return <Modal open onClose={onClose} wide title={KIND_LABEL[m.kind]} footer={<><Button variant="primary" onClick={save}>{needApproval ? 'ثبت و ارسال برای تأیید' : 'ثبت'}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
+  return <Modal open onClose={onClose} wide title={m.edit ? `ویرایش ${KIND_LABEL[m.kind]} · ${m.edit.id}` : KIND_LABEL[m.kind]} footer={<><Button variant="primary" onClick={save}>{m.edit ? 'ذخیرهٔ ویرایش' : needApproval ? 'ثبت و ارسال برای تأیید' : 'ثبت'}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         {!fx && <Field label="مبلغ (تومان)"><MoneyInput value={f.amount} onChange={(v) => set({ amount: v })} aria-label="مبلغ" /></Field>}
@@ -195,7 +219,7 @@ function EntryModal({ m, onClose }: { m: null | { kind: TEntry['kind']; pre?: Pa
         <Field label="توضیح"><Textarea rows={2} value={f.note ?? ''} onChange={(e) => set({ note: e.target.value })} /></Field>
         <Field label="مستند (فاکتور، رسید، قرارداد)"><label className="flex h-[60px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-line text-12 text-t2 hover:border-brand"><FileText size={15} />{f.doc ?? 'انتخاب عکس یا PDF'}<input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => { const fl = e.target.files?.[0]; if (fl) set({ doc: fl.name }) }} /></label></Field>
       </div>
-      {m.kind === 'expense' && <div className="flex flex-wrap items-center gap-4"><Toggle on={!!f.tax} onChange={(v) => set({ tax: v })} text="فاکتور رسمی دارد (قابل قبول مالیاتی)" /><span className="flex items-center gap-2 text-12">تکرار:<Segmented value={rec || 'none'} onChange={(v) => setRec(v === 'none' ? '' : v as TRecurring['every'])} options={[['none', 'یک‌باره'], ['monthly', 'ماهانه'], ['quarterly', 'سه‌ماهه'], ['yearly', 'سالانه']]} /></span></div>}
+      {m.kind === 'expense' && <div className="flex flex-wrap items-center gap-4"><Toggle on={!!f.tax} onChange={(v) => set({ tax: v })} text="فاکتور رسمی دارد (قابل قبول مالیاتی)" />{!m.edit && <span className="flex items-center gap-2 text-12">تکرار:<Segmented value={rec || 'none'} onChange={(v) => setRec(v === 'none' ? '' : v as TRecurring['every'])} options={[['none', 'یک‌باره'], ['monthly', 'ماهانه'], ['quarterly', 'سه‌ماهه'], ['yearly', 'سالانه']]} /></span>}</div>}
       {needApproval && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">این مبلغ از سقف {toman(T.cap)} بیشتر است؛ بعد از ثبت، منتظر تأیید مدیر کل می‌ماند و تا تأیید از موجودی کم نمی‌شود.</p>}
       {m.kind === 'capital' && <p className="rounded-lg bg-info-bg px-3 py-2 text-12 text-info">ورود سرمایه درآمد نیست و در سود و زیان نمی‌آید. پول سرمایه‌گذار به «حساب سرمایه» می‌رود و فقط با «انتقال» به حساب جاری خرج می‌شود؛ گزارش مصرف آن در تب «سرمایه و شرکا» است.</p>}
     </div>

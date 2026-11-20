@@ -5,6 +5,8 @@ export type TEntry = {
   id: string; at: string; kind: 'expense' | 'income' | 'transfer' | 'capital' | 'loan' | 'draw'; amount: number; from?: string; to?: string
   category?: string; vendor?: string; note?: string; doc?: string; fx?: { amount: number; cur: string; rate: number; fee: number }
   status: 'paid' | 'approval' | 'rejected'; by: string; approvedBy?: string; tax?: boolean; investor?: string; recurring?: string; sms?: string
+  /** سابقهٔ ویرایش‌ها: چه کسی، کی، چه چیزی را عوض کرد */
+  edits?: { at: string; by: string; changes: string }[]
 }
 export type TRecurring = { id: string; title: string; category: string; amount: number; fx?: { amount: number; cur: string; fee: number }; every: 'monthly' | 'quarterly' | 'yearly'; next: string; account: string; vendor?: string; remind: number; active: boolean }
 export type TInvestor = { id: string; name: string; kind: 'equity' | 'loan' | 'founder'; committed: number; share?: number; note?: string }

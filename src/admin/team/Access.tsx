@@ -5,6 +5,7 @@ import { Badge, Button, Card, cx, Field, Input, Segmented, Select, Textarea, Tog
 import { Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
 import { mutate, ROLES, setSession, useDB } from '@/shared/lib/store'
+import { isChief } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
 import type { Face, RoleDef } from '@/shared/data/roles'
 import { NAV } from '../shell/nav'
@@ -100,6 +101,8 @@ export function MemberAccess({ uid }: { uid: string }) {
   }, { action: on ? 'دادن دسترسی اختصاصی' : 'گرفتن دسترسی اختصاصی', target: `${u.name} · ${label(m)}` })
   const changes = ov.add.length + ov.remove.length
   const off = u.status === 'غیرفعال'
+  // نقش و دسترسی دیگران را فقط مدیر کل (صاحب حساب) تغییر می‌دهد؛ مدیر کل دوم فقط می‌بیند
+  if (!isChief()) return <p className="rounded-xl bg-warning-bg px-3 py-2 text-12 text-warning">نقش، دسترسی و فعال یا غیرفعال بودن اعضا را فقط مدیر کل تغییر می‌دهد. دسترسی‌های فعلی {u.name}: {r?.label}{changes ? ` با ${fa(changes)} تغییر اختصاصی` : ''}.</p>
   return (
     <div className="space-y-4">
       <Card className="!p-3">

@@ -26,7 +26,7 @@ export function Login() {
           <img src="./brand/logo-full.png" alt="غنیمت" className="mb-1 h-10 rounded-sm bg-white p-0.5" />
           <p className="mb-6 text-12 text-t2">مرکز فرماندهی غنیمت</p>
           {step === 'phone' ? (
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!user) return setErr(ERR.phone); setErr(''); setStep('code') }}>
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!user) return setErr(ERR.phone); if ((user as { disabled?: boolean }).disabled || user.status === 'غیرفعال') return setErr('ورود این حساب از طرف مدیر کل بسته شده است.'); setErr(''); setStep('code') }}>
               <Field label="شمارهٔ موبایل" error={err}><Input className="ltr text-left font-mono" inputMode="numeric" placeholder="مثلاً 09000000001" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
               <Button variant="primary" size="lg" className="w-full">دریافت کد ورود</Button>
             </form>
@@ -48,8 +48,8 @@ export function Login() {
           <ul className="divide-y divide-line">
             {d.team.map((u) => (
               <li key={u.id} className="flex items-center justify-between gap-3 py-2">
-                <div className="min-w-0"><p className="text-13 font-medium">{ROLES[u.role].label}</p><p className="truncate text-11 text-t3"><span className="ltr font-mono">{fa(u.phone)}</span> · {ROLES[u.role].opens}</p></div>
-                <Button size="sm" onClick={() => enter(u.id)}>ورود با این حساب</Button>
+                <div className="min-w-0"><p className="text-13 font-medium">{u.name} · {ROLES[u.role].label}</p><p className="truncate text-11 text-t3"><span className="ltr font-mono">{fa(u.phone)}</span> · {ROLES[u.role].opens}</p></div>
+                <Button size="sm" disabled={(u as { disabled?: boolean }).disabled || u.status === 'غیرفعال'} onClick={() => enter(u.id)}>{(u as { disabled?: boolean }).disabled || u.status === 'غیرفعال' ? 'ورود بسته است' : 'ورود با این حساب'}</Button>
               </li>
             ))}
           </ul>

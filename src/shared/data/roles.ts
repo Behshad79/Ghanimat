@@ -3,6 +3,7 @@ export type Face = 'full' | 'simple' | 'partner'
 export type RoleDef = { label: string; face: Face; modules: string[] | '*'; home: string; opens: string; custom?: boolean; desc?: string }
 export const BASE_ROLES: Record<string, RoleDef> = {
   super: { label: 'مدیر کل', face: 'full', modules: '*', home: '/admin', opens: 'پنل کامل، همهٔ ماژول‌ها' },
+  cofounder: { label: 'مدیر کل دوم (شریک انبار)', face: 'full', modules: '*', home: '/admin', opens: 'همهٔ بخش‌های پنل؛ مدیر کل هر بخش را بخواهد از «تیم و دسترسی» می‌بندد. کارهای حساس به تأیید مدیر کل می‌رود و همهٔ اقدام‌ها با سند در لاگ ممیزی ثبت می‌شود.', desc: 'برای شریکی مثل یاسین که بخشی از غنیمت است و انبار شهر خودش را می‌گرداند' },
   ops: { label: 'مدیر عملیات', face: 'full', modules: ['home', 'live', 'network', 'orders', 'packing', 'ownership', 'warehouse', 'shipping', 'print', 'returns', 'catalog', 'media', 'trade', 'readiness', 'team', 'trash'], home: '/admin/live', opens: 'سفارش‌ها، انبار، ارسال، مرجوعی' },
   simple: { label: 'اپراتور', face: 'simple', modules: [], home: '/simple', opens: 'حالت سریع (کامل، بدون نیاز به تأیید)' },
   partner: { label: 'شریک فروش (شعبه)', face: 'partner', modules: [], home: '/partner', opens: 'پرتال شریک' },

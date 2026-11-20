@@ -5,7 +5,7 @@ import { CONDITION, SOURCE } from '../data/statuses'
 import { ledgerHook } from '../data/ledger'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v73'
+const DB_KEY = 'ghanimat-demo-db-v74'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -16,11 +16,42 @@ const dbSubs = new Set<() => void>()
 const subDB = (f: () => void) => { dbSubs.add(f); return () => dbSubs.delete(f) }
 export const getDB = () => db
 export function useDB(): DB { return useSyncExternalStore(subDB, getDB) }
+// ───── سند خودکار لاگ ممیزی: مقایسهٔ قبل و بعد هر اقدام، تا روشن باشد دقیقاً چه چیزی عوض شد ─────
+const SENSITIVE = /تسویه|بازگشت وجه|قیمت|موجودی|دسترسی|نقش|حذف|لغو|غیرفعال|شریک|پرداخت|مالک/
+const KEY_LABEL: Record<string, string> = { orders: 'سفارش', products: 'کالا', units: 'واحد', refunds: 'بازگشت وجه', team: 'عضو تیم', access: 'دسترسی', roleDefs: 'نقش', rules: 'قانون', txns: 'تراکنش', returns: 'مرجوعی', customers: 'مشتری' }
+const STOCK_LABEL: Record<string, string> = { lots: 'موجودی شرکا', sales: 'فروش شرکا', settlements: 'تسویه', parties: 'شریک', warehouses: 'انبار', channels: 'کانال فروش', agreements: 'قرارداد سهم', codes: 'بارکد شریک', rules: 'قاعدهٔ تسویه' }
+const FIELD: Record<string, string> = { status: 'وضعیت', qty: 'تعداد', price: 'قیمت', cost: 'بهای تمام‌شده', shipments: 'مرسوله', items: 'اقلام', warehouse: 'انبار', owner: 'مالک', amount: 'مبلغ', active: 'فعال', role: 'نقش', tracking: 'کد رهگیری', courier: 'پیک', pack: 'بسته‌بندی', priceNew: 'قیمت نو', discount: 'تخفیف', total: 'جمع', handlingFee: 'هزینهٔ ارسال', sellerPct: 'درصد فروشنده', title: 'عنوان', cancelled: 'لغو', variations: 'تنوع‌ها' }
+const short = (v: unknown) => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? '—' : t.length > 48 ? `${t.slice(0, 46)}…` : t }
+function diffList(label: string, a: unknown, b: unknown, out: string[], depth = 0) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const keyOf = (x: Record<string, unknown>, i: number) => String(x?.id ?? x?.code ?? x?.key ?? i)
+    const A = new Map(a.map((x, i) => [keyOf(x, i), x])); const B = new Map(b.map((x, i) => [keyOf(x, i), x]))
+    B.forEach((v, k) => { if (!A.has(k)) out.push(`${label} ${k}: افزوده شد`) })
+    A.forEach((v, k) => { if (!B.has(k)) out.push(`${label} ${k}: حذف شد`) })
+    B.forEach((v, k) => { const o = A.get(k); if (!o || JSON.stringify(o) === JSON.stringify(v)) return
+      if (typeof v !== 'object' || !v) { out.push(`${label} ${k}: ${short(o)} ← ${short(v)}`); return }
+      const fields = Object.keys({ ...(o as object), ...(v as object) }).filter((f) => JSON.stringify((o as Record<string, unknown>)[f]) !== JSON.stringify((v as Record<string, unknown>)[f]))
+      fields.slice(0, 5).forEach((f) => { const x = (o as Record<string, unknown>)[f]; const y = (v as Record<string, unknown>)[f]; if (depth < 2 && x && y && typeof x === 'object' && typeof y === 'object') diffList(`${label} ${k} › ${FIELD[f] ?? f}`, x, y, out, depth + 1); else out.push(`${label} ${k} · ${FIELD[f] ?? f}: ${short(x)} ← ${short(y)}`) }) })
+  } else if (a && b && typeof a === 'object' && typeof b === 'object') {
+    Object.keys({ ...(a as object), ...(b as object) }).forEach((f) => { const x = (a as Record<string, unknown>)[f]; const y = (b as Record<string, unknown>)[f]; if (JSON.stringify(x) !== JSON.stringify(y)) out.push(`${label} · ${f}: ${short(x)} ← ${short(y)}`) })
+  } else out.push(`${label}: ${short(a)} ← ${short(b)}`)
+}
+function diffDB(prev: DB, next: DB) {
+  const out: string[] = []
+  for (const k of Object.keys(next) as (keyof DB)[]) {
+    if (k === 'audit' || (k as string) === 'drafts') continue
+    if (k === 'stock') { for (const sk of Object.keys(next.stock) as (keyof DB['stock'])[]) if (JSON.stringify(prev.stock?.[sk]) !== JSON.stringify(next.stock[sk])) diffList(STOCK_LABEL[sk] ?? sk, prev.stock?.[sk], next.stock[sk], out); continue }
+    if (JSON.stringify(prev[k]) !== JSON.stringify(next[k])) diffList(KEY_LABEL[k] ?? k, prev[k], next[k], out)
+    if (out.length > 30) break
+  }
+  return out.slice(0, 30)
+}
 export function mutate(fn: (d: DB) => void, log?: { action: string; target: string; before?: string; after?: string; ai?: boolean }) {
   const next = structuredClone(db)
   fn(next)
   try { ledgerHook(db, next, currentUser()?.name ?? 'سیستم') } catch (e) { console.error('ledger', e) }
-  if (log) next.audit.unshift({ at: new Date().toISOString(), who: currentUser()?.name ?? 'سیستم', before: '-', after: '-', ai: false, ...log })
+  if (log) { let changes: string[] = []; try { changes = diffDB(db, next) } catch { /* سند اختیاری است */ }
+    const u = currentUser(); next.audit.unshift({ at: new Date().toISOString(), who: u?.name ?? 'سیستم', role: u?.role, before: '-', after: '-', ai: false, ...log, changes, sensitive: SENSITIVE.test(log.action) || changes.some((c) => /^(تسویه|موجودی شرکا|فروش شرکا|بازگشت وجه|قیمت|دسترسی|نقش)/.test(c)) }) }
   db = next
   syncRoles()
   write(DB_KEY, db)

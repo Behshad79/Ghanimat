@@ -15,7 +15,7 @@ export type Contract = { hqCommission: number; platformFee: number; sharedSplit:
 export type FastZone = { on: boolean; cities: string; hours: number; fee: number; cutoff: string; capacity: number; courier: string; areas?: string; radiusKm?: number }
 export type PartnerT = {
   id: string; name: string; city: string; owner: string; userId?: string; phone: string; warehouse: string; address: string
-  status: 'فعال' | 'در حال راه‌اندازی' | 'متوقف'; color: string; since: string
+  status: 'فعال' | 'در حال راه‌اندازی' | 'متوقف' | 'در انتظار تأیید'; color: string; since: string
   contract: Contract; fast: FastZone; services: { pickup: boolean; test: boolean; ownProducts: boolean; storeSales: boolean }
   couriers: { name: string; phone: string; vehicle: string; active: boolean }[]; iban: string
   reviews: { id: string; orderId: string; customer: string; rating: number; text: string; tags: string[]; at: string; reply?: string }[]

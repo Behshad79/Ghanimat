@@ -35,7 +35,7 @@ export const NAV: NavItem[] = [
   { id: 'merch', label: 'ویترین و غنی‌آف', icon: Flame, path: '/admin/merch', group: 'فروش و درآمد', count: (d) => (d.merch?.deals ?? []).filter((x) => !x.endedAt && x.sold < x.cap && !x.paused && +new Date(x.start) <= Date.now() && +new Date(x.end) > Date.now() && +new Date(x.end) - Date.now() < 2 * 36e5).length },
   { id: 'promotions', label: 'موتور پروموشن و کمپین', icon: BadgePercent, path: '/admin/promotions', group: 'فروش و درآمد' },
   { id: 'channels', label: 'کانال‌های فروش', icon: Share2, path: '/admin/channels', group: 'فروش و درآمد' },
-  { id: 'sellers', label: 'شرکای فروش (شعب همکار)', icon: Store, path: '/admin/sellers', group: 'فروش و درآمد', count: (d) => (d.partners ?? []).filter((p) => p.status === 'در حال راه‌اندازی').length + (d.partners ?? []).flatMap((p) => p.payouts).filter((x) => x.status === 'در انتظار تأیید').length },
+  { id: 'sellers', label: 'شرکای مستقل (به‌زودی)', icon: Store, path: '/admin/sellers', group: 'فروش و درآمد' },
   { id: 'analytics', label: 'تحلیل و گزارش', icon: BarChart3, path: '/admin/analytics', group: 'بازاریابی و رشد' },
   { id: 'messaging', label: 'پیامک و پیگیری مشتری', icon: MessagesSquare, path: '/admin/messaging', group: 'بازاریابی و رشد', count: (d) => (d.nudges?.blasts ?? []).filter((b) => b.status === 'زمان‌بندی‌شده').length },
   { id: 'marketing', label: 'مارکتینگ', icon: Megaphone, path: '/admin/marketing', group: 'بازاریابی و رشد' },

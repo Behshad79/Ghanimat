@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Building2, Check, ExternalLink, Package, Plus, Truck, Wallet } from 'lucide-react'
+import { Building2, Check, ExternalLink, Lock, Package, Plus, Truck, Wallet } from 'lucide-react'
 import { Badge, Button, Card, cx, EmptyState, Field, Input, Progress, Row, Segmented, Select, Tabs, Toggle } from '@/shared/ui/base'
 import { KPI, Page } from '@/shared/ui/page'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
@@ -11,7 +11,7 @@ import { CAPITAL, statement, type Capital, type PartnerT } from '@/shared/data/p
 import { ProductImg } from '../pages/_shared'
 import { PartnerLedger, PartnerReviews } from './PartnerOps'
 
-const ST_TONE = { 'فعال': 'success', 'در حال راه‌اندازی': 'warning', 'متوقف': 'danger' } as const
+const ST_TONE = { 'فعال': 'success', 'در حال راه‌اندازی': 'warning', 'متوقف': 'danger', 'در انتظار تأیید': 'warning' } as const
 const num = (v: string) => +v.replace(/[^\d.]/g, '') || 0
 
 /** شعب و شرکای فروش: انبار، شهر، ارسال سریع، کالای امانی و کالای خود شریک، کمیسیون و تسویه */
@@ -22,8 +22,14 @@ export function PartnersAdmin() {
   const p = P.find((x) => x.id === sel)
   if (p) return <PartnerDetail p={p} onBack={() => setSel(null)} />
   return (
-    <Page title="شعب و شرکای فروش" module="sellers" sub="هر شعبه انبار و شهر خودش را دارد؛ سهم هر طرف از روی «سرمایهٔ چه کسی» محاسبه می‌شود." primary={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن شعبه یا شریک</Button>}>
-      <div className="space-y-4">
+    <Page title="شرکای مستقل (پرتال جداگانه)" badge={<Badge tone="warning">در انتظار تأیید</Badge>} module="sellers" sub="هر شعبه انبار و شهر خودش را دارد؛ سهم هر طرف از روی «سرمایهٔ چه کسی» محاسبه می‌شود." primary={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setAdd(true)}>افزودن شعبه یا شریک</Button>}>
+      <div className="mb-4 rounded-2xl border-2 border-warning/40 bg-warning-bg/60 p-4">
+        <p className="flex items-center gap-2 text-14 font-bold text-warning"><Lock size={16} />پرتال شرکای مستقل فعلاً غیرفعال است · در انتظار تأیید</p>
+        <p className="mt-1.5 text-13 leading-7 text-t1">این بخش برای شریک‌هایی است که در آینده با پنل جداگانهٔ خودشان (کالای امانی، کمیسیون و تسویهٔ دوره‌ای) به غنیمت می‌پیوندند. شریک‌هایی مثل یاسین که بخشی از خود غنیمت‌اند با حساب «مدیر کل دوم» کار می‌کنند و مالکیت کالا، فروش و تسویه‌شان در «مالکیت و تسویهٔ موجودی» ثبت می‌شود. موارد زیر فقط برای مرور ساختار نمایش داده می‌شوند و قابل تغییر نیستند.</p>
+        <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" onClick={() => nav('/admin/ownership?tab=setup')}>شرکا و انبارها در مالکیت و تسویه</Button><Button onClick={() => nav('/admin/ownership?tab=statement')}>صورت‌حساب شرکا</Button></div>
+        <ul className="mt-3 flex flex-wrap gap-2 text-12">{(d.stock?.parties ?? []).filter((x) => x.kind === 'partner').map((x) => <li key={x.id} className="rounded-full border border-line bg-surface px-3 py-1">{x.name} · {x.city ?? '—'} · {x.account === 'portal' ? 'پرتال جداگانه' : 'جزئی از غنیمت'} · {x.active ? 'فعال' : 'غیرفعال'}</li>)}</ul>
+      </div>
+      <div className="pointer-events-none select-none space-y-4 opacity-55" aria-disabled="true" inert>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured label="فروش شعب در این دوره" value={compactToman(all.reduce((a, x) => a + x.s.revenue, 0))} note={`${fa(P.filter((x) => x.status === 'فعال').length)} شعبهٔ فعال`} />
           <KPI label="ارزش کالای امانی غنیمت نزد شعب" value={compactToman(all.reduce((a, x) => a + x.s.byCap('hq').reduce((b, r) => b + r.stockValue, 0), 0))} note="سرمایهٔ شما در انبار شرکا" />

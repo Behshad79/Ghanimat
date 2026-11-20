@@ -22,6 +22,8 @@ export type Product = { id: string; image: string; images?: string[]; imagePos?:
 export type PAttr = { axis: string; name?: string; values: string[]; forVar: boolean; visible: boolean }
 /** یک تنوع کالای متغیر (مثل هدفون آبی): کد، بارکد، قیمت، موجودی و تصویر جدا */
 export type Variation = { id: string; opts: Record<string, string>; suffix: string; ean?: string; price?: number; sale?: number; saleUntil?: string; qty: { tehran: number; mahabad: number }; low?: number; enabled: boolean; image?: string; backorder?: boolean; weight?: number; costFx?: number; extra?: number }
+/** هر اقدام ثبت‌شده؛ changes سند خودکار تغییرهاست (چه رکوردی، چه فیلدی، از چه به چه) */
+export type AuditEntry = { at: string; who: string; action: string; target: string; before: string; after: string; ai: boolean; role?: string; changes?: string[]; sensitive?: boolean }
 export type Unit = { variationId?: string; owner?: string; id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
 /** تصمیم مشتری در کمبود تأمین (فیگما: سفارش‌های جاری › نیازمند تصمیم شما) */
 export type OrderDecision = { kind: 'unsupplied' | 'out_of_stock' | 'other_warehouse'; items: string[]; alt?: string; deadline: string; at: string; by: string; choice?: 'send_rest' | 'from_other' | 'cancel_all'; chosenBy?: 'مشتری' | 'پشتیبانی' | 'سیستم'; chosenAt?: string; refund?: number; error?: boolean }
@@ -288,7 +290,7 @@ const makeSeedBase = () => ({
     { id: 'u1', name: 'بهشاد', role: 'super', phone: '09000000001', status: 'آنلاین', twoFA: true },
     { id: 'u2', name: 'نیما', role: 'ops', phone: '09000000002', status: 'آنلاین', twoFA: true },
     { id: 'u3', name: 'آرش', role: 'simple', phone: '09000000003', status: 'آنلاین', twoFA: false },
-    { id: 'u4', name: 'یاسین', role: 'partner', phone: '09000000004', status: 'آفلاین', twoFA: false },
+    { id: 'u4', name: 'یاسین', role: 'cofounder', phone: '09000000004', status: 'آفلاین', twoFA: false },
     { id: 'u5', name: 'سارا', role: 'support', phone: '09000000005', status: 'آنلاین', twoFA: true },
     { id: 'u6', name: 'مریم', role: 'finance', phone: '09000000006', status: 'استراحت', twoFA: true },
     { id: 'u7', name: 'پویا', role: 'growth', phone: '09000000007', status: 'آنلاین', twoFA: true },
@@ -305,7 +307,7 @@ const makeSeedBase = () => ({
     { at: ago(55), who: 'مریم', action: 'درخواست بازگشت وجه', target: 'RT-300398', before: '-', after: '۳۸٬۵۰۰٬۰۰۰ تومان', ai: false },
     { at: ago(60 * 3), who: 'بهشاد', action: 'مشاهدهٔ دادهٔ حساس', target: 'شمارهٔ موبایل c1', before: '-', after: '-', ai: false },
     { at: ago(60 * 5), who: 'یاسین', action: 'تغییر موجودی', target: 'Kindle Paperwhite / انبار مهاباد', before: '۹', after: '۷', ai: false },
-  ],
+  ] as AuditEntry[],
   alerts: [
     { id: 'al1', cat: 'مالی', tone: 'danger', title: 'تارا پاسخ نمی‌دهد', body: 'درگاه اقساطی تارا خودکار از صفحهٔ پرداخت پنهان شد. پرداخت‌ها از سایر درگاه‌ها ادامه دارد.', to: '/admin/finance?tab=gateways', at: ago(9), read: false },
     { id: 'al2', cat: 'عملیات', tone: 'warning', title: 'تأیید موجودی شریک رو به پایان است', body: 'مرسولهٔ GH-10479-2 تا ۳۵ دقیقهٔ دیگر تأیید نشود، به جریان تصمیم مشتری می‌رود.', to: '/admin/orders/GH-10479', at: ago(14), read: false },
@@ -499,6 +501,8 @@ export const makeSeed = () => {
       mk('GH-10511', 'c2', 'mahabad', [{ productId: 'prx', unitId: '', qty: 2, price: 2900000, variationId: 'var-prx-blk' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }], 25),
       mk('GH-10510', 'c5', 'tehran', [{ productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-blk' }], 40))
     s.txns.unshift(...['GH-10511', 'GH-10510'].map((oid, i) => ({ ...structuredClone(s.txns.find((t) => t.orderId === 'GH-10480') ?? s.txns[0]), id: `TX-PK${i + 1}`, orderId: oid, amount: s.orders.find((o) => o.id === oid)!.total, status: 'pay.success' }))) }
+  // پرتال شرکای مستقل فعلاً غیرفعال است؛ یاسین جزئی از غنیمت است و از «مالکیت و تسویه» مدیریت می‌شود
+  s.partners.forEach((p) => { p.status = 'در انتظار تأیید' })
   // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)
   { const who = ['نیما', 'هستی', 'یاسین']; let n = 0
     s.orders.forEach((o) => o.shipments.forEach((sh) => { if (n >= 14 || !['ship.packed', 'ship.handed', 'ship.in_transit', 'ship.delivered'].includes(sh.status)) return; n++

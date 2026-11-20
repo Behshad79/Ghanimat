@@ -12,6 +12,9 @@ import type { DB } from '@/shared/data/seed'
 import { balances, split, type StockSale } from '@/shared/data/stock'
 import { chName, codeFor, ownersAt, PartyChip, partyName, pv, productsWithLots, syncQty, takeLots, whName } from './common'
 import { useTab } from '../pages/_shared'
+import { PartyManager } from './Parties'
+import { PerformanceTab, StatementTab } from './Statement'
+import { ExtTab } from './ExtSites'
 
 const uid = (p: string) => `${p}-${Date.now().toString(36).slice(-5).toUpperCase()}`
 const by = () => currentUser()?.name ?? 'پنل'
@@ -24,15 +27,18 @@ export function Ownership() {
   const value = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty * l.cost, 0)
   return (
     <Page module="warehouse" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
-      actions={<Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
+      actions={<><Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {s.parties.filter((p) => p.active).map((p) => <Card key={p.id} onClick={() => setTab('stock')}><div className="flex items-center justify-between"><PartyChip s={s} id={p.id} /><span className="text-11 text-t2">{p.kind === 'self' ? 'خودمان' : 'شریک'}</span></div><p className="mt-2 text-20 font-bold">{fa(units(p.id))} <span className="text-12 font-normal text-t2">عدد موجود</span></p><p className="text-12 text-t2">ارزش به بهای تمام‌شده: {toman(value(p.id))}</p></Card>)}
         <Card onClick={() => setTab('settle')}><p className="flex items-center gap-1.5 text-12 text-t2"><HandCoins size={14} />ماندهٔ تسویه</p>{bal.length ? bal.map((b) => <p key={b.a + b.b} className="mt-1.5 text-13"><b>{partyName(s, b.net > 0 ? b.a : b.b)}</b> به <b>{partyName(s, b.net > 0 ? b.b : b.a)}</b> <span className="font-bold text-warning">{toman(Math.abs(b.net))}</span></p>) : <p className="mt-2 text-13 text-success">همه تسویه است.</p>}</Card>
       </div>
       {tab === 'stock' && <StockTab />}
       {tab === 'sales' && <SalesTab />}
+      {tab === 'statement' && <StatementTab />}
       {tab === 'settle' && <SettleTab />}
+      {tab === 'perf' && <PerformanceTab />}
+      {tab === 'ext' && <ExtTab />}
       {tab === 'codes' && <CodesTab />}
       {tab === 'setup' && <SetupTab />}
     </Page>
@@ -198,11 +204,7 @@ function SetupTab() {
       <p className="mb-2 text-11 text-t2">هر سفارش از روی کانالش به یکی از کانال‌های فروش وصل می‌شود تا معلوم باشد فروشنده و دریافت‌کنندهٔ پول کیست. روی صفحهٔ هر سفارش هم می‌شود دستی عوض کرد.</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{orderChannels.map((c) => <label key={c} className="flex items-center gap-2 rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12"><span className="w-28 shrink-0 truncate">{c}</span><Select className="flex-1" value={s.channelMap?.[c] ?? 'gh-site'} onChange={(v) => mutate((x) => { x.stock.channelMap = { ...x.stock.channelMap, [c]: v } }, { action: 'نگاشت کانال سفارش به کانال تسویه', target: `${c} ← ${v}` })} options={s.channels.map((ch) => [ch.id, ch.name] as [string, string])} /></label>)}</div>
     </Card>
-    <Card title={<span className="flex items-center gap-1.5"><Users size={15} />شرکا و تأمین‌کنندگان</span>} hint="هر شریک یک پیشوند کد دارد (۲ تا ۴ حرف لاتین).">
-      <ul className="mb-3 space-y-1.5">{s.parties.map((p) => <li key={p.id} className="flex items-center gap-2 rounded-lg bg-neutral-bg px-3 py-2 text-13"><PartyChip s={s} id={p.id} /><span className="flex-1 text-12 text-t2">{p.kind === 'self' ? 'خودمان' : `شریک${p.site ? ` · سایت ${p.site}` : ''}`}</span>{p.kind !== 'self' && <Toggle on={p.active} onChange={(v) => mutate((x) => { const q = x.stock.parties.find((y) => y.id === p.id); if (q) q.active = v }, { action: v ? 'فعال‌سازی شریک' : 'غیرفعال‌سازی شریک', target: p.name })} />}</li>)}</ul>
-      <div className="grid gap-2 sm:grid-cols-[1fr_.6fr_.8fr_auto] sm:items-end"><Field label="نام شریک"><Input value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} placeholder="مثلاً شعبهٔ شیراز" /></Field><Field label="پیشوند کد" error={pfxBad ? 'تکراری یا نامعتبر' : undefined}><Input className="ltr text-left font-mono uppercase" value={np.prefix} onChange={(e) => setNp({ ...np, prefix: e.target.value.toUpperCase() })} placeholder="SH" /></Field><Field label="سایت خودش (اختیاری)"><Input className="ltr text-left" value={np.site} onChange={(e) => setNp({ ...np, site: e.target.value })} /></Field>
-        <Button variant="primary" icon={<Plus size={14} />} disabled={!np.name.trim() || !np.prefix || pfxBad} onClick={() => { const id = np.prefix.toLowerCase(); mutate((x) => { x.stock.parties.push({ id, name: np.name.trim(), prefix: np.prefix.toUpperCase(), kind: 'partner', color: COLORS[x.stock.parties.length % COLORS.length], site: np.site || undefined, active: true }); x.stock.parties.filter((p) => p.id !== id).forEach((p) => { x.stock.agreements.push({ owner: p.id, seller: id, sellerPct: 30 }, { owner: id, seller: p.id, sellerPct: 25 }) }) }, { action: 'افزودن شریک تازه', target: np.name }); toast(`«${np.name}» اضافه شد؛ قرارداد سهم پیش‌فرض با بقیه ساخته شد و قابل ویرایش است.`); setNp({ name: '', prefix: '', site: '' }) }}>افزودن</Button></div>
-    </Card>
+    <PartyManager />
     <Card title={<span className="flex items-center gap-1.5"><Warehouse size={15} />انبارها و شهرها</span>} hint="گردانندهٔ انبار کسی است که کالا را بسته‌بندی و ارسال می‌کند؛ اگر کالای دیگری را ارسال کند، هزینهٔ ارسال هر عدد به او تعلق می‌گیرد.">
       <ul className="mb-3 space-y-1.5">{s.warehouses.map((w) => <li key={w.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-3 py-2 text-13"><Building2 size={14} className="text-t2" /><b>{w.name}</b><span className="text-12 text-t2">{w.city} · گرداننده: {partyName(s, w.operator)}</span><span className="flex-1" /><label className="flex items-center gap-1 text-11 text-t2">هزینهٔ ارسال هر عدد<Input type="number" className="ltr h-8 w-28 text-left font-mono" value={w.handlingFee} onChange={(e) => mutate((x) => { const q = x.stock.warehouses.find((y) => y.id === w.id); if (q) q.handlingFee = Math.max(0, +e.target.value) })} /></label></li>)}</ul>
       <div className="grid gap-2 sm:grid-cols-[1fr_.8fr_.8fr_.7fr_auto] sm:items-end"><Field label="نام انبار"><Input value={nw.name} onChange={(e) => setNw({ ...nw, name: e.target.value })} placeholder="انبار شیراز" /></Field><Field label="شهر"><Input value={nw.city} onChange={(e) => setNw({ ...nw, city: e.target.value })} /></Field><Field label="گرداننده"><Select value={nw.operator} onChange={(v) => setNw({ ...nw, operator: v })} options={s.parties.map((p) => [p.id, p.name] as [string, string])} /></Field><Field label="هزینهٔ ارسال"><Input type="number" className="ltr text-left font-mono" value={nw.fee} onChange={(e) => setNw({ ...nw, fee: +e.target.value })} /></Field>

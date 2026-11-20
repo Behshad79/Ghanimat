@@ -51,7 +51,7 @@ export function OrderReturns({ o }: { o: Order }) {
         <p className="mb-2 font-semibold text-t1">هنوز مرجوعی برای این سفارش ثبت نشده است. اگر مشتری از سایت «ثبت مرجوعی» بزند، این چهار گام همین‌جا دنبال می‌شود:</p>
         <MiniSteps at={-1} />
         <ol className="mt-2 list-decimal space-y-0.5 pr-5"><li>مشتری کالا، دلیل، عکس و مقصد بازگشت وجه را انتخاب می‌کند؛ پرونده با وضعیت «در انتظار ارسال کالا» ساخته می‌شود و برای شما اعلان می‌آید.</li><li>مشتری با پست یا پیک پس‌کرایه می‌فرستد و کد رهگیری را در پنل وارد می‌کند، یا حضوری تحویل می‌دهد؛ شما «دریافت در انبار» را ثبت می‌کنید.</li><li>کنترل کیفیت پلمب، ظاهر، کارکرد و متعلقات را بررسی می‌کند و نتیجه را ثبت می‌کند.</li><li>با تأیید، وجه به کیف پول یا کارت واریز می‌شود؛ با رد، کالا دوباره برای مشتری ارسال می‌شود.</li></ol>
-        <p className="mt-2">نمونهٔ کامل: <button type="button" className="font-mono text-brand underline" onClick={() => nav('/admin/orders/GH-10458')}>GH-10458</button> (کاوه مرادی، ثبت از سایت، منتظر ارسال کالا) و <button type="button" className="font-mono text-brand underline" onClick={() => nav('/admin/orders/GH-10451')}>GH-10451</button> (در حال بررسی کالا).</p>
+        <p className="mt-2">نمونهٔ کامل: <button type="button" className="font-mono text-brand underline" onClick={() => nav('/admin/orders/GH-10458')}>GH-10458</button> (ثبت مشتری از سایت، منتظر ارسال کالا) و <button type="button" className="font-mono text-brand underline" onClick={() => nav('/admin/orders/GH-10451')}>GH-10451</button> (در حال بررسی کالا).</p>
       </div>}
     </div>
     {open && <ManualReturn open onClose={() => setOpen(null)} preset={{ orderId: o.id, customerId: o.customerId, items: open }} />}

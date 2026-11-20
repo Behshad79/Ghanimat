@@ -16,6 +16,7 @@ import { recordShipment, suggestOwners } from '@/shared/data/ledger'
 import { codeFor, ownersAt, PartyChip, partyName, pv, syncQty, takeLots, whName } from './common'
 import { shipBlocked } from '../orders/PayHold'
 import { StartDecision } from '../orders/Decision'
+import { Inspect } from './Inspect'
 
 type Scan = NonNullable<Shipment['pack']>['scans'][number]
 /** کدام ویژگی‌ها (رنگ، حافظه، رم، نسخه و…) بین تنوع اسکن‌شده و تنوع سفارش فرق دارد */
@@ -166,14 +167,14 @@ export function Packing() {
   const [station, setStation] = useState(() => getDB().orders.flatMap((o) => o.shipments).find((x) => x.id === sp.get('ship'))?.warehouse ?? localStorage.getItem('gh-pack-station') ?? 'tehran')
   const [sid, setSid] = useState(sp.get('ship') ?? '')
   const [sound, setSound] = useState(true); const [code, setCode] = useState(''); const [flash, setFlash] = useState('')
-  const [tab, setTab] = useState(sp.get('tab') === 'history' ? 'history' : 'queue'); const [fq, setFq] = useState(''); const [fm, setFm] = useState('all'); const [fs, setFs] = useState('all'); const [late, setLate] = useState(false)
+  const [tab, setTab] = useState(['history', 'inspect'].includes(sp.get('tab') ?? '') ? sp.get('tab')! : 'queue'); const [probe, setProbe] = useState<string | undefined>(sp.get('code') ?? undefined); const [fq, setFq] = useState(''); const [fm, setFm] = useState('all'); const [fs, setFs] = useState('all'); const [late, setLate] = useState(false)
   useEffect(() => { localStorage.setItem('gh-pack-station', station) }, [station])
   const all = d.orders.flatMap((o) => o.shipments.filter((x) => OPEN.includes(x.status) && x.warehouse === station).map((x) => ({ o, x }))).sort((a, b) => +new Date(a.x.sla) - +new Date(b.x.sla))
   const methodOf = (m: string) => (/حضوری/.test(m) ? 'pickup' : /پیک|سریع|اسنپ|تیپاکس/.test(m) ? 'courier' : 'post')
   const queue = all.filter(({ o, x }) => (fm === 'all' || methodOf(x.method) === fm) && (fs === 'all' || x.status === fs) && (!late || +new Date(x.sla) - Date.now() < 2 * 36e5) && (!fq.trim() || `${o.id} ${x.id} ${x.items.map((i) => d.products.find((p) => p.id === i.productId)?.title ?? '').join(' ')}`.toLowerCase().includes(fq.trim().toLowerCase())))
   const open = (id: string) => { setSid(id); setFlash(''); setSp((p) => { if (id) p.set('ship', id); else p.delete('ship'); return p }, { replace: true }) }
   const byLabel = (c: string) => {
-    const ord = d.orders.find((o) => o.id.toUpperCase() === c.toUpperCase() || o.shipments.some((x) => x.id.toUpperCase() === c.toUpperCase())); if (!ord) { setFlash('این برچسب سفارش شناخته نشد.'); sound && beep(false); return false }
+    const ord = d.orders.find((o) => o.id.toUpperCase() === c.toUpperCase() || o.shipments.some((x) => x.id.toUpperCase() === c.toUpperCase())); if (!ord) { if (resolveCode(d, c)) { setProbe(c); setTab('inspect'); sound && beep(true); return true } setFlash('این برچسب سفارش یا کالا شناخته نشد.'); sound && beep(false); return false }
     const x = ord.shipments.find((y) => y.id.toUpperCase() === c.toUpperCase()) ?? ord.shipments.find((y) => OPEN.includes(y.status)); if (!x) return false
     if (!OPEN.includes(x.status)) { setFlash(`مرسولهٔ ${x.id} در وضعیت بسته‌بندی نیست.`); sound && beep(false); return true }
     if (x.warehouse !== station) { setFlash(`این مرسوله از ${whName(s, x.warehouse)} ارسال می‌شود؛ ایستگاه را عوض کنید.`); sound && beep(false); return true }
@@ -182,9 +183,9 @@ export function Packing() {
   const cur = sid && d.orders.some((o) => o.shipments.some((x) => x.id === sid && OPEN.includes(x.status))) ? sid : ''
   return (
     <Page module="packing" title="ایستگاه بسته‌بندی و اسکن" sub="بارکدخوان را وصل کنید؛ هر قلم را قبل از گذاشتن در جعبه اسکن کنید"
-      tabs={<Tabs value={tab} onChange={(v) => { setTab(v); setSp((p) => { p.set('tab', v); return p }, { replace: true }) }} tabs={[{ id: 'queue', label: 'صف بسته‌بندی', count: all.length || undefined }, { id: 'history', label: 'تاریخچهٔ بسته‌بندی' }]} />}
+      tabs={<Tabs value={tab} onChange={(v) => { setTab(v); setSp((p) => { p.set('tab', v); return p }, { replace: true }) }} tabs={[{ id: 'queue', label: 'صف بسته‌بندی', count: all.length || undefined }, { id: 'inspect', label: 'استعلام کالا با اسکن' }, { id: 'history', label: 'تاریخچهٔ بسته‌بندی' }]} />}
       actions={<><Select className="w-48" value={station} onChange={(v) => { setStation(v); open('') }} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, `ایستگاه ${w.name}`] as [string, string])} /><Button variant="ghost" icon={sound ? <Volume2 size={14} /> : <VolumeX size={14} />} onClick={() => setSound(!sound)}>{sound ? 'صدا روشن' : 'بی‌صدا'}</Button></>}>
-      {tab === 'history' ? <PackHistory station={station} /> : <div className="grid gap-4 xl:grid-cols-[300px_1fr]">
+      {tab === 'history' ? <PackHistory station={station} /> : tab === 'inspect' ? <Inspect key={probe} station={station} initial={probe} /> : <div className="grid gap-4 xl:grid-cols-[300px_1fr]">
         <Card pad={false} title={`صف ${whName(s, station)}`} hint="به ترتیب نزدیک‌ترین مهلت ارسال">
           <div className="space-y-2 border-b border-line p-3"><Input value={fq} onChange={(e) => setFq(e.target.value)} placeholder="شمارهٔ سفارش یا نام کالا" aria-label="جست‌وجو در صف" className="h-9" />
             <div className="flex flex-wrap gap-1">{([['all', 'همه'], ['courier', 'پیک'], ['post', 'پست'], ['pickup', 'حضوری']] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFm(k)} className={cx('h-7 rounded-full border px-2.5 text-11', fm === k ? 'border-brand bg-brand text-white' : 'border-line')}>{l}</button>)}</div>
@@ -197,7 +198,7 @@ export function Packing() {
           </button></li>)}</ul> : <p className="p-4 text-12 text-t2">سفارشی برای بسته‌بندی در این انبار نیست.</p>}
         </Card>
         {cur ? <PackSession key={cur} shipId={cur} sound={sound} onOrderCode={byLabel} onDone={() => { const next = queue.find((q) => q.x.id !== cur); open(next?.x.id ?? '') }} />
-          : <Card><form onSubmit={(e) => { e.preventDefault(); byLabel(code.trim()); setCode('') }} className="mx-auto max-w-lg py-8 text-center"><ScanLine size={40} className="mx-auto text-t3" /><p className="mt-3 font-semibold">برچسب سفارش را اسکن کنید</p><p className="mb-3 text-12 text-t2">یا یک مرسوله را از صف کنار صفحه انتخاب کنید.</p><Input autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="مثلاً GH-10511" className="ltr h-12 text-center font-mono text-16" aria-label="برچسب سفارش" />{flash && <p className="mt-2 text-12 text-danger">{flash}</p>}</form></Card>}
+          : <Card><form onSubmit={(e) => { e.preventDefault(); byLabel(code.trim()); setCode('') }} className="mx-auto max-w-lg py-8 text-center"><ScanLine size={40} className="mx-auto text-t3" /><p className="mt-3 font-semibold">برچسب سفارش را اسکن کنید</p><p className="mb-3 text-12 text-t2">یا یک مرسوله را از صف کنار صفحه انتخاب کنید. اگر برچسب یک کالا را اسکن کنید، اطلاعات همان کالا باز می‌شود.</p><Input autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="مثلاً GH-10511" className="ltr h-12 text-center font-mono text-16" aria-label="برچسب سفارش" />{flash && <p className="mt-2 text-12 text-danger">{flash}</p>}</form></Card>}
       </div>}
     </Page>
   )

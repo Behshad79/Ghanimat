@@ -1,0 +1,112 @@
+// مالکیت و محل موجودی، فروش بین شرکا و تسویهٔ خودکار
+// هر واحد فروش سه نقش دارد:
+//   مالک (تأمین‌کننده): کسی که پول کالا را داده و بهای تمام‌شده و سهم سودش مال اوست
+//   محل (انبار): کالا فیزیکی کجاست و از کجا ارسال می‌شود؛ هر انبار یک گردانندهٔ مشخص دارد
+//   فروشنده (کانال): چه کسی فروخته و پول را چه کسی گرفته (سایت غنیمت، شعبهٔ شریک، سایت خود شریک)
+// اگر مالک و فروشنده یکی نباشند، طبق «قرارداد سهم» میان آن دو، سهم هر طرف خودکار حساب می‌شود.
+
+export type Party = { id: string; name: string; prefix: string; kind: 'self' | 'partner'; color: string; site?: string; phone?: string; active: boolean }
+export type StockWh = { id: string; name: string; city: string; operator: string; handlingFee: number; active: boolean }
+export type Channel = { id: string; name: string; seller: string; collector: string; brand: string; active: boolean }
+export type Agreement = { owner: string; seller: string; sellerPct: number; note?: string }
+export type Lot = { id: string; productId: string; variationId?: string; owner: string; warehouse: string; qty: number; cost: number; at: string; ref?: string }
+export type StockSale = { id: string; at: string; productId: string; variationId?: string; owner: string; warehouse: string; channel: string; qty: number; price: number; cost: number; orderId?: string; code?: string; by: string }
+export type Settlement = { id: string; at: string; from: string; to: string; amount: number; ref: string; by: string; note?: string }
+export type CustomCode = { code: string; productId: string; variationId?: string; owner: string; note?: string }
+
+export type StockDB = { parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean } }
+
+const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
+export const makeStock = (): StockDB => ({
+  parties: [
+    { id: 'gh', name: 'غنیمت', prefix: 'GH', kind: 'self', color: '#0000ff', active: true },
+    { id: 'ys', name: 'یاسین', prefix: 'YS', kind: 'partner', color: '#12733f', site: 've1', active: true },
+  ],
+  warehouses: [
+    { id: 'tehran', name: 'انبار تهران', city: 'تهران', operator: 'gh', handlingFee: 0, active: true },
+    { id: 'mahabad', name: 'انبار مهاباد', city: 'مهاباد', operator: 'ys', handlingFee: 60000, active: true },
+  ],
+  channels: [
+    { id: 'gh-site', name: 'سایت غنیمت', seller: 'gh', collector: 'gh', brand: 'غنیمت', active: true },
+    { id: 'gh-branch-ys', name: 'شعبهٔ مهاباد به نام غنیمت', seller: 'ys', collector: 'gh', brand: 'غنیمت', active: true },
+    { id: 'ys-store', name: 'فروش حضوری شعبهٔ مهاباد', seller: 'ys', collector: 'ys', brand: 'غنیمت', active: true },
+    { id: 've1', name: 'سایت ve1 (یاسین)', seller: 'ys', collector: 'ys', brand: 've1', active: true },
+  ],
+  agreements: [
+    { owner: 'gh', seller: 'ys', sellerPct: 30, note: 'یاسین کالای غنیمت را می‌فروشد: بهای تمام‌شده + ۷۰٪ سود به غنیمت، ۳۰٪ سود برای یاسین' },
+    { owner: 'ys', seller: 'gh', sellerPct: 25, note: 'غنیمت کالای یاسین را می‌فروشد: بهای تمام‌شده + ۷۵٪ سود به یاسین، ۲۵٪ سود برای غنیمت' },
+  ],
+  lots: [
+    { id: 'L-101', productId: 'prx', variationId: 'var-prx-blk', owner: 'gh', warehouse: 'tehran', qty: 25, cost: 1600000, at: ago(240), ref: 'IN-1405-06' },
+    { id: 'L-102', productId: 'prx', variationId: 'var-prx-wht', owner: 'gh', warehouse: 'tehran', qty: 15, cost: 1600000, at: ago(240), ref: 'IN-1405-06' },
+    { id: 'L-103', productId: 'prx', variationId: 'var-prx-blk', owner: 'gh', warehouse: 'mahabad', qty: 5, cost: 1600000, at: ago(230), ref: 'انتقال از تهران' },
+    { id: 'L-104', productId: 'prx', variationId: 'var-prx-wht', owner: 'gh', warehouse: 'mahabad', qty: 5, cost: 1600000, at: ago(230), ref: 'انتقال از تهران' },
+    { id: 'L-105', productId: 'prx', variationId: 'var-prx-blk', owner: 'ys', warehouse: 'mahabad', qty: 20, cost: 1500000, at: ago(200), ref: 'خرید یاسین از اربیل' },
+    { id: 'L-106', productId: 'prx', variationId: 'var-prx-wht', owner: 'ys', warehouse: 'mahabad', qty: 15, cost: 1500000, at: ago(200), ref: 'خرید یاسین از اربیل' },
+    { id: 'L-107', productId: 'p8', owner: 'ys', warehouse: 'mahabad', qty: 7, cost: 8600000, at: ago(150), ref: 'کالای یاسین برای فروش در سایت غنیمت' },
+  ],
+  sales: [
+    { id: 'S-201', at: ago(200), productId: 'prx', variationId: 'var-prx-blk', owner: 'gh', warehouse: 'tehran', channel: 'gh-site', qty: 8, price: 2900000, cost: 1600000, by: 'سیستم' },
+    { id: 'S-202', at: ago(150), productId: 'prx', variationId: 'var-prx-wht', owner: 'gh', warehouse: 'tehran', channel: 'gh-site', qty: 4, price: 2900000, cost: 1600000, by: 'سیستم' },
+    { id: 'S-203', at: ago(120), productId: 'prx', variationId: 'var-prx-blk', owner: 'gh', warehouse: 'mahabad', channel: 'gh-branch-ys', qty: 2, price: 2900000, cost: 1600000, by: 'یاسین' },
+    { id: 'S-204', at: ago(90), productId: 'prx', variationId: 'var-prx-wht', owner: 'gh', warehouse: 'mahabad', channel: 've1', qty: 2, price: 2800000, cost: 1600000, by: 'یاسین' },
+    { id: 'S-205', at: ago(70), productId: 'prx', variationId: 'var-prx-blk', owner: 'ys', warehouse: 'mahabad', channel: 'gh-site', qty: 3, price: 2900000, cost: 1500000, by: 'سیستم' },
+    { id: 'S-206', at: ago(40), productId: 'prx', variationId: 'var-prx-blk', owner: 'ys', warehouse: 'mahabad', channel: 've1', qty: 5, price: 2750000, cost: 1500000, by: 'یاسین' },
+    { id: 'S-207', at: ago(30), productId: 'p8', owner: 'ys', warehouse: 'mahabad', channel: 'gh-site', qty: 1, price: 10900000, cost: 8600000, by: 'سیستم' },
+    { id: 'S-208', at: ago(10), productId: 'prx', variationId: 'var-prx-blk', owner: 'gh', warehouse: 'mahabad', channel: 'ys-store', qty: 1, price: 3000000, cost: 1600000, by: 'یاسین' },
+  ],
+  settlements: [{ id: 'ST-01', at: ago(100), from: 'ys', to: 'gh', amount: 4000000, ref: '140508011245', by: 'یاسین', note: 'تسویهٔ هفتهٔ اول' }],
+  codes: [{ code: '6971234500017', productId: 'prx', variationId: 'var-prx-blk', owner: 'ys', note: 'بارکد کارخانه روی جعبه‌های یاسین' }],
+  codeRule: { sep: '-', withVariant: true },
+})
+
+/** کد کالا بر اساس مالک: پیشوند مالک + شمارهٔ کالا + پسوند تنوع؛ مثلاً GH-000201-1 و YS-000201-1 */
+export function labelCode(s: StockDB, ownerId: string, product: { code?: string; id: string }, variation?: { suffix: string } | null) {
+  const p = s.parties.find((x) => x.id === ownerId)?.prefix ?? ownerId.toUpperCase()
+  const num = (product.code ?? '').replace(/\D/g, '').slice(-6) || product.id.replace(/\W/g, '').toUpperCase()
+  return [p, num, s.codeRule.withVariant && variation ? variation.suffix : ''].filter(Boolean).join(s.codeRule.sep)
+}
+
+type ProdLite = { id: string; code?: string; title: string; variations?: { id: string; suffix: string; opts: Record<string, string>; enabled?: boolean }[] }
+/** خواندن هر بارکد: کد ساختهٔ سیستم یا بارکد اختصاصی شریک ← کالا، تنوع و مالک */
+export function scanLookup(s: StockDB, products: ProdLite[], raw: string): { productId: string; variationId?: string; owner: string } | null {
+  const code = raw.trim().toUpperCase(); if (!code) return null
+  const c = s.codes.find((x) => x.code.toUpperCase() === code); if (c) return { productId: c.productId, variationId: c.variationId, owner: c.owner }
+  for (const p of products) for (const o of s.parties) {
+    if (p.variations?.length) { for (const v of p.variations) if (labelCode(s, o.id, p, v).toUpperCase() === code) return { productId: p.id, variationId: v.id, owner: o.id } }
+    else if (labelCode(s, o.id, p, null).toUpperCase() === code) return { productId: p.id, owner: o.id }
+  }
+  return null
+}
+
+/** سهم هر طرف از یک فروش؛ «بدهکار» کسی است که پول را گرفته ولی مال او نیست */
+export function split(s: StockDB, x: StockSale) {
+  const ch = s.channels.find((c) => c.id === x.channel); const seller = ch?.seller ?? 'gh'; const collector = ch?.collector ?? seller
+  const wh = s.warehouses.find((w) => w.id === x.warehouse); const operator = wh?.operator ?? seller
+  const revenue = x.price * x.qty; const costT = x.cost * x.qty; const profit = revenue - costT
+  const pct = x.owner === seller ? 0 : s.agreements.find((a) => a.owner === x.owner && a.seller === seller)?.sellerPct ?? 0
+  const sellerShare = Math.round((profit * pct) / 100)
+  const handling = operator !== seller && operator !== x.owner ? (wh?.handlingFee ?? 0) * x.qty : 0
+  const ownerTotal = costT + profit - sellerShare - handling
+  // جریان پول: گیرنده (collector) سهم بقیه را بدهکار است
+  const flows: { from: string; to: string; amount: number; why: string }[] = []
+  const pay = (to: string, amount: number, why: string) => { if (to !== collector && amount > 0) flows.push({ from: collector, to, amount, why }) }
+  pay(x.owner, ownerTotal, 'بهای تمام‌شده و سهم سود مالک')
+  pay(seller, sellerShare, 'سهم سود فروشنده')
+  pay(operator, handling, 'هزینهٔ ارسال از انبار')
+  return { seller, collector, operator, revenue, costT, profit, pct, sellerShare, handling, ownerTotal, ownerProfit: profit - sellerShare - handling, flows }
+}
+
+/** مانده بین هر دو طرف: مثبت یعنی «a» به «b» بدهکار است */
+export function balances(s: StockDB) {
+  const m = new Map<string, number>(); const k = (a: string, b: string) => `${a}>${b}`
+  const add = (from: string, to: string, amt: number) => { m.set(k(from, to), (m.get(k(from, to)) ?? 0) + amt) }
+  s.sales.forEach((x) => split(s, x).flows.forEach((f) => add(f.from, f.to, f.amount)))
+  s.settlements.forEach((t) => add(t.from, t.to, -t.amount))
+  const pairs: { a: string; b: string; net: number }[] = []
+  for (let i = 0; i < s.parties.length; i++) for (let j = i + 1; j < s.parties.length; j++) {
+    const a = s.parties[i].id; const b = s.parties[j].id; const net = (m.get(k(a, b)) ?? 0) - (m.get(k(b, a)) ?? 0)
+    pairs.push({ a, b, net })
+  }
+  return pairs
+}

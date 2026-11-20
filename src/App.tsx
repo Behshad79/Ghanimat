@@ -45,6 +45,8 @@ import { ConfirmHost, ToastHost } from './shared/ui/overlay'
 import { currentUser, ROLES, useSession } from './shared/lib/store'
 import { MediaPage } from './admin/media/Media'
 import { TradePage } from './admin/trade/Trade'
+import { Ownership } from './admin/stock/Ownership'
+import { Packing } from './admin/stock/Packing'
 
 export function App() {
   const s = useSession()
@@ -78,6 +80,8 @@ export function App() {
               <Route path="network" element={<Network />} />
               <Route path="*" element={<NotFound />} />
               <Route path="warehouse" element={<Warehouse />} />
+              <Route path="ownership" element={<Ownership />} />
+              <Route path="packing" element={<Packing />} />
               <Route path="shipping" element={<Shipping />} />
               <Route path="print" element={<PrintCenter />} />
               <Route path="returns" element={<Returns />} />

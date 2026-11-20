@@ -1,4 +1,4 @@
-import { Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, type LucideIcon } from 'lucide-react'
+import { Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, ScanLine, HandCoins, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -12,6 +12,7 @@ export const NAV: NavItem[] = [
   { id: 'network', label: 'کنترل شعب و ارسال سریع', icon: Zap, path: '/admin/network', group: 'سفارش و ارسال', count: (d) => [d.network?.closed, d.network?.fastOff].filter((x) => x && new Date(x.until).getTime() > Date.now()).length },
   { id: 'orders', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'سفارش و ارسال', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
   { id: 'social', label: 'فروش اجتماعی و کارت به کارت', icon: SocialIcon, path: '/admin/social', group: 'سفارش و ارسال', count: (d) => d.bank.receipts.filter((r) => r.status !== 'تطبیق شد').length },
+  { id: 'packing', label: 'ایستگاه بسته‌بندی و اسکن', icon: ScanLine, path: '/admin/packing', group: 'سفارش و ارسال', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => s.status === 'ship.picking').length },
   { id: 'shipping', label: 'ارسال و لجستیک', icon: Truck, path: '/admin/shipping', group: 'سفارش و ارسال' },
   { id: 'returns', label: 'مرجوعی و گارانتی', icon: RotateCcw, path: '/admin/returns', group: 'سفارش و ارسال', count: (d) => d.returns.filter((r) => r.status === 'return.inspecting').length + d.warranties.filter((w) => w.status === 'warranty.pending').length },
   { id: 'print', label: 'چاپ و خروجی', icon: Printer, path: '/admin/print', group: 'سفارش و ارسال' },
@@ -19,6 +20,7 @@ export const NAV: NavItem[] = [
   { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'کالا و انبار', count: (d) => d.partnerQueue.length },
   { id: 'media', label: 'کتابخانهٔ رسانه', icon: Images, path: '/admin/media', group: 'کالا و انبار', count: (d) => d.media.filter((m) => !m.alt).length },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'کالا و انبار', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
+  { id: 'ownership', label: 'مالکیت و تسویهٔ موجودی', icon: HandCoins, path: '/admin/ownership', group: 'کالا و انبار' },
   { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'کالا و انبار' },
   { id: 'trade', label: 'امور بازرگانی', icon: Landmark, path: '/admin/trade', group: 'کالا و انبار' },
   { id: 'readiness', label: 'آمادگی کالا و محتوا', icon: ListChecks, path: '/admin/readiness', group: 'کالا و انبار', count: (d) => d.contentQueue.filter((c) => c.status === 'آماده انتشار').length },

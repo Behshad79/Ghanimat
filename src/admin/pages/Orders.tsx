@@ -1,7 +1,7 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Phone, Printer, Sparkles, Truck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Phone, Printer, ScanLine, Sparkles, Truck } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -20,6 +20,7 @@ import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
 import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
 import { ChangeHistory, RollbackShip } from '../orders/History'
+import { PackRecord } from '../stock/Packing'
 import { PaymentInfo } from '../orders/PaymentInfo'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
@@ -228,6 +229,7 @@ export function OrderDetail() {
               </ul>
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
               {(/حضوری/.test(s.method) || d.pickups.some((p) => p.orderId === o.id)) && s.status !== 'ship.cancelled' && <PickupReceipt orderId={o.id} customerId={o.customerId} items={s.items.map((x) => x.productId)} />}
+              <PackRecord s={s} />
               <div className="mb-3"><CustomerProgress o={o} s={s} /></div>
               {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
               {s.tracking && <p className="mb-3 text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
@@ -237,7 +239,8 @@ export function OrderDetail() {
                   {s.status === 'ship.packed' && !s.courier && !s.tracking && /سریع|پیک|اسنپ/.test(s.method) && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.delivery.fast.couriers.find((c) => c.id === d.delivery.fast.primary)?.name ?? 'سرویس پیک'} />}
                   <div className="flex flex-wrap gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
-                    {s.status === 'ship.picking' && <Button variant="primary" onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی')}>تأیید بسته‌بندی</Button>}
+                    {['ship.pending', 'ship.picking'].includes(s.status) && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => nav(`/admin/packing?ship=${s.id}`)}>بسته‌بندی با اسکن</Button>}
+                    {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')}>تأیید بدون اسکن</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
                     <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>

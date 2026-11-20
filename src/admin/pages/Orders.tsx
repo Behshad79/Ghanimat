@@ -7,7 +7,7 @@ import { Page, Stepper, StickyStepBar, Timeline, useScrolledPast } from '@/share
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
-import { CustomerProgress } from '../orders/Progress'
+import { CustomerProgress, rollShipped } from '../orders/Progress'
 import { canSecret, isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
@@ -32,6 +32,7 @@ import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from '.
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../orders/Restock'
 import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
+import { OrderReturns, ReturnShipButton } from '../orders/OrderReturns'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
 import { OrderLedger } from '../stock/OrderLedger'
 import { guardForeign, myWarehouses } from '../stock/foreign'
@@ -173,9 +174,9 @@ export function OrderDetail() {
   const idx = d.orders.findIndex((o) => o.id === id); const o = d.orders[idx]
   if (!o) return <Page title="سفارش پیدا نشد" back="/admin/orders" empty={undefined}><Card><p className="p-6 text-center text-13 text-t2">سفارشی با این شماره نیست. شماره را بررسی کنید یا از جست‌وجوی سراسری استفاده کنید.</p></Card></Page>
   const c = customer(o.customerId)
-  const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 3, 'order.pickup_ready': 3, 'order.delivered': 4 } as Record<string, number>)[o.status] ?? 4
+  const step = ({ 'order.awaiting_payment': 0, 'order.awaiting_credit': 0, 'order.paid': 1, 'order.needs_decision': 1, 'order.suspicious': 1, 'order.preparing': 2, 'order.shipped': 4, 'order.pickup_ready': 4, 'order.delivered': 5, 'order.returned': 5 } as Record<string, number>)[o.status] ?? 5
   const items = o.shipments.flatMap((s) => s.items); const sub = items.reduce((a, i) => a + i.price * i.qty, 0)
-  const advance = async (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, label, sid))) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
+  const advance = async (sid: string, to: string, label: string) => { if (to !== 'ship.delivered' && shipBlocked(o.id)) return; const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, label, sid))) return; const undo = snapshot(); mutate((db) => { const oo = db.orders.find((x) => x.id === o.id)!; oo.shipments.find((s) => s.id === sid)!.status = to; if (to === 'ship.picking') oo.status = 'order.preparing'; if (to === 'ship.handed' || to === 'ship.in_transit') rollShipped(oo); if (to === 'ship.delivered' && oo.shipments.every((s) => ['ship.delivered', 'ship.cancelled'].includes(s.status))) oo.status = 'order.delivered' }, { action: label, target: sid }); toast(`${label} ثبت شد.`, { undo }) }
   const openPack = async (sid: string) => { const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, 'بسته‌بندی با اسکن', sid))) return; setPacking(sid); setTimeout(() => document.getElementById(`pack-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }
   const cancelShip = async (sid: string, total: number) => { const wh0 = o.shipments.find((x) => x.id === sid)?.warehouse ?? ''; if (!(await guardForeign(wh0, 'لغو مرسوله', sid))) return; setRestock('site'); setRdest('کیف پول'); setRacct(''); setCancelSh({ sid, total }) }
   const doCancelShip = async () => {
@@ -197,7 +198,7 @@ export function OrderDetail() {
   const live = o.shipments.find((s) => !['ship.cancelled', 'ship.delivered'].includes(s.status))
   const goShip = (sid: string) => document.getElementById(`ship-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   const [sumRef, pastSum] = useScrolledPast<HTMLDivElement>()
-  const stepNames = o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']
+  const stepNames = o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', step > 4 ? 'تحویل شد' : 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', step > 3 ? 'ارسال شد' : 'ارسال', step > 4 ? 'تحویل شد' : 'تحویل']
   const nextAct: { label: string; hint: string; run?: () => void; tone?: 'wait' | 'done' } = o.status === 'order.awaiting_payment' || o.status === 'order.awaiting_credit' ? { label: 'منتظر پرداخت مشتری', hint: 'تا پرداخت کامل نشود، آماده‌سازی شروع نمی‌شود.', tone: 'wait' }
     : o.status === 'order.suspicious' ? { label: 'بازبینی سفارش مشکوک', hint: 'ارسال تا تأیید شما متوقف است.', run: () => document.getElementById('order-attention')?.scrollIntoView({ behavior: 'smooth' }) }
     : !live ? { label: o.status === 'order.cancelled' ? 'سفارش لغو شده است' : 'همهٔ مرسوله‌ها تحویل شد', hint: o.status === 'order.cancelled' ? 'بازگشت وجه را از کارت «بازگشت وجه» پیگیری کنید.' : 'کار دیگری روی این سفارش باقی نمانده است.', tone: 'done' }
@@ -290,7 +291,7 @@ export function OrderDetail() {
                   </div>
                 </div>
               )}
-              {s.status === 'ship.delivered' && <div className="flex flex-wrap items-center justify-between gap-2">{(s as any).deliveredAt ? <p className="flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-1.5 text-12 text-success">تحویل مشتری شد · {new Date((s as any).deliveredAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}{(s as any).deliveredTo ? ` · ${(s as any).deliveredTo.name} (${(s as any).deliveredTo.relation})` : ''}{(s as any).deliveredVia ? ` · ${(s as any).deliveredVia}` : ''}</p> : <span />}<RollbackShip o={o} sid={s.id} /></div>}
+              {s.status === 'ship.delivered' && <div className="flex flex-wrap items-center justify-between gap-2">{(s as any).deliveredAt ? <p className="flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-1.5 text-12 text-success">تحویل مشتری شد · {new Date((s as any).deliveredAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}{(s as any).deliveredTo ? ` · ${(s as any).deliveredTo.name} (${(s as any).deliveredTo.relation})` : ''}{(s as any).deliveredVia ? ` · ${(s as any).deliveredVia}` : ''}</p> : <span />}<span className="flex flex-wrap items-center gap-2"><ReturnShipButton o={o} sid={s.id} /><RollbackShip o={o} sid={s.id} /></span></div>}
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="min-w-0"><CustomerProgress o={o} s={s} /></div>
                 <div className="min-w-0 space-y-3">
@@ -303,6 +304,7 @@ export function OrderDetail() {
               </div>
               </div>
             </section>) })}
+          <OrderReturns o={o} />
           <OrderNotes o={o} />
           <Card title="تاریخچه و یادداشت‌ها">
             <ChangeHistory o={o} />

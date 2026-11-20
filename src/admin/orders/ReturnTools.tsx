@@ -40,11 +40,11 @@ export function OriginalOrder({ orderId, highlight }: { orderId: string; highlig
 
 const CH: [string, string][] = [['تماس تلفنی', 'تماس تلفنی'], ['حضوری در شعبه', 'حضوری در شعبه'], ['واتساپ', 'واتساپ'], ['اینستاگرام دایرکت', 'اینستاگرام'], ['تلگرام', 'تلگرام'], ['ایمیل', 'ایمیل'], ['سایر', 'سایر']]
 /** ثبت دستی مرجوعی یا درخواست گارانتی به نیابت از مشتری (تماس، شعبه، پیام‌رسان)؛ فیلدها همان فرم مشتری در فیگماست */
-export function ManualReturn({ open, onClose, defaultKind = 'return' }: { open: boolean; onClose: () => void; defaultKind?: 'return' | 'warranty' }) {
+export function ManualReturn({ open, onClose, defaultKind = 'return', preset }: { open: boolean; onClose: () => void; defaultKind?: 'return' | 'warranty'; preset?: { orderId: string; customerId: string; items?: string[] } }) {
   const d = useDB(); const chips = useQuickChips()
   const [kind, setKind] = useState<'return' | 'warranty'>(defaultKind)
   const blank = { customerId: '', orderId: '', items: [] as string[], channel: 'تماس تلفنی', reason: RETURN_REASONS[0].k, wreason: WARRANTY_REASONS[0].k, note: '', method: 'post' as 'post' | 'courier' | 'inperson', refund: 'wallet' as 'wallet' | 'card', bank: '', last4: '', photos: [] as string[], terms: false }
-  const [f, setF] = useState(blank)
+  const [f, setF] = useState(preset ? { ...blank, orderId: preset.orderId, customerId: preset.customerId, items: preset.items ?? [] } : blank)
   const orders = useMemo(() => d.orders.filter((o) => (!f.customerId || o.customerId === f.customerId) && ['order.delivered', 'order.returned'].includes(o.status)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [d.orders, f.customerId])
   const o = d.orders.find((x) => x.id === f.orderId)
   const all = o ? o.shipments.flatMap((s) => s.items.map((it) => ({ key: `${s.id}|${it.productId}|${it.unitId}`, it, shipId: s.id }))) : []

@@ -10,6 +10,8 @@ import { shipBlocked } from './PayHold'
 export const STEPS = ['ثبت سفارش', 'آماده‌سازی', 'در حال ارسال', 'تحویل شده'] as const
 /** مرحلهٔ نوار پیشرفت پنل مشتری، خودکار از وضعیت مرسوله */
 export const PICKUP_STEPS = ['ثبت سفارش', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] as const
+/** وقتی مرسوله‌ای به پیک یا پست سپرده شد (کد رهگیری یا مأمور ارسال)، سفارش به «ارسال‌شده» می‌رود و گام بعدی «تحویل» است */
+export function rollShipped(oo: Order) { if (['order.paid', 'order.preparing', 'order.needs_decision'].includes(oo.status) && oo.shipments.some((x) => ['ship.handed', 'ship.in_transit'].includes(x.status))) oo.status = 'order.shipped' }
 export const stepOf = (s: Shipment) => ['ship.delivered'].includes(s.status) ? 3 : ['ship.handed', 'ship.in_transit', 'ship.pickup_ready'].includes(s.status) ? 2 : ['ship.picking', 'ship.packed'].includes(s.status) ? 1 : 0
 
 const toEn = (t: string) => t.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g, (c) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))
@@ -42,7 +44,7 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
     const rc = d.bank.receipts.find((r) => r.orderId === o.id)
     if (o.pay === 'کارت به کارت' && rc?.status !== 'تطبیق شد') return toast('رسید کارت به کارت این سفارش هنوز با واریز بانک تطبیق نشده است؛ ارسال قفل است.', { tone: 'err' })
     const plate = plateOf(f)
-    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.courier = { ...(sh.courier ?? { vehicle: 'موتور', eta: 30, code: '', cost: 0 }), vehicle: f.veh, name: f.name, phone: f.phone, plate, company: f.company } as Shipment['courier']; if (f.url.trim()) sh.trackingUrl = f.url.trim(); if (stepOf(sh) < 2) sh.status = 'ship.handed' }, { action: 'ثبت مأمور ارسال و پلاک', target: s.id, after: plate })
+    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.courier = { ...(sh.courier ?? { vehicle: 'موتور', eta: 30, code: '', cost: 0 }), vehicle: f.veh, name: f.name, phone: f.phone, plate, company: f.company } as Shipment['courier']; if (f.url.trim()) sh.trackingUrl = f.url.trim(); if (stepOf(sh) < 2) sh.status = 'ship.handed'; rollShipped(x.orders.find((y) => y.id === o.id)!) }, { action: 'ثبت مأمور ارسال و پلاک', target: s.id, after: plate })
     if (c) sendSms(c.mobile, `غنیمت: مرسولهٔ ${s.id} در راه است. ${f.company}: ${f.name}، پلاک ${plate}.${f.url.trim() ? ` رصد زنده: ${f.url.trim()}` : ''}`, 'وضعیت سفارش', o.id, c.id)
     setEdit(false); toast('مأمور ارسال ثبت شد؛ نوار پیشرفت مشتری روی «در حال ارسال» رفت و پیامک ارسال شد.')
   }
@@ -90,9 +92,9 @@ function PostTracking({ open, onClose, o, s }: { open: boolean; onClose: () => v
     if (shipBlocked(o.id)) return
     if (!/^[\dA-Za-z-]{6,30}$/.test(f.code.trim())) return toast('کد رهگیری معتبر نیست (۶ تا ۳۰ رقم یا حرف).', { tone: 'err' })
     const url = f.url.trim() || auto(f.carrier, f.code.trim())
-    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.tracking = f.code.trim(); sh.trackingUrl = url; sh.trackingCarrier = f.carrier; if (['ship.pending', 'ship.picking', 'ship.packed'].includes(sh.status)) sh.status = 'ship.in_transit' }, { action: 'ثبت کد رهگیری پستی', target: s.id, after: f.code })
+    mutate((x) => { const sh = x.orders.find((y) => y.id === o.id)!.shipments.find((y) => y.id === s.id)!; sh.tracking = f.code.trim(); sh.trackingUrl = url; sh.trackingCarrier = f.carrier; if (['ship.pending', 'ship.picking', 'ship.packed', 'ship.handed'].includes(sh.status)) sh.status = 'ship.in_transit'; rollShipped(x.orders.find((y) => y.id === o.id)!) }, { action: 'ثبت کد رهگیری پستی', target: s.id, after: f.code })
     if (c) sendSms(c.mobile, `غنیمت: مرسولهٔ ${s.id} با ${f.carrier} ارسال شد. کد رهگیری: ${f.code.trim()}${url ? ` · ${url}` : ''}`, 'وضعیت سفارش', o.id, c.id)
-    toast('کد و لینک رهگیری ثبت شد و برای مشتری پیامک شد.'); onClose()
+    toast('کد رهگیری ثبت شد؛ سفارش «ارسال‌شده» شد، گام بعدی «تحویل» است و لینک رهگیری برای مشتری پیامک شد.'); onClose()
   }
   return (
     <Modal open={open} onClose={onClose} title={`رهگیری پستی مرسولهٔ ${s.id}`} footer={<Button variant="primary" onClick={save}>ثبت و پیامک به مشتری</Button>}>

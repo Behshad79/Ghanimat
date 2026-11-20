@@ -32,6 +32,7 @@ export const NAV: NavItem[] = [
   { id: 'readiness', label: 'آمادگی کالا و محتوا', icon: ListChecks, path: '/admin/readiness', group: 'کالا و انبار', count: (d) => d.contentQueue.filter((c) => c.status === 'آماده انتشار').length },
   { id: 'media', label: 'کتابخانهٔ رسانه', icon: Images, path: '/admin/media', group: 'کالا و انبار', count: (d) => d.media.filter((m) => !m.alt).length },
   { id: 'finance', urgent: true, label: 'مالی', icon: CircleDollarSign, path: '/admin/finance', group: 'فروش و درآمد', count: (d) => d.txns.filter((t) => t.status === 'pay.unknown').length },
+  { id: 'treasury', label: 'حسابداری و خزانه', icon: Landmark, path: '/admin/treasury', group: 'فروش و درآمد', count: (d) => (d.treasury?.entries ?? []).filter((e) => e.status === 'approval').length + (d.treasury?.sms ?? []).filter((x) => !x.entry && x.dir === 'out').length },
   { id: 'pricing', label: 'قیمت‌گذاری و تخفیف‌ها', icon: Tags, path: '/admin/pricing', group: 'فروش و درآمد' },
   { id: 'merch', label: 'ویترین و غنی‌آف', icon: Flame, path: '/admin/merch', group: 'فروش و درآمد', count: (d) => (d.merch?.deals ?? []).filter((x) => !x.endedAt && x.sold < x.cap && !x.paused && +new Date(x.start) <= Date.now() && +new Date(x.end) > Date.now() && +new Date(x.end) - Date.now() < 2 * 36e5).length },
   { id: 'promotions', label: 'موتور پروموشن و کمپین', icon: BadgePercent, path: '/admin/promotions', group: 'فروش و درآمد' },

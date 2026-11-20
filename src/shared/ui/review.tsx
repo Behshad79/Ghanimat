@@ -61,15 +61,16 @@ export function ReviewWidget() {
       <div className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center p-3"><p className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#10123d] px-4 py-2 text-13 text-white shadow-float" data-review-ui><Crosshair size={16} />روی بخشی که نظر دارید کلیک کنید<button type="button" className="ms-2 rounded-full bg-white/15 px-2 py-0.5 text-12" onClick={() => { setPick(false); setBox(null) }}>انصراف (Esc)</button></p></div>
       {box && <div className="pointer-events-none fixed z-[89] rounded-md border-2 border-brand-solid bg-brand-solid/10 transition-all duration-75" style={{ top: box.top - 2, left: box.left - 2, width: box.width + 4, height: box.height + 4 }} />}
     </>}
-    {!pick && !open && <div className="fixed bottom-4 left-4 z-[80] flex flex-col items-end gap-2">
-      {menu && <div className="w-[min(16rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface text-13 shadow-float" role="menu">
+    {/* زبانهٔ باریک وسط لبهٔ چپ صفحه: روی دکمه‌های پایین صفحه (بعدی، ذخیره، اقدام بعدی) نمی‌افتد */}
+    {!pick && !open && <div className="fixed top-1/2 left-0 z-[80] -translate-y-1/2">
+      {menu && <div className="absolute top-1/2 left-full ml-2 w-[min(16rem,calc(100vw-4rem))] -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-surface text-13 shadow-float" role="menu">
         <p className="border-b border-line px-4 py-2.5 text-12 text-t2">نظر شما در بخش Issues مخزن GitHub ثبت می‌شود و همهٔ تیم می‌بینند.</p>
         <MItem icon={<Crosshair size={16} />} onClick={() => { setMenu(false); setPick(true) }}>انتخاب بخش و ثبت نظر</MItem>
         <MItem icon={<FileText size={16} />} onClick={() => { setMenu(false); setPicked(null); setOpen(true) }}>نظر کلی دربارهٔ این صفحه</MItem>
         <MItem icon={<List size={16} />} onClick={() => { setMenu(false); window.open(REVIEW_LIST, '_blank', 'noopener') }}>همهٔ نظرهای ثبت‌شده</MItem>
       </div>}
-      <button type="button" aria-expanded={menu} onClick={() => setMenu((m) => !m)} aria-label="ثبت نظر" className="flex size-11 items-center justify-center gap-2 rounded-full bg-[#10123d] text-13 font-semibold text-white shadow-float hover:bg-[#1c1f4a] sm:w-auto sm:px-4">
-        {menu ? <X size={18} /> : <MessageSquarePlus size={18} />}<span className="hidden sm:inline">ثبت نظر</span>
+      <button type="button" aria-expanded={menu} onClick={() => setMenu((m) => !m)} aria-label="ثبت نظر" title="ثبت نظر برای تیم" className="flex flex-col items-center gap-1.5 rounded-r-xl bg-[#10123d] px-1.5 py-3 text-12 font-semibold text-white opacity-80 shadow-float transition-[opacity,padding] hover:pl-2.5 hover:opacity-100 focus-visible:opacity-100">
+        {menu ? <X size={16} /> : <MessageSquarePlus size={16} />}<span className="hidden [writing-mode:vertical-rl] sm:inline" style={{ transform: 'rotate(180deg)' }}>ثبت نظر</span>
       </button>
     </div>}
     <ReviewForm open={open} onClose={() => setOpen(false)} picked={picked} page={page} path={path} role={ROLES[effectiveRole(s)]?.label ?? effectiveRole(s)} theme={s.theme} onRepick={() => { setOpen(false); setPick(true) }} />

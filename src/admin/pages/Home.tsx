@@ -25,10 +25,11 @@ import { NAV } from '../shell/nav'
 import { CONDITION, WAREHOUSE } from '@/shared/data/statuses'
 import { GatewayHolds } from '../orders/GatewayHolds'
 import { waitItems } from '../home/tasks'
+import { HomeNotes } from '../planner/Planner'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
 const MONTH_SALES = [4.1, 5.3, 4.8, 6.2, 7.1, 6.6, 8.4, 10.8]
-const WIDGETS: [string, string][] = [['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
+const WIDGETS: [string, string][] = [['notes', 'یادداشت‌ها و کارهای امروز'], ['lifetime', 'از ابتدا تا کنون'], ['visits', 'بازدید هفتهٔ اخیر'], ['salesgoal', 'فروش روزانه در برابر هدف'], ['mostviewed', 'پربازدیدترین کالاها'], ['kpi', 'شاخص‌های اصلی'], ['monthly', 'فروش ماهانه'], ['top', 'پرفروش‌ها'], ['orders', 'سفارش‌های اخیر'], ['goal', 'هدف ماهانه'], ['profit', 'سود من'], ['cats', 'فروش به تفکیک دسته'], ['sources', 'منابع ورودی'], ['map', 'فروش به تفکیک استان'], ['cards', 'کالاهای برتر'], ['ai', 'خلاصهٔ AI']]
 export function Home() {
   const { d } = useLookup(); const nav = useNavigate(); const [pick, setPick] = useState(false); const [exp, setExp] = useState(false)
   const hidden: string[] = (d.entities.homeHidden?.[0]?.list as string[]) ?? []
@@ -53,6 +54,7 @@ export function Home() {
       actions={<><Button icon={<Download size={14} />} onClick={() => setExp(true)}>خروجی گزارش</Button><Button icon={<LayoutGrid size={14} />} onClick={() => setPick(true)}>چیدمان ویجت‌ها</Button></>}>
       <div className="space-y-4">
         <WelcomeHero items={waitItems(d)} />
+        {on('notes') && <HomeNotes />}
         {on('kpi') && <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KPI featured icon={<ShoppingBag size={17} />} label="فروش امروز" num={gmv} fmt={compactToman} full={toman(gmv)} delta={12.4} spark={[4, 6, 5, 8, 7, 9, 12]} to="/admin/orders" note={`هدف روزانه: ${compactToman(+(d.rules.find((r) => r.key === 'daily_sales_goal')?.value ?? 0))}`} />
           {canSecret() && <KPI icon={<TrendingUp size={17} />} label="سود امروز" hint="margin" num={profitToday} fmt={compactToman} delta={9.1} spark={[3, 4, 4, 5, 6, 6, 7]} to="/admin/finance?tab=profit&p=today" />}

@@ -11,14 +11,46 @@ const days = (n: number) => Array.from({ length: n }, (_, i) => { const t = new 
 
 /** «منتظر شما»: یک جا برای هر چیزی که همین حالا باید بررسی، تأیید یا منتشر شود (ادغام خوشامد و میانبرهای اقدام) */
 export type WaitItem = { label: string; count: number; to: string; icon: LucideIcon; urgent?: boolean }
+const WINDOWS: [string, string, number][] = [['24', '۲۴ ساعت گذشته', 24], ['72', '۳ روز', 72], ['168', '۷ روز', 168], ['all', 'همه', Infinity]]
+const FOCUS = ['سفارش منتظر اقدام', 'مرسولهٔ منتظر بسته‌بندی']
 export function WelcomeHero({ items }: { items: WaitItem[] }) {
-  const nav = useNavigate()
-  const open = items.filter((x) => x.count > 0).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)); const clear = items.filter((x) => x.count === 0)
-  const total = open.reduce((a, x) => a + x.count, 0)
+  const nav = useNavigate(); const d = useDB()
+  const [win, setWin] = useState(() => { try { return localStorage.getItem('gh-home-window') ?? '24' } catch { return '24' } })
+  const pickWin = (v: string) => { setWin(v); try { localStorage.setItem('gh-home-window', v) } catch { /* فقط در حافظه */ } }
+  const hours = WINDOWS.find(([k]) => k === win)?.[2] ?? 24; const inWin = (iso: string) => Date.now() - +new Date(iso) <= hours * 36e5
+  // دو مورد اصلی روز: سفارش‌هایی که باید تأیید یا تصمیم بگیرند و مرسوله‌هایی که باید بسته‌بندی شوند
+  const actAll = d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id))
+  const packAll = d.orders.flatMap((o) => o.shipments.filter((sh) => sh.status === 'ship.picking').map((sh) => ({ o, sh })))
+  const act = actAll.filter((o) => inWin(o.createdAt)); const pack = packAll.filter((x) => inWin(x.o.createdAt))
+  const oldest = (L: string[]) => L.length ? L.reduce((a, b) => (a < b ? a : b)) : null
+  const soon = (iso?: string) => !!iso && +new Date(iso) - Date.now() < 2 * 36e5
+  const focus = [
+    { label: FOCUS[0], icon: ShoppingBag, n: act.length, all: actAll.length, to: `/admin/orders?tab=action&fl=${encodeURIComponent(FOCUS[0])}`, old: oldest(act.map((o) => o.createdAt)),
+      chips: [[`${fa(act.filter((o) => o.status === 'order.suspicious').length)} مشکوک`, act.some((o) => o.status === 'order.suspicious')], [`${fa(act.filter((o) => o.status === 'order.needs_decision').length)} نیازمند تصمیم`, act.some((o) => o.status === 'order.needs_decision')], [`${fa(act.filter((o) => o.shipments.some((sh) => /سریع|پیک/.test(sh.method))).length)} ارسال سریع`, false]] as [string, boolean][] },
+    { label: FOCUS[1], icon: Package, n: pack.length, all: packAll.length, to: '/admin/packing', old: oldest(pack.map((x) => x.o.createdAt)),
+      chips: [[`${fa(pack.filter((x) => soon(x.sh.sla)).length)} نزدیک پایان مهلت`, pack.some((x) => soon(x.sh.sla))], [`تهران ${fa(pack.filter((x) => x.sh.warehouse === 'tehran').length)} · مهاباد ${fa(pack.filter((x) => x.sh.warehouse === 'mahabad').length)}`, false]] as [string, boolean][] },
+  ]
+  const rest = items.filter((x) => !FOCUS.includes(x.label))
+  const open = rest.filter((x) => x.count > 0).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)); const clear = rest.filter((x) => x.count === 0)
+  const total = open.reduce((a, x) => a + x.count, 0) + actAll.length + packAll.length
+  const showFocus = items.some((x) => FOCUS.includes(x.label))
   return (
     <div className="relative overflow-hidden rounded-3xl bg-brand-solid p-5 text-white">
       <span aria-hidden className="pointer-events-none absolute -top-16 -left-10 size-56 rounded-full bg-white/10" /><span aria-hidden className="pointer-events-none absolute -bottom-20 left-40 size-48 rounded-full bg-[#ffc24b]/20" />
       <p className="relative text-16 font-bold">{total ? `${fa(total)} مورد منتظر بررسی و تصمیم شماست` : 'همه‌چیز مرتب است؛ موردی منتظر شما نیست.'}</p>
+      {showFocus && <div className="relative mt-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-12"><span className="text-white/80">بازهٔ زمانی ثبت سفارش:</span><div role="radiogroup" aria-label="بازهٔ زمانی" className="flex flex-wrap gap-1 rounded-full bg-white/10 p-1">{WINDOWS.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={win === k} onClick={() => pickWin(k)} className={cx('h-7 rounded-full px-3 transition-colors', win === k ? 'bg-white font-semibold text-[#10123d]' : 'text-white/85 hover:bg-white/15')}>{l}</button>)}</div></div>
+        <div className="grid gap-3 lg:grid-cols-2">{focus.filter((x) => items.some((i) => i.label === x.label)).map((x) => { const I = x.icon; const hot = x.n > 0; return (
+          <button key={x.label} type="button" onClick={() => nav(x.to)} className="lift group flex items-center gap-4 rounded-2xl bg-white p-4 text-right text-[#10123d] ring-2 ring-transparent hover:ring-[#ffc24b] sm:p-5">
+            <span className={cx('grid size-14 shrink-0 place-items-center rounded-2xl', hot ? 'bg-danger-bg text-danger' : 'bg-success-bg text-success')}><I size={26} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline gap-2"><b className={cx('tnum text-[40px] leading-none font-extrabold', hot ? 'text-danger' : 'text-success')}>{fa(x.n)}</b><span className="text-14 font-semibold">{x.label}</span></span>
+              <span className="mt-1.5 block text-11 text-t2">{win === 'all' ? 'همهٔ زمان‌ها' : `در ${WINDOWS.find(([k]) => k === win)?.[1]}`}{win !== 'all' && x.all !== x.n ? ` · از کل ${fa(x.all)}` : ''}{x.old ? ` · قدیمی‌ترین: ${rel(x.old)}` : ''}</span>
+              <span className="mt-2 flex flex-wrap gap-1.5">{x.chips.map(([t, warn]) => <span key={t} className={cx('rounded-full px-2 py-0.5 text-11', warn ? 'bg-danger-bg font-medium text-danger' : 'bg-neutral-bg text-t2')}>{t}</span>)}</span>
+            </span>
+            <ArrowUpLeft size={20} className="shrink-0 text-t3 transition-transform group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand" />
+          </button>) })}</div>
+      </div>}
       {open.length > 0 && <div className="relative mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">{open.map((x) => { const I = x.icon; return (
         <button key={x.label} type="button" onClick={() => nav(/[?&]fl=/.test(x.to) ? x.to : `${x.to}${x.to.includes('?') ? '&' : '?'}fl=${encodeURIComponent(x.label)}`)} className="lift flex items-center gap-2.5 rounded-2xl bg-white p-3 text-right text-[#10123d]">
           <span className={cx('grid size-10 shrink-0 place-items-center rounded-xl', x.urgent ? 'bg-danger-bg text-danger' : 'bg-brand-tint text-brand')}><I size={18} /></span>

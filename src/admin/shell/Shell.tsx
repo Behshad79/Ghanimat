@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'r
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowUp, Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
 import { NAV } from './nav'
+import { useReminders } from '../planner/Planner'
 import { waitItems } from '../home/tasks'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
@@ -203,6 +204,7 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
 export function Shell() {
   const s = useSession(); const loc = useLocation(); const nav = useNavigate(); const mainRef = useRef<HTMLElement>(null)
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }) }, [loc.pathname])
+  useReminders()
   const [menu, setMenu] = useState(false); const [cmd, setCmd] = useState(false); const [ai, setAI] = useState(false); const [keys, setKeys] = useState(false); const [site, setSite] = useState(false)
   useEffect(() => { const f = () => setSite(true); window.addEventListener('site-preview', f); return () => window.removeEventListener('site-preview', f) }, [])
   useEffect(() => {

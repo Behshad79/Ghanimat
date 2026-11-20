@@ -1,4 +1,4 @@
-import { Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, ScanLine, HandCoins, type LucideIcon } from 'lucide-react'
+import { NotebookPen, Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, ScanLine, HandCoins, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -9,6 +9,7 @@ export const NAV_CLOSED_DEFAULT = ['سیستم']
 // آیکون‌ها جایگزین موقت خانوادهٔ Magicoon هستند.
 export const NAV: NavItem[] = [
   { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
+  { id: 'planner', label: 'یادداشت و برنامه‌ریزی', icon: NotebookPen, path: '/admin/planner', group: 'امروز', count: (d) => (d.planner?.notes ?? []).filter((n) => !n.done && n.kind !== 'note' && n.due && new Date(n.due).toDateString() === new Date().toDateString()).length },
   { id: 'live', urgent: true, also: 'سفارش و ارسال', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
   { id: 'orders', urgent: true, also: 'سفارش و ارسال', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'امروز', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
   { id: 'packing', urgent: true, also: 'سفارش و ارسال', label: 'ایستگاه بسته‌بندی و اسکن', icon: ScanLine, path: '/admin/packing', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => s.status === 'ship.picking').length },

@@ -2,17 +2,17 @@ import { Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListCheck
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
-export type NavItem = { id: string; label: string; icon: LucideIcon; path: string; group: string; soon?: boolean; urgent?: boolean; count?: (d: DB) => number }
+export type NavItem = { id: string; label: string; icon: LucideIcon; path: string; group: string; soon?: boolean; urgent?: boolean; also?: string; count?: (d: DB) => number }
 // منوی کناری: «امروز» پنج کار پرتکرار روزانه است و همیشه باز می‌ماند؛ بقیهٔ گروه‌ها آکاردئونی‌اند (یکی باز)، به ترتیب اولویت کار.
 // شمارندهٔ قرمز فقط برای کار فوری (urgent)؛ بقیه خاکستری و اطلاعاتی.
 export const NAV_CLOSED_DEFAULT = ['سیستم']
 // آیکون‌ها جایگزین موقت خانوادهٔ Magicoon هستند.
 export const NAV: NavItem[] = [
   { id: 'home', label: 'خانه', icon: Home, path: '/admin', group: 'امروز' },
-  { id: 'live', urgent: true, label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
-  { id: 'orders', urgent: true, label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'امروز', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
-  { id: 'packing', urgent: true, label: 'ایستگاه بسته‌بندی و اسکن', icon: ScanLine, path: '/admin/packing', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => s.status === 'ship.picking').length },
-  { id: 'support', urgent: true, label: 'پشتیبانی', icon: Headphones, path: '/admin/support', group: 'امروز', count: (d) => d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length },
+  { id: 'live', urgent: true, also: 'سفارش و ارسال', label: 'مرکز عملیات زنده', icon: Activity, path: '/admin/live', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => !['ship.delivered', 'ship.cancelled'].includes(s.status) && minsLeft(s.sla) < 45).length },
+  { id: 'orders', urgent: true, also: 'سفارش و ارسال', label: 'سفارش‌ها', icon: ShoppingBag, path: '/admin/orders', group: 'امروز', count: (d) => d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id)).length },
+  { id: 'packing', urgent: true, also: 'سفارش و ارسال', label: 'ایستگاه بسته‌بندی و اسکن', icon: ScanLine, path: '/admin/packing', group: 'امروز', count: (d) => d.orders.flatMap((o) => o.shipments).filter((s) => s.status === 'ship.picking').length },
+  { id: 'support', urgent: true, also: 'مشتری و پشتیبانی', label: 'پشتیبانی', icon: Headphones, path: '/admin/support', group: 'امروز', count: (d) => d.tickets.filter((t) => ['ticket.new', 'ticket.open'].includes(t.status)).length },
   { id: 'network', label: 'کنترل شعب و ارسال سریع', icon: Zap, path: '/admin/network', group: 'سفارش و ارسال', count: (d) => [d.network?.closed, d.network?.fastOff].filter((x) => x && new Date(x.until).getTime() > Date.now()).length },
   { id: 'social', urgent: true, label: 'فروش اجتماعی و کارت به کارت', icon: SocialIcon, path: '/admin/social', group: 'سفارش و ارسال', count: (d) => d.bank.receipts.filter((r) => r.status !== 'تطبیق شد').length },
   { id: 'shipping', label: 'ارسال و لجستیک', icon: Truck, path: '/admin/shipping', group: 'سفارش و ارسال' },

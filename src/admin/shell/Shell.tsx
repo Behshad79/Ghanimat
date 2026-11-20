@@ -47,7 +47,7 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   const core = items.filter((n) => n.group === 'امروز')
   const groups = [...new Set(items.filter((n) => n.group !== 'امروز').map((n) => n.group))]
   const loc = useLocation(); const [q, setQ] = useState('')
-  const activeG = items.filter((n) => n.path !== '/admin' && loc.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]?.group
+  const activeN = items.filter((n) => n.path !== '/admin' && loc.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]; const activeG = activeN?.also ?? activeN?.group
   // آکاردئون: فقط یک گروه باز است؛ گروه صفحهٔ فعلی خودکار باز می‌شود
   const [open, setOpen] = useState<string | null>(activeG ?? null)
   useEffect(() => { if (activeG && activeG !== 'امروز') setOpen(activeG) }, [activeG])
@@ -77,7 +77,7 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
           <div className="space-y-0.5">{core.map(link)}</div>
           {pins.length > 0 && <div className="space-y-0.5"><Head>سنجاق‌شده‌های من</Head>{pins.map(link)}</div>}
           <div className={cx(!mini && 'border-t border-line pt-2')}>
-            {groups.map((g) => { const gi = items.filter((i) => i.group === g); const isOpen = mini || open === g; const urgent = gi.filter((n) => n.urgent).reduce((a, n) => a + (n.count?.(d) ?? 0), 0); const here = activeG === g; return (
+            {groups.map((g) => { const gi = items.filter((i) => i.group === g || i.also === g); const isOpen = mini || open === g; const urgent = gi.filter((n) => n.urgent).reduce((a, n) => a + (n.count?.(d) ?? 0), 0); const here = activeG === g; return (
               <div key={g} className="mb-0.5">
                 {!mini ? <button onClick={() => setOpen(open === g ? null : g)} aria-expanded={isOpen} className={cx('flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-12 font-semibold hover:bg-neutral-bg', here ? 'text-brand' : 'text-t1')}>
                   <span className="flex-1 text-right">{g}</span>

@@ -24,7 +24,7 @@ export function OwnerSplit({ f, set, cost }: { f: F; set: (p: Partial<F>) => voi
   return <div className="space-y-3 rounded-xl border border-line p-3">
     <div className="flex flex-wrap items-end gap-3"><Field label="مالک پیش‌فرض (تأمین‌کننده)" help="کسی که پول این کالا را داده؛ پیشوند کد برچسب از او می‌آید"><Select className="w-56" value={owner} onChange={(v) => set({ owner: v, ownSplit: rows.length ? rows : undefined })} options={s.parties.filter((p) => p.active).map((p) => [p.id, `${p.name} (${p.prefix})`] as [string, string])} /></Field>
       <p className="pb-2 text-12 text-t2">کد برچسب: <bdi dir="ltr" className="font-mono font-bold text-t1">{labelCode(s, owner, { id: 'new', code: f.code || 'GH-P-000000' }, vars[0] ?? null)}</bdi></p></div>
-    <Toggle on={rows.length > 0} onChange={(v) => set({ ownSplit: v ? auto() : undefined })} label="موجودی میان چند مالک یا چند انبار تقسیم شده است" />
+    <Toggle on={rows.length > 0} onChange={(v) => set({ ownSplit: v ? auto() : undefined })} text="موجودی میان چند مالک یا چند انبار تقسیم شده است" />
     {rows.length > 0 && <>
       <div className="space-y-2">{rows.map((r, i) => <div key={i} className="grid grid-cols-2 gap-2 rounded-lg bg-neutral-bg p-2 sm:grid-cols-[1fr_1fr_1fr_.6fr_.9fr_auto] sm:items-end">
         {vars.length ? <Field label="تنوع"><Select value={r.variationId ?? ''} onChange={(v) => up(i, { variationId: v })} options={vars.map((v) => [v.id, vname(v.id)] as [string, string])} /></Field> : <div className="hidden sm:block" />}

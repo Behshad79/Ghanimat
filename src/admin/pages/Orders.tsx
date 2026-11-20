@@ -20,7 +20,7 @@ import { NoteBanner, OrderNotes, openNotes } from '../orders/OrderNotes'
 import { DecisionPanel } from '../orders/Decision'
 import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
 import { ChangeHistory, RollbackShip } from '../orders/History'
-import { PackRecord } from '../stock/Packing'
+import { PackRecord, PackSession } from '../stock/Packing'
 import { PaymentInfo } from '../orders/PaymentInfo'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
@@ -164,6 +164,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
 
 export function OrderDetail() {
   const { id } = useParams(); const { d, customer, product, unit, rule } = useLookup(); const nav = useNavigate()
+  const [packing, setPacking] = useState<string | null>(null)
   const [refund, setRefund] = useState(false); const [amount, setAmount] = useState(''); const [dest, setDest] = useState('کیف پول')
   const [cancelSh, setCancelSh] = useState<{ sid: string; total: number } | null>(null); const [restock, setRestock] = useState<RestockMode>('site'); const [rdest, setRdest] = useState('کیف پول'); const [racct, setRacct] = useState('')
   const [editOpen, setEditOpen] = useState(false); const [addrOpen, setAddrOpen] = useState(false); const [msg, setMsg] = useState<string | null>(null)
@@ -227,6 +228,7 @@ export function OrderDetail() {
                     <span className="flex items-center gap-2">{it.cancelled && <Badge tone="danger" dot={false}>لغو شد{it.cancelBy ? ` · ${it.cancelBy}` : ''}</Badge>}<ProductLinks pid={it.productId} /><Money v={it.price * it.qty} /></span>
                   </li>) })}
               </ul>
+              {packing === s.id && ['ship.pending', 'ship.picking'].includes(s.status) && <PackSession inline shipId={s.id} onDone={() => setPacking(null)} onClose={() => setPacking(null)} />}
               {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
               {(/حضوری/.test(s.method) || d.pickups.some((p) => p.orderId === o.id)) && s.status !== 'ship.cancelled' && <PickupReceipt orderId={o.id} customerId={o.customerId} items={s.items.map((x) => x.productId)} />}
               <PackRecord s={s} />
@@ -239,7 +241,7 @@ export function OrderDetail() {
                   {s.status === 'ship.packed' && !s.courier && !s.tracking && /سریع|پیک|اسنپ/.test(s.method) && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.delivery.fast.couriers.find((c) => c.id === d.delivery.fast.primary)?.name ?? 'سرویس پیک'} />}
                   <div className="flex flex-wrap gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
-                    {['ship.pending', 'ship.picking'].includes(s.status) && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => nav(`/admin/packing?ship=${s.id}`)}>بسته‌بندی با اسکن</Button>}
+                    {['ship.pending', 'ship.picking'].includes(s.status) && packing !== s.id && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => { setPacking(s.id); setTimeout(() => document.getElementById(`pack-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>بسته‌بندی با اسکن</Button>}
                     {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')}>تأیید بدون اسکن</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>

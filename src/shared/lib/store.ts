@@ -4,7 +4,7 @@ import { BASE_ROLES, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v71'
+const DB_KEY = 'ghanimat-demo-db-v73'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -57,12 +57,15 @@ export type Session = {
   revealed: string[]
   pinned: string[]
   navClosed?: string[]
+  pinMig?: number
 }
-const defaults: Session = { userId: null, viewAs: null, theme: 'light', density: 'normal', collapsed: false, hints: 'hover', askAI: true, google: true, level: 'معمولی', viewState: 'normal', simulate: 'success', scope: 'all', revealed: [], pinned: ['orders', 'warehouse'] }
+const defaults: Session = { userId: null, viewAs: null, theme: 'light', density: 'normal', collapsed: false, hints: 'hover', askAI: true, google: true, level: 'معمولی', viewState: 'normal', simulate: 'success', scope: 'all', revealed: [], pinned: ['catalog', 'warehouse', 'ownership'], pinMig: 1 }
 // تم پیش‌فرض از ترجیح سیستم‌عامل خوانده می‌شود؛ از لحظه‌ای که کاربر تم را عوض کند، انتخاب او منبع حقیقت است.
 const stored = read<Session>(S_KEY)
 /** تم پیش‌فرض همیشه روشن است و از تم سیستم پیروی نمی‌کند؛ تیره فقط با انتخاب کاربر */
 let session: Session = { ...defaults, ...(stored ?? {}), viewState: 'normal' }
+// «کالا و کاتالوگ» یک بار به سنجاق‌های کاربران قبلی هم اضافه می‌شود
+if (!session.pinMig) session = { ...session, pinned: [...new Set(['catalog', ...session.pinned])], pinMig: 1 }
 const sSubs = new Set<() => void>()
 const subS = (f: () => void) => { sSubs.add(f); return () => sSubs.delete(f) }
 export const getSession = () => session

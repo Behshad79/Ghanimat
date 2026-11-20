@@ -496,9 +496,16 @@ export const makeSeed = () => {
     const mk = (id: string, cid: string, wh: string, items: Shipment['items'], ago: number): Order => ({ ...structuredClone(base), id, customerId: cid, createdAt: new Date(Date.now() - ago * 6e4).toISOString(), status: 'order.preparing', pay: 'زرین‌پال', channel: 'سایت', tags: ['بسته‌بندی با اسکن'], total: items.reduce((a, x) => a + x.price * x.qty, 0), fee: 0, risk: 6, edits: undefined, payHold: undefined,
       shipments: [{ id: `${id}-1`, warehouse: wh, method: 'پست پیشتاز', status: 'ship.picking', sla: m(240), items, courier: null, tracking: '', allocReason: wh === 'mahabad' ? 'رنگ سفید فقط در انبار مهاباد کافی بود.' : 'موجودی تهران کافی بود.' }] })
     s.orders.unshift(
-      mk('GH-10495', 'c2', 'mahabad', [{ productId: 'prx', unitId: '', qty: 2, price: 2900000, variationId: 'var-prx-blk' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }], 25),
-      mk('GH-10494', 'c5', 'tehran', [{ productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-blk' }], 40))
-    s.txns.unshift(...['GH-10495', 'GH-10494'].map((oid, i) => ({ ...structuredClone(s.txns.find((t) => t.orderId === 'GH-10480') ?? s.txns[0]), id: `TX-PK${i + 1}`, orderId: oid, amount: s.orders.find((o) => o.id === oid)!.total, status: 'pay.success' }))) }
+      mk('GH-10511', 'c2', 'mahabad', [{ productId: 'prx', unitId: '', qty: 2, price: 2900000, variationId: 'var-prx-blk' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }], 25),
+      mk('GH-10510', 'c5', 'tehran', [{ productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-wht' }, { productId: 'prx', unitId: '', qty: 1, price: 2900000, variationId: 'var-prx-blk' }], 40))
+    s.txns.unshift(...['GH-10511', 'GH-10510'].map((oid, i) => ({ ...structuredClone(s.txns.find((t) => t.orderId === 'GH-10480') ?? s.txns[0]), id: `TX-PK${i + 1}`, orderId: oid, amount: s.orders.find((o) => o.id === oid)!.total, status: 'pay.success' }))) }
+  // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)
+  { const who = ['نیما', 'هستی', 'یاسین']; let n = 0
+    s.orders.forEach((o) => o.shipments.forEach((sh) => { if (n >= 14 || !['ship.packed', 'ship.handed', 'ship.in_transit', 'ship.delivered'].includes(sh.status)) return; n++
+      const at = new Date(new Date(o.createdAt).getTime() + 50 * 6e4).toISOString(); const scans: NonNullable<Shipment['pack']>['scans'] = []
+      if (n % 4 === 1) { const p = s.products.find((x) => x.id !== sh.items[0]?.productId && x.code); if (p) scans.push({ at, code: p.code!, productId: p.id, owner: 'gh', ok: false, why: `«${p.title}» در این سفارش نیست.` }) }
+      sh.items.filter((i) => !i.cancelled).forEach((i) => { for (let k = 0; k < i.qty; k++) scans.push({ at, code: i.unitId || s.products.find((x) => x.id === i.productId)?.code || i.productId, productId: i.productId, variationId: i.variationId, unitId: i.unitId || undefined, owner: sh.warehouse === 'mahabad' && n % 3 === 0 ? 'ys' : 'gh', ok: true }) })
+      sh.pack = { at, by: sh.warehouse === 'mahabad' ? 'یاسین' : who[n % 2], station: sh.warehouse, scans } })) }
   // لیست خرید نمونه
   { const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
     s.buyList.push({ id: 'bl1', productId: 'p1', name: 'گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت', qty: 4, targetCost: 1500, currency: 'دلار', must: true, reason: 'پرفروش', note: 'فقط تیتانیوم طبیعی و مشکی', status: 'در لیست', addedAt: ago(20), by: 'بهشاد' },

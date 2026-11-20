@@ -127,8 +127,8 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'sp-p4', page: 'iPhone 16 Pro', url: '/product/iphone-16-pro', title: 'خرید گوشی اپل iPhone 16 Pro ظرفیت ۲۵۶ گیگابایت | غنیمت', desc: '', score: 58 },
   ],
   branches: [
-    { id: 'bh1', name: 'شعبهٔ مرکزی تهران', address: 'تهران، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '021-00000002', status: 'باز', closedMsg: '', services: 'تست حضوری، دریافت حضوری، تحویل مرجوعی', pickup: true, test: true, active: true },
-    { id: 'bh2', name: 'شعبهٔ کرج', address: 'کرج، خیابان نمونه', hours: '—', phone: '026-00000000', status: 'بستهٔ موقت', closedMsg: 'شعبهٔ کرج به‌زودی افتتاح می‌شود؛ تا آن زمان از شعبهٔ مرکزی تهران تحویل بگیرید.', services: '', pickup: false, test: false, active: false },
+    { id: 'bh1', name: 'شعبهٔ تهران', address: 'تهران، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '021-00000002', status: 'باز', closedMsg: '', services: 'تست حضوری، دریافت حضوری، تحویل مرجوعی', pickup: true, test: true, active: true },
+    { id: 'bh2', name: 'شعبهٔ مهاباد', address: 'مهاباد، خیابان نمونه', hours: 'شنبه تا پنجشنبه ۱۰ تا ۲۰', phone: '044-00000001', status: 'باز', closedMsg: '', services: 'دریافت حضوری، فروش حضوری، تحویل مرجوعی، ارسال پستی', pickup: true, test: true, active: true },
   ],
   segments: [
     { id: 'sg1', name: 'VIP', rule: 'LTV > ۳۰۰ میلیون تومان', size: 1, active: true },
@@ -148,7 +148,7 @@ export const makeEntities = (): Record<string, Rec[]> => ({
     { id: 'sm3', name: 'پست پیشتاز', scope: 'هر دو انبار · سراسر کشور', price: 90000, perKg: 15000, maxKg: 30, timeMode: 'متن ثابت', timeText: '۲ تا ۴ روز کاری', active: true },
     { id: 'sm4', name: 'تیپاکس', scope: 'هر دو انبار · مراکز استان', price: 140000, perKg: 20000, maxKg: 50, timeMode: 'متن ثابت', timeText: '۱ تا ۳ روز کاری', active: true },
     { id: 'sm5', name: 'باربری کالای سنگین', scope: 'انبار تهران · کلاس سنگین', price: 450000, perKg: 8000, maxKg: 300, timeMode: 'متن ثابت', timeText: 'هماهنگی تلفنی پس از پرداخت', active: true },
-    { id: 'sm6', name: 'دریافت حضوری از شعبه', scope: 'شعبهٔ مرکزی', price: 0, perKg: 0, maxKg: 0, timeMode: 'انتخاب بازه توسط مشتری', timeText: 'از ۲ ساعت پس از پرداخت', active: true },
+    { id: 'sm6', name: 'دریافت حضوری از شعبه', scope: 'شعبهٔ تهران و شعبهٔ مهاباد', price: 0, perKg: 0, maxKg: 0, timeMode: 'انتخاب بازه توسط مشتری', timeText: 'از ۲ ساعت پس از پرداخت', active: true },
   ],
   reports: [
     { id: 'rp1', name: 'خلاصهٔ فروش هفتگی', schedule: 'هر شنبه ساعت ۹', to: 'مدیر کل · ایمیل', format: 'PDF', active: true },

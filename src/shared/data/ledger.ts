@@ -13,7 +13,8 @@ const id = (p: string) => `${p}-${Date.now().toString(36).slice(-4).toUpperCase(
 export function reserved(x: DB, pid: string, vid: string | undefined, wh: string) {
   return x.orders.reduce((a, o) => a + o.shipments.filter((s) => s.warehouse === wh && OPEN_SHIP.includes(s.status)).reduce((b, s) => b + s.items.filter((i) => !i.cancelled && i.productId === pid && (vid === undefined || (i.variationId ?? '') === (vid ?? ''))).reduce((c, i) => c + i.qty, 0), 0), 0)
 }
-const liveLot = (x: DB, l: Lot) => !l.hold && x.stock.parties.find((p) => p.id === l.owner)?.active !== false && x.stock.warehouses.find((w) => w.id === l.warehouse)?.active !== false
+export const expired = (l: Lot, now = Date.now()) => !!l.expiry && +new Date(l.expiry) < now
+const liveLot = (x: DB, l: Lot) => !l.hold && !expired(l) && x.stock.parties.find((p) => p.id === l.owner)?.active !== false && x.stock.warehouses.find((w) => w.id === l.warehouse)?.active !== false
 
 /** موجودی سایت = موجودی فیزیکی مالکان فعال در انبارهای فعال، منهای رزرو سفارش‌های باز */
 export function syncQty(x: DB, pid: string) {
@@ -28,7 +29,7 @@ export function syncQty(x: DB, pid: string) {
 /** برداشت از موجودی یک مالک در یک انبار (قدیمی‌ترین لات اول)؛ بهای تمام‌شدهٔ میانگین برمی‌گردد */
 export function takeLots(x: DB, q: { productId: string; variationId?: string; owner: string; warehouse: string }, n: number) {
   let left = n; let cost = 0
-  const L = x.stock.lots.filter((l) => l.productId === q.productId && (l.variationId ?? '') === (q.variationId ?? '') && l.owner === q.owner && l.warehouse === q.warehouse && l.qty > 0 && !l.hold).sort((a, b) => +new Date(a.at) - +new Date(b.at))
+  const L = x.stock.lots.filter((l) => l.productId === q.productId && (l.variationId ?? '') === (q.variationId ?? '') && l.owner === q.owner && l.warehouse === q.warehouse && l.qty > 0 && !l.hold && !expired(l)).sort((a, b) => (a.expiry && b.expiry ? +new Date(a.expiry) - +new Date(b.expiry) : a.expiry ? -1 : b.expiry ? 1 : 0) || +new Date(a.at) - +new Date(b.at))
   for (const l of L) { if (!left) break; const t = Math.min(l.qty, left); l.qty -= t; left -= t; cost += t * l.cost }
   const taken = n - left
   return { taken, cost: taken ? Math.round(cost / taken) : (L[0]?.cost ?? x.stock.lots.find((l) => l.productId === q.productId && l.owner === q.owner)?.cost ?? 0) }

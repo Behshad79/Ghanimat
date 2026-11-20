@@ -40,7 +40,7 @@ export function resolveCode(d: DB, raw: string): { productId: string; variationI
   return null
 }
 
-function beep(ok: boolean) {
+export function beep(ok: boolean) {
   try { const A = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)(); const o = A.createOscillator(); const g = A.createGain(); o.connect(g); g.connect(A.destination); o.type = ok ? 'sine' : 'square'; o.frequency.value = ok ? 1320 : 220; g.gain.value = 0.08; o.start(); o.stop(A.currentTime + (ok ? 0.09 : 0.35)) } catch { /* بدون صدا */ }
   try { navigator.vibrate?.(ok ? 40 : [80, 60, 80]) } catch { /* */ }
 }

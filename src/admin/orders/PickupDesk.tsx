@@ -79,7 +79,7 @@ export function PickupReceipt({ orderId, customerId, items }: { orderId: string;
     mutate((x) => {
       const q = x.pickups.find((y) => y.orderId === orderId)
       if (q) { q.receipt = img; if (q.status !== 'handed') { q.status = 'handed'; q.handedAt = new Date().toISOString(); q.by = currentUser()?.name ?? 'شما'; q.receiver = q.receiver || x.customers.find((c) => c.id === customerId)?.name } }
-      else x.pickups.unshift({ id: `PU-${1300 + x.pickups.length}`, orderId, customerId, branch: 'شعبهٔ ونک', status: 'handed', window: '—', code: '—', deadline: new Date().toISOString(), receiver: x.customers.find((c) => c.id === customerId)?.name, relation: 'خود مشتری', handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما', receipt: img, items })
+      else x.pickups.unshift({ id: `PU-${1300 + x.pickups.length}`, orderId, customerId, branch: 'شعبهٔ تهران', status: 'handed', window: '—', code: '—', deadline: new Date().toISOString(), receiver: x.customers.find((c) => c.id === customerId)?.name, relation: 'خود مشتری', handedAt: new Date().toISOString(), by: currentUser()?.name ?? 'شما', receipt: img, items })
     }, { action: p?.receipt ? 'جایگزینی عکس رسید تحویل حضوری' : 'بارگذاری عکس رسید تحویل حضوری', target: orderId })
     toast('عکس رسید امضاشده بایگانی شد.')
   }

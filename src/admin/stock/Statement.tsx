@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownLeft, ArrowUpLeft, BarChart3, Eye } from 'lucide-react'
-import { Badge, Card, Select, Segmented } from '@/shared/ui/base'
+import { ArrowDownLeft, ArrowUpLeft, BarChart3, Eye, MessageSquare, Printer } from 'lucide-react'
+import { Badge, Button, Card, Select, Segmented } from '@/shared/ui/base'
 import { DataTable } from '@/shared/ui/table'
-import { Modal } from '@/shared/ui/overlay'
-import { canSecret, currentUser, myParty, useDB } from '@/shared/lib/store'
-import { fa, rel, toman } from '@/shared/lib/fa'
+import { Modal, toast } from '@/shared/ui/overlay'
+import { printSolo } from '@/shared/lib/printSolo'
+import { canSecret, currentUser, myParty, sendSms, useDB } from '@/shared/lib/store'
+import { fa, num, rel, toman } from '@/shared/lib/fa'
 import { shareOf, split, type StockSale } from '@/shared/data/stock'
+import { payoutBetween, tranches } from '@/shared/data/payout'
 import { chName, PartyChip, partyName, pv, whName } from './common'
 import { SaleBreakdown } from './Ownership'
 import { OrderPeek } from '../orders/OrderPeek'
@@ -18,7 +20,7 @@ type Line = { kind: 'sale'; x: StockSale; role: string; earns: number; net: numb
 export function StatementTab() {
   const d = useDB(); const s = d.stock; const nav = useNavigate()
   const mine = s.parties.find((p) => p.userId === currentUser()?.id)?.id ?? 'gh'; const sec = canSecret()
-  const [viewer, setViewer] = useState(mine); const [other, setOther] = useState('all'); const [period, setPeriod] = useState('30'); const [open, setOpen] = useState<StockSale | null>(null); const [peek, setPeek] = useState<string | null>(null)
+  const [viewer, setViewer] = useState(mine); const [other, setOther] = useState('all'); const [period, setPeriod] = useState('30'); const [open, setOpen] = useState<StockSale | null>(null); const [peek, setPeek] = useState<string | null>(null); const printRef = useRef<HTMLDivElement>(null)
   const since = period === 'all' ? 0 : Date.now() - Number(period) * 864e5
   const me = partyName(s, viewer); const you = viewer === mine
   const lines: Line[] = useMemo(() => {
@@ -42,11 +44,14 @@ export function StatementTab() {
         <label className="text-12"><span className="mb-1 block text-t2">با چه کسی</span><Select className="w-44" value={other} onChange={setOther} options={[['all', 'همهٔ طرف‌ها'], ...s.parties.filter((p) => p.id !== viewer).map((p) => [p.id, p.name] as [string, string])]} /></label>
         <Segmented value={period} onChange={setPeriod} options={PERIODS} />
         {!you && <Badge tone="info"><Eye size={12} /> نمای {me}؛ همان چیزی که او در پنل خودش می‌بیند</Badge>}
+        <span className="flex-1" />
+        <Button size="sm" icon={<Printer size={13} />} onClick={() => printSolo(printRef.current)}>چاپ یا PDF صورت‌حساب</Button>
+        {s.parties.find((p) => p.id === viewer)?.phone && <Button size="sm" icon={<MessageSquare size={13} />} onClick={() => { const pp = s.parties.find((p) => p.id === viewer)!; const lines2 = bal.map((b) => { const po = payoutBetween(d, b.p.id, viewer); const now = Math.max(0, b.v > 0 ? po.payable : -po.payable); return `${b.v > 0 ? 'طلب از' : 'بدهی به'} ${b.p.name}: ${num(Math.abs(b.v))} (قابل پرداخت الان ${num(now)})` }).join('؛ '); sendSms(pp.phone!, `غنیمت: ${pp.name} عزیز، در ${PERIODS.find(([k]) => k === period)?.[1] ?? ''} اخیر ${fa(sold.reduce((a, l) => a + l.x.qty, 0))} عدد از کالاهای شما فروخته شد. ${lines2 || 'مانده‌ای باز نیست.'}`, 'صورت‌حساب شریک', viewer); toast(`خلاصهٔ صورت‌حساب برای ${pp.name} پیامک شد.`) }}>پیامک خلاصه به {me}</Button>}
       </div>
     </Card>
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Card><p className="text-12 text-t2">{you ? 'سهم تو' : `سهم ${me}`} از فروش‌های این دوره</p><p className="mt-1 text-20 font-bold text-success">{toman(earned)}</p><p className="text-11 text-t2">سود مالکیت، سهم فروشنده و هزینهٔ ارسال · {fa(sold.length)} ردیف</p></Card>
-      {bal.length ? bal.map((b) => <Card key={b.p.id}><p className="flex items-center gap-1 text-12 text-t2">{b.v > 0 ? <ArrowDownLeft size={14} className="text-success" /> : <ArrowUpLeft size={14} className="text-danger" />}مانده با {b.p.name}</p><p className={b.v > 0 ? 'mt-1 text-20 font-bold text-success' : 'mt-1 text-20 font-bold text-danger'}>{toman(Math.abs(b.v))}</p><p className="text-12">{b.v > 0 ? `${you ? 'از' : `${me} از`} ${b.p.name} طلب ${you ? 'داری' : 'دارد'}` : `${you ? 'به' : `${me} به`} ${b.p.name} بدهکار ${you ? 'هستی' : 'است'}`}</p></Card>) : <Card><p className="text-12 text-t2">مانده</p><p className="mt-1 text-15 font-semibold text-success">با هیچ‌کس طلب یا بدهی باز نیست.</p></Card>}
+      {bal.length ? bal.map((b) => { const po = payoutBetween(d, b.p.id, viewer); const now = Math.max(0, b.v > 0 ? po.payable : -po.payable); return <Card key={b.p.id}><p className="flex items-center gap-1 text-12 text-t2">{b.v > 0 ? <ArrowDownLeft size={14} className="text-success" /> : <ArrowUpLeft size={14} className="text-danger" />}مانده با {b.p.name}</p><p className={b.v > 0 ? 'mt-1 text-20 font-bold text-success' : 'mt-1 text-20 font-bold text-danger'}>{toman(Math.abs(b.v))}</p><p className="text-12">{b.v > 0 ? `${you ? 'از' : `${me} از`} ${b.p.name} طلب ${you ? 'داری' : 'دارد'}` : `${you ? 'به' : `${me} به`} ${b.p.name} بدهکار ${you ? 'هستی' : 'است'}`}</p><p className="mt-1.5 text-11"><span className="text-success">قابل پرداخت الان: {toman(now)}</span>{Math.abs(b.v) - now > 0 && <span className="text-warning"> · بعداً: {toman(Math.abs(b.v) - now)}{po.later[0] ? ` (اولین: ${/^\d{4}-/.test(po.later[0].at) ? new Date(po.later[0].at).toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' }) : po.later[0].at})` : ''}</span>}</p></Card> }) : <Card><p className="text-12 text-t2">مانده</p><p className="mt-1 text-15 font-semibold text-success">با هیچ‌کس طلب یا بدهی باز نیست.</p></Card>}
     </div>
     <Card pad={false} title={you ? 'ریز حساب تو' : `ریز حساب ${me}`} hint="هر ردیف یک فروش یا پرداخت است؛ روی ردیف فروش بزنید تا محاسبهٔ کامل و لینک سفارش را ببینید.">
       <DataTable name={`صورت‌حساب ${me}`} empty={{ title: 'در این دوره ردیفی نیست.' }} rows={inP} rowKey={(l) => (l.kind === 'sale' ? l.x.id : l.id)} onRow={(l) => l.kind === 'sale' && setOpen(l.x)} search={(l) => (l.kind === 'sale' ? `${l.x.orderId ?? ''} ${pv(d, l.x.productId, l.x.variationId).full} ${chName(s, l.x.channel)}` : `${l.ref} تسویه`)}
@@ -56,10 +61,18 @@ export function StatementTab() {
           { key: 'r', title: 'نقش', render: (l) => <span className="text-12">{l.role}</span> },
           { key: 'e', title: you ? 'سهم تو' : 'سهم او', render: (l) => l.earns ? <span className={l.earns > 0 ? 'text-success' : 'text-danger'}>{toman(l.earns)}</span> : '—', sort: (l) => l.earns },
           { key: 'n', title: 'اثر بر حساب', render: (l) => l.net ? <span className={l.net > 0 ? 'font-medium text-success' : 'font-medium text-danger'}>{l.net > 0 ? 'طلب ' : 'بدهی '}{toman(Math.abs(l.net))}</span> : <span className="text-12 text-t2">بی‌اثر</span>, sort: (l) => l.net },
+          { key: 'w', title: 'زمان پرداخت', render: (l) => { if (l.kind !== 'sale') return null; const T = tranches(d, l.x).filter((t) => t.from === viewer || t.to === viewer); if (!T.length) return <span className="text-12 text-t3">—</span>; if (T.every((t) => t.state === 'payable')) return <Badge tone="success">قابل پرداخت</Badge>; return <span className="flex flex-col gap-0.5 text-11">{T.map((t, i) => <span key={i} className={t.state === 'payable' ? 'text-success' : 'text-warning'}>{t.state === 'payable' ? 'قابل پرداخت' : t.state === 'waiting_delivery' ? 'پس از تحویل' : t.at ? new Date(t.at).toLocaleDateString('fa-IR', { day: 'numeric', month: 'short' }) : '—'} · {toman(t.amount)}</span>)}</span> } },
           { key: 'd', title: '', render: (l) => l.kind === 'sale' ? <button className="whitespace-nowrap text-12 text-brand underline" onClick={(e) => { e.stopPropagation(); setOpen(l.x) }}>جزئیات</button> : null }]} />
     <OrderPeek id={peek} onClose={() => setPeek(null)} />
     </Card>
     <Modal open={!!open} onClose={() => setOpen(null)} title={open ? `ریز فروش ${open.orderId ?? open.id}` : ''} wide>{open && <SaleBreakdown x={open} />}</Modal>
+    <div ref={printRef} className="hidden"><div style={{ width: '190mm', padding: '6mm', fontFamily: 'inherit', color: '#000', background: '#fff' }} dir="rtl">
+      <h2 style={{ fontSize: 18, fontWeight: 700 }}>صورت‌حساب {me} با غنیمت</h2><p style={{ fontSize: 11 }}>بازه: {PERIODS.find(([k]) => k === period)?.[1]} · تاریخ چاپ: {new Date().toLocaleDateString('fa-IR')}</p>
+      <p style={{ fontSize: 12, marginTop: 8 }}>سهم از فروش‌های این دوره: <b>{toman(earned)}</b></p>
+      {bal.map((b) => { const po = payoutBetween(d, b.p.id, viewer); const now = Math.max(0, b.v > 0 ? po.payable : -po.payable); return <p key={b.p.id} style={{ fontSize: 12 }}>{b.v > 0 ? 'طلب از' : 'بدهی به'} {b.p.name}: <b>{toman(Math.abs(b.v))}</b> · قابل پرداخت الان {toman(now)}{po.later.length ? ` · بعداً: ${po.later.map((l) => `${/^\d{4}-/.test(l.at) ? new Date(l.at).toLocaleDateString('fa-IR') : l.at} ${num(Math.abs(l.amount))}`).join('، ')}` : ''}</p> })}
+      <table style={{ width: '100%', fontSize: 10, marginTop: 10, borderCollapse: 'collapse' }}><thead><tr>{['تاریخ', 'سفارش یا سند', 'شرح', 'تعداد', 'سهم', 'اثر بر حساب'].map((h) => <th key={h} style={{ borderBottom: '1px solid #000', textAlign: 'right', padding: 3 }}>{h}</th>)}</tr></thead>
+        <tbody>{inP.map((l, i) => <tr key={i}><td style={{ padding: 3 }}>{new Date(l.at).toLocaleDateString('fa-IR')}</td><td style={{ padding: 3 }}>{l.kind === 'sale' ? (l.x.orderId ?? l.x.id) : l.ref}</td><td style={{ padding: 3 }}>{l.kind === 'sale' ? pv(d, l.x.productId, l.x.variationId).full : 'پرداخت تسویه'}</td><td style={{ padding: 3 }}>{l.kind === 'sale' ? fa(l.x.qty) : ''}</td><td style={{ padding: 3 }}>{l.earns ? num(l.earns) : ''}</td><td style={{ padding: 3 }}>{l.net ? `${l.net > 0 ? 'طلب' : 'بدهی'} ${num(Math.abs(l.net))}` : ''}</td></tr>)}</tbody></table>
+    </div></div>
   </div>
 }
 

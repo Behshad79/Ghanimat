@@ -16,7 +16,7 @@ export type BuyItem = { id: string; productId?: string; name: string; qty: numbe
 /** اطلاعات بازرگانی کالا (فقط با فعال‌شدن «امور بازرگانی») */
 export type TradeInfo = { hsCode?: string; iranCode?: string; trackCode?: string; hamta?: string; origin?: string }
 export type PricePoint = { pid: string; at: string; price: number; by: string }
-export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; subCats?: string[]; kind?: 'simple' | 'variable'; attrs?: PAttr[]; variations?: Variation[]; defaultVar?: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; comingSoon?: string; incoming?: string; owner?: string; pdp?: Pdp
+export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; subCats?: string[]; kind?: 'simple' | 'variable'; attrs?: PAttr[]; variations?: Variation[]; defaultVar?: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; comingSoon?: string; incoming?: string; owner?: string; needsExpiry?: boolean; irc?: string; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 /** ویژگی کالای متغیر: سراسری (از ویژگی‌های فروشگاه) یا اختصاصی همین کالا */
 export type PAttr = { axis: string; name?: string; values: string[]; forVar: boolean; visible: boolean }
@@ -364,7 +364,7 @@ const makeSeedBase = () => ({
   articleBlocks: {} as Record<string, { id: string; t: string; v: string; href?: string; w?: number; h?: number }[]>,
   smsLog: [
     { id: 'sm1', to: '09123456789', customerId: 'c1', kind: 'وضعیت سفارش', ref: 'GH-10458', text: 'غنیمت: سفارش GH-10458 تحویل پیک شد. پیک: علی رضایی، پلاک ۲۲ ب ۳۴۵ ایران ۱۰. رصد: ghanimat.ir/t/10458', status: 'تحویل شد', at: ago(60 * 3) },
-    { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ ونک آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹.', status: 'تحویل شد', at: ago(60 * 5) },
+    { id: 'sm2', to: '09351234567', customerId: 'c2', kind: 'دریافت حضوری', ref: 'GH-10480', text: 'غنیمت: سفارش شما در شعبهٔ تهران آماده است. زمان مراجعه: فردا ساعت ۱۷ تا ۱۹.', status: 'تحویل شد', at: ago(60 * 5) },
     { id: 'sm3', to: '09120000003', customerId: 'c3', kind: 'کد ورود', ref: '', text: 'کد ورود شما به غنیمت: 52817', status: 'ارسال‌نشده (خطای اپراتور)', at: ago(60 * 9) },
   ] as { id: string; to: string; customerId?: string; kind: string; ref: string; text: string; status: string; at: string }[],
   settleDue: {} as Record<string, string>,
@@ -399,7 +399,7 @@ export const makeSeed = () => {
     ['GH-10492', 'c5', 'تلگرام', '@mahsa_t', 'کارت به کارت', 'p4', 38900000, 'order.awaiting_payment'],
     ['GH-10493', 'c6', 'بله', '0935-000-0006', 'لینک پرداخت', 'p5', 21900000, 'order.preparing'],
     ['GH-10494', 'c7', 'تلفنی', '021-تماس ورودی', 'لینک پرداخت', 'p8', 8200000, 'order.shipped'],
-    ['GH-10495', 'c1', 'حضوری در شعبه', 'شعبهٔ ونک', 'پرداخت حضوری (کارت‌خوان)', 'p9', 3000000, 'order.delivered'],
+    ['GH-10495', 'c1', 'حضوری در شعبه', 'شعبهٔ تهران', 'پرداخت حضوری (کارت‌خوان)', 'p9', 3000000, 'order.delivered'],
   ]
   rows.forEach(([id, cid, ch, handle, pay, pid, total, status], i) => {
     const o = structuredClone(base)
@@ -443,7 +443,7 @@ export const makeSeed = () => {
   { const t = s.tickets.find((x) => x.id === 'TK-482106'); if (t) { t.messages[0].atts = [{ kind: 'image', src: './products/p2-500.webp', name: 'جعبه-باز-شده.jpg', size: 412000 }, { kind: 'voice', src: '', name: 'پیام صوتی', dur: 14 }] } }
   // سفارش سایتی با دریافت حضوری که آماده شده و مشتری هنوز نیامده است
   { const o = structuredClone(base); Object.assign(o, { id: 'GH-10497', customerId: 'c2', channel: 'سایت', pay: 'زرین‌پال', total: 32900000, discount: 0, status: 'order.pickup_ready', buyer: 'person', legalId: undefined, invoiceNo: undefined, createdAt: new Date(Date.now() - 7 * 36e5).toISOString(), tags: ['دریافت حضوری'] })
-    o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10497-1', warehouse: 'tehran', method: 'دریافت حضوری از شعبه', status: 'ship.pickup_ready', sla: new Date(Date.now() + 70 * 36e5).toISOString(), packPhotos: [{ src: './products/p6-500.webp', at: new Date(Date.now() - 3 * 36e5).toISOString(), by: 'آرش' }], courier: null, tracking: '', allocReason: 'مشتری دریافت حضوری از شعبهٔ ونک را انتخاب کرد.', items: [{ productId: 'p6', unitId: '', qty: 1, price: 32900000 }] }]
+    o.shipments = [{ ...structuredClone(base.shipments[0]), id: 'GH-10497-1', warehouse: 'tehran', method: 'دریافت حضوری از شعبه', status: 'ship.pickup_ready', sla: new Date(Date.now() + 70 * 36e5).toISOString(), packPhotos: [{ src: './products/p6-500.webp', at: new Date(Date.now() - 3 * 36e5).toISOString(), by: 'آرش' }], courier: null, tracking: '', allocReason: 'مشتری دریافت حضوری از شعبهٔ تهران را انتخاب کرد.', items: [{ productId: 'p6', unitId: '', qty: 1, price: 32900000 }] }]
     s.orders.unshift(o); s.txns.unshift({ ...s.txns[0], id: 'TX-S97', orderId: 'GH-10497', amount: 32900000, gateway: 'زرین‌پال', ref: '48120117745', status: 'pay.success', at: o.createdAt }) }
   // توضیح مشتری هنگام پرداخت و درخواست تلفنی نمونه
   { const set = (id: string, note: string) => { const o = s.orders.find((x) => x.id === id); if (o) o.customerNote = note }
@@ -520,6 +520,27 @@ export const makeSeed = () => {
       s.orders.push({ ...structuredClone(base), id, customerId: ['c2', 'c5', 'c6', 'c7'][n % 4], createdAt: x.at, status: 'order.delivered', total: x.price * x.qty, discount: 0, shippingFee: 0, fee: Math.round(x.price * x.qty * 0.01), tags: [], edits: undefined, payHold: undefined, cancelInfo: undefined, refunded: undefined, refundPending: undefined,
         shipments: [{ ...structuredClone(base.shipments[0]), id: shipId, warehouse: x.warehouse, method: x.warehouse === 'mahabad' ? 'پست پیشتاز' : 'تحویل سریع (پیک)', status: 'ship.delivered', items: [{ productId: x.productId, unitId: '', qty: x.qty, price: x.price, variationId: x.variationId }], allocReason: x.warehouse === 'mahabad' ? 'کالا در انبار مهاباد بود.' : 'موجودی تهران کافی بود.', pack: { at: x.at, by: x.warehouse === 'mahabad' ? 'یاسین' : 'نیما', station: x.warehouse, scans: [{ at: x.at, code: `${x.owner.toUpperCase()}-${x.productId}`, productId: x.productId, variationId: x.variationId, owner: x.owner, ok: true }] } }] })
       x.orderId = id; x.shipId = shipId }) }
+  // یوسف: تأمین‌کنندهٔ امانی بدون انبار و کانال فروش؛ کالا در انبار تهران ماست، با قیمت توافقی ثابت، تاریخ انقضا، سری ساخت و شناسهٔ سلامت
+  { const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString(); const inD = (dd: number) => new Date(Date.now() + dd * 864e5).toISOString()
+    s.stock.parties.push({ id: 'yf', name: 'یوسف', prefix: 'YF', kind: 'partner', color: '#b45309', active: true, city: 'تهران', phone: '09120000011', account: 'internal', joinedAt: ago(24 * 20), note: 'تأمین‌کنندهٔ امانی لوازم بهداشتی؛ انبار و کانال فروش ندارد.', payout: { cycle: 'weekly', holdDays: 7, minShelfDays: 270 } })
+    s.stock.agreements.push({ owner: 'yf', seller: 'gh', sellerPct: 100, model: 'fixed_price', note: 'قیمت توافقی ثابت: مبلغ هر ورود سهم یوسف است و بقیه مال غنیمت' }, { owner: 'yf', seller: 'ys', sellerPct: 100, model: 'fixed_price' }, { owner: 'gh', seller: 'yf', sellerPct: 0, model: 'profit_share' }, { owner: 'ys', seller: 'yf', sellerPct: 0, model: 'profit_share' })
+    const base = s.products.find((x) => x.id === 'p8')!
+    const mk = (id: string, code: string, title: string, en: string, brand: string, price: number, irc: string) => ({ ...structuredClone(base), id, code, title, en, brand, category: 'آرایشی و بهداشتی', status: 'product.published', mode: 'qty', kind: 'simple', variations: undefined, attrs: undefined, priceNew: price, price, cost: undefined, image: '', images: [], rating: 4.6, reviews: 7, views: 410, health: 74, partner: false, seller: 'غنیمت (کالای امانی یوسف)', owner: 'yf', needsExpiry: true, irc, qty: { tehran: 0, mahabad: 0 } }) as Product
+    s.products.push(mk('pgl', 'GH-P-000203', 'تیغ اصلاح ژیلت Mach3 بستهٔ ۴ عددی', 'Gillette Mach3 Blades 4-pack', 'ژیلت', 850000, '1228541937482116'), mk('pfs', 'GH-P-000204', 'ژل شستشوی صورت سراوی ۲۳۶ میلی‌لیتر', 'CeraVe Foaming Facial Cleanser 236ml', 'سراوی', 1450000, '1228330918844205'))
+    s.stock.lots.push(
+      { id: 'L-301', productId: 'pgl', owner: 'yf', warehouse: 'tehran', qty: 18, cost: 600000, at: ago(24 * 18), ref: 'رسید امانی ۰۱', batch: 'MCH-2409A', expiry: inD(520) },
+      { id: 'L-302', productId: 'pfs', owner: 'yf', warehouse: 'tehran', qty: 9, cost: 1050000, at: ago(24 * 18), ref: 'رسید امانی ۰۱', batch: 'CV-24K118', expiry: inD(55) },
+      { id: 'L-303', productId: 'pfs', owner: 'yf', warehouse: 'tehran', qty: 2, cost: 1050000, at: ago(24 * 60), ref: 'رسید امانی ۰۰', batch: 'CV-23F007', expiry: inD(-4) },
+      { id: 'L-304', productId: 'pfs', owner: 'yf', warehouse: 'tehran', qty: 12, cost: 1050000, at: ago(24 * 6), ref: 'رسید امانی ۰۲', batch: 'CV-25B031', expiry: inD(610) })
+    const o0 = s.orders.find((o) => o.id === 'GH-10412')!
+    const mo = (id: string, pay: string, h: number, items: [string, number, number][]) => { const at = ago(h); const shipId = `${id}-1`
+      s.orders.push({ ...structuredClone(o0), id, customerId: 'c6', createdAt: at, status: 'order.delivered', pay, total: items.reduce((a, i) => a + i[1] * i[2], 0), discount: 0, shippingFee: 0, fee: Math.round(items.reduce((a, i) => a + i[1] * i[2], 0) * (pay.includes('اسنپ') ? 0.06 : 0.01)), tags: [], edits: undefined, payHold: undefined, cancelInfo: undefined, refunded: undefined, refundPending: undefined,
+        shipments: [{ ...structuredClone(o0.shipments[0]), id: shipId, warehouse: 'tehran', status: 'ship.delivered', deliveredAt: ago(h - 30), items: items.map(([pid, price, qty]) => ({ productId: pid, unitId: '', qty, price })), allocReason: 'کالای امانی یوسف در انبار تهران', pack: { at: ago(h - 2), by: 'نیما', station: 'tehran', scans: [] } } as Order['shipments'][number]] })
+      items.forEach(([pid, price, qty], k) => s.stock.sales.unshift({ id: `S-3${id.slice(-2)}${k}`, at: ago(h - 2), productId: pid, owner: 'yf', warehouse: 'tehran', channel: 'gh-site', qty, price, cost: pid === 'pgl' ? 600000 : 1050000, orderId: id, shipId, by: 'نیما', fee: Math.round(price * qty * (pay.includes('اسنپ') ? 0.06 : 0.01)) })) }
+    mo('GH-10530', 'اسنپ‌پی (۴ قسط)', 24 * 12, [['pgl', 850000, 2], ['pfs', 1450000, 1]])
+    mo('GH-10531', 'زرین‌پال', 24 * 11, [['pgl', 850000, 3]])
+    mo('GH-10532', 'درگاه ملت', 24 * 2, [['pfs', 1450000, 2]])
+    ;['pgl', 'pfs'].forEach((pid) => { const p = s.products.find((x) => x.id === pid)!; p.qty = { tehran: s.stock.lots.filter((l) => l.productId === pid && (!l.expiry || +new Date(l.expiry) > Date.now())).reduce((a, l) => a + l.qty, 0), mahabad: 0 } }) }
   // پرتال شرکای مستقل فعلاً غیرفعال است؛ یاسین جزئی از غنیمت است و از «مالکیت و تسویه» مدیریت می‌شود
   s.partners.forEach((p) => { p.status = 'در انتظار تأیید' })
   // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)

@@ -10,7 +10,7 @@ import { reserved } from '@/shared/data/ledger'
 import type { Order } from '@/shared/data/seed'
 import { ManualOrder } from '../orders/OrderTools'
 import { chName, ownersAt, PartyChip, pv } from './common'
-import { resolveCode } from './Packing'
+import { beep, resolveCode } from './Packing'
 
 const OPEN = ['ship.pending', 'ship.picking']
 
@@ -18,7 +18,7 @@ const OPEN = ['ship.pending', 'ship.picking']
 export function Inspect({ station, initial }: { station: string; initial?: string }) {
   const d = useDB(); const nav = useNavigate(); const [code, setCode] = useState(''); const [hit, setHit] = useState<(NonNullable<ReturnType<typeof resolveCode>> & { code: string }) | null>(() => { const r = initial ? resolveCode(d, initial) : null; return r ? { ...r, code: initial! } : null }); const [err, setErr] = useState('')
   const [manual, setManual] = useState(false); const [addTo, setAddTo] = useState(false); const [price, setPrice] = useState<string | null>(null)
-  const go = (c: string) => { const r = resolveCode(d, c.trim()); setCode(''); setPrice(null); if (!r) { setErr(`«${c}» در سیستم تعریف نشده است.`); setHit(null); return } setErr(''); setHit({ ...r, code: c.trim() }) }
+  const go = (c: string) => { const r = resolveCode(d, c.trim()); setCode(''); setPrice(null); if (!r) { beep(false); setErr(`«${c}» در سیستم تعریف نشده است.`); setHit(null); return } beep(true); setErr(''); setHit({ ...r, code: c.trim() }) }
   const p = hit ? d.products.find((x) => x.id === hit.productId && (!hit.variationId || x.variations?.some((v) => v.id === hit.variationId))) ?? d.products.find((x) => x.id === hit.productId) : undefined
   const v = hit?.variationId ? p?.variations?.find((x) => x.id === hit.variationId) : undefined
   const unit = hit?.unitId ? d.units.find((u) => u.id === hit.unitId) : undefined

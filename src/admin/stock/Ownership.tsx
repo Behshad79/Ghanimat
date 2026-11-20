@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeftRight, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
+import { Undo2, ArrowLeftRight, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Segmented, Select, Tabs, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
@@ -9,9 +9,10 @@ import { Barcode } from '@/shared/ui/codes'
 import { can, canSecret, currentUser, myParty, mutate, useDB } from '@/shared/lib/store'
 import { fa, num, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
-import { balances, shareOf, split, type StockSale } from '@/shared/data/stock'
+import { balances, shareOf, split, type OwnerReturn, type StockSale } from '@/shared/data/stock'
 import { chName, codeFor, ownersAt, PartyChip, partyName, pv, productsWithLots, syncQty, takeLots, whName } from './common'
 import { useTab } from '../pages/_shared'
+import { payoutBetween } from '@/shared/data/payout'
 import { PartyManager } from './Parties'
 import { PerformanceTab, StatementTab } from './Statement'
 import { ExtTab } from './ExtSites'
@@ -48,12 +49,12 @@ export function Ownership() {
 
 /* ───────── موجودی ───────── */
 function StockTab() {
-  const d = useDB(); const s = d.stock; const [sp] = useSearchParams(); const [intake, setIntake] = useState(sp.get('intake') === '1'); const [move, setMove] = useState(false)
+  const d = useDB(); const s = d.stock; const [sp] = useSearchParams(); const [intake, setIntake] = useState(sp.get('intake') === '1'); const [move, setMove] = useState(false); const [ret, setRet] = useState<{ lotId?: string } | null>(null)
   const whs = s.warehouses.filter((w) => w.active)
   const rows = productsWithLots(d).flatMap((p) => (p.variations?.length ? p.variations.map((v) => ({ p, vid: v.id })) : [{ p, vid: undefined as string | undefined }])).filter((r) => s.lots.some((l) => l.productId === r.p.id && (l.variationId ?? '') === (r.vid ?? '')))
   return (
     <div className="space-y-4">
-      <Card pad={false} title="موجودی هر کالا: انبار × مالک" hint="یک کالا یا یک تنوع (ترکیب رنگ، حافظه و هر ویژگی دیگر) می‌تواند هم‌زمان در چند انبار و مال چند نفر باشد؛ عدد سایت جمع همهٔ این خانه‌هاست." actions={<div className="flex gap-2"><Button size="sm" icon={<ArrowLeftRight size={13} />} onClick={() => setMove(true)}>انتقال بین انبارها</Button><Button size="sm" variant="primary" icon={<PackagePlus size={13} />} onClick={() => setIntake(true)}>ورود موجودی</Button></div>}>
+      <Card pad={false} title="موجودی هر کالا: انبار × مالک" hint="یک کالا یا یک تنوع (ترکیب رنگ، حافظه و هر ویژگی دیگر) می‌تواند هم‌زمان در چند انبار و مال چند نفر باشد؛ عدد سایت جمع همهٔ این خانه‌هاست." actions={<div className="flex gap-2"><Button size="sm" icon={<Undo2 size={13} />} onClick={() => setRet({})}>برگشت کالا به مالک</Button><Button size="sm" icon={<ArrowLeftRight size={13} />} onClick={() => setMove(true)}>انتقال بین انبارها</Button><Button size="sm" variant="primary" icon={<PackagePlus size={13} />} onClick={() => setIntake(true)}>ورود موجودی</Button></div>}>
         <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-13">
           <thead><tr className="border-b border-line text-right text-12 text-t2"><th className="px-4 py-2.5 font-medium">کالا و تنوع</th>{whs.map((w) => <th key={w.id} className="px-3 py-2.5 font-medium">{w.name}<span className="block text-[10px] font-normal">گرداننده: {partyName(s, w.operator)}</span></th>)}<th className="px-3 py-2.5 font-medium">جمع به تفکیک مالک</th></tr></thead>
           <tbody>{rows.map(({ p, vid }) => { const { vname } = pv(d, p.id, vid); const tot = new Map<string, number>(); return (
@@ -64,12 +65,15 @@ function StockTab() {
             </tr>) })}</tbody>
         </table></div>
       </Card>
+      <ExpiryAlerts onReturn={(pre) => setRet(pre)} />
       <Card title="ورودها و لات‌های موجودی" pad={false}>
         <DataTable name="لات‌های موجودی" empty={{ title: 'لاتی ثبت نشده است' }} rows={[...s.lots].sort((a, b) => +new Date(b.at) - +new Date(a.at))} rowKey={(l) => l.id} search={(l) => `${l.id} ${pv(d, l.productId, l.variationId).full} ${partyName(s, l.owner)} ${l.ref ?? ''}`}
-          cols={[{ key: 'id', title: 'شناسه', render: (l) => <span className="font-mono text-12">{l.id}</span> }, { key: 'p', title: 'کالا', render: (l) => pv(d, l.productId, l.variationId).full }, { key: 'o', title: 'مالک', render: (l) => <PartyChip s={s} id={l.owner} /> }, { key: 'w', title: 'انبار', render: (l) => whName(s, l.warehouse) }, { key: 'q', title: 'مانده', render: (l) => fa(l.qty), sort: (l) => l.qty }, { key: 'c', title: 'بهای تمام‌شدهٔ واحد', render: (l) => (canSecret() || l.owner === myParty() ? toman(l.cost) : <span className="text-t3">محرمانه</span>), sort: (l) => l.cost }, { key: 'code', title: 'کد برچسب', render: (l) => <bdi dir="ltr" className="font-mono text-12">{codeFor(d, l.owner, l.productId, l.variationId)}</bdi> }, { key: 'r', title: 'منشأ', render: (l) => <span className="text-12 text-t2">{l.ref ?? '—'} · {rel(l.at)}</span> }]} />
+          cols={[{ key: 'id', title: 'شناسه', render: (l) => <span className="font-mono text-12">{l.id}</span> }, { key: 'p', title: 'کالا', render: (l) => pv(d, l.productId, l.variationId).full }, { key: 'o', title: 'مالک', render: (l) => <PartyChip s={s} id={l.owner} /> }, { key: 'w', title: 'انبار', render: (l) => whName(s, l.warehouse) }, { key: 'q', title: 'مانده', render: (l) => fa(l.qty), sort: (l) => l.qty }, { key: 'c', title: 'بهای تمام‌شدهٔ واحد', render: (l) => (canSecret() || l.owner === myParty() ? toman(l.cost) : <span className="text-t3">محرمانه</span>), sort: (l) => l.cost }, { key: 'code', title: 'کد برچسب', render: (l) => <bdi dir="ltr" className="font-mono text-12">{codeFor(d, l.owner, l.productId, l.variationId)}</bdi> }, { key: 'ex', title: 'انقضا و سری', render: (l) => l.expiry ? <span className="text-12">{expBadge(l.expiry)}{l.batch && <bdi dir="ltr" className="mr-1 font-mono text-t2">{l.batch}</bdi>}</span> : <span className="text-t3">—</span>, sort: (l) => (l.expiry ? +new Date(l.expiry) : Infinity) }, { key: 'r', title: 'منشأ', render: (l) => <span className="text-12 text-t2">{l.ref ?? '—'} · {rel(l.at)}</span> }]} />
       </Card>
       <IntakeModal open={intake} onClose={() => setIntake(false)} />
       <MoveModal open={move} onClose={() => setMove(false)} />
+      <OwnerReturnModal pre={ret} onClose={() => setRet(null)} />
+      <OwnerReturns />
     </div>
   )
 }
@@ -83,13 +87,22 @@ function ProductPicker({ pid, vid, onChange }: { pid: string; vid: string; onCha
 
 function IntakeModal({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: { pid: string; vid?: string } }) {
   const d = useDB(); const s = d.stock
-  const [f, setF] = useState({ pid: preset?.pid ?? 'prx', vid: preset?.vid ?? 'var-prx-blk', owner: 'gh', wh: 'tehran', qty: 1, cost: 0, ref: '' })
-  const ok = f.qty > 0 && f.cost > 0
-  const save = () => { mutate((x) => { x.stock.lots.unshift({ id: uid('L'), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, qty: f.qty, cost: f.cost, at: new Date().toISOString(), ref: f.ref || `ورود توسط ${by()}` }); syncQty(x, f.pid) }, { action: 'ورود موجودی با مالک مشخص', target: `${pv(d, f.pid, f.vid).full} · ${partyName(s, f.owner)} · ${whName(s, f.wh)}` }); toast(`${fa(f.qty)} عدد به نام ${partyName(s, f.owner)} در ${whName(s, f.wh)} ثبت شد.`); onClose() }
+  const [f, setF] = useState({ pid: preset?.pid ?? 'prx', vid: preset?.vid ?? 'var-prx-blk', owner: 'gh', wh: 'tehran', qty: 1, cost: 0, ref: '', expiry: '', batch: '', irc: '' })
+  const prod = d.products.find((x) => x.id === f.pid); const needs = !!prod?.needsExpiry; const minShelf = s.parties.find((p) => p.id === f.owner)?.payout?.minShelfDays ?? 0
+  const shelfDays = f.expiry ? Math.round((+new Date(f.expiry) - Date.now()) / 864e5) : null
+  const ok = f.qty > 0 && f.cost > 0 && (!needs || (!!f.expiry && !!f.batch.trim() && !!(prod?.irc || f.irc.trim())))
+  const save = () => { mutate((x) => { x.stock.lots.unshift({ id: uid('L'), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, qty: f.qty, cost: f.cost, at: new Date().toISOString(), ref: f.ref || `ورود توسط ${by()}`, expiry: f.expiry || undefined, batch: f.batch.trim() || undefined }); if (f.irc.trim()) { const q = x.products.find((y) => y.id === f.pid); if (q) q.irc = f.irc.trim() } syncQty(x, f.pid) }, { action: 'ورود موجودی با مالک مشخص', target: `${pv(d, f.pid, f.vid).full} · ${partyName(s, f.owner)} · ${whName(s, f.wh)}` }); toast(`${fa(f.qty)} عدد به نام ${partyName(s, f.owner)} در ${whName(s, f.wh)} ثبت شد.`); onClose() }
   return <Modal open={open} onClose={onClose} title="ورود موجودی با مالک مشخص" wide footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" disabled={!ok} onClick={save}>ثبت ورود</Button></>}>
     <div className="space-y-3"><ProductPicker pid={f.pid} vid={f.vid} onChange={(pid, vid) => setF({ ...f, pid, vid })} />
       <div className="grid gap-3 sm:grid-cols-2"><Field label="مالک (تأمین‌کننده)" help="کسی که پول این کالا را داده است"><Select value={f.owner} onChange={(v) => setF({ ...f, owner: v })} options={s.parties.filter((p) => p.active).map((p) => [p.id, `${p.name} (${p.prefix})`] as [string, string])} /></Field><Field label="انبار محل نگهداری"><Select value={f.wh} onChange={(v) => setF({ ...f, wh: v })} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} /></Field></div>
       <div className="grid gap-3 sm:grid-cols-3"><Field label="تعداد"><Input type="number" min={1} className="ltr text-left font-mono" value={f.qty} onChange={(e) => setF({ ...f, qty: Math.max(0, +e.target.value) })} /></Field><Field label="بهای تمام‌شدهٔ هر عدد (تومان)"><Input type="number" min={0} className="ltr text-left font-mono" value={f.cost || ''} onChange={(e) => setF({ ...f, cost: Math.max(0, +e.target.value) })} /></Field><Field label="سند یا منشأ (اختیاری)"><Input value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} placeholder="مثلاً فاکتور خرید اربیل" /></Field></div>
+      <div className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-3">
+        <p className="text-12 font-semibold sm:col-span-3">{needs ? 'کالای تاریخ‌دار (آرایشی، بهداشتی، خوراکی): این سه مورد اجباری است' : 'تاریخ انقضا و سری ساخت (اختیاری؛ برای کالای تاریخ‌دار)'}</p>
+        <Field label="تاریخ انقضا" error={needs && !f.expiry ? 'اجباری' : shelfDays !== null && shelfDays < 0 ? 'این کالا منقضی شده است' : undefined}><Input type="date" value={f.expiry} onChange={(e) => setF({ ...f, expiry: e.target.value })} /></Field>
+        <Field label="شمارهٔ سری ساخت (Batch/LOT)" error={needs && !f.batch.trim() ? 'اجباری' : undefined}><Input className="ltr text-left font-mono" value={f.batch} onChange={(e) => setF({ ...f, batch: e.target.value })} /></Field>
+        <Field label="شناسهٔ سلامت (IRC)" help={prod?.irc ? `ثبت‌شده: ${prod.irc}` : 'از برچسب سازمان غذا و دارو'} error={needs && !prod?.irc && !f.irc.trim() ? 'اجباری' : undefined}><Input className="ltr text-left font-mono" value={f.irc || prod?.irc || ''} onChange={(e) => setF({ ...f, irc: e.target.value })} /></Field>
+        {shelfDays !== null && minShelf > 0 && shelfDays < minShelf && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning sm:col-span-3">ماندگاری این محموله {fa(Math.max(0, shelfDays))} روز است؛ طبق قرارداد {partyName(s, f.owner)} حداقل {fa(minShelf)} روز لازم است. قبل از پذیرفتن، با او هماهنگ کنید.</p>}
+      </div>
       <p className="flex items-start gap-1.5 rounded-lg bg-info-bg px-3 py-2 text-12 text-info"><Info size={14} className="mt-0.5 shrink-0" />کد برچسب این ورود: <bdi dir="ltr" className="font-mono font-bold">{codeFor(d, f.owner, f.pid, f.vid || undefined)}</bdi>. همین کد روی جعبه چسبانده می‌شود تا هنگام بسته‌بندی، مالک خودکار تشخیص داده شود.</p></div>
   </Modal>
 }
@@ -143,26 +156,40 @@ function OfflineSale({ open, onClose }: { open: boolean; onClose: () => void }) 
 
 /* ───────── تسویه ───────── */
 function SettleTab() {
-  const d = useDB(); const s = d.stock; const [pay, setPay] = useState<{ from: string; to: string; amount: number } | null>(null)
+  const d = useDB(); const s = d.stock; const nav = useNavigate(); const [pay, setPay] = useState<{ from: string; to: string; amount: number; payable: number } | null>(null); const [open, setOpen] = useState<string | null>(null)
   const pairs = balances(s).filter((b) => canSecret() || b.a === myParty() || b.b === myParty())
+  const dt = (k: string) => (/^\d{4}-/.test(k) ? new Date(k).toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' }) : k)
   return <div className="space-y-4">
-    <div className="grid gap-3 lg:grid-cols-2">{pairs.map((b) => { const from = b.net >= 0 ? b.a : b.b; const to = b.net >= 0 ? b.b : b.a; const flows = s.sales.flatMap((x) => split(s, x).flows.filter((f) => (f.from === b.a && f.to === b.b) || (f.from === b.b && f.to === b.a)).map((f) => ({ ...f, x })))
-      return <Card key={b.a + b.b} title={<span className="flex items-center gap-2"><PartyChip s={s} id={b.a} />و<PartyChip s={s} id={b.b} /></span>} actions={b.net !== 0 && <Button size="sm" variant="primary" icon={<HandCoins size={13} />} onClick={() => setPay({ from, to, amount: Math.abs(b.net) })}>ثبت پرداخت تسویه</Button>}>
-        <p className="text-15">{b.net === 0 ? <span className="text-success">مانده صفر است.</span> : <><b>{partyName(s, from)}</b> به <b>{partyName(s, to)}</b> <b className="text-warning">{toman(Math.abs(b.net))}</b> بدهکار است.</>}</p>
-        <ul className="mt-3 max-h-56 space-y-1 overflow-y-auto text-12">{flows.map((f, i) => <li key={i} className="flex justify-between gap-2 border-b border-line py-1 last:border-0"><span>{pv(d, f.x.productId, f.x.variationId).full} ×{fa(f.x.qty)} · {chName(s, f.x.channel)} <span className="text-t2">({f.why})</span></span><span className="shrink-0 font-mono">{partyName(s, f.from)} ← {partyName(s, f.to)}: {num(f.amount)}</span></li>)}
-          {s.settlements.filter((t) => [t.from, t.to].includes(b.a) && [t.from, t.to].includes(b.b)).map((t) => <li key={t.id} className="flex justify-between gap-2 py-1 text-success"><span>پرداخت تسویه {t.note ? `· ${t.note}` : ''} · {rel(t.at)}</span><span className="font-mono">−{num(t.amount)}</span></li>)}</ul>
+    <p className="flex items-start gap-1.5 rounded-xl bg-info-bg px-3 py-2 text-12 text-info"><Info size={14} className="mt-0.5 shrink-0" />«قابل پرداخت» فقط پولی است که هم به حساب ما رسیده (مثلاً قسط اسنپ‌پی) و هم مهلت مرجوعی کالایش گذشته است. بقیه با تاریخ در «بعداً» می‌ماند تا پول کالایی را که دو ماه دیگر از اقساطی می‌رسد، الان پرداخت نکنیم. قاعدهٔ هر روش پرداخت در تب «شرکا، انبارها و قرارداد سهم» قابل تغییر است.</p>
+    <div className="grid gap-3 lg:grid-cols-2">{pairs.map((p0) => { const po = payoutBetween(d, p0.a, p0.b); const from = po.total >= 0 ? p0.a : p0.b; const to = po.total >= 0 ? p0.b : p0.a; const sg = po.total >= 0 ? 1 : -1; const payable = Math.max(0, po.payable * sg); const key = p0.a + p0.b
+      return <Card key={key} title={<span className="flex items-center gap-2"><PartyChip s={s} id={p0.a} />و<PartyChip s={s} id={p0.b} /></span>} actions={po.total !== 0 && <Button size="sm" variant="primary" icon={<HandCoins size={13} />} onClick={() => setPay({ from, to, amount: Math.abs(po.total), payable })}>ثبت پرداخت تسویه</Button>}>
+        {po.total === 0 ? <p className="text-15 text-success">مانده صفر است.</p> : <>
+          <p className="text-13"><b>{partyName(s, from)}</b> در کل <b>{toman(Math.abs(po.total))}</b> به <b>{partyName(s, to)}</b> بدهکار است.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-success-bg p-2.5"><p className="text-11 text-success">قابل پرداخت همین حالا</p><p className="text-18 font-bold text-success">{toman(payable)}</p></div>
+            <div className="rounded-xl bg-warning-bg p-2.5"><p className="text-11 text-warning">بعداً قابل پرداخت می‌شود</p><p className="text-18 font-bold text-warning">{toman(Math.max(0, Math.abs(po.total) - payable))}</p></div>
+          </div>
+          {po.later.length > 0 && <ul className="mt-3 space-y-1 text-12">{po.later.map((l) => <li key={l.at} className="flex justify-between gap-2 border-b border-line py-1 last:border-0"><span><b>{dt(l.at)}</b> <span className="text-t2">· {l.why}</span></span><span className="shrink-0 font-semibold">{toman(Math.abs(l.amount))}</span></li>)}</ul>}
+          <button className="mt-2 text-12 text-brand underline" onClick={() => setOpen(open === key ? null : key)}>{open === key ? 'بستن ریز اقساط' : 'ریز هر فروش و قسط'}</button>
+          {open === key && <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto text-11">{po.tranches.map((t, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-neutral-bg px-2 py-1"><span>{t.sale.orderId ? <button className="font-mono text-brand underline" onClick={() => nav(`/admin/orders/${t.sale.orderId}`)}>{t.sale.orderId}</button> : <span className="font-mono">{t.sale.id}</span>} · {pv(d, t.sale.productId, t.sale.variationId).full} · <span className="text-t2">{t.why}</span></span><span className="flex items-center gap-1.5">{t.state === 'payable' ? <Badge tone="success">قابل پرداخت</Badge> : t.state === 'waiting_delivery' ? <Badge>در انتظار تحویل</Badge> : <Badge tone="warning">{t.at ? dt(t.at.slice(0, 10)) : '—'}</Badge>}<span className="font-mono">{partyName(s, t.from)} ← {partyName(s, t.to)}: {num(t.amount)}</span></span></li>)}</ul>}
+        </>}
+        {s.settlements.some((t) => [t.from, t.to].includes(p0.a) && [t.from, t.to].includes(p0.b)) && <ul className="mt-3 space-y-0.5 border-t border-line pt-2 text-12">{s.settlements.filter((t) => [t.from, t.to].includes(p0.a) && [t.from, t.to].includes(p0.b)).map((t) => <li key={t.id} className="flex justify-between text-success"><span>پرداخت {partyName(s, t.from)} به {partyName(s, t.to)} {t.note ? `· ${t.note}` : ''} · {rel(t.at)}</span><span className="font-mono">{num(t.amount)}</span></li>)}</ul>}
       </Card> })}</div>
     <Card pad={false} title="پرداخت‌های تسویه"><DataTable name="پرداخت‌های تسویه" empty={{ title: 'پرداختی ثبت نشده است' }} rows={s.settlements} rowKey={(t) => t.id} cols={[{ key: 'id', title: 'شناسه', render: (t) => <span className="font-mono text-12">{t.id}</span> }, { key: 'f', title: 'پرداخت‌کننده', render: (t) => <PartyChip s={s} id={t.from} /> }, { key: 't', title: 'دریافت‌کننده', render: (t) => <PartyChip s={s} id={t.to} /> }, { key: 'a', title: 'مبلغ', render: (t) => toman(t.amount), sort: (t) => t.amount }, { key: 'r', title: 'شمارهٔ پیگیری', render: (t) => <bdi dir="ltr" className="font-mono text-12">{t.ref}</bdi> }, { key: 'b', title: 'ثبت', render: (t) => <span className="text-12 text-t2">{t.by} · {rel(t.at)}</span> }]} /></Card>
     <SettleModal v={pay} onClose={() => setPay(null)} />
   </div>
 }
 
-function SettleModal({ v, onClose }: { v: { from: string; to: string; amount: number } | null; onClose: () => void }) {
+function SettleModal({ v, onClose }: { v: { from: string; to: string; amount: number; payable: number } | null; onClose: () => void }) {
   const d = useDB(); const s = d.stock; const [amount, setAmount] = useState(0); const [ref, setRef] = useState(''); const [note, setNote] = useState('')
-  const a = amount || v?.amount || 0
-  const save = () => { if (!v) return; mutate((x) => { x.stock.settlements.unshift({ id: uid('ST'), at: new Date().toISOString(), from: v.from, to: v.to, amount: a, ref, by: by(), note }) }, { action: 'ثبت پرداخت تسویه بین شرکا', target: `${partyName(s, v.from)} ← ${partyName(s, v.to)}: ${num(a)}` }); toast('پرداخت تسویه ثبت شد و از مانده کم شد.'); setAmount(0); setRef(''); setNote(''); onClose() }
+  const a = amount || v?.payable || 0
+  const over = v ? a > v.payable : false
+  const save = () => { if (!v) return; mutate((x) => { x.stock.settlements.unshift({ id: uid('ST'), at: new Date().toISOString(), from: v.from, to: v.to, amount: a, ref, by: by(), note: note || (over ? 'پیش‌پرداخت (بیش از قابل پرداخت)' : undefined) }) }, { action: 'ثبت پرداخت تسویه بین شرکا', target: `${partyName(s, v.from)} ← ${partyName(s, v.to)}: ${num(a)}`, after: over ? `پیش‌پرداخت ${num(a - v.payable)}` : 'در حد قابل پرداخت' }); toast('پرداخت تسویه ثبت شد و از مانده کم شد.'); setAmount(0); setRef(''); setNote(''); onClose() }
   return <Modal open={!!v} onClose={onClose} title="ثبت پرداخت تسویه" footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" disabled={!ref.trim() || a <= 0} onClick={save}>ثبت پرداخت</Button></>}>
-    {v && <div className="space-y-3"><p className="text-13"><b>{partyName(s, v.from)}</b> به <b>{partyName(s, v.to)}</b> · مانده: {toman(v.amount)}</p><Field label="مبلغ پرداختی (تومان)" help="پرداخت بخشی از مانده هم مجاز است"><Input type="number" className="ltr text-left font-mono" value={a} onChange={(e) => setAmount(+e.target.value)} /></Field><Field label="شمارهٔ پیگیری بانکی"><Input className="ltr text-left font-mono" value={ref} onChange={(e) => setRef(e.target.value)} /></Field><Field label="یادداشت (اختیاری)"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field></div>}
+    {v && <div className="space-y-3"><p className="text-13"><b>{partyName(s, v.from)}</b> به <b>{partyName(s, v.to)}</b> · مانده کل: {toman(v.amount)} · <b className="text-success">قابل پرداخت الان: {toman(v.payable)}</b></p>
+      <Field label="مبلغ پرداختی (تومان)" help="پیش‌فرض همان «قابل پرداخت» است"><Input type="number" className="ltr text-left font-mono" value={a} onChange={(e) => setAmount(+e.target.value)} /></Field>
+      {over && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">{toman(a - v.payable)} از این مبلغ هنوز از درگاه یا اقساطی به حساب ما نرسیده یا مهلت مرجوعی‌اش تمام نشده است. اگر ثبت کنید، پیش‌پرداخت حساب می‌شود و ریسک مرجوعی با ماست.</p>}
+      <Field label="شمارهٔ پیگیری بانکی"><Input className="ltr text-left font-mono" value={ref} onChange={(e) => setRef(e.target.value)} /></Field><Field label="یادداشت (اختیاری)"><Input value={note} onChange={(e) => setNote(e.target.value)} /></Field></div>}
   </Modal>
 }
 
@@ -216,10 +243,21 @@ function SetupTab() {
       <div className="grid gap-2 sm:grid-cols-[1fr_.7fr_.7fr_.7fr_auto] sm:items-end"><Field label="نام کانال"><Input value={nc.name} onChange={(e) => setNc({ ...nc, name: e.target.value })} /></Field><Field label="فروشنده"><Select value={nc.seller} onChange={(v) => setNc({ ...nc, seller: v })} options={s.parties.map((p) => [p.id, p.name] as [string, string])} /></Field><Field label="پول دست"><Select value={nc.collector} onChange={(v) => setNc({ ...nc, collector: v })} options={s.parties.map((p) => [p.id, p.name] as [string, string])} /></Field><Field label="برند"><Input value={nc.brand} onChange={(e) => setNc({ ...nc, brand: e.target.value })} /></Field>
         <Button variant="primary" icon={<Plus size={14} />} disabled={!nc.name.trim()} onClick={() => { mutate((x) => { x.stock.channels.push({ id: `ch${Date.now().toString(36).slice(-4)}`, name: nc.name.trim(), seller: nc.seller, collector: nc.collector, brand: nc.brand, active: true }) }, { action: 'افزودن کانال فروش', target: nc.name }); setNc({ ...nc, name: '' }) }}>افزودن</Button></div>
     </Card>
-    <Card title={<span className="flex items-center gap-1.5"><HandCoins size={15} />قرارداد سهم (درصد سود برای فروشنده)</span>} hint="ردیف: مالک کالا · ستون: فروشنده. عدد یعنی فروشنده چند درصد از سود را نگه می‌دارد؛ بقیهٔ سود به‌اضافهٔ بهای تمام‌شده به مالک می‌رسد.">
+    <Card className="xl:col-span-2" title={<span className="flex items-center gap-1.5"><HandCoins size={15} />قرارداد سهم میان مالک و فروشنده</span>} hint="ردیف: مالک کالا · ستون: فروشنده. برای هر جفت مدل قرارداد را انتخاب کنید.">
       <div className="overflow-x-auto"><table className="w-full text-12"><thead><tr><th className="p-2 text-right text-t2">مالک ↓ / فروشنده ←</th>{s.parties.map((p) => <th key={p.id} className="p-2"><PartyChip s={s} id={p.id} /></th>)}</tr></thead>
-        <tbody>{s.parties.map((o) => <tr key={o.id} className="border-t border-line"><td className="p-2"><PartyChip s={s} id={o.id} /></td>{s.parties.map((sl) => <td key={sl.id} className="p-2 text-center">{o.id === sl.id ? <span className="text-t3">—</span> : <span className="inline-flex items-center gap-1"><Input type="number" min={0} max={100} className="ltr h-8 w-16 text-center font-mono" value={s.agreements.find((a) => a.owner === o.id && a.seller === sl.id)?.sellerPct ?? 0} onChange={(e) => setPct(o.id, sl.id, Math.min(100, Math.max(0, +e.target.value)))} />٪</span>}</td>)}</tr>)}</tbody></table></div>
-      <div className="mt-3 rounded-lg bg-neutral-bg p-3 text-12 leading-6"><b>نمونه با اعداد فعلی:</b> هدفون ریمکس با بهای تمام‌شدهٔ ۱٬۶۰۰٬۰۰۰ و فروش ۲٬۹۰۰٬۰۰۰ (سود ۱٬۳۰۰٬۰۰۰). اگر یاسین کالای غنیمت را بفروشد، {fa(s.agreements.find((a) => a.owner === 'gh' && a.seller === 'ys')?.sellerPct ?? 0)}٪ سود ({toman(Math.round(1300000 * (s.agreements.find((a) => a.owner === 'gh' && a.seller === 'ys')?.sellerPct ?? 0) / 100))}) مال یاسین است و {toman(2900000 - Math.round(1300000 * (s.agreements.find((a) => a.owner === 'gh' && a.seller === 'ys')?.sellerPct ?? 0) / 100))} به غنیمت می‌رسد.</div>
+        <tbody>{s.parties.map((o) => <tr key={o.id} className="border-t border-line align-top"><td className="p-2"><PartyChip s={s} id={o.id} /></td>{s.parties.map((sl) => { const ag = s.agreements.find((a) => a.owner === o.id && a.seller === sl.id); const m = ag?.model ?? 'profit_share'; return <td key={sl.id} className="p-2 text-center">{o.id === sl.id ? <span className="text-t3">—</span> : <div className="mx-auto flex w-44 flex-col gap-1">
+          <select aria-label={`مدل قرارداد ${o.name} با ${sl.name}`} className="h-8 rounded-md border border-line bg-surface px-1 text-11" value={m} onChange={(e) => mutate((x) => { const a = x.stock.agreements.find((y) => y.owner === o.id && y.seller === sl.id); const v = e.target.value as typeof m; if (a) a.model = v; else x.stock.agreements.push({ owner: o.id, seller: sl.id, sellerPct: v === 'fixed_price' ? 100 : 20, model: v }) }, { action: 'تغییر مدل قرارداد سهم', target: `${o.name} ← ${sl.name}: ${e.target.value}` })}><option value="profit_share">تقسیم سود</option><option value="fixed_price">قیمت توافقی ثابت</option><option value="commission">کمیسیون از مبلغ فروش</option></select>
+          {m === 'fixed_price' ? <span className="text-[10px] leading-4 text-t2">سهم مالک = مبلغ توافقی هر ورود؛ بقیه مال فروشنده</span> : <span className="inline-flex items-center justify-center gap-1"><Input type="number" min={0} max={100} className="ltr h-8 w-16 text-center font-mono" value={ag?.sellerPct ?? 0} onChange={(e) => setPct(o.id, sl.id, Math.min(100, Math.max(0, +e.target.value)))} /><span className="text-[10px] text-t2">{m === 'commission' ? '٪ از فروش' : '٪ از سود'}</span></span>}
+        </div>}</td> })}</tr>)}</tbody></table></div>
+      <div className="mt-3 grid gap-2 text-12 leading-6 lg:grid-cols-3">
+        <p className="rounded-lg bg-neutral-bg p-2.5"><b>تقسیم سود:</b> فروشنده درصدی از سود را برمی‌دارد؛ بهای تمام‌شده و بقیهٔ سود مال مالک. مثل یاسین.</p>
+        <p className="rounded-lg bg-neutral-bg p-2.5"><b>قیمت توافقی ثابت:</b> مالک برای هر عدد همان مبلغ توافقی را می‌گیرد؛ تخفیف، کارمزد و سود با فروشنده. پیشنهادی برای تأمین‌کنندهٔ امانی مثل یوسف.</p>
+        <p className="rounded-lg bg-neutral-bg p-2.5"><b>کمیسیون:</b> فروشنده درصدی از مبلغ خالص فروش را برمی‌دارد و بقیه مال مالک؛ بهای خرید مالک لازم نیست.</p>
+      </div>
+    </Card>
+    <Card className="xl:col-span-2" title={<span className="flex items-center gap-1.5"><Info size={15} />زمان رسیدن پول هر روش پرداخت</span>} hint="پرداخت به شرکا و تأمین‌کنندگان فقط بعد از رسیدن همان پول به حساب ما و گذشت مهلت مرجوعی انجام می‌شود. قالب: روز:درصد، مثلاً «30:50، 60:50» یعنی نیمی ۳۰ روز بعد و نیمی ۶۰ روز بعد.">
+      <ul className="grid gap-2 lg:grid-cols-2">{(s.payTerms ?? []).map((t, i) => <PayTermRow key={t.match + i} i={i} />)}</ul>
+      <Button size="sm" className="mt-2" icon={<Plus size={13} />} onClick={() => mutate((x) => { x.stock.payTerms = [...(x.stock.payTerms ?? []), { match: 'روش تازه', label: 'روش پرداخت تازه', tranches: [{ days: 0, pct: 100 }] }] }, { action: 'افزودن قاعدهٔ زمان رسیدن پول', target: 'روش تازه' })}>افزودن روش پرداخت</Button>
     </Card>
   </div>
 }
@@ -238,3 +276,57 @@ export function ProductOwnership({ pid }: { pid: string }) {
 }
 
 export type { DB }
+
+function PayTermRow({ i }: { i: number }) {
+  const d = useDB(); const t = d.stock.payTerms[i]; const [txt, setTxt] = useState(t.tranches.map((x) => `${x.days}:${x.pct}`).join('، '))
+  const parse = (v: string) => v.split(/[،,]/).map((p) => p.trim()).filter(Boolean).map((p) => { const [a, b] = p.split(':').map((q) => Number(q.replace(/[^\d]/g, ''))); return { days: a || 0, pct: b || 0 } })
+  const T = parse(txt); const sum = T.reduce((a, x) => a + x.pct, 0)
+  const save = () => { if (sum !== 100) return toast('جمع درصدها باید ۱۰۰ باشد.', { tone: 'err' }); mutate((x) => { x.stock.payTerms[i].tranches = T }, { action: 'تغییر زمان رسیدن پول روش پرداخت', target: t.label, after: txt }) }
+  return <li className="flex flex-wrap items-end gap-2 rounded-xl border border-line p-2.5 text-12">
+    <label className="flex-1"><span className="mb-0.5 block text-11 text-t2">عنوان</span><Input className="h-8" value={t.label} onChange={(e) => mutate((x) => { x.stock.payTerms[i].label = e.target.value })} /></label>
+    <label className="w-28"><span className="mb-0.5 block text-11 text-t2">اگر روش پرداخت شامل</span><Input className="h-8" value={t.match} onChange={(e) => mutate((x) => { x.stock.payTerms[i].match = e.target.value })} /></label>
+    <label className="w-36"><span className="mb-0.5 block text-11 text-t2">روز:درصد</span><Input className={sum === 100 ? 'ltr h-8 text-left font-mono' : 'ltr h-8 border-danger text-left font-mono'} value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={save} /></label>
+    <button aria-label={`حذف ${t.label}`} className="pb-2 text-t3 hover:text-danger" onClick={() => mutate((x) => { x.stock.payTerms.splice(i, 1) }, { action: 'حذف قاعدهٔ زمان رسیدن پول', target: t.label })}><Trash2 size={14} /></button>
+    <p className="basis-full text-[10px] text-t3">{T.map((x) => `${fa(x.pct)}٪ ${x.days ? `${fa(x.days)} روز بعد` : 'همان روز'}`).join(' · ')}</p>
+  </li>
+}
+
+const expDays = (iso: string) => Math.round((+new Date(iso) - Date.now()) / 864e5)
+function expBadge(iso: string) { const n = expDays(iso); return <Badge tone={n < 0 ? 'danger' : n <= 90 ? 'warning' : 'neutral'}>{n < 0 ? `منقضی (${fa(-n)} روز)` : `${new Date(iso).toLocaleDateString('fa-IR')} · ${fa(n)} روز`}</Badge> }
+
+/** هشدار انقضا: منقضی‌ها از سایت خارج‌اند و باید به مالک برگردند یا معدوم شوند؛ نزدیک‌ها اول فروخته می‌شوند */
+function ExpiryAlerts({ onReturn }: { onReturn: (p: { lotId?: string }) => void }) {
+  const d = useDB(); const s = d.stock
+  const L = s.lots.filter((l) => l.expiry && l.qty > 0 && expDays(l.expiry) <= 90).sort((a, b) => +new Date(a.expiry!) - +new Date(b.expiry!))
+  if (!L.length) return null
+  return <Card title="انقضای نزدیک یا گذشته" hint="کالای منقضی خودکار از سایت خارج است؛ کالای نزدیک به انقضا در بسته‌بندی زودتر برداشته می‌شود.">
+    <ul className="space-y-1.5">{L.map((l) => <li key={l.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12">{expBadge(l.expiry!)}<span className="flex-1">{pv(d, l.productId, l.variationId).full} ×{fa(l.qty)} · {whName(s, l.warehouse)}{l.batch && <> · سری <bdi dir="ltr" className="font-mono">{l.batch}</bdi></>}</span><PartyChip s={s} id={l.owner} />{l.owner !== (s.parties.find((p) => p.kind === 'self')?.id ?? 'gh') && <Button size="sm" variant="ghost" icon={<Undo2 size={12} />} onClick={() => onReturn({ lotId: l.id })}>برگشت به مالک</Button>}</li>)}</ul>
+  </Card>
+}
+
+/** برگشت کالای فروش‌نرفته یا تاریخ‌گذشته به مالک، با رسید */
+function OwnerReturnModal({ pre, onClose }: { pre: { lotId?: string } | null; onClose: () => void }) {
+  const d = useDB(); const s = d.stock; const lot0 = s.lots.find((l) => l.id === pre?.lotId)
+  const [owner, setOwner] = useState(lot0?.owner ?? s.parties.find((p) => p.kind !== 'self')?.id ?? ''); const [sel, setSel] = useState<Record<string, number>>(lot0 ? { [lot0.id]: lot0.qty } : {}); const [reason, setReason] = useState(lot0 && lot0.expiry && expDays(lot0.expiry) < 0 ? 'تاریخ‌گذشته' : 'فروش نرفت'); const [recv, setRecv] = useState('')
+  if (!pre) return null
+  const lots = s.lots.filter((l) => l.owner === owner && l.qty > 0)
+  const total = Object.values(sel).reduce((a, n) => a + n, 0)
+  const save = () => { if (!total) return toast('دست‌کم یک قلم و تعداد انتخاب کنید.', { tone: 'err' }); if (!recv.trim()) return toast('نام تحویل‌گیرنده را بنویسید.', { tone: 'err' })
+    const id = uid('RTO'); const wh = lots.find((l) => sel[l.id])?.warehouse ?? 'tehran'
+    mutate((x) => { const lines: OwnerReturn['lines'] = []; Object.entries(sel).forEach(([lid, n]) => { const l = x.stock.lots.find((y) => y.id === lid); if (!l || !n) return; const t = Math.min(n, l.qty); l.qty -= t; lines.push({ productId: l.productId, variationId: l.variationId, qty: t, batch: l.batch, expiry: l.expiry }); syncQty(x, l.productId) })
+      x.stock.ownerReturns = [{ id, at: new Date().toISOString(), owner, warehouse: wh, lines, reason, by: by(), receivedBy: recv.trim() }, ...(x.stock.ownerReturns ?? [])] }, { action: 'برگشت کالا به مالک', target: `${partyName(s, owner)} · ${fa(total)} عدد`, after: `${reason} · تحویل‌گیرنده ${recv.trim()}` })
+    toast(`رسید ${id} ثبت شد؛ ${fa(total)} عدد از موجودی کم شد.`); setSel({}); onClose() }
+  return <Modal open onClose={onClose} title="برگشت کالا به مالک" wide footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" onClick={save}>ثبت رسید برگشت</Button></>}>
+    <div className="space-y-3 text-13">
+      <div className="grid gap-3 sm:grid-cols-3"><Field label="مالک"><Select value={owner} onChange={(v) => { setOwner(v); setSel({}) }} options={s.parties.filter((p) => p.kind !== 'self').map((p) => [p.id, p.name] as [string, string])} /></Field><Field label="دلیل"><Select value={reason} onChange={setReason} options={['فروش نرفت', 'تاریخ‌گذشته', 'نزدیک به انقضا', 'آسیب‌دیده', 'پایان همکاری', 'درخواست مالک']} /></Field><Field label="تحویل‌گیرنده (نام)"><Input value={recv} onChange={(e) => setRecv(e.target.value)} /></Field></div>
+      <ul className="space-y-1.5">{lots.map((l) => <li key={l.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line px-2.5 py-1.5 text-12"><span className="flex-1">{pv(d, l.productId, l.variationId).full} · {whName(s, l.warehouse)}{l.batch && <> · <bdi dir="ltr" className="font-mono">{l.batch}</bdi></>}</span>{l.expiry && expBadge(l.expiry)}<span className="text-t2">موجود {fa(l.qty)}</span><Input type="number" min={0} max={l.qty} aria-label="تعداد برگشتی" className="ltr h-8 w-20 text-center font-mono" value={sel[l.id] ?? 0} onChange={(e) => setSel({ ...sel, [l.id]: Math.min(l.qty, Math.max(0, +e.target.value)) })} /></li>)}{!lots.length && <li className="text-12 text-t2">این مالک موجودی‌ای در انبارها ندارد.</li>}</ul>
+      <p className="text-11 text-t2">رسید با نام تحویل‌گیرنده ثبت می‌شود و موجودی همان سری‌ها کم می‌شود. پیشنهاد: هنگام تحویل، رسید چاپی را امضا بگیرید.</p>
+    </div>
+  </Modal>
+}
+
+function OwnerReturns() {
+  const d = useDB(); const s = d.stock; const R = s.ownerReturns ?? []
+  if (!R.length) return null
+  return <Card title="رسیدهای برگشت کالا به مالک" pad={false}><ul className="divide-y divide-line">{R.map((r) => <li key={r.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-12"><b className="font-mono">{r.id}</b><PartyChip s={s} id={r.owner} /><span className="flex-1">{r.lines.map((l) => `${pv(d, l.productId, l.variationId).full} ×${fa(l.qty)}`).join('، ')}</span><Badge>{r.reason}</Badge><span className="text-t2">تحویل به {r.receivedBy} · {r.by} · {rel(r.at)}</span></li>)}</ul></Card>
+}

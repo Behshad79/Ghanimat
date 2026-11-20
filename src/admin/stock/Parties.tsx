@@ -67,6 +67,12 @@ function PartyEdit({ p, onClose }: { p: Party | null; onClose: () => void }) {
       <Field label="حساب کاربری متصل"><Select value={cur.userId ?? ''} onChange={(v) => set({ userId: v || undefined })} options={[['', 'بدون حساب'], ...d.team.map((u) => [u.id, `${u.name} · ${ROLES[u.role]?.label ?? u.role}`] as [string, string])]} /></Field>
       {cur.kind !== 'self' && <Field label="نوع همکاری"><Segmented value={cur.account ?? 'internal'} onChange={(v) => set({ account: v })} options={[['internal', 'جزئی از غنیمت (پنل مشترک)'], ['portal', 'پرتال جداگانه (به‌زودی)']]} /></Field>}
       <Field label="رنگ"><div className="flex gap-1.5">{[cur.color, ...COLORS].filter((c, i, a) => a.indexOf(c) === i).map((c) => <button key={c} type="button" aria-label={`رنگ ${c}`} onClick={() => set({ color: c })} className="size-8 rounded-full border-2" style={{ background: c, borderColor: cur.color === c ? '#000' : 'transparent' }} />)}</div></Field>
+      {cur.kind !== 'self' && <div className="grid gap-3 rounded-xl border border-line p-3 sm:col-span-2 sm:grid-cols-3">
+        <p className="text-12 font-semibold sm:col-span-3">شرایط پرداخت به این شریک</p>
+        <Field label="دورهٔ تسویه"><Segmented value={cur.payout?.cycle ?? 'weekly'} onChange={(v) => set({ payout: { holdDays: 7, ...cur.payout, cycle: v } })} options={[['weekly', 'هفتگی'], ['biweekly', 'دوهفتگی'], ['monthly', 'ماهانه']]} /></Field>
+        <Field label="مهلت مرجوعی پیش از پرداخت (روز)" help="پول فروش تا این مدت بعد از تحویل نگه داشته می‌شود"><Input type="number" min={0} className="ltr text-left font-mono" value={cur.payout?.holdDays ?? 0} onChange={(e) => set({ payout: { cycle: 'weekly', ...cur.payout, holdDays: Math.max(0, +e.target.value) } })} /></Field>
+        <Field label="حداقل ماندگاری هنگام تحویل (روز)" help="برای کالای تاریخ‌دار؛ ورود با ماندگاری کمتر هشدار می‌دهد"><Input type="number" min={0} className="ltr text-left font-mono" value={cur.payout?.minShelfDays ?? 0} onChange={(e) => set({ payout: { cycle: 'weekly', holdDays: 7, ...cur.payout, minShelfDays: Math.max(0, +e.target.value) || undefined } })} /></Field>
+      </div>}
       <div className="sm:col-span-2"><Field label="یادداشت"><Textarea rows={2} value={cur.note ?? ''} onChange={(e) => set({ note: e.target.value })} /></Field></div>
     </div>
   </Modal>

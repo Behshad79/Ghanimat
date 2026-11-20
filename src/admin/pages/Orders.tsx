@@ -280,7 +280,7 @@ export function OrderDetail() {
         </div>
       </div>
       <Modal open={!!cancelSh} onClose={() => setCancelSh(null)} title={`لغو مرسولهٔ ${cancelSh?.sid ?? ''}`} footer={<><Button variant="danger" onClick={() => void doCancelShip()}>لغو مرسوله</Button><Button variant="ghost" onClick={() => setCancelSh(null)}>انصراف</Button></>}>
-        <div className="space-y-3 text-13"><p>این مرسوله لغو می‌شود. مقصد بازگشت وجه را انتخاب کنید؛ پرونده تا تأیید و اعمال شما باز می‌ماند.</p><RefundDest dest={rdest} setDest={setRdest} account={racct} setAccount={setRacct} amount={cancelSh?.total ?? 0} /><RestockChoice value={restock} onChange={setRestock} /></div>
+        <div className="space-y-3 text-13"><p>این مرسوله لغو می‌شود. مقصد بازگشت وجه را انتخاب کنید؛ پرونده تا تأیید و اعمال شما باز می‌ماند.</p><RefundDest dest={rdest} setDest={setRdest} account={racct} setAccount={setRacct} amount={cancelSh?.total ?? 0} customer={{ name: c.name, mobile: c.mobile }} /><RestockChoice value={restock} onChange={setRestock} /></div>
       </Modal>
       <OrderEdit o={editOpen ? o : null} onClose={() => setEditOpen(false)} />
       <AddressEdit o={addrOpen ? o : null} onClose={() => setAddrOpen(false)} />

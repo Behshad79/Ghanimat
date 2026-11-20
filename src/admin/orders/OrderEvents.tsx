@@ -9,7 +9,8 @@ import type { DB, Order } from '@/shared/data/seed'
 import type { OrderEvent } from '@/shared/data/orderEvents'
 import { StartDecision } from './Decision'
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from './Restock'
-import { createRefund, RefundDest } from './Refunds'
+import { createRefund, RefundDest, REFUND_LABEL } from './Refunds'
+import { useNavigate } from 'react-router-dom'
 
 const KIND: Record<OrderEvent['kind'], { label: string; icon: typeof BellRing; cls: string }> = {
   cancel: { label: 'درخواست لغو', icon: CircleX, cls: 'border-danger/40 bg-danger-bg/60' },
@@ -66,7 +67,7 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
   const byUs = !e; const [apology, setApology] = useState('متأسفیم؛ این کالا در انبار به دستمان نرسید و مجبور شدیم سفارش را لغو کنیم.'); const [giveCode, setGiveCode] = useState(true); const [codeAmt, setCodeAmt] = useState('500000'); const [codeDays, setCodeDays] = useState('14'); const [notifyMe, setNotifyMe] = useState(true)
   const amount = scope === 'all' ? L.reduce((a, l) => a + l.it.price * l.it.qty, 0) : (L.find((l) => l.key === scope)?.it.price ?? 0) * (L.find((l) => l.key === scope)?.it.qty ?? 1)
   const go = async () => {
-    const why = e ? e.body.slice(0, 80) : await askReason({ kind: 'cancel', ref: o.id, status: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', title: 'دلیل لغو (برای مشتری و سوابق)' }); if (!why) return
+    const why = e ? e.body.slice(0, 80) : await askReason({ kind: 'order', ref: o.id, status: scope === 'all' ? 'لغو سفارش' : 'لغو یک قلم', title: 'دلیل لغو (برای مشتری و سوابق)' }); if (!why) return
     mutate((x) => {
       const oo = x.orders.find((y) => y.id === o.id)!
       const back = oo.shipments.flatMap((s) => s.status === 'ship.delivered' ? [] : s.items.map((it, i) => ({ it, warehouse: s.warehouse, key: `${s.id}|${i}` }))).filter((r) => !r.it.cancelled && (scope === 'all' || r.key === scope))
@@ -86,7 +87,7 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
       <div className="space-y-3">
         <Field label="چه چیزی لغو شود؟"><Select value={scope} onChange={setScope} options={[['all', `کل سفارش (${fa(L.length)} قلم)`], ...L.map((l) => [l.key, `${d.products.find((p) => p.id === l.it.productId)?.title ?? l.it.productId} · ${toman(l.it.price)} · ${l.s.id}`] as [string, string])]} /></Field>
         <RestockChoice value={restock} onChange={setRestock} />
-        <RefundDest dest={to} setDest={setTo} account={acct} setAccount={setAcct} amount={amount} />
+        <RefundDest dest={to} setDest={setTo} account={acct} setAccount={setAcct} amount={amount} customer={c ? { name: c.name, mobile: c.mobile } : undefined} />
         {!e && <div className="space-y-2 rounded-xl border border-line p-3"><p className="text-12 font-semibold">لغو از طرف غنیمت (مشتری در «سفارش‌های لغوشده» می‌بیند)</p>
           <Field label="پیام عذرخواهی برای مشتری"><Input value={apology} onChange={(ev2) => setApology(ev2.target.value)} /></Field>
           <div className="flex flex-wrap items-end gap-3"><Toggle on={giveCode} onChange={setGiveCode} text="کد تخفیف جبرانی" />{giveCode && <><Field label="مبلغ (تومان)"><Input className="ltr w-32" inputMode="numeric" value={codeAmt} onChange={(ev2) => setCodeAmt(ev2.target.value.replace(/\D/g, ''))} /></Field><Field label="مهلت (روز)"><Input className="ltr w-20" inputMode="numeric" value={codeDays} onChange={(ev2) => setCodeDays(ev2.target.value.replace(/\D/g, ''))} /></Field></>}</div>
@@ -99,8 +100,9 @@ function CancelModal({ o, ev, onClose, onDone }: { o: Order; ev: OrderEvent | 'a
 
 /** خلاصهٔ لغو و پیگیری بازگشت وجه؛ همان چیزی که مشتری در «سفارش‌های لغوشده» می‌بیند */
 export function CancelSummary({ o }: { o: Order }) {
-  const d = useDB(); const ci = o.cancelInfo; const [ref, setRef] = useState('')
+  const d = useDB(); const nav = useNavigate(); const ci = o.cancelInfo; const [ref, setRef] = useState('')
   if (!ci) return null
+  const rf = (d.refunds ?? []).find((r) => r.orderId === o.id && r.status !== 'done') ?? (d.refunds ?? []).find((r) => r.orderId === o.id)
   const c = d.customers.find((x) => x.id === o.customerId)
   const set = (fn: (x: NonNullable<Order['cancelInfo']>) => void, action: string, sms?: string) => { mutate((x) => { fn(x.orders.find((y) => y.id === o.id)!.cancelInfo!) }, { action, target: o.id }); if (sms && c) sendSms(c.mobile, `غنیمت: ${sms}`, 'وضعیت سفارش', o.id, c.id) }
   return <Card title={<span className="flex flex-wrap items-center gap-2">{ci.partial ? 'لغو بخشی از سفارش' : 'سفارش لغو شد'}<Badge tone={ci.refund === 'بازگشت داده شد' ? 'success' : ci.refund === 'ناموفق' ? 'danger' : 'warning'}>{ci.refund === 'در جریان' ? 'بازگشت وجه در جریان' : ci.refund === 'ناموفق' ? 'بازگشت وجه ناموفق' : 'وجه بازگشت داده شد'}</Badge></span>}>
@@ -112,7 +114,7 @@ export function CancelSummary({ o }: { o: Order }) {
       {ci.notify && <p><span className="text-t3">خبرم کن: </span>برای کالای لغوشده فعال است</p>}
       {ci.failWhy && <p className="text-danger sm:col-span-2">علت ناموفق: {ci.failWhy}</p>}
     </div>
-    {(d.refunds ?? []).some((r) => r.orderId === o.id) && ci.refund !== 'بازگشت داده شد' && <p className="mt-3 rounded-lg bg-brand-tint/50 px-3 py-2 text-12 text-brand">مراحل بازگشت وجه (تأیید، ارسال به بانک یا اعمال در کیف پول، ثبت پیگیری) در کارت «بازگشت وجه» همین صفحه است.</p>}
+    {rf && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-brand-tint/50 px-3 py-2 text-12"><span className="flex-1 text-brand">بازگشت {toman(rf.amount)} به {rf.dest}: <b>{REFUND_LABEL[rf.status][0]}</b></span><Button size="sm" variant="primary" onClick={() => document.getElementById('order-refunds')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>پیگیری بازگشت وجه</Button><Button size="sm" variant="ghost" onClick={() => nav(`/admin/finance?tab=refunds&rf=${rf.id}`)}>در صف مالی</Button>{c && <Button size="sm" variant="ghost" icon={<Phone size={13} />} onClick={() => { window.location.href = `tel:${c.mobile}` }}>تماس با مشتری</Button>}</div>}
     {ci.refund !== 'بازگشت داده شد' && !(d.refunds ?? []).some((r) => r.orderId === o.id) && <div className="mt-3 flex flex-wrap items-end gap-2">
       {ci.refund === 'در جریان' && <><Input className="ltr w-48" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="شمارهٔ پیگیری" aria-label="شمارهٔ پیگیری بازگشت وجه" />
         <Button size="sm" variant="primary" disabled={ref.trim().length < 4} onClick={() => { set((x) => { x.refund = 'بازگشت داده شد'; x.ref = ref.trim(); x.refundAt = new Date().toISOString() }, 'ثبت بازگشت وجه لغو', `مبلغ ${toman(ci.amount)} سفارش ${o.id} به ${ci.to} واریز شد. شمارهٔ پیگیری: ${ref.trim()}`); toast('بازگشت وجه ثبت شد.') }}>ثبت واریز</Button>

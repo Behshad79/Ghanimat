@@ -1,7 +1,7 @@
 // بازگشت وجه، یک پرونده برای هر بازگشت: ثبت ← تأیید ← ارسال به بانک ← واریز شد (با شمارهٔ پیگیری)، یا ناموفق ← تلاش دوباره یا تغییر مقصد.
 // از لغو سفارش یا قلم، لغو مرسوله، ویرایش سفارش، تصمیم کمبود و بازگشت دستی ساخته می‌شود؛ پس از واریز، سفارش به‌روز می‌شود.
 import { useState } from 'react'
-import { Banknote, CheckCircle2, Clock, RotateCcw, Send, Wallet, XCircle } from 'lucide-react'
+import { Banknote, CheckCircle2, Clock, Copy, Phone, RotateCcw, Send, Wallet, XCircle } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented } from '@/shared/ui/base'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
@@ -9,6 +9,7 @@ import { DataTable } from '@/shared/ui/table'
 import { currentUser, getDB, isChief, mutate, sendSms, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB, Refund } from '@/shared/data/seed'
+import { useSearchParams } from 'react-router-dom'
 
 export const DESTS = ['کیف پول', 'کارت به کارت', 'شبا (پایا)', 'بازگشت به حساب مبدأ'] as const
 const VIA_OF: Record<string, string> = { 'کارت به کارت': 'کارت به کارت', 'شبا (پایا)': 'پایا (شبا)', 'کارت بانکی': 'پایا (شبا)', 'بازگشت به حساب مبدأ': 'برگشت از درگاه', 'همان روش پرداخت': 'برگشت از درگاه' }
@@ -74,8 +75,9 @@ function RefundRow({ r }: { r: Refund }) {
 }
 
 /** انتخاب مقصد بازگشت وجه در پنجره‌های لغو و ویرایش */
-export function RefundDest({ dest, setDest, account, setAccount, amount }: { dest: string; setDest: (v: string) => void; account: string; setAccount: (v: string) => void; amount: number }) {
+export function RefundDest({ dest, setDest, account, setAccount, amount, customer }: { dest: string; setDest: (v: string) => void; account: string; setAccount: (v: string) => void; amount: number; customer?: { name: string; mobile: string } }) {
   return <div className="space-y-2 rounded-xl border border-line p-3">
+    {customer && <div className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-3 py-2 text-12"><span className="text-t2">مشتری:</span><b>{customer.name}</b><bdi dir="ltr" className="font-mono">{customer.mobile}</bdi><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => { window.location.href = `tel:${customer.mobile}` }}>تماس</Button><Button size="sm" variant="ghost" icon={<Copy size={12} />} onClick={() => { void navigator.clipboard?.writeText(customer.mobile); toast('شماره کپی شد.') }}>کپی</Button><span className="basis-full text-11 text-t3">اگر همین حالا کارت یا شبا را تلفنی گرفتید، «کارت به کارت» یا «شبا» را بزنید و همین‌جا وارد کنید.</span></div>}
     <Field label={`بازگشت ${toman(amount)} به`}><Segmented size="sm" value={dest} onChange={setDest} options={DESTS.map((x) => [x, x] as [string, string])} /></Field>
     {(dest === 'کارت به کارت' || dest === 'شبا (پایا)') && <Field label={dest === 'کارت به کارت' ? 'شمارهٔ کارت مشتری (اختیاری؛ در مرحلهٔ ارسال هم ثبت می‌شود)' : 'شمارهٔ شبای مشتری (اختیاری)'}><Input className="ltr" value={account} onChange={(e) => setAccount(e.target.value)} placeholder={dest === 'کارت به کارت' ? '6037-99xx-xxxx-1234' : 'IR00 0000 0000 0000 0000 0000 00'} /></Field>}
     <p className="text-11 text-t2">{dest === 'کیف پول' ? 'پس از تأیید، با دکمهٔ «اعمال در کیف پول» واریز می‌شود.' : dest === 'بازگشت به حساب مبدأ' ? 'به همان کارتی که با آن پرداخت شده (از طریق درگاه) برمی‌گردد.' : 'پس از تأیید، به بانک ارسال و با شمارهٔ پیگیری ثبت می‌شود.'} بازگشت وجه خودکار انجام نمی‌شود و تا اعمال شما در کارت «بازگشت وجه» باز می‌ماند.</p>
@@ -87,14 +89,14 @@ export function RefundPanel({ orderId }: { orderId: string }) {
   const d = useDB(); const R = (d.refunds ?? []).filter((r) => r.orderId === orderId)
   if (!R.length) return null
   const doneSum = R.filter((r) => r.status === 'done').reduce((a, r) => a + r.amount, 0); const open = R.filter((r) => r.status !== 'done')
-  return <Card className={open.length ? 'border-warning/50' : ''} title={<span className="flex items-center gap-2"><RotateCcw size={16} />بازگشت وجه</span>} actions={<span className="flex gap-1.5">{doneSum > 0 && <Badge tone="success" dot={false}>واریزشده {toman(doneSum)}</Badge>}{open.length > 0 && <Badge tone="warning" dot={false}>در جریان {toman(open.reduce((a, r) => a + r.amount, 0))}</Badge>}</span>}>
+  return <div id="order-refunds" className="scroll-mt-24"><Card className={open.length ? 'border-warning/50' : ''} title={<span className="flex items-center gap-2"><RotateCcw size={16} />بازگشت وجه</span>} actions={<span className="flex gap-1.5">{doneSum > 0 && <Badge tone="success" dot={false}>واریزشده {toman(doneSum)}</Badge>}{open.length > 0 && <Badge tone="warning" dot={false}>در جریان {toman(open.reduce((a, r) => a + r.amount, 0))}</Badge>}</span>}>
     <ul className="space-y-2">{R.map((r) => <RefundRow key={r.id} r={r} />)}</ul>
-  </Card>
+  </Card></div>
 }
 
 /** صف همهٔ بازگشت‌های وجه در «مالی» */
 export function RefundQueue() {
-  const d = useDB(); const [f, setF] = useState<'open' | 'all' | Refund['status']>('open'); const [sel, setSel] = useState<string | null>(null)
+  const d = useDB(); const [sp] = useSearchParams(); const [f, setF] = useState<'open' | 'all' | Refund['status']>(sp.get('rf') ? 'all' : 'open'); const [sel, setSel] = useState<string | null>(sp.get('rf'))
   const R = d.refunds ?? []; const rows = R.filter((r) => f === 'all' || (f === 'open' ? r.status !== 'done' : r.status === f))
   const late = R.filter((r) => r.status !== 'done' && Date.now() - +new Date(r.at) > SLA_H * 36e5)
   const sum = (s: (r: Refund) => boolean) => R.filter(s).reduce((a, r) => a + r.amount, 0)

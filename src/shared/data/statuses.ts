@@ -19,9 +19,9 @@ export const STATUS: Record<string, { label: string; tone: Tone }> = {
   'ship.picking': { label: 'در حال جمع‌آوری', tone: 'info' },
   'ship.packed': { label: 'بسته‌بندی‌شده', tone: 'info' },
   'ship.pickup_ready': { label: 'آماده در شعبه، منتظر مراجعه', tone: 'warning' },
-  'ship.handed': { label: 'تحویل پیک شد', tone: 'brand' },
+  'ship.handed': { label: 'تحویل پیک یا پست شد', tone: 'brand' },
   'ship.in_transit': { label: 'در مسیر', tone: 'brand' },
-  'ship.delivered': { label: 'تحویل‌شده', tone: 'success' },
+  'ship.delivered': { label: 'تحویل مشتری شد', tone: 'success' },
   'ship.failed': { label: 'تحویل ناموفق', tone: 'danger' },
   'ship.cancelled': { label: 'لغوشده', tone: 'danger' },
   // واحد کالا

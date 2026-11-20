@@ -41,13 +41,14 @@ export function ReasonLog({ kind, refId, status = 'توضیح تکمیلی' }: {
   const save = (id: string) => { mutate((x) => { const r = x.reasons.find((y) => y.id === id)!; r.reason = val; r.editedAt = new Date().toISOString() }, { action: 'ویرایش دلیل', target: refId, after: val }); setEdit(null); toast('دلیل ویرایش شد و نسخهٔ تازه برای مشتری نمایش داده می‌شود.') }
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between"><p className="flex items-center gap-1.5 text-13 font-semibold"><MessageSquareText size={14} />سوابق دلیل‌ها و توضیح برای مشتری</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"><p className="flex min-w-0 items-center gap-1.5 text-13 font-semibold"><MessageSquareText size={14} className="shrink-0" /><span>سوابق دلیل‌ها و توضیح برای مشتری</span></p>
         <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={async () => { const r = await askReason({ kind, ref: refId, status, title: 'افزودن توضیح برای مشتری' }); if (r) toast('توضیح ثبت شد.') }}>افزودن توضیح</Button></div>
-      {rows.length === 0 ? <p className="rounded-xl bg-neutral-bg px-3 py-2 text-12 text-t2">هنوز دلیلی ثبت نشده است. اگر یادتان رفته، «افزودن توضیح» را بزنید.</p> : <ul className="space-y-1.5">{rows.map((r) => <li key={r.id} className="rounded-xl border border-line p-2.5">
-        <div className="flex items-center gap-2 text-11 text-t2"><Badge dot={false}>{r.status}</Badge>{r.visible ? <Badge tone="info" dot={false}>برای مشتری نمایش داده می‌شود</Badge> : <Badge dot={false}>داخلی</Badge>}<span className="mr-auto">{r.by} · {rel(r.editedAt ?? r.at)}{r.editedAt && ' (ویرایش‌شده)'}</span>
+      {rows.length === 0 ? <p className="rounded-xl bg-neutral-bg px-3 py-2 text-12 text-t2">هنوز دلیلی ثبت نشده است. اگر یادتان رفته، «افزودن توضیح» را بزنید.</p> : <ul className="space-y-1.5">{rows.map((r) => <li key={r.id} className="min-w-0 overflow-hidden rounded-xl border border-line p-2.5">
+        <p className="text-12 font-semibold leading-5 break-words">{r.status}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-11 text-t2">{r.visible ? <Badge tone="info" dot={false}>برای مشتری</Badge> : <Badge dot={false}>داخلی</Badge>}<span className="min-w-0">{r.by} · {rel(r.editedAt ?? r.at)}{r.editedAt && ' (ویرایش‌شده)'}</span><span className="mr-auto" />
           <button aria-label="ویرایش دلیل" onClick={() => { setEdit(r.id); setVal(r.reason) }} className="grid size-6 place-items-center rounded-md hover:bg-neutral-bg"><Pencil size={12} /></button>
           <span className="inline-flex"><Toggle on={r.visible} label="نمایش برای مشتری" onChange={(v) => mutate((x) => { x.reasons.find((y) => y.id === r.id)!.visible = v })} /></span></div>
-        {edit === r.id ? <div className="mt-2 space-y-2"><Textarea aria-label="ویرایش دلیل" rows={2} value={val} onChange={(e) => setVal(e.target.value)} /><div className="flex gap-2"><Button size="sm" variant="primary" disabled={val.trim().length < 3} onClick={() => save(r.id)}>ذخیره</Button><Button size="sm" variant="ghost" onClick={() => setEdit(null)}>انصراف</Button></div></div> : <p className="mt-1 text-13">{r.reason}</p>}
+        {edit === r.id ? <div className="mt-2 space-y-2"><Textarea aria-label="ویرایش دلیل" rows={2} value={val} onChange={(e) => setVal(e.target.value)} /><div className="flex gap-2"><Button size="sm" variant="primary" disabled={val.trim().length < 3} onClick={() => save(r.id)}>ذخیره</Button><Button size="sm" variant="ghost" onClick={() => setEdit(null)}>انصراف</Button></div></div> : <p className="mt-1 text-13 leading-6 break-words">{r.reason}</p>}
       </li>)}</ul>}
     </div>
   )

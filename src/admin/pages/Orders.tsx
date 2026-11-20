@@ -31,6 +31,7 @@ import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from '.
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../orders/Restock'
 import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
+import { DeliverConfirm } from '../orders/DeliverConfirm'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
 const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
@@ -237,7 +238,7 @@ export function OrderDetail() {
                   <div className="flex flex-wrap gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
                     {s.status === 'ship.picking' && <Button variant="primary" onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی')}>تأیید بسته‌بندی</Button>}
-                    {['ship.handed', 'ship.in_transit'].includes(s.status) && <Button variant="primary" onClick={() => advance(s.id, 'ship.delivered', 'ثبت تحویل')}>ثبت تحویل</Button>}
+                    {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
                     <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
                     <RollbackShip o={o} sid={s.id} />
@@ -245,7 +246,7 @@ export function OrderDetail() {
                   </div>
                 </div>
               )}
-              {s.status === 'ship.delivered' && <div className="flex justify-end"><RollbackShip o={o} sid={s.id} /></div>}
+              {s.status === 'ship.delivered' && <div className="flex flex-wrap items-center justify-between gap-2">{(s as any).deliveredAt ? <p className="flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-1.5 text-12 text-success">تحویل مشتری شد · {new Date((s as any).deliveredAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}{(s as any).deliveredTo ? ` · ${(s as any).deliveredTo.name} (${(s as any).deliveredTo.relation})` : ''}{(s as any).deliveredVia ? ` · ${(s as any).deliveredVia}` : ''}</p> : <span />}<RollbackShip o={o} sid={s.id} /></div>}
             </Card>) })}
           <Card title="تاریخچه و یادداشت‌ها">
             <ChangeHistory o={o} />

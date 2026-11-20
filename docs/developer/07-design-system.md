@@ -126,6 +126,8 @@
 | `KPI` | `src/shared/ui/page.tsx` |
 | `ActionChips` | `src/shared/ui/page.tsx` |
 | `AISummary` | `src/shared/ui/page.tsx` |
+| `useScrolledPast` | `src/shared/ui/page.tsx` |
+| `StickyStepBar` | `src/shared/ui/page.tsx` |
 | `resolve` | `src/shared/ui/quickview.tsx` |
 | `QuickText` | `src/shared/ui/quickview.tsx` |
 | `QuickHost` | `src/shared/ui/quickview.tsx` |

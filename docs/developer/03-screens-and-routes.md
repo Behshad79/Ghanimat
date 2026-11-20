@@ -9,6 +9,7 @@
 | گروه | بخش | مسیر | شناسهٔ دسترسی |
 |---|---|---|---|
 | امروز | خانه | `/admin` | `home` |
+| امروز | یادداشت و برنامه‌ریزی | `/admin/planner` | `planner` |
 | سفارش و ارسال | کنترل شعب و ارسال سریع | `/admin/network` | `network` |
 | سفارش و ارسال | ارسال و لجستیک | `/admin/shipping` | `shipping` |
 | سفارش و ارسال | چاپ و خروجی | `/admin/print` | `print` |
@@ -75,10 +76,11 @@
 | `/admin/insight/:key` | — | — | `Insight` · `src/admin/insight/Insight.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-insight-key.jpg) |
 | `/admin/merch` | ویترین و غنی‌آف | فروش و درآمد | `Merch` · `src/admin/merch/Merch.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مارکتینگ، سئو و رشد، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-merch.jpg) |
 | `/admin/network` | کنترل شعب و ارسال سریع | سفارش و ارسال | `Network` · `src/admin/partner/Network.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-network.jpg) |
+| `/admin/planner` | یادداشت و برنامه‌ریزی | امروز | `Planner` · `src/admin/planner/Planner.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس پشتیبانی، کارشناس مالی، مارکتینگ، سئو و رشد، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار |  |
 | `/admin/*` | — | — | `NotFound` · `src/admin/shell/NotFound.tsx` | همهٔ نقش‌های دارای پنل کامل |  |
 | `/admin/warehouse` | انبار و موجودی | کالا و انبار | `Warehouse` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-warehouse.jpg) |
-| `/admin/ownership` | مالکیت و تسویهٔ موجودی | کالا و انبار | `Ownership` · `src/admin/stock/Ownership.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس مالی، مدیر شعبهٔ شریک (دسترسی گسترده) |  |
-| `/admin/packing` | — | — | `Packing` · `src/admin/stock/Packing.tsx` | همهٔ نقش‌های دارای پنل کامل |  |
+| `/admin/ownership` | مالکیت و تسویهٔ موجودی | کالا و انبار | `Ownership` · `src/admin/stock/Ownership.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس مالی، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-ownership.jpg) |
+| `/admin/packing` | — | — | `Packing` · `src/admin/stock/Packing.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-packing.jpg) |
 | `/admin/shipping` | ارسال و لجستیک | سفارش و ارسال | `Shipping` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-shipping.jpg) |
 | `/admin/print` | چاپ و خروجی | سفارش و ارسال | `PrintCenter` · `src/admin/print/PrintCenter.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-print.jpg) |
 | `/admin/returns` | — | — | `Returns` · `src/admin/pages/Ops.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-returns.jpg) |
@@ -133,11 +135,11 @@
 | `super` | مدیر کل | `full` | `/admin` | همه |
 | `cofounder` | مدیر کل دوم (شریک انبار) | `full` | `/admin` | همه |
 | `assistant` | دستیار مدیر کل (همکار اجرایی) | `full` | `/admin` | همه |
-| `ops` | مدیر عملیات | `full` | `/admin/live` | `home`، `live`، `network`، `orders`، `packing`، `ownership`، `warehouse`، `shipping`، `print`، `returns`، `catalog`، `media`، `trade`، `readiness`، `team`، `trash` |
+| `ops` | مدیر عملیات | `full` | `/admin/live` | `home`، `planner`، `live`، `network`، `orders`، `packing`، `ownership`، `warehouse`، `shipping`، `print`، `returns`، `catalog`، `media`، `trade`، `readiness`، `team`، `trash` |
 | `simple` | اپراتور | `simple` | `/simple` | — |
 | `partner` | شریک فروش (شعبه) | `partner` | `/partner` | — |
-| `support` | کارشناس پشتیبانی | `full` | `/admin/support` | `home`، `support`، `customers`، `orders`، `reviews`، `returns` |
-| `finance` | کارشناس مالی | `full` | `/admin/finance` | `home`، `finance`، `ownership`، `people`، `orders`، `pricing`، `returns`، `analytics` |
-| `growth` | مارکتینگ، سئو و رشد | `full` | `/admin/marketing` | `home`، `readiness`، `blog`، `marketing`، `seo`، `growth`، `analytics`، `content`، `channels`، `pricing`، `reviews`، `merch` |
-| `branch` | مدیر شعبهٔ شریک (دسترسی گسترده) | `full` | `/admin/live` | `home`، `live`، `network`، `orders`، `packing`، `ownership`، `social`، `shipping`، `returns`، `print`، `catalog`، `media`، `warehouse`، `supply`، `readiness`، `support`، `calls`، `requests`، `reviews`، `conversations`، `customers`، `merch`، `pricing`، `channels`، `sellers`، `messaging`، `analytics` |
-| `qc` | کارشناس کنترل کیفیت و انبار | `full` | `/admin/warehouse` | `home`، `warehouse`، `packing`، `catalog`، `media`، `trade`، `print` |
+| `support` | کارشناس پشتیبانی | `full` | `/admin/support` | `home`، `planner`، `support`، `customers`، `orders`، `reviews`، `returns` |
+| `finance` | کارشناس مالی | `full` | `/admin/finance` | `home`، `planner`، `finance`، `ownership`، `people`، `orders`، `pricing`، `returns`، `analytics` |
+| `growth` | مارکتینگ، سئو و رشد | `full` | `/admin/marketing` | `home`، `planner`، `readiness`، `blog`، `marketing`، `seo`، `growth`، `analytics`، `content`، `channels`، `pricing`، `reviews`، `merch` |
+| `branch` | مدیر شعبهٔ شریک (دسترسی گسترده) | `full` | `/admin/live` | `home`، `planner`، `live`، `network`، `orders`، `packing`، `ownership`، `social`، `shipping`، `returns`، `print`، `catalog`، `media`، `warehouse`، `supply`، `readiness`، `support`، `calls`، `requests`، `reviews`، `conversations`، `customers`، `merch`، `pricing`، `channels`، `sellers`، `messaging`، `analytics` |
+| `qc` | کارشناس کنترل کیفیت و انبار | `full` | `/admin/warehouse` | `home`، `planner`، `warehouse`، `packing`، `catalog`، `media`، `trade`، `print` |

@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { MoneyInput } from '@/shared/ui/money'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Undo2, ArrowLeftRight, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
-import { Badge, Button, Card, Field, Input, Segmented, Select, Tabs, Toggle } from '@/shared/ui/base'
+import { Undo2, ArrowLeftRight, Sparkles, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
+import { Badge, Button, Card, Field, Input, Segmented, Select, Tabs, Textarea, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { Barcode } from '@/shared/ui/codes'
-import { can, canSecret, currentUser, myParty, mutate, useDB } from '@/shared/lib/store'
+import { can, canSecret, currentUser, getDB, myParty, mutate, notify, takeCode, useDB } from '@/shared/lib/store'
 import { fa, num, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
-import { balances, shareOf, split, type OwnerReturn, type StockSale } from '@/shared/data/stock'
+import { balances, labelCode, shareOf, split, type OwnerReturn, type StockSale } from '@/shared/data/stock'
 import { chName, codeFor, ownersAt, PartyChip, partyName, pv, productsWithLots, syncQty, takeLots, whName } from './common'
 import { useTab } from '../pages/_shared'
 import { payoutBetween } from '@/shared/data/payout'
@@ -79,16 +79,90 @@ function ProductPicker({ pid, vid, onChange }: { pid: string; vid: string; onCha
     {p?.variations?.length ? <Field label="تنوع (رنگ و ویژگی)"><Select value={vid} onChange={(v) => onChange(pid, v)} options={p.variations.map((v) => [v.id, pv(d, p.id, v.id).vname] as [string, string])} /></Field> : <div />}</div>
 }
 
+type NewRow = { title: string; specs: string; category: string; qty: number; cost: number; price: number }
+const emptyRow = (category = ''): NewRow => ({ title: '', specs: '', category, qty: 1, cost: 0, price: 0 })
+const normT = (t: string) => t.replace(/\s+/g, ' ').trim().toLowerCase()
+/** متن چسبانده‌شده از اکسل یا گوگل‌شیت: نام، مشخصات، دسته، تعداد، بهای هر عدد، قیمت پیشنهادی */
+function parsePaste(txt: string, cats: string[], fallbackCat: string): NewRow[] {
+  const n = (v?: string) => +String(v ?? '').replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[^\d.]/g, '') || 0
+  return txt.split(/\r?\n/).map((l) => l.split(/\t|;|,(?=\s*[\d۰-۹])/).map((c) => c.trim())).filter((c) => c[0] && !/^(نام|title)/i.test(c[0]))
+    .map((c) => ({ title: c[0], specs: c[1] ?? '', category: cats.find((x) => x === c[2]) ?? fallbackCat, qty: Math.max(1, n(c[3]) || 1), cost: n(c[4]), price: n(c[5]) }))
+}
+
 function IntakeModal({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: { pid: string; vid?: string } }) {
-  const d = useDB(); const s = d.stock
-  const [f, setF] = useState({ pid: preset?.pid ?? 'prx', vid: preset?.vid ?? 'var-prx-blk', owner: 'gh', wh: 'tehran', qty: 1, cost: 0, ref: '', expiry: '', batch: '', irc: '' })
-  const prod = d.products.find((x) => x.id === f.pid); const needs = !!prod?.needsExpiry; const minShelf = s.parties.find((p) => p.id === f.owner)?.payout?.minShelfDays ?? 0
+  const d = useDB(); const s = d.stock; const nav = useNavigate(); const me = myParty()
+  const [f, setF] = useState({ pid: preset?.pid ?? 'prx', vid: preset?.vid ?? 'var-prx-blk', owner: me, wh: s.warehouses.find((w) => w.operator === me && w.active)?.id ?? 'tehran', qty: 1, cost: 0, ref: '', expiry: '', batch: '', irc: '' })
+  const [src, setSrc] = useState<'cat' | 'new'>('cat')
+  const cats = useMemo(() => [...new Set([...((d.entities?.categories as unknown as { name: string }[]) ?? []).map((c) => c.name), ...d.products.map((p) => p.category)])].filter(Boolean), [d])
+  const [rows, setRows] = useState<NewRow[]>([emptyRow()]); const [paste, setPaste] = useState<string | null>(null); const [dated, setDated] = useState(false); const [note, setNote] = useState('')
+  const isNew = src === 'new'
+  const known = useMemo(() => new Map(d.products.map((p) => [normT(p.title), p] as const)), [d])
+  const rowErr = (r: NewRow, i: number) => !r.title.trim() ? '' : r.title.trim().length < 3 ? 'نام کوتاه است' : known.get(normT(r.title)) ? 'در کاتالوگ هست' : rows.findIndex((x) => normT(x.title) === normT(r.title)) !== i ? 'تکراری در همین فهرست' : !r.category ? 'دسته' : r.qty < 1 ? 'تعداد' : r.cost <= 0 ? 'بها' : ''
+  const filled = rows.filter((r) => r.title.trim())
+  const rowsOk = filled.length > 0 && filled.every((r) => !rowErr(r, rows.indexOf(r)))
+  const prod = isNew ? undefined : d.products.find((x) => x.id === f.pid); const needs = !isNew && !!prod?.needsExpiry; const minShelf = s.parties.find((p) => p.id === f.owner)?.payout?.minShelfDays ?? 0
   const shelfDays = f.expiry ? Math.round((+new Date(f.expiry) - Date.now()) / 864e5) : null
-  const ok = f.qty > 0 && f.cost > 0 && (!needs || (!!f.expiry && !!f.batch.trim() && !!(prod?.irc || f.irc.trim())))
+  const fmt = d.codeFormat; const codeAt = (k: number) => `${fmt.product}${String(fmt.nextProduct + k).padStart(fmt.pDigits, '0')}`
+  const ok = isNew ? rowsOk : f.qty > 0 && f.cost > 0 && (!needs || (!!f.expiry && !!f.batch.trim() && !!(prod?.irc || f.irc.trim())))
+  const setRow = (i: number, p: Partial<NewRow>) => setRows(rows.map((r, k) => (k === i ? { ...r, ...p } : r)))
+  const saveNew = () => {
+    const batchId = uid('NB'); const at = new Date().toISOString(); const who = by(); const owner = f.owner
+    /** اسکلت خالی: ساختار کالای نمونه بدون هیچ محتوای آن (بارکد، مدل، مشخصات، توضیح، ویدیو، گارانتی) */
+    const base = (() => { const b = structuredClone(getDB().products[0]) as Record<string, unknown>; ['ean', 'model', 'specs', 'keyFeatures', 'long', 'box', 'pros', 'cons', 'metaTitle', 'metaDesc', 'slug', 'video', 'warrantyType', 'warrantyMonths', 'warrantyTerms', 'supplier', 'costFx', 'rate', 'currency', 'extraCost', 'discount', 'weight', 'dims', 'source', 'condition', 'grade', 'irc', 'saleFrom', 'saleUntil'].forEach((k) => delete b[k]); const pd = b.pdp as Record<string, unknown> | undefined; if (pd) b.pdp = { ...pd, videos: [], flaws: [], variantGroup: '', variantLabel: '', variant: undefined, amazonUrl: undefined, featured: false, covered: '', notCovered: '', cardLines: undefined }; return b as unknown as ReturnType<typeof getDB>['products'][number] })(); const made: { pid: string; code: string; r: NewRow }[] = []
+    filled.forEach((r, k) => made.push({ pid: `p${Date.now().toString(36)}${k}`, code: takeCode('product'), r }))
+    mutate((x) => {
+      made.forEach(({ pid, code, r }) => {
+        const title = r.title.trim()
+        x.products.unshift({ ...structuredClone(base), id: pid, code, title, en: title, torob: false, brand: 'بدون برند', category: r.category, subCats: [], kind: 'simple', attrs: [], variations: undefined, defaultVar: undefined, mode: 'qty', qty: { tehran: 0, mahabad: 0 }, priceNew: r.price, price: undefined, compareAt: undefined, cost: r.cost, status: 'product.draft', image: '', images: [], short: r.specs.trim(), views: 0, cvr: 0, reviews: 0, rating: 0, health: 15, featured: false, comingSoon: undefined, incoming: undefined, owner: owner === 'gh' ? undefined : owner, partner: owner !== 'gh' || undefined, needsExpiry: dated || undefined, exclusive: { owner, at, by: who, note: note.trim() || undefined, specs: r.specs.trim() || undefined, warehouse: f.wh, batchId } } as typeof base)
+        x.stock.lots.unshift({ id: uid('L') + made.findIndex((m) => m.pid === pid), productId: pid, owner, warehouse: f.wh, qty: r.qty, qty0: r.qty, cost: r.cost, at, ref: f.ref || `ورود کالای تازه توسط ${who}` })
+        syncQty(x, pid)
+      })
+    }, { action: 'ورود گروهی کالای تازه (هنوز در سایت نیست)', target: `${fa(made.length)} کالا · ${partyName(s, owner)} · ${whName(s, f.wh)}`, after: `${made[0].code} تا ${made[made.length - 1].code} · پیش‌نویس در صف تکمیل` })
+    notify('کالای تازه در صف تکمیل', `${who} ${fa(made.length)} کالای تازه (${fa(filled.reduce((a, r) => a + r.qty, 0))} عدد) به نام ${partyName(s, owner)} در ${whName(s, f.wh)} وارد کرد. عکس، مشخصات و صفحهٔ کالا را کامل و منتشر کنید.`, '/admin/catalog?tab=fill', 'کاتالوگ', 'warning')
+    toast(`${fa(made.length)} کالای تازه با کد ${made[0].code}${made.length > 1 ? ` تا ${made[made.length - 1].code}` : ''} ساخته و موجودی‌اش ثبت شد؛ در «کاتالوگ ← صف تکمیل کالای تازه» منتظر اطلاعات و انتشار است.`)
+    setRows([emptyRow()]); setNote(''); setDated(false); setSrc('cat'); onClose()
+  }
   const save = () => { mutate((x) => { x.stock.lots.unshift({ id: uid('L'), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, qty: f.qty, qty0: f.qty, cost: f.cost, at: new Date().toISOString(), ref: f.ref || `ورود توسط ${by()}`, expiry: f.expiry || undefined, batch: f.batch.trim() || undefined }); if (f.irc.trim()) { const q = x.products.find((y) => y.id === f.pid); if (q) q.irc = f.irc.trim() } syncQty(x, f.pid) }, { action: 'ورود موجودی با مالک مشخص', target: `${pv(d, f.pid, f.vid).full} · ${partyName(s, f.owner)} · ${whName(s, f.wh)}` }); toast(`${fa(f.qty)} عدد به نام ${partyName(s, f.owner)} در ${whName(s, f.wh)} ثبت شد.`); onClose() }
-  return <Modal open={open} onClose={onClose} title="ورود موجودی با مالک مشخص" wide footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" disabled={!ok} onClick={save}>ثبت ورود</Button></>}>
-    <div className="space-y-3"><ProductPicker pid={f.pid} vid={f.vid} onChange={(pid, vid) => setF({ ...f, pid, vid })} />
-      <div className="grid gap-3 sm:grid-cols-2"><Field label="مالک (تأمین‌کننده)" help="کسی که پول این کالا را داده است"><Select value={f.owner} onChange={(v) => setF({ ...f, owner: v })} options={s.parties.filter((p) => p.active).map((p) => [p.id, `${p.name} (${p.prefix})`] as [string, string])} /></Field><Field label="انبار محل نگهداری"><Select value={f.wh} onChange={(v) => setF({ ...f, wh: v })} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} /></Field></div>
+  const shared = <div className="grid gap-3 sm:grid-cols-2"><Field label="مالک (تأمین‌کننده)" help="کسی که پول این کالا را داده است"><Select value={f.owner} onChange={(v) => setF({ ...f, owner: v })} options={s.parties.filter((p) => p.active).map((p) => [p.id, `${p.name} (${p.prefix})`] as [string, string])} /></Field><Field label="انبار محل نگهداری"><Select value={f.wh} onChange={(v) => setF({ ...f, wh: v })} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} /></Field></div>
+  const total = filled.reduce((a, r) => a + r.qty, 0)
+  return <Modal open={open} onClose={onClose} title="ورود موجودی با مالک مشخص" wide footer={<><Button onClick={onClose}>انصراف</Button>{isNew ? <Button variant="primary" disabled={!ok} onClick={saveNew}>{filled.length ? `ساخت ${fa(filled.length)} کالا و ثبت ${fa(total)} عدد` : 'ساخت کالا و ثبت ورود'}</Button> : <Button variant="primary" disabled={!ok} onClick={save}>ثبت ورود</Button>}</>}>
+    <div className="space-y-3">
+      <Segmented value={src} onChange={(v) => setSrc(v as 'cat' | 'new')} options={[['cat', 'کالای موجود در کاتالوگ'], ['new', 'کالای تازه، یکی یا گروهی']]} />
+      {isNew ? <>
+        <p className="flex items-start gap-1.5 rounded-lg bg-info-bg px-3 py-2 text-12 text-info"><Sparkles size={14} className="mt-0.5 shrink-0" />برای کالاهایی که در کاتالوگ غنیمت نیستند؛ فقط نام، مشخصات کوتاه، تعداد و بها کافی است. هر کالا کد داخلی خودکار می‌گیرد، موجودی‌اش همان لحظه به نام مالک ثبت می‌شود و به‌صورت پیش‌نویس (دیده‌نشدنی در سایت) به «کاتالوگ ← صف تکمیل کالای تازه» می‌رود تا تیم کاتالوگ عکس، مشخصات و صفحه را کامل و منتشر کند.</p>
+        {shared}
+        <div className="overflow-x-auto rounded-xl border border-line">
+          <table className="w-full min-w-[1080px] text-12">
+            <thead className="bg-neutral-bg text-t2"><tr><th className="w-8 px-2 py-2">#</th><th className="min-w-[230px] px-2 py-2 text-right">نام کالا</th><th className="min-w-[170px] px-2 py-2 text-right">مشخصات کوتاه</th><th className="w-36 px-2 py-2 text-right">دسته</th><th className="w-20 px-2 py-2 text-right">تعداد</th><th className="w-40 px-2 py-2 text-right">بهای هر عدد</th><th className="w-40 px-2 py-2 text-right">قیمت پیشنهادی</th><th className="w-32 px-2 py-2 text-right">کد خودکار</th><th className="w-8" /></tr></thead>
+            <tbody>{rows.map((r, i) => { const e = rowErr(r, i); const k = filled.indexOf(r); return <tr key={i} className="border-t border-line align-top">
+              <td className="px-2 py-2 text-center text-t3">{fa(i + 1)}</td>
+              <td className="px-1 py-1.5"><Input value={r.title} onChange={(ev) => setRow(i, { title: ev.target.value })} placeholder="مثلاً عطر Khamrah ۱۰۰ میل" aria-invalid={!!e} />{e && <p className="mt-0.5 text-11 text-danger">{e === 'در کاتالوگ هست' ? <>در کاتالوگ هست؛ <button type="button" className="underline" onClick={() => { const p = known.get(normT(r.title))!; setF({ ...f, pid: p.id, vid: p.variations?.[0]?.id ?? '' }); setSrc('cat') }}>ورود روی همان کالا</button></> : e === 'دسته' || e === 'تعداد' || e === 'بها' ? `${e} لازم است` : e}</p>}</td>
+              <td className="px-1 py-1.5"><Input value={r.specs} onChange={(ev) => setRow(i, { specs: ev.target.value })} placeholder="مشکی، ۲۵۶ گیگ" /></td>
+              <td className="px-1 py-1.5"><Select value={r.category} onChange={(v) => setRow(i, { category: v })} options={[['', 'انتخاب'] as [string, string], ...cats.map((c) => [c, c] as [string, string])]} /></td>
+              <td className="px-1 py-1.5"><Input type="number" min={1} className="ltr text-left font-mono" value={r.qty} onChange={(ev) => setRow(i, { qty: Math.max(0, +ev.target.value) })} /></td>
+              <td className="px-1 py-1.5"><MoneyInput value={r.cost} onChange={(n) => setRow(i, { cost: n })} /></td>
+              <td className="px-1 py-1.5"><MoneyInput value={r.price} onChange={(n) => setRow(i, { price: n })} /></td>
+              <td className="px-2 py-2"><bdi dir="ltr" className="font-mono text-11 text-t2">{k >= 0 ? codeAt(k) : '—'}</bdi>{k >= 0 && <bdi dir="ltr" className="block font-mono text-11 text-t3">{labelCode(s, f.owner, { id: 'n', code: codeAt(k) }, null)}</bdi>}</td>
+              <td className="px-1 py-1.5">{rows.length > 1 && <button type="button" aria-label="حذف ردیف" className="grid size-8 place-items-center rounded-md text-t3 hover:bg-danger-bg hover:text-danger" onClick={() => setRows(rows.filter((_, x) => x !== i))}><Trash2 size={14} /></button>}</td>
+            </tr> })}</tbody>
+          </table>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" icon={<Plus size={13} />} onClick={() => setRows([...rows, emptyRow(rows[rows.length - 1]?.category)])}>ردیف تازه</Button>
+          <Button size="sm" icon={<Plus size={13} />} onClick={() => setRows([...rows, ...Array.from({ length: 10 }, () => emptyRow(rows[rows.length - 1]?.category))])}>۱۰ ردیف</Button>
+          <Button size="sm" onClick={() => setPaste(paste === null ? '' : null)}>چسباندن از اکسل</Button>
+          <span className="mr-auto text-12 text-t2">{fa(filled.length)} کالا · {fa(total)} عدد{filled.length ? ` · کدها ${codeAt(0)} تا ${codeAt(filled.length - 1)}` : ''}</span>
+        </div>
+        {paste !== null && <div className="space-y-2 rounded-xl border border-dashed border-line p-3">
+          <p className="text-12 text-t2">ستون‌ها را از اکسل یا گوگل‌شیت کپی و اینجا بچسبانید، به همین ترتیب: نام کالا، مشخصات، دسته، تعداد، بهای هر عدد، قیمت پیشنهادی. هر سطر یک کالا؛ تا چند صد سطر در یک بار.</p>
+          <Textarea rows={5} className="font-mono text-12" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'عطر Khamrah ۱۰۰ میل\tادو پرفیوم\tعطر\t12\t1850000\t2690000'} />
+          <div className="flex gap-2"><Button size="sm" variant="primary" disabled={!paste.trim()} onClick={() => { const add = parsePaste(paste, cats, rows[rows.length - 1]?.category ?? ''); setRows([...rows.filter((r) => r.title.trim()), ...add]); setPaste(null); toast(`${fa(add.length)} ردیف اضافه شد؛ ردیف‌های قرمز را اصلاح کنید.`) }}>افزودن به جدول</Button><Button size="sm" variant="ghost" onClick={() => setPaste(null)}>بستن</Button></div>
+        </div>}
+        <div className="grid gap-3 sm:grid-cols-2"><Field label="سند یا منشأ (اختیاری)"><Input value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} placeholder="مثلاً بار دبی، فاکتور ۴۱۲" /></Field><Field label="یادداشت برای تیم کاتالوگ (اختیاری)"><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="مثلاً عکس جعبه‌ها در گروه تلگرام است" /></Field></div>
+        <Toggle on={dated} onChange={setDated} text="این کالاها تاریخ‌دارند (آرایشی، بهداشتی، خوراکی)؛ تاریخ انقضا، سری ساخت و IRC در صف تکمیل خواسته می‌شود" />
+      </> : <>
+        <ProductPicker pid={f.pid} vid={f.vid} onChange={(pid, vid) => setF({ ...f, pid, vid })} />
+        {shared}
       <div className="grid gap-3 sm:grid-cols-3"><Field label="تعداد"><Input type="number" min={1} className="ltr text-left font-mono" value={f.qty} onChange={(e) => setF({ ...f, qty: Math.max(0, +e.target.value) })} /></Field><Field label="بهای تمام‌شدهٔ هر عدد (تومان)" help="به تومان؛ برای کالای وارداتی، مبلغ تبدیل‌شده با هزینهٔ حمل و گمرک"><MoneyInput value={f.cost} onChange={(n) => setF({ ...f, cost: n })} /></Field><Field label="سند یا منشأ (اختیاری)"><Input value={f.ref} onChange={(e) => setF({ ...f, ref: e.target.value })} placeholder="مثلاً فاکتور خرید اربیل" /></Field></div>
       <div className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-3">
         <p className="text-12 font-semibold sm:col-span-3">{needs ? 'کالای تاریخ‌دار (آرایشی، بهداشتی، خوراکی): این سه مورد اجباری است' : 'تاریخ انقضا و سری ساخت (اختیاری؛ برای کالای تاریخ‌دار)'}</p>
@@ -97,7 +171,8 @@ function IntakeModal({ open, onClose, preset }: { open: boolean; onClose: () => 
         <Field label="شناسهٔ سلامت (IRC)" help={prod?.irc ? `ثبت‌شده: ${prod.irc}` : 'از برچسب سازمان غذا و دارو'} error={needs && !prod?.irc && !f.irc.trim() ? 'اجباری' : undefined}><Input className="ltr text-left font-mono" value={f.irc || prod?.irc || ''} onChange={(e) => setF({ ...f, irc: e.target.value })} /></Field>
         {shelfDays !== null && minShelf > 0 && shelfDays < minShelf && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning sm:col-span-3">ماندگاری این محموله {fa(Math.max(0, shelfDays))} روز است؛ طبق قرارداد {partyName(s, f.owner)} حداقل {fa(minShelf)} روز لازم است. قبل از پذیرفتن، با او هماهنگ کنید.</p>}
       </div>
-      <p className="flex items-start gap-1.5 rounded-lg bg-info-bg px-3 py-2 text-12 text-info"><Info size={14} className="mt-0.5 shrink-0" />کد برچسب این ورود: <bdi dir="ltr" className="font-mono font-bold">{codeFor(d, f.owner, f.pid, f.vid || undefined)}</bdi>. همین کد روی جعبه چسبانده می‌شود تا هنگام بسته‌بندی، مالک خودکار تشخیص داده شود.</p></div>
+      <p className="flex items-start gap-1.5 rounded-lg bg-info-bg px-3 py-2 text-12 text-info"><Info size={14} className="mt-0.5 shrink-0" />کد برچسب این ورود: <bdi dir="ltr" className="font-mono font-bold">{codeFor(d, f.owner, f.pid, f.vid || undefined)}</bdi>. همین کد روی جعبه چسبانده می‌شود تا هنگام بسته‌بندی، مالک خودکار تشخیص داده شود.</p></>}
+    </div>
   </Modal>
 }
 

@@ -15,6 +15,7 @@ import { CONDITION, SOURCE, WAREHOUSE } from '@/shared/data/statuses'
 import type { DB, Product, Unit } from '@/shared/data/seed'
 import { Cell, Money, ProductImg, useLookup, useTab } from '../pages/_shared'
 import { Incoming } from './Incoming'
+import { fillQueue, NewItemsQueue } from './NewItemsQueue'
 import { ProductCard } from './ProductCard'
 import { WIZARD_STEPS } from './Wizard'
 import { LABEL_BG, LABEL_SIZES, ProductLabel } from '../print/ProductLabel'
@@ -144,7 +145,7 @@ export function Catalog() {
     { key: 'margin', title: <>سود<Hint k="margin" /></>, align: 'left', hideMobile: true, render: (u) => (u.price ? <span className={u.price - u.cost < 0 ? 'text-danger' : 'text-success'}>{compactToman(u.price - u.cost)}</span> : '—'), sort: (u) => u.price - u.cost },
     { key: 'st', title: 'چرخهٔ عمر', render: (u) => <StatusBadge s={u.status} />, sort: (u) => u.status },
   ]
-  const tabs = [{ id: 'products', label: 'محصولات', count: d.products.length }, { id: 'units', label: 'واحدها', count: d.units.length }, { id: 'incoming', label: 'در راه و پیش‌ساخت', count: d.incoming.filter((b) => !b.receivedAt).reduce((a, b) => a + b.items.length, 0) }, { id: 'partner', label: 'صف تأیید شریک', count: d.partnerQueue.length }, { id: 'card', label: 'قوانین کارت محصول' }, { id: 'categories', label: 'دسته‌ها' }, { id: 'brands', label: 'برندها' }, { id: 'attr', label: 'قالب ویژگی‌ها' }, { id: 'collections', label: 'مجموعه‌ها' }, { id: 'bulk', label: 'ویرایش جدولی' }, { id: 'pim', label: 'تنوع، مکمل و باندل' }, { id: 'reprice', label: 'بازقیمت‌گذاری ارزی' }, { id: 'workflow', label: 'جریان کار محتوا' }, { id: 'media', label: 'رسانه' }]
+  const tabs = [{ id: 'products', label: 'محصولات', count: d.products.length }, { id: 'units', label: 'واحدها', count: d.units.length }, { id: 'incoming', label: 'در راه و پیش‌ساخت', count: d.incoming.filter((b) => !b.receivedAt).reduce((a, b) => a + b.items.length, 0) }, { id: 'fill', label: 'صف تکمیل کالای تازه', count: fillQueue(d).length }, { id: 'partner', label: 'صف تأیید شریک', count: d.partnerQueue.length }, { id: 'card', label: 'قوانین کارت محصول' }, { id: 'categories', label: 'دسته‌ها' }, { id: 'brands', label: 'برندها' }, { id: 'attr', label: 'قالب ویژگی‌ها' }, { id: 'collections', label: 'مجموعه‌ها' }, { id: 'bulk', label: 'ویرایش جدولی' }, { id: 'pim', label: 'تنوع، مکمل و باندل' }, { id: 'reprice', label: 'بازقیمت‌گذاری ارزی' }, { id: 'workflow', label: 'جریان کار محتوا' }, { id: 'media', label: 'رسانه' }]
   const decide = (id: string, ok: boolean) => { mutate((x) => { const q = x.partnerQueue.find((y) => y.id === id)!; x.products.find((p) => p.id === q.productId)!.status = ok ? 'product.published' : 'product.rejected'; x.partnerQueue = x.partnerQueue.filter((y) => y.id !== id) }, { action: ok ? 'تأیید کالای شریک' : 'رد کالای شریک', target: id }); toast(ok ? 'کالا تأیید و منتشر شد. شریک با اعلان خبردار شد.' : 'کالا رد شد و دلیل برای شریک ارسال شد.') }
   return (
     <Page title="کالا و کاتالوگ" module="catalog" sub="محصول یعنی مدل؛ واحد یعنی یک نمونهٔ فیزیکی با سریال و عکس خودش."
@@ -174,6 +175,7 @@ export function Catalog() {
             <div className="mt-3 flex flex-wrap gap-2"><Button variant="primary" onClick={() => decide(q.id, true)}>تأیید و انتشار</Button><Button onClick={() => nav(`/admin/catalog/${p.id}/edit`)}>بررسی همهٔ فیلدها و اصلاح</Button><Button variant="danger" onClick={() => decide(q.id, false)}>رد کالا</Button></div>
           </Card>) })}</div>))}
       {tab === 'incoming' && <Incoming />}
+      {tab === 'fill' && <NewItemsQueue />}
       {tab === 'card' && <CardRules />}
       {tab === 'bulk' && <InlineTable />}
       {tab === 'pim' && <PimPanel />}

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, Minus, PackagePlus, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { ExternalLink, Lock, Minus, PackagePlus, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select } from '@/shared/ui/base'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { MoneyInput } from '@/shared/ui/money'
-import { canSecret, currentUser, mutate, myParty, notify, useDB } from '@/shared/lib/store'
+import { can, canSecret, currentUser, mutate, myParty, notify, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
 import type { AdjustKind } from '@/shared/data/stock'
@@ -40,6 +40,7 @@ export function StockDesk({ onIntake }: { onIntake?: () => void }) {
       .sort((a, b) => a.name.localeCompare(b.name, 'fa'))
   }, [d, q, owner, low, wh]) // eslint-disable-line react-hooks/exhaustive-deps
   const recent = (s.adjusts ?? []).slice(0, 6)
+  const edit0 = can('catalog')
   return <Card pad={false} title={<span className="flex items-center gap-1.5"><SlidersHorizontal size={15} />میز موجودی: تغییر آنی موجودی هر مالک در هر انبار</span>}
     hint="روی هر عدد بزنید: فروش حضوری، کنار گذاشتن از فروش، برگرداندن، اصلاح شمارش، ورود تازه یا خرابی. موجودی سایت همان لحظه به‌روز می‌شود."
     actions={<div className="flex flex-wrap gap-2"><Button size="sm" icon={<PackagePlus size={13} />} onClick={() => onIntake ? onIntake() : nav('/admin/ownership?tab=stock&intake=1')}>افزودن کالا به موجودی</Button><Button size="sm" variant="ghost" onClick={() => nav('/admin/catalog/new')}>کالای تازه در کاتالوگ</Button></div>}>
@@ -53,7 +54,8 @@ export function StockDesk({ onIntake }: { onIntake?: () => void }) {
     <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-13">
       <thead><tr className="border-b border-line text-right text-12 text-t2"><th className="px-4 py-2.5 font-medium">کالا و تنوع</th>{whs.map((w) => <th key={w.id} className="px-3 py-2.5 font-medium">{w.name}<span className="block text-[10px] font-normal">گرداننده: {partyName(s, w.operator)}{canEditWh(d, w.id) ? '' : ' · فقط خواندنی'}</span></th>)}<th className="px-3 py-2.5 font-medium">روی سایت</th></tr></thead>
       <tbody>{rows.map((r) => { const P = d.products.find((p) => p.id === r.pid); const site = P?.variations?.length ? P.variations.find((v) => v.id === r.vid)?.qty : P?.qty; return <tr key={r.pid + (r.vid ?? '')} className="border-b border-line align-top last:border-0">
-        <td className="px-4 py-3"><p className="font-medium">{pv(d, r.pid, r.vid).name}</p>{pv(d, r.pid, r.vid).vname && <p className="text-12 text-t2">{pv(d, r.pid, r.vid).vname}</p>}</td>
+        <td className="px-4 py-3"><button type="button" onClick={() => nav(`/admin/catalog/${r.pid}`)} className="text-right font-medium hover:text-brand hover:underline">{pv(d, r.pid, r.vid).name}</button>{pv(d, r.pid, r.vid).vname && <p className="text-12 text-t2">{pv(d, r.pid, r.vid).vname}</p>}
+          <p className="mt-1 flex flex-wrap gap-1.5"><button type="button" onClick={() => nav(`/admin/catalog/${r.pid}`)} className="inline-flex h-6 items-center gap-1 rounded-full border border-line px-2 text-11 text-t2 hover:border-brand hover:text-brand"><ExternalLink size={11} />صفحهٔ کالا</button>{edit0 && <button type="button" onClick={() => nav(`/admin/catalog/${r.pid}/edit?step=5`)} className="inline-flex h-6 items-center gap-1 rounded-full border border-line px-2 text-11 text-t2 hover:border-brand hover:text-brand"><Pencil size={11} />ویرایش کالا</button>}</p></td>
         {whs.map((w) => { const owners = s.parties.filter((p) => (owner === 'all' || p.id === owner) && s.lots.some((l) => l.productId === r.pid && (l.variationId ?? '') === (r.vid ?? '') && l.owner === p.id && l.warehouse === w.id)); const edit = canEditWh(d, w.id)
           return <td key={w.id} className="px-3 py-3"><div className="flex flex-wrap gap-1.5">{owners.map((p) => { const c = { pid: r.pid, vid: r.vid, owner: p.id, wh: w.id }; const n = sum(d, c, false); const h = sum(d, c, true)
             return <button key={p.id} type="button" disabled={!edit} onClick={() => setCell(c)} title={edit ? 'تغییر موجودی' : 'فقط خواندنی؛ این انبار دست شما نیست'} className={cx('inline-flex items-center gap-1.5 rounded-xl border px-2 py-1 text-12 transition-colors', edit ? 'border-line hover:border-brand hover:bg-brand-tint/40' : 'cursor-not-allowed border-line/60 opacity-70', n === 0 && 'border-danger/40 bg-danger-bg/30')}>

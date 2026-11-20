@@ -5,22 +5,27 @@
 //   فروشنده (کانال): چه کسی فروخته و پول را چه کسی گرفته (سایت غنیمت، شعبهٔ شریک، سایت خود شریک)
 // اگر مالک و فروشنده یکی نباشند، طبق «قرارداد سهم» میان آن دو، سهم هر طرف خودکار حساب می‌شود.
 
-export type Party = { id: string; name: string; prefix: string; kind: 'self' | 'partner'; color: string; site?: string; phone?: string; active: boolean }
+export type Party = { id: string; name: string; prefix: string; kind: 'self' | 'partner'; color: string; site?: string; phone?: string; active: boolean; city?: string; userId?: string; account?: 'internal' | 'portal'; joinedAt?: string; note?: string; offAt?: string; offBy?: string; offWhy?: string }
 export type StockWh = { id: string; name: string; city: string; operator: string; handlingFee: number; active: boolean }
 export type Channel = { id: string; name: string; seller: string; collector: string; brand: string; active: boolean }
 export type Agreement = { owner: string; seller: string; sellerPct: number; note?: string }
-export type Lot = { id: string; productId: string; variationId?: string; owner: string; warehouse: string; qty: number; cost: number; at: string; ref?: string }
-export type StockSale = { id: string; at: string; productId: string; variationId?: string; owner: string; warehouse: string; channel: string; qty: number; price: number; cost: number; orderId?: string; code?: string; by: string }
+export type Lot = { id: string; productId: string; variationId?: string; owner: string; warehouse: string; qty: number; cost: number; at: string; ref?: string; hold?: boolean }
+/** qty منفی یعنی برگشت (لغو یا مرجوعی) همان فروش؛ discount و fee جمع سهم این ردیف از تخفیف سفارش و کارمزد درگاه است */
+export type StockSale = { id: string; at: string; productId: string; variationId?: string; owner: string; warehouse: string; channel: string; qty: number; price: number; cost: number; orderId?: string; shipId?: string; unitId?: string; code?: string; by: string; discount?: number; fee?: number; auto?: boolean; reversal?: string; note?: string; ext?: string }
 export type Settlement = { id: string; at: string; from: string; to: string; amount: number; ref: string; by: string; note?: string }
 export type CustomCode = { code: string; productId: string; variationId?: string; owner: string; note?: string }
 
-export type StockDB = { parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean } }
+export type PickRule = 'fifo' | 'own_first' | 'partner_first' | 'cost_low'
+export type CostRules = { discount: 'shared' | 'seller'; fee: 'shared' | 'seller' }
+export type ExtSite = { partyId: string; kind: 'woocommerce'; url: string; key: string; secret: string; on: boolean; lastSync?: string; pullOrders: boolean; pushStock: boolean; skuMap: Record<string, { productId: string; variationId?: string }>; inbox: ExtOrder[]; webhook: boolean }
+export type ExtOrder = { id: string; at: string; status: 'new' | 'imported' | 'skipped' | 'unmatched'; lines: { sku: string; name: string; qty: number; price: number }[]; customer: string; note?: string; importedAt?: string }
+export type StockDB = { parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean }; pickRule: PickRule; rules: CostRules; channelMap: Record<string, string>; ext: ExtSite[] }
 
 const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
 export const makeStock = (): StockDB => ({
   parties: [
-    { id: 'gh', name: 'غنیمت', prefix: 'GH', kind: 'self', color: '#0000ff', active: true },
-    { id: 'ys', name: 'یاسین', prefix: 'YS', kind: 'partner', color: '#12733f', site: 've1', active: true },
+    { id: 'gh', name: 'غنیمت', prefix: 'GH', kind: 'self', color: '#0000ff', active: true, city: 'تهران', userId: 'u1', account: 'internal' },
+    { id: 'ys', name: 'یاسین', prefix: 'YS', kind: 'partner', color: '#12733f', site: 've1', active: true, city: 'مهاباد', userId: 'u4', account: 'internal', joinedAt: ago(24 * 60), note: 'انبار مهاباد جزئی از غنیمت است؛ با حساب مدیر کل دوم کار می‌کند.' },
   ],
   warehouses: [
     { id: 'tehran', name: 'انبار تهران', city: 'تهران', operator: 'gh', handlingFee: 0, active: true },
@@ -58,6 +63,16 @@ export const makeStock = (): StockDB => ({
   settlements: [{ id: 'ST-01', at: ago(100), from: 'ys', to: 'gh', amount: 4000000, ref: '140508011245', by: 'یاسین', note: 'تسویهٔ هفتهٔ اول' }],
   codes: [{ code: '6971234500017', productId: 'prx', variationId: 'var-prx-blk', owner: 'ys', note: 'بارکد کارخانه روی جعبه‌های یاسین' }],
   codeRule: { sep: '-', withVariant: true },
+  pickRule: 'partner_first',
+  rules: { discount: 'shared', fee: 'shared' },
+  channelMap: { 'سایت': 'gh-site', 'ترب': 'gh-site', 'دیجی‌کالا': 'gh-site', 'اینستاگرام دایرکت': 'gh-site', 'تلگرام': 'gh-site', 'واتساپ': 'gh-site', 'بله': 'gh-site', 'تلفنی': 'gh-site', 'حضوری در شعبه': 'gh-site' },
+  ext: [{ partyId: 'ys', kind: 'woocommerce', url: 'https://ve1.ir', key: 'ck_7f3a••••••••••••••••••••c21d', secret: 'cs_91be••••••••••••••••••••04aa', on: true, lastSync: ago(3), pullOrders: true, pushStock: true, webhook: true,
+    skuMap: { 'VE1-RMX-DRG-BLK': { productId: 'prx', variationId: 'var-prx-blk' }, 'VE1-RMX-DRG-WHT': { productId: 'prx', variationId: 'var-prx-wht' }, 'VE1-KINDLE-16': { productId: 'p8' } },
+    inbox: [
+      { id: 've1-5521', at: ago(2), status: 'new', customer: 'ر. کریمی', lines: [{ sku: 'VE1-RMX-DRG-BLK', name: 'Remax Dragon Black', qty: 1, price: 2750000 }] },
+      { id: 've1-5522', at: ago(1.2), status: 'new', customer: 'م. احمدی', lines: [{ sku: 'VE1-RMX-DRG-WHT', name: 'Remax Dragon White', qty: 2, price: 2750000 }, { sku: 'VE1-KINDLE-16', name: 'Kindle Paperwhite', qty: 1, price: 11200000 }] },
+      { id: 've1-5523', at: ago(0.5), status: 'unmatched', customer: 'ش. رحیمی', lines: [{ sku: 'VE1-ANKER-20W', name: 'Anker 20W Charger', qty: 1, price: 1450000 }], note: 'SKU این کالا هنوز به کالای غنیمت وصل نشده است' },
+    ] }],
 })
 
 /** کد کالا بر اساس مالک: پیشوند مالک + شمارهٔ کالا + پسوند تنوع؛ مثلاً GH-000201-1 و YS-000201-1 */
@@ -79,22 +94,34 @@ export function scanLookup(s: StockDB, products: ProdLite[], raw: string): { pro
   return null
 }
 
-/** سهم هر طرف از یک فروش؛ «بدهکار» کسی است که پول را گرفته ولی مال او نیست */
+/** سهم هر طرف از یک فروش؛ «بدهکار» کسی است که پول را گرفته ولی همه‌اش مال او نیست. qty منفی (برگشت) همهٔ جریان‌ها را برعکس می‌کند. */
 export function split(s: StockDB, x: StockSale) {
   const ch = s.channels.find((c) => c.id === x.channel); const seller = ch?.seller ?? 'gh'; const collector = ch?.collector ?? seller
   const wh = s.warehouses.find((w) => w.id === x.warehouse); const operator = wh?.operator ?? seller
-  const revenue = x.price * x.qty; const costT = x.cost * x.qty; const profit = revenue - costT
+  const R = s.rules ?? { discount: 'shared', fee: 'shared' }
+  const gross = x.price * x.qty; const disc = x.discount ?? 0; const fee = x.fee ?? 0; const revenue = gross - disc; const costT = x.cost * x.qty
   const pct = x.owner === seller ? 0 : s.agreements.find((a) => a.owner === x.owner && a.seller === seller)?.sellerPct ?? 0
-  const sellerShare = Math.round((profit * pct) / 100)
+  // سود قابل تقسیم: تخفیف و کارمزد اگر «مشترک» باشند پیش از تقسیم کم می‌شوند؛ اگر «با فروشنده» باشند فقط از سهم فروشنده کم می‌شوند
+  const shared = (R.discount === 'shared' ? disc : 0) + (R.fee === 'shared' ? fee : 0)
+  const own = x.owner === seller ? 0 : (R.discount === 'seller' ? disc : 0) + (R.fee === 'seller' ? fee : 0)
+  const profit = gross - costT - shared - (x.owner === seller ? disc + fee - shared : 0)
   const handling = operator !== seller && operator !== x.owner ? (wh?.handlingFee ?? 0) * x.qty : 0
-  const ownerTotal = costT + profit - sellerShare - handling
-  // جریان پول: گیرنده (collector) سهم بقیه را بدهکار است
+  const sellerShare = (Math.round((profit * pct) / 100) - own) || 0
+  const ownerTotal = costT + profit - Math.round((profit * pct) / 100) - handling
   const flows: { from: string; to: string; amount: number; why: string }[] = []
-  const pay = (to: string, amount: number, why: string) => { if (to !== collector && amount > 0) flows.push({ from: collector, to, amount, why }) }
+  const pay = (to: string, amount: number, why: string) => { if (to !== collector && amount !== 0) flows.push(amount > 0 ? { from: collector, to, amount, why } : { from: to, to: collector, amount: -amount, why: `${why} (برگشت)` }) }
   pay(x.owner, ownerTotal, 'بهای تمام‌شده و سهم سود مالک')
   pay(seller, sellerShare, 'سهم سود فروشنده')
   pay(operator, handling, 'هزینهٔ ارسال از انبار')
-  return { seller, collector, operator, revenue, costT, profit, pct, sellerShare, handling, ownerTotal, ownerProfit: profit - sellerShare - handling, flows }
+  return { seller, collector, operator, gross, revenue, disc, fee, costT, profit, pct, sellerShare, handling, ownerTotal, ownerProfit: ownerTotal - costT, flows }
+}
+
+/** سهم یک طرف مشخص از یک فروش (برای صورت‌حساب از دید هر شریک): چقدر از این فروش مال اوست و چقدر باید بدهد یا بگیرد */
+export function shareOf(s: StockDB, x: StockSale, party: string) {
+  const b = split(s, x)
+  const earns = (x.owner === party ? b.ownerTotal - b.costT : 0) + (b.seller === party && b.seller !== x.owner ? b.sellerShare : 0) + (b.operator === party ? b.handling : 0)
+  const net = b.flows.reduce((a, f) => a + (f.to === party ? f.amount : f.from === party ? -f.amount : 0), 0)
+  return { earns, net, involved: [x.owner, b.seller, b.collector, b.operator].includes(party), b }
 }
 
 /** مانده بین هر دو طرف: مثبت یعنی «a» به «b» بدهکار است */

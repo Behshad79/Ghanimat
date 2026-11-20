@@ -7,6 +7,7 @@ type Item = Order['shipments'][number]['items'][number]
 /** اعمال انتخاب روی اقلام لغوشده؛ برای کالای سریال‌دار وضعیت واحد و برای کالای تعدادی موجودی همان انبار */
 export function applyRestock(x: DB, items: { it: Item; warehouse: string }[], mode: RestockMode) {
   items.forEach(({ it, warehouse }) => {
+    (it as Item & { restockMode?: RestockMode }).restockMode = mode // دفتر شرکا: موجودی برگشتی مالک قابل فروش باشد یا نگه داشته شود
     if (it.unitId) { const u = x.units.find((y) => y.id === it.unitId); if (u && ['unit.reserved', 'unit.sold'].includes(u.status)) u.status = mode === 'site' ? 'unit.published' : 'unit.ready' }
     else if (mode === 'site') { const p = x.products.find((y) => y.id === it.productId); if (p?.qty) (p.qty as Record<string, number>)[warehouse] = ((p.qty as Record<string, number>)[warehouse] ?? 0) + (Number(it.qty) || 1) }
   })

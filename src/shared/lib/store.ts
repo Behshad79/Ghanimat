@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
 import { BASE_ROLES, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
+import { ledgerHook } from '../data/ledger'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
 const DB_KEY = 'ghanimat-demo-db-v73'
@@ -18,6 +19,7 @@ export function useDB(): DB { return useSyncExternalStore(subDB, getDB) }
 export function mutate(fn: (d: DB) => void, log?: { action: string; target: string; before?: string; after?: string; ai?: boolean }) {
   const next = structuredClone(db)
   fn(next)
+  try { ledgerHook(db, next, currentUser()?.name ?? 'سیستم') } catch (e) { console.error('ledger', e) }
   if (log) next.audit.unshift({ at: new Date().toISOString(), who: currentUser()?.name ?? 'سیستم', before: '-', after: '-', ai: false, ...log })
   db = next
   syncRoles()

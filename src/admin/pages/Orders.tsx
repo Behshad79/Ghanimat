@@ -1,7 +1,7 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Phone, Printer, ScanLine, Sparkles, Truck } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2 } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, Timeline } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -33,6 +33,7 @@ import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../
 import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
+import { OrderLedger } from '../stock/OrderLedger'
 
 // سفارشی که رویداد باز دارد (درخواست لغو، کمبود موجودی، تغییر مشتری) در «نیازمند اقدام» هم می‌آید
 const evOpen = { has: (id: string) => getDB().orderEvents.some((e) => e.status === 'open' && e.orderId === id) }
@@ -190,19 +191,54 @@ export function OrderDetail() {
     if (n > cap && !isChief()) { mutate((db) => { db.approvals.unshift({ id: `AP-${710 + db.approvals.length}`, type: 'بازگشت وجه', title: `بازگشت ${toman(n)} به ${dest} ${c.name}`, ref: o.id, amount: n, by: 'کاربر فعلی', byRole: 'x', status: 'approval.pending', at: new Date().toISOString() }) }, { action: 'درخواست بازگشت وجه', target: o.id, after: toman(n) }); return toast('مبلغ بالاتر از سقف است. درخواست به صندوق تأییدها رفت.') }
     mutate((db) => { createRefund(db, { orderId: o.id, customerId: c.id, amount: n, source: 'بازگشت دستی', dest: dest === 'کیف پول' ? 'کیف پول' : 'شبا (پایا)' }) }, { action: 'بازگشت وجه', target: o.id, after: toman(n) }); toast(`پروندهٔ بازگشت ${toman(n)} ساخته شد؛ از کارت «بازگشت وجه» تأیید و اعمال کنید.`)
   }
+  // اقدام بعدی: اولین مرسولهٔ فعال تعیین می‌کند الان چه کاری باید انجام شود
+  const live = o.shipments.find((s) => !['ship.cancelled', 'ship.delivered'].includes(s.status))
+  const goShip = (sid: string) => document.getElementById(`ship-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const nextAct: { label: string; hint: string; run?: () => void; tone?: 'wait' | 'done' } = o.status === 'order.awaiting_payment' || o.status === 'order.awaiting_credit' ? { label: 'منتظر پرداخت مشتری', hint: 'تا پرداخت کامل نشود، آماده‌سازی شروع نمی‌شود.', tone: 'wait' }
+    : o.status === 'order.suspicious' ? { label: 'بازبینی سفارش مشکوک', hint: 'ارسال تا تأیید شما متوقف است.', run: () => document.getElementById('order-attention')?.scrollIntoView({ behavior: 'smooth' }) }
+    : !live ? { label: o.status === 'order.cancelled' ? 'سفارش لغو شده است' : 'همهٔ مرسوله‌ها تحویل شد', hint: o.status === 'order.cancelled' ? 'بازگشت وجه را از کارت «بازگشت وجه» پیگیری کنید.' : 'کار دیگری روی این سفارش باقی نمانده است.', tone: 'done' }
+    : live.status === 'ship.pending' ? { label: 'شروع جمع‌آوری', hint: `مرسولهٔ ${live.id} از ${WAREHOUSE[live.warehouse]}`, run: () => advance(live.id, 'ship.picking', 'شروع جمع‌آوری') }
+    : live.status === 'ship.picking' ? { label: 'بسته‌بندی با اسکن', hint: `مرسولهٔ ${live.id}: هر قلم را اسکن کنید`, run: () => { setPacking(live.id); setTimeout(() => document.getElementById(`pack-${live.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) } }
+    : live.status === 'ship.partner_confirm' ? { label: 'منتظر تأیید موجودی شریک', hint: 'پیامک و پیام‌رسان برای او ارسال شده است.', tone: 'wait' }
+    : live.status === 'ship.packed' ? { label: /پست|تیپاکس|باربری/.test(live.method) ? 'ثبت تحویل به پست و کد رهگیری' : 'ثبت پیک و تحویل بسته', hint: `مرسولهٔ ${live.id} آمادهٔ ارسال است`, run: () => goShip(live.id) }
+    : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است`, run: () => goShip(live.id) }
   return (
-    <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · فروشنده: غنیمت`}
+    <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · ${c.name}`}
       actions={<>
-        <Button size="sm" variant="ghost" disabled={idx <= 0} icon={<ChevronRight size={14} />} onClick={() => nav(`/admin/orders/${d.orders[idx - 1].id}`)}>قبلی</Button>
-        <Button size="sm" variant="ghost" disabled={idx >= d.orders.length - 1} onClick={() => nav(`/admin/orders/${d.orders[idx + 1].id}`)}>بعدی<ChevronLeft size={14} /></Button>
+        <span className="flex items-center rounded-lg border border-line">
+          <button aria-label="سفارش قبلی" title="سفارش قبلی" disabled={idx <= 0} onClick={() => nav(`/admin/orders/${d.orders[idx - 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronRight size={16} /></button>
+          <span className="h-5 w-px bg-line" />
+          <button aria-label="سفارش بعدی" title="سفارش بعدی" disabled={idx >= d.orders.length - 1} onClick={() => nav(`/admin/orders/${d.orders[idx + 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronLeft size={16} /></button>
+        </span>
         <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?orders=${o.id}`)}>چاپ بستهٔ کامل</Button>
-        <Button onClick={() => setEditOpen(true)}>ویرایش سفارش</Button>
-        <Button onClick={() => { setAmount(''); setRefund(true) }}>بازگشت وجه</Button>
+        <Button icon={<Pencil size={14} />} onClick={() => setEditOpen(true)}>ویرایش سفارش</Button>
+        <Button icon={<Undo2 size={14} />} onClick={() => { setAmount(''); setRefund(true) }}>بازگشت وجه</Button>
       </>}>
       {o.lockedBy && <div className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><Avatar name={o.lockedBy} size={20} />{o.lockedBy} همین سفارش را باز کرده است. ویرایش هم‌زمان ممکن است تعارض بسازد؛ تغییر او اول ذخیره می‌شود.</div>}
-      <Card className="mb-4"><Stepper current={step} steps={o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} /></Card>
-      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+      {/* خلاصهٔ سفارش و اقدام بعدی: مهم‌ترین چیزی که اپراتور باید در یک نگاه ببیند */}
+      <Card className="mb-4" pad={false}>
+        <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
+          <div className="p-4">
+            <Stepper current={step} steps={o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} />
+            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-12 sm:grid-cols-4">
+              <div><dt className="text-t3">مبلغ پرداختی</dt><dd className="mt-0.5 text-15 font-bold"><Money v={o.total} /></dd></div>
+              <div><dt className="text-t3">پرداخت</dt><dd className="mt-0.5 font-medium">{o.pay}</dd></div>
+              <div><dt className="text-t3">مشتری</dt><dd className="mt-0.5 flex items-center gap-1 font-medium">{c.name}<button aria-label={`تماس با ${c.name}`} title="تماس" onClick={() => callTo(c.mobile, c.name)} className="text-t3 hover:text-brand"><Phone size={13} /></button></dd></div>
+              <div><dt className="text-t3">ارسال</dt><dd className="mt-0.5 font-medium">{o.shipments.length ? `${fa(o.shipments.length)} مرسوله · ${[...new Set(o.shipments.map((x) => WAREHOUSE[x.warehouse]))].join('، ')}` : '—'}</dd></div>
+            </dl>
+          </div>
+          <div className={cx('flex flex-col justify-center gap-2 border-t border-line p-4 lg:w-80 lg:border-t-0 lg:border-r', nextAct.tone === 'done' ? 'bg-success-bg/50' : nextAct.tone === 'wait' ? 'bg-warning-bg/50' : 'bg-brand-tint/30')}>
+            <p className="text-11 font-medium text-t3">اقدام بعدی</p>
+            {nextAct.run ? <Button variant="primary" size="lg" icon={<ArrowLeft size={16} />} onClick={nextAct.run} className="justify-center">{nextAct.label}</Button> : <p className={cx('text-15 font-bold', nextAct.tone === 'done' ? 'text-success' : 'text-warning')}>{nextAct.label}</p>}
+            <p className="text-12 text-t2">{nextAct.hint}</p>
+            {live && <SlaChip at={live.sla} />}
+          </div>
+        </div>
+      </Card>
+      <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+        <div className="min-w-0 space-y-4">
+          {/* نیازمند توجه: فقط وقتی موردی باشد چیزی نشان داده می‌شود */}
+          <div id="order-attention" className="space-y-4 empty:hidden">
           <NoteBanner o={o} />
           <PayHoldCard o={o} />
           <OrderAlerts key={o.id} o={o} />
@@ -216,11 +252,16 @@ export function OrderDetail() {
             </Card>
           )}
           {o.shipments.length > 1 && <SplitBanner o={o} />}
-          <OrderNotes o={o} />
+          </div>
           {o.shipments.length === 0 && <Card><p className="py-6 text-center text-13 text-t2">این سفارش مرسوله‌ای ندارد؛ پیش از تخصیص انبار لغو شده است.</p></Card>}
-          {o.shipments.map((s, i) => { const total = s.items.reduce((a, x) => a + x.price * x.qty, 0); const dead = ['ship.cancelled', 'ship.delivered'].includes(s.status); const post = /پست|تیپاکس|باربری/.test(s.method); return (
-            <Card key={s.id} title={<span className="flex flex-wrap items-center gap-2">مرسولهٔ {fa(i + 1)}<CopyId v={s.id} /><StatusBadge s={s.status} /></span>} actions={<SlaChip at={s.sla} done={dead} />}>
-              <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-12 text-t2"><span className="flex items-center gap-1"><MapPin size={13} />ارسال از {WAREHOUSE[s.warehouse]}</span><span className="flex items-center gap-1"><Truck size={13} />{s.method}</span><span>دلیل تخصیص: {s.allocReason}</span></div>
+          {o.shipments.map((s, i) => { const total = s.items.reduce((a, x) => a + x.price * x.qty, 0); const dead = ['ship.cancelled', 'ship.delivered'].includes(s.status); const post = /پست|تیپاکس|باربری/.test(s.method); const isNext = live?.id === s.id; return (
+            <section key={s.id} id={`ship-${s.id}`} className={cx('scroll-mt-24 rounded-2xl border bg-surface', isNext ? 'border-brand/50 shadow-sm' : 'border-line')}>
+              <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+                <b className="text-14">مرسولهٔ {fa(i + 1)}</b><CopyId v={s.id} /><StatusBadge s={s.status} />{isNext && <Badge tone="brand" dot={false}>در جریان</Badge>}
+                <span className="flex-1" /><SlaChip at={s.sla} done={dead} />
+              </header>
+              <div className="p-4">
+              <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-12 text-t2"><span className="flex items-center gap-1"><MapPin size={13} />ارسال از {WAREHOUSE[s.warehouse]}</span><span className="flex items-center gap-1"><Truck size={13} />{s.method}</span><span>دلیل تخصیص: {s.allocReason}</span><span className="mr-auto font-medium text-t1">جمع مرسوله: <Money v={total} /></span></div>
               <ul className="mb-3 divide-y divide-line rounded-md border border-line">
                 {s.items.map((it, k) => { const u = unit(it.unitId); return (
                   <li key={k} className={cx('flex flex-wrap items-center justify-between gap-2 px-3 py-2', it.cancelled && 'bg-neutral-bg/60 opacity-70')}>
@@ -229,30 +270,36 @@ export function OrderDetail() {
                   </li>) })}
               </ul>
               {packing === s.id && ['ship.pending', 'ship.picking'].includes(s.status) && <PackSession inline shipId={s.id} onDone={() => setPacking(null)} onClose={() => setPacking(null)} />}
-              {s.status !== 'ship.cancelled' && <div className="mb-3 rounded-lg border border-line p-3"><p className="mb-2 flex items-center justify-between text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</p><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div>}
-              {(/حضوری/.test(s.method) || d.pickups.some((p) => p.orderId === o.id)) && s.status !== 'ship.cancelled' && <PickupReceipt orderId={o.id} customerId={o.customerId} items={s.items.map((x) => x.productId)} />}
-              <PackRecord s={s} />
-              <div className="mb-3"><CustomerProgress o={o} s={s} /></div>
-              {s.courier && <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
-              {s.tracking && <p className="mb-3 text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
               {s.status === 'ship.partner_confirm' && <p className="mb-3 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning">منتظر تأیید موجودی شریک انبار. پیامک و پیام‌رسان برای او ارسال شده است. اگر تا پایان مهلت تأیید نکند، سفارش به جریان تصمیم مشتری می‌رود.</p>}
+              {/* اقدام‌های مرسوله: اصلی‌ها راست، کم‌کاربرد و حساس‌ها چپ و جدا */}
               {!dead && s.status !== 'ship.partner_confirm' && (
-                <div className="space-y-3">
+                <div className="mb-3 space-y-3 rounded-xl bg-neutral-bg/60 p-3">
                   {s.status === 'ship.packed' && !s.courier && !s.tracking && /سریع|پیک|اسنپ/.test(s.method) && <SmartPaste orderId={o.id} shipId={s.id} carrierName={d.delivery.fast.couriers.find((c) => c.id === d.delivery.fast.primary)?.name ?? 'سرویس پیک'} />}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {s.status === 'ship.pending' && <Button variant="primary" onClick={() => advance(s.id, 'ship.picking', 'شروع جمع‌آوری')}>شروع جمع‌آوری</Button>}
                     {['ship.pending', 'ship.picking'].includes(s.status) && packing !== s.id && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => { setPacking(s.id); setTimeout(() => document.getElementById(`pack-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>بسته‌بندی با اسکن</Button>}
-                    {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')}>تأیید بدون اسکن</Button>}
+                    {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')} title="مالک هر قلم طبق قاعدهٔ اولویت برداشت تعیین و ثبت می‌شود">تأیید بدون اسکن</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
                     <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
-                    <Button variant="ghost" disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
-                    <RollbackShip o={o} sid={s.id} />
-                    <Button variant="danger" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button>
+                    <Button variant="ghost" icon={<MapPin size={14} />} disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
+                    <span className="mr-auto flex flex-wrap items-center gap-2"><RollbackShip o={o} sid={s.id} /><Button variant="danger" size="sm" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button></span>
                   </div>
                 </div>
               )}
               {s.status === 'ship.delivered' && <div className="flex flex-wrap items-center justify-between gap-2">{(s as any).deliveredAt ? <p className="flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-1.5 text-12 text-success">تحویل مشتری شد · {new Date((s as any).deliveredAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}{(s as any).deliveredTo ? ` · ${(s as any).deliveredTo.name} (${(s as any).deliveredTo.relation})` : ''}{(s as any).deliveredVia ? ` · ${(s as any).deliveredVia}` : ''}</p> : <span />}<RollbackShip o={o} sid={s.id} /></div>}
-            </Card>) })}
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="min-w-0"><CustomerProgress o={o} s={s} /></div>
+                <div className="min-w-0 space-y-3">
+              {s.courier && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
+              {s.tracking && <p className="text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
+              <PackRecord s={s} />
+              {(/حضوری/.test(s.method) || d.pickups.some((p) => p.orderId === o.id)) && s.status !== 'ship.cancelled' && <PickupReceipt orderId={o.id} customerId={o.customerId} items={s.items.map((x) => x.productId)} />}
+              {s.status !== 'ship.cancelled' && <details className="rounded-lg border border-line" open={!s.packPhotos?.length && ['ship.picking', 'ship.packed'].includes(s.status)}><summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-12 font-semibold">عکس پیش از ارسال{s.packPhotos?.length ? <Badge tone="success">{fa(s.packPhotos.length)} عکس بایگانی شد</Badge> : <Badge tone="warning">ثبت نشده</Badge>}</summary><div className="border-t border-line p-3"><PackPhotos orderId={o.id} shipId={s.id} readOnly={['ship.delivered', 'ship.in_transit', 'ship.handed'].includes(s.status)} /></div></details>}
+                </div>
+              </div>
+              </div>
+            </section>) })}
+          <OrderNotes o={o} />
           <Card title="تاریخچه و یادداشت‌ها">
             <ChangeHistory o={o} />
             <Timeline items={[
@@ -263,7 +310,7 @@ export function OrderDetail() {
             <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget.elements.namedItem('n') as HTMLInputElement; if (!f.value) return; mutate(() => {}, { action: 'یادداشت داخلی', target: o.id, after: f.value }); f.value = '' }}><Input name="n" placeholder="یادداشت داخلی؛ با @ همکار را منشن کنید" /><Button>ثبت یادداشت</Button></form>
           </Card>
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card title="مشتری" actions={<Button size="sm" variant="ghost" onClick={() => nav(`/admin/customers?c=${c.id}`)}>پروفایل ۳۶۰</Button>}>
             <div className="mb-2 flex items-center gap-2"><Avatar name={c.name} /><div><p className="text-13 font-semibold">{c.name}</p><p className="text-11 text-t3">{c.segment} · {c.city}</p></div></div>
             <Row k="موبایل"><Masked id={`m-${c.id}`} value={c.mobile} label={`شمارهٔ موبایل ${c.name}`} /></Row>
@@ -272,8 +319,6 @@ export function OrderDetail() {
             <Row k={<>امتیاز ریسک<Hint k="risk" /></>}><Badge tone={o.risk > 70 ? 'danger' : o.risk > 30 ? 'warning' : 'success'}>{fa(o.risk)}</Badge></Row>
             <div className="mt-2 flex gap-2"><Button size="sm" icon={<Phone size={12} />} onClick={() => callTo(c.mobile, c.name)}>تماس</Button><Button size="sm" onClick={() => { mutate((x) => { x.tickets.unshift({ id: `TK-${482200 + x.tickets.length}`, customerId: c.id, orderId: o.id, subject: `پیگیری سفارش ${o.id}`, channel: 'پنل ادمین', status: 'ticket.open', priority: 'عادی', sla: new Date(Date.now() + 4 * 36e5).toISOString(), assignee: 'من', sentiment: 'خنثی', messages: [{ from: 'agent', text: `تیکت برای پیگیری سفارش ${o.id} ساخته شد.`, at: new Date().toISOString() }] }) }, { action: 'ساخت تیکت', target: o.id }); nav(`/admin/support?t=TK-${482200 + d.tickets.length}`) }}>ساخت تیکت</Button><Button size="sm" variant="ai" icon={<Sparkles size={12} />} onClick={() => setMsg(`سلام ${c.name.split(' ')[0]} عزیز. سفارش ${o.id} شما ${o.status === 'order.shipped' ? 'در مسیر است و به‌زودی می‌رسد' : o.status === 'order.delivered' ? 'تحویل شده است؛ از خرید شما سپاسگزاریم' : 'در حال آماده‌سازی است'}. غنیمت`)}>پیش‌نویس پیام</Button></div>
           </Card>
-          <OrderProfitCard o={o} />
-          <Card><ReasonLog kind="order" refId={o.id} /></Card>
           <Card title="مالی">
             <Row k="جمع کالاها"><Money v={sub} /></Row><Row k="هزینهٔ ارسال">{o.shippingFee ? <Money v={o.shippingFee} /> : 'رایگان'}</Row>
             {o.discount > 0 && <Row k="تخفیف"><span className="text-success">−<Money v={o.discount} /></span></Row>}
@@ -283,6 +328,9 @@ export function OrderDetail() {
             <PaymentInfo orderId={o.id} />
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>
+          <OrderLedger o={o} />
+          <OrderProfitCard o={o} />
+          <Card><ReasonLog kind="order" refId={o.id} /></Card>
         </div>
       </div>
       <Modal open={!!cancelSh} onClose={() => setCancelSh(null)} title={`لغو مرسولهٔ ${cancelSh?.sid ?? ''}`} footer={<><Button variant="danger" onClick={() => void doCancelShip()}>لغو مرسوله</Button><Button variant="ghost" onClick={() => setCancelSh(null)}>انصراف</Button></>}>

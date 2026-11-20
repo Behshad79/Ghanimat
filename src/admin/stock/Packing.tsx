@@ -11,6 +11,7 @@ import { currentUser, getDB, mutate, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 import type { DB, Order, Shipment } from '@/shared/data/seed'
 import { scanLookup } from '@/shared/data/stock'
+import { recordShipment, suggestOwners } from '@/shared/data/ledger'
 import { codeFor, ownersAt, PartyChip, partyName, pv, syncQty, takeLots, whName } from './common'
 import { shipBlocked } from '../orders/PayHold'
 import { StartDecision } from '../orders/Decision'
@@ -23,7 +24,7 @@ const OPEN = ['ship.pending', 'ship.picking']
 export function resolveCode(d: DB, raw: string): { productId: string; variationId?: string; unitId?: string; owner: string } | null {
   const c = raw.trim(); if (!c) return null; const C = c.toUpperCase()
   const u = d.units.find((x) => x.id.toUpperCase() === C || (x as { code?: string }).code?.toUpperCase() === C || x.serial.toUpperCase() === C)
-  if (u) return { productId: u.productId, variationId: u.variationId, unitId: u.id, owner: (u as { owner?: string }).owner ?? 'gh' }
+  if (u) return { productId: u.productId, variationId: u.variationId, unitId: u.id, owner: u.owner ?? d.products.find((p) => p.id === u.productId)?.owner ?? 'gh' }
   const hit = scanLookup(d.stock, d.products, c); if (hit) return hit
   for (const p of d.products) {
     if (p.code?.toUpperCase() === C || (p.ean && p.ean === c)) return { productId: p.id, variationId: p.variations?.length === 1 ? p.variations[0].id : undefined, owner: p.owner ?? 'gh' }
@@ -70,7 +71,9 @@ export function PackSession({ shipId, inline, sound = true, onDone, onClose, onO
     if (okFor(line) >= line.qty) return push({ at, code: c, ...r, ok: false, why: `از این کالا فقط ${fa(line.qty)} عدد سفارش داده شده و همه اسکن شده است.` }, 'بیشتر از تعداد سفارش')
     const has = ownersAt(s, r.productId, r.variationId, station).get(r.owner) ?? 0
     const tracked = s.lots.some((l) => l.productId === r.productId)
-    push({ at, code: c, ...r, ok: true, why: tracked && has <= 0 ? `در ${whName(s, station)} موجودی ثبت‌شده‌ای به نام ${partyName(s, r.owner)} نیست؛ پس از ارسال موجودی را بررسی کنید.` : undefined }, `درست: ${name}`)
+    const sug = tracked ? suggestOwners(d, r.productId, r.variationId, station, 1)[0] : null
+    const why = tracked && has <= 0 ? `در ${whName(s, station)} موجودی ثبت‌شده‌ای به نام ${partyName(s, r.owner)} نیست؛ پس از ارسال موجودی را بررسی کنید.` : sug && sug.owner !== r.owner ? `طبق قاعدهٔ اولویت برداشت، بهتر بود از کالای ${partyName(s, sug.owner)} برداشته شود. ثبت شد؛ دفعهٔ بعد دقت کنید.` : undefined
+    push({ at, code: c, ...r, ok: true, why }, `درست: ${name}`)
   }
 
   const undo = () => { setScans((L) => L.slice(1)); setFlash(null); focus() }
@@ -80,13 +83,8 @@ export function PackSession({ shipId, inline, sound = true, onDone, onClose, onO
     mutate((x) => {
       const o = x.orders.find((y) => y.id === cur.o.id); const sh = o?.shipments.find((y) => y.id === cur.x.id); if (!o || !sh) return
       sh.status = 'ship.packed'; sh.pack = { at: new Date().toISOString(), by, station, scans: [...scans].reverse() }
-      // هر قلم: از موجودی همان مالک در همین انبار کم می‌شود و یک ردیف فروش برای تسویه ساخته می‌شود
-      const groups = new Map<string, Scan[]>(); ok.forEach((sc) => { const k = `${sc.productId}|${sc.variationId ?? ''}|${sc.owner}`; groups.set(k, [...(groups.get(k) ?? []), sc]) })
-      groups.forEach((L) => { const f = L[0]; if (!x.stock.lots.some((l) => l.productId === f.productId)) return
-        const t = takeLots(x, { productId: f.productId, variationId: f.variationId, owner: f.owner, warehouse: station }, L.length)
-        const price = sh.items.find((i) => i.productId === f.productId && (i.variationId ?? '') === (f.variationId ?? ''))?.price ?? 0
-        x.stock.sales.unshift({ id: `S-${Date.now().toString(36).slice(-4).toUpperCase()}${f.owner}`, at: new Date().toISOString(), productId: f.productId, variationId: f.variationId, owner: f.owner, warehouse: station, channel: chan, qty: L.length, price, cost: t.cost, orderId: o.id, code: f.code, by })
-        syncQty(x, f.productId) })
+      // هر قلم: از موجودی همان مالک در همین انبار کم می‌شود و یک ردیف فروش برای تسویه ساخته می‌شود (تخفیف و کارمزد به نسبت)
+      recordShipment(x, o, sh, [...scans].reverse(), by)
     }, { action: 'تأیید بسته‌بندی با اسکن', target: `${cur.x.id} · ${fa(ok.length)} قلم` })
     toast(`مرسولهٔ ${cur.x.id} بسته‌بندی شد؛ موجودی و سهم شرکا به‌روز شد.${inline ? ' مرحلهٔ بعد: تحویل به پیک یا پست.' : ''}`)
     onDone?.(next)
@@ -110,7 +108,7 @@ export function PackSession({ shipId, inline, sound = true, onDone, onClose, onO
     <ul className="space-y-2">{lines.map((l) => { const n = okFor(l); const full = n >= l.qty; const { name, vname } = pv(d, l.productId, l.variationId); const owners = scans.filter((x) => x.ok && x.productId === l.productId && (x.variationId ?? '') === (l.variationId ?? '')).map((x) => x.owner); return (
       <li key={l.k} className={cx('flex flex-wrap items-center gap-3 rounded-xl border-2', inline ? 'p-2.5' : 'p-3', full ? 'border-success bg-success-bg' : n ? 'border-brand/40' : 'border-line')}>
         {full ? <CheckCircle2 size={22} className="text-success" /> : <span className="flex size-[22px] items-center justify-center rounded-full border-2 border-line text-11 font-bold">{fa(l.qty - n)}</span>}
-        <div className="min-w-0 flex-1"><p className="font-medium">{name}</p><p className="text-12 text-t2">{vname && <>{vname} · </>}تعداد {fa(l.qty)}{l.unitId && <> · واحد <bdi dir="ltr" className="font-mono">{l.unitId}</bdi></>}</p>{owners.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{[...new Set(owners)].map((o) => <PartyChip key={o} s={s} id={o} n={owners.filter((x) => x === o).length} />)}</div>}</div>
+        <div className="min-w-0 flex-1"><p className="font-medium">{name}</p><p className="text-12 text-t2">{vname && <>{vname} · </>}تعداد {fa(l.qty)}{l.unitId && <> · واحد <bdi dir="ltr" className="font-mono">{l.unitId}</bdi></>}</p>{!full && !l.unitId && s.lots.some((q) => q.productId === l.productId) && <p className="mt-1 flex flex-wrap items-center gap-1 text-11 text-t2">برداشت از:{suggestOwners(d, l.productId, l.variationId, station, l.qty - n).map((g) => <PartyChip key={g.owner} s={s} id={g.owner} n={g.qty} />)}</p>}{owners.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{[...new Set(owners)].map((o) => <PartyChip key={o} s={s} id={o} n={owners.filter((x) => x === o).length} />)}</div>}</div>
         <span className="font-mono text-15 font-bold">{fa(n)}/{fa(l.qty)}</span>
         {!full && <Button size="sm" variant="ghost" icon={<PackageX size={13} />} onClick={() => setShort([l.k])}>اینجا نیست</Button>}
       </li>) })}</ul>

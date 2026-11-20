@@ -22,7 +22,7 @@ export type Product = { id: string; image: string; images?: string[]; imagePos?:
 export type PAttr = { axis: string; name?: string; values: string[]; forVar: boolean; visible: boolean }
 /** یک تنوع کالای متغیر (مثل هدفون آبی): کد، بارکد، قیمت، موجودی و تصویر جدا */
 export type Variation = { id: string; opts: Record<string, string>; suffix: string; ean?: string; price?: number; sale?: number; saleUntil?: string; qty: { tehran: number; mahabad: number }; low?: number; enabled: boolean; image?: string; backorder?: boolean; weight?: number; costFx?: number; extra?: number }
-export type Unit = { variationId?: string; id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
+export type Unit = { variationId?: string; owner?: string; id: string; productId: string; serial: string; condition: string; grade: string; warehouse: string; source: string; status: string; cost: number; price: number; shelf: string; received: string; flaws: string[]; color: string; warrantyMonths?: number; code?: string; ean?: string; photos?: string[] }
 /** تصمیم مشتری در کمبود تأمین (فیگما: سفارش‌های جاری › نیازمند تصمیم شما) */
 export type OrderDecision = { kind: 'unsupplied' | 'out_of_stock' | 'other_warehouse'; items: string[]; alt?: string; deadline: string; at: string; by: string; choice?: 'send_rest' | 'from_other' | 'cancel_all'; chosenBy?: 'مشتری' | 'پشتیبانی' | 'سیستم'; chosenAt?: string; refund?: number; error?: boolean }
 /** جزئیات لغو و بازگشت وجه (فیگما: سفارش‌های لغوشده) */

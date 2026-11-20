@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeftRight, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
-import { Badge, Button, Card, Field, Input, Select, Tabs, Toggle } from '@/shared/ui/base'
+import { Badge, Button, Card, Field, Input, Segmented, Select, Tabs, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
 import { DataTable } from '@/shared/ui/table'
 import { Modal, toast } from '@/shared/ui/overlay'
@@ -99,11 +99,13 @@ function MoveModal({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 /* ───────── فروش ───────── */
 export function SaleBreakdown({ x }: { x: StockSale }) {
-  const d = useDB(); const s = d.stock; const b = split(s, x)
+  const d = useDB(); const s = d.stock; const b = split(s, x); const nav = useNavigate()
   return <div className="space-y-2 text-12">
+    {x.reversal && <p className="rounded-lg bg-danger-bg px-2.5 py-1.5 text-danger">این ردیف برگشت فروش است ({x.note}); همهٔ سهم‌ها برعکس حساب شده است.</p>}
     <div className="flex flex-wrap items-center gap-2"><span className="text-t2">مالک:</span><PartyChip s={s} id={x.owner} /><span className="text-t2">انبار:</span><b>{whName(s, x.warehouse)}</b><span className="text-t2">فروشنده:</span><PartyChip s={s} id={b.seller} /><span className="text-t2">کانال:</span><b>{chName(s, x.channel)}</b><span className="text-t2">پول دست:</span><PartyChip s={s} id={b.collector} /></div>
-    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">{[['مبلغ فروش', b.revenue], ['بهای تمام‌شده', b.costT], ['سود ناخالص', b.profit], [`سهم فروشنده (${fa(b.pct)}٪ سود)`, b.sellerShare], ['سهم کل مالک', b.ownerTotal]].map(([k, v]) => <div key={k as string} className="rounded-lg bg-neutral-bg px-2.5 py-1.5"><dt className="text-[10px] text-t2">{k}</dt><dd className="font-semibold">{toman(v as number)}</dd></div>)}</dl>
-    {b.handling > 0 && <p className="text-t2">هزینهٔ ارسال از {whName(s, x.warehouse)}: {toman(b.handling)} به {partyName(s, b.operator)}</p>}
+    {x.orderId && <p className="flex flex-wrap items-center gap-2"><span className="text-t2">سفارش:</span><button className="font-mono text-brand underline" onClick={() => nav(`/admin/orders/${x.orderId}`)}>{x.orderId}</button>{x.code && <><span className="text-t2">کد اسکن‌شده:</span><bdi dir="ltr" className="font-mono">{x.code}</bdi></>}<span className="text-t2">ثبت:</span>{x.by}{x.auto && <Badge tone="warning">بدون اسکن، طبق قاعدهٔ برداشت</Badge>}</p>}
+    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">{([['مبلغ فهرست', b.gross], ['تخفیف سهم این قلم', -b.disc], ['کارمزد درگاه سهم این قلم', -b.fee], ['بهای تمام‌شده', b.costT], ['سود قابل تقسیم', b.profit], [`سهم فروشنده (${fa(b.pct)}٪ سود)`, b.sellerShare], ['هزینهٔ ارسال گردانندهٔ انبار', b.handling], ['سهم کل مالک', b.ownerTotal]] as [string, number][]).map(([k, v]) => <div key={k} className="rounded-lg bg-neutral-bg px-2.5 py-1.5"><dt className="text-[10px] text-t2">{k}</dt><dd className="font-semibold">{toman(v)}</dd></div>)}</dl>
+    <p className="text-11 text-t2">قاعدهٔ فعلی: تخفیف {s.rules?.discount === 'seller' ? 'فقط از سهم فروشنده' : 'مشترک، پیش از تقسیم سود'} · کارمزد درگاه {s.rules?.fee === 'seller' ? 'فقط از سهم فروشنده' : 'مشترک، پیش از تقسیم سود'}</p>
     {b.flows.length ? b.flows.map((f, i) => <p key={i} className="rounded-lg bg-warning-bg px-2.5 py-1.5 text-warning"><b>{partyName(s, f.from)}</b> باید <b>{toman(f.amount)}</b> به <b>{partyName(s, f.to)}</b> بدهد ({f.why}).</p>) : <p className="rounded-lg bg-success-bg px-2.5 py-1.5 text-success">مالک خودش فروخته و پول دست خودش است؛ تسویه‌ای لازم نیست.</p>}
   </div>
 }
@@ -184,7 +186,18 @@ function SetupTab() {
   const COLORS = ['#b45309', '#7c3aed', '#0e7490', '#be185d', '#4d7c0f']
   const setPct = (owner: string, seller: string, v: number) => mutate((x) => { const a = x.stock.agreements.find((y) => y.owner === owner && y.seller === seller); if (a) a.sellerPct = v; else x.stock.agreements.push({ owner, seller, sellerPct: v }) }, { action: 'تغییر قرارداد سهم', target: `${partyName(s, owner)} ← ${partyName(s, seller)}: ${v}٪` })
   const pfxBad = !!np.prefix && (s.parties.some((p) => p.prefix === np.prefix.toUpperCase()) || !/^[A-Z]{2,4}$/i.test(np.prefix))
+  const orderChannels = [...new Set([...d.orders.map((o) => o.channel ?? 'سایت'), ...Object.keys(s.channelMap ?? {})])]
   return <div className="grid gap-4 xl:grid-cols-2">
+    <Card className="xl:col-span-2" title={<span className="flex items-center gap-1.5"><Info size={15} />قواعد محاسبه و برداشت</span>} hint="روی همهٔ فروش‌های بعدی اعمال می‌شود؛ فروش‌های ثبت‌شده با قاعدهٔ زمان خودشان می‌مانند مگر برگشت بخورند.">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Field label="اولویت برداشت وقتی هر دو مالک در یک انبار موجودی دارند" help="در ایستگاه بسته‌بندی پیشنهاد داده می‌شود و در تأیید بدون اسکن همین اعمال می‌شود"><Select value={s.pickRule ?? 'fifo'} onChange={(v) => mutate((x) => { x.stock.pickRule = v as typeof s.pickRule }, { action: 'تغییر قاعدهٔ اولویت برداشت', target: v })} options={[['partner_first', 'اول کالای شریک (پیشنهادی: نقدینگی شریک زودتر برمی‌گردد)'], ['own_first', 'اول کالای خودمان'], ['fifo', 'قدیمی‌ترین ورود اول'], ['cost_low', 'کم‌هزینه‌ترین اول']]} /></Field>
+        <Field label="تخفیف سفارش" help="کد تخفیف و تخفیف دستی به نسبت مبلغ میان اقلام پخش می‌شود"><Segmented value={s.rules?.discount ?? 'shared'} onChange={(v) => mutate((x) => { x.stock.rules = { ...x.stock.rules, discount: v } }, { action: 'تغییر قاعدهٔ تخفیف در تسویه', target: v })} options={[['shared', 'مشترک (پیش از تقسیم سود)'], ['seller', 'فقط با فروشنده']]} /></Field>
+        <Field label="کارمزد درگاه و اقساطی" help="کارمزد زرین‌پال، اسنپ‌پی و مانند آن"><Segmented value={s.rules?.fee ?? 'shared'} onChange={(v) => mutate((x) => { x.stock.rules = { ...x.stock.rules, fee: v } }, { action: 'تغییر قاعدهٔ کارمزد در تسویه', target: v })} options={[['shared', 'مشترک'], ['seller', 'فقط با فروشنده']]} /></Field>
+      </div>
+      <p className="mt-3 mb-1.5 text-12 font-semibold">کانال سفارش ← کانال تسویه</p>
+      <p className="mb-2 text-11 text-t2">هر سفارش از روی کانالش به یکی از کانال‌های فروش وصل می‌شود تا معلوم باشد فروشنده و دریافت‌کنندهٔ پول کیست. روی صفحهٔ هر سفارش هم می‌شود دستی عوض کرد.</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{orderChannels.map((c) => <label key={c} className="flex items-center gap-2 rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12"><span className="w-28 shrink-0 truncate">{c}</span><Select className="flex-1" value={s.channelMap?.[c] ?? 'gh-site'} onChange={(v) => mutate((x) => { x.stock.channelMap = { ...x.stock.channelMap, [c]: v } }, { action: 'نگاشت کانال سفارش به کانال تسویه', target: `${c} ← ${v}` })} options={s.channels.map((ch) => [ch.id, ch.name] as [string, string])} /></label>)}</div>
+    </Card>
     <Card title={<span className="flex items-center gap-1.5"><Users size={15} />شرکا و تأمین‌کنندگان</span>} hint="هر شریک یک پیشوند کد دارد (۲ تا ۴ حرف لاتین).">
       <ul className="mb-3 space-y-1.5">{s.parties.map((p) => <li key={p.id} className="flex items-center gap-2 rounded-lg bg-neutral-bg px-3 py-2 text-13"><PartyChip s={s} id={p.id} /><span className="flex-1 text-12 text-t2">{p.kind === 'self' ? 'خودمان' : `شریک${p.site ? ` · سایت ${p.site}` : ''}`}</span>{p.kind !== 'self' && <Toggle on={p.active} onChange={(v) => mutate((x) => { const q = x.stock.parties.find((y) => y.id === p.id); if (q) q.active = v }, { action: v ? 'فعال‌سازی شریک' : 'غیرفعال‌سازی شریک', target: p.name })} />}</li>)}</ul>
       <div className="grid gap-2 sm:grid-cols-[1fr_.6fr_.8fr_auto] sm:items-end"><Field label="نام شریک"><Input value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} placeholder="مثلاً شعبهٔ شیراز" /></Field><Field label="پیشوند کد" error={pfxBad ? 'تکراری یا نامعتبر' : undefined}><Input className="ltr text-left font-mono uppercase" value={np.prefix} onChange={(e) => setNp({ ...np, prefix: e.target.value.toUpperCase() })} placeholder="SH" /></Field><Field label="سایت خودش (اختیاری)"><Input className="ltr text-left" value={np.site} onChange={(e) => setNp({ ...np, site: e.target.value })} /></Field>

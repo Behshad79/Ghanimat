@@ -1,4 +1,5 @@
 import { AmazonReviews } from './LinkExtras'
+import { WizardLabels } from './WizardLabels'
 import { OwnerSplit, type SplitRow } from '../stock/OwnerSplit'
 import { syncQty } from '../stock/common'
 import { VideoField } from './VideoField'
@@ -310,7 +311,7 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
         {f.ean && isEan13(f.ean) && <><p className="text-13">بارکد کارخانه</p><Barcode value={f.ean} type="ean13" className="h-20 w-full max-w-sm rounded border border-line" /></>}
         {f.code && <div className="flex items-center gap-3"><QR value={`https://ghanimat.ir/p/${f.code}`} size={88} /><p className="text-12 text-t2">QR به صفحهٔ کالا در پنل و سایت می‌رود. اسکن هر کد در جست‌وجو، دریافت، جمع‌آوری، بسته‌بندی و مرجوعی همین کالا را باز می‌کند.</p></div>}
         {!f.code && <Button icon={<RefreshCw size={14} />} onClick={() => set({ code: takeCode('product') })}>ساخت کد داخلی الان</Button>}</div>
-      <div><p className="mb-2 text-13 font-medium">پیش‌نمایش برچسب کالا (۵۰×۳۰)</p><div className="inline-block rounded-lg bg-neutral-bg p-4"><ProductLabel p={{ ...blank(), id: 'x', image: '', title: f.title || 'عنوان کالا', en: f.en, brand: f.brand, category: f.category, status: '', mode: f.mode, priceNew: 0, rating: 0, reviews: 0, views: 0, cvr: 0, health: 0, seller: '', code: f.code || 'GH-P-000000', model: f.model } as unknown as Product} qty={f.mode === 'qty' ? f.qtyTehran + f.qtyMahabad : undefined} /></div><p className="mt-2 text-11 text-t2">برچسب واحدها پس از ثبت از فهرست واحدها یا صفحهٔ هر واحد چاپ می‌شود (تکی یا گروهی).</p></div></div>,
+      <div><p className="mb-2 text-13 font-medium">برچسب کالا: پیش‌نمایش و چاپ</p><WizardLabels f={f} set={set} /></div></div>,
     11: <div className="grid gap-5 xl:grid-cols-[1fr_auto]">
       <div className="space-y-4">
         <Card title="چک‌لیست انتشار">{missing.length === 0 ? <p className="flex items-center gap-2 text-13 text-success"><Check size={16} />همه‌چیز برای انتشار آماده است.</p> : <ul className="space-y-1.5">{missing.map(([, l, s]) => <li key={l}><button onClick={() => setStep(s)} className="flex items-center gap-2 text-13 text-danger hover:underline"><CircleAlert size={14} />{l}<span className="text-11 text-t2">(رفتن به گام {fa(order.indexOf(s) + 1)})</span></button></li>)}</ul>}</Card>

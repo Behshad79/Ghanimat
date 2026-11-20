@@ -175,7 +175,11 @@ button:disabled { cursor: not-allowed; }
   .print-area.space-y-6 > * + * { margin-top: 0 !important; }
   aside, header, nav { display: none !important; }
   main { overflow: visible !important; }
+  body.print-solo-mode > *:not(#print-solo-root) { display: none !important; }
+  #print-solo-root { display: flex !important; flex-wrap: wrap; gap: 2mm; }
 }
+
+#print-solo-root { display: none; }
 
 /* خانه‌های نقشهٔ انبار */
 .bin { color: var(--text-1); }

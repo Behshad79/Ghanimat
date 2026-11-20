@@ -47,7 +47,7 @@ export function Social() {
   }
   const byCh = CHANNELS.slice(1).map((c) => ({ label: c, value: social.filter((o) => o.channel === c).reduce((a, o) => a + o.total, 0) }))
   return (
-    <Page title="فروش اجتماعی و کارت به کارت" module="orders" sub="سفارش‌های دایرکت اینستاگرام، واتساپ، تلگرام، بله و تلفن؛ صدور فوری فاکتور، ثبت هم‌زمان در مالی و تطبیق کارت به کارت پیش از ارسال."
+    <Page title="فروش اجتماعی و کارت به کارت" module="social" sub="سفارش‌های دایرکت اینستاگرام، واتساپ، تلگرام، بله و تلفن؛ صدور فوری فاکتور، ثبت هم‌زمان در مالی و تطبیق کارت به کارت پیش از ارسال."
       primary={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setOrder('اینستاگرام دایرکت')}>ثبت سفارش از شبکه‌های اجتماعی</Button>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'orders', label: 'سفارش‌ها', count: social.length }, { id: 'receipts', label: 'رسیدهای کارت به کارت', count: B.receipts.filter((r) => r.status !== 'تطبیق شد').length }, { id: 'bank', label: 'واریزهای بانک' }, { id: 'cards', label: 'کارت‌های غنیمت' }]} />}>
       <div className="stagger mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

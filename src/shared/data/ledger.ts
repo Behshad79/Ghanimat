@@ -2,6 +2,7 @@
 // اینجا بعد از همان تغییر اجرا می‌شود تا موجودی مالک، ردیف فروش و سهم تسویه همیشه درست بماند.
 import type { DB, Order, Shipment } from './seed'
 import type { Lot, StockSale } from './stock'
+import { fa } from '../lib/fa'
 
 export const PACKED = ['ship.packed', 'ship.handed', 'ship.in_transit', 'ship.pickup_ready', 'ship.delivered']
 export const OPEN_SHIP = ['ship.pending', 'ship.picking', 'ship.partner_confirm']
@@ -69,12 +70,18 @@ export function recordShipment(x: DB, o: Order, sh: Shipment, scans: Scan[] | nu
     if (scans) { const m = new Map<string, number>(); scans.filter((q) => q.ok && q.productId === it.productId && (q.variationId ?? '') === (it.variationId ?? '')).forEach((q) => m.set(q.owner, (m.get(q.owner) ?? 0) + 1)); m.forEach((n, ow) => picks.push({ it, owner: ow, qty: n, code: scans.find((q) => q.ok && q.owner === ow && q.productId === it.productId)?.code })); if (m.size) return }
     suggestOwners(x, it.productId, it.variationId, sh.warehouse, it.qty).forEach((s) => picks.push({ it, owner: s.owner, qty: s.qty }))
   })
+  const short: string[] = []
   picks.forEach((pk) => {
     const tracked = x.stock.lots.some((l) => l.productId === pk.it.productId)
-    const cost = pk.unitId ? (x.units.find((u) => u.id === pk.unitId)?.cost ?? 0) : tracked ? takeLots(x, { productId: pk.it.productId, variationId: pk.it.variationId, owner: pk.owner, warehouse: sh.warehouse }, pk.qty).cost : (x.products.find((p) => p.id === pk.it.productId)?.cost ?? Math.round(pk.it.price * 0.85))
-    x.stock.sales.unshift({ id: id('S'), at, productId: pk.it.productId, variationId: pk.it.variationId, owner: pk.owner, warehouse: sh.warehouse, channel: chan, qty: pk.qty, price: pk.it.price, cost, orderId: o.id, shipId: sh.id, unitId: pk.unitId, code: pk.code, by, auto, ...sh2(pk.it, pk.qty), note: auto ? 'بدون اسکن؛ مالک طبق قاعدهٔ اولویت برداشت تعیین شد' : undefined })
+    const t = !pk.unitId && tracked ? takeLots(x, { productId: pk.it.productId, variationId: pk.it.variationId, owner: pk.owner, warehouse: sh.warehouse }, pk.qty) : null
+    const cost = pk.unitId ? (x.units.find((u) => u.id === pk.unitId)?.cost ?? 0) : t ? t.cost : (x.products.find((p) => p.id === pk.it.productId)?.cost ?? Math.round(pk.it.price * 0.85))
+    // موجودی ثبت‌شدهٔ این مالک در این انبار کمتر از تعداد ارسالی بود: فروش ثبت می‌شود ولی مغایرت علامت می‌خورد و هشدار می‌رود
+    const gap = t ? pk.qty - t.taken : 0; if (gap > 0) short.push(`${x.products.find((p) => p.id === pk.it.productId)?.title ?? pk.it.productId} (${fa(gap)} عدد)`)
+    const note = [auto ? 'بدون اسکن؛ مالک طبق قاعدهٔ اولویت برداشت تعیین شد' : '', gap > 0 ? `مغایرت موجودی: ${fa(gap)} عدد بیش از موجودی ثبت‌شده ارسال شد` : ''].filter(Boolean).join(' · ') || undefined
+    x.stock.sales.unshift({ id: id('S'), at, productId: pk.it.productId, variationId: pk.it.variationId, owner: pk.owner, warehouse: sh.warehouse, channel: chan, qty: pk.qty, price: pk.it.price, cost, orderId: o.id, shipId: sh.id, unitId: pk.unitId, code: pk.code, by, auto, ...sh2(pk.it, pk.qty), note })
     touched.add(pk.it.productId)
   })
+  if (short.length) x.alerts.unshift({ id: `al-${Date.now()}-${sh.id}`, cat: 'انبار', tone: 'warning', title: `مغایرت موجودی در بسته‌بندی ${sh.id}`, body: `بیش از موجودی ثبت‌شده ارسال شد: ${short.join('، ')}. شمارش انبار یا ورود موجودی را بررسی کنید.`, to: `/admin/orders/${o.id}`, at, read: false })
   if (auto && !sh.pack) sh.pack = { at, by: `${by} (بدون اسکن)`, station: sh.warehouse, scans: picks.map((pk) => ({ at, code: pk.code ?? '—', productId: pk.it.productId, variationId: pk.it.variationId, unitId: pk.unitId, owner: pk.owner, ok: true, why: 'تخصیص خودکار بدون اسکن' })) }
   touched.forEach((p) => syncQty(x, p))
 }
@@ -119,6 +126,9 @@ export function ledgerHook(prev: DB, next: DB, by: string) {
   if (prev.returns !== next.returns) {
     const was = new Map(prev.returns.map((r) => [r.id, r.status]))
     next.returns.forEach((r) => { if (['return.refunded', 'return.partial'].includes(r.status) && !['return.refunded', 'return.partial'].includes(was.get(r.id) ?? '')) {
+      // همهٔ اقلام همان مرجوعی با تعداد واقعی هر کدام؛ مرجوعی‌های قدیمی تک‌قلمی همان یک عدد
+      const its = ((r as { items?: { productId: string; variationId?: string; qty?: number; shipId?: string }[] }).items ?? []).filter((i) => i.productId)
+      if (its.length) { its.forEach((i) => reverseSales(next, { orderId: r.orderId, shipId: i.shipId, productId: i.productId, variationId: i.variationId, qty: i.qty ?? 1 }, `مرجوعی ${r.id}`, by, 'hold')); return }
       const pid = r.productId ?? next.units.find((u) => u.id === r.unitId)?.productId; if (!pid) return
       reverseSales(next, { orderId: r.orderId, productId: pid, qty: 1 }, `مرجوعی ${r.id}`, by, 'hold') } })
   }

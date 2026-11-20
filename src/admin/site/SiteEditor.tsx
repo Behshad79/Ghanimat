@@ -187,7 +187,7 @@ export function SiteEditor() {
   })()
 
   return (
-    <Page title="ویرایش سایت" module="content" sub="سربرگ، منو، صفحهٔ خانه، کارت و فهرست محصولات و فوتر. روی هر بخش پیش‌نمایش بزنید تا ویرایشش باز شود."
+    <Page title="ویرایش سایت" module="site" sub="سربرگ، منو، صفحهٔ خانه، کارت و فهرست محصولات و فوتر. روی هر بخش پیش‌نمایش بزنید تا ویرایشش باز شود."
       actions={<><Button variant="ghost" icon={<RotateCcw size={14} />} disabled={!dirty} onClick={discard}>دور ریختن تغییرات</Button><Button icon={<Eye size={14} />} onClick={() => setFull(true)}>پیش‌نمایش کامل</Button><Button variant="ghost" onClick={() => nav('/admin/content')}>محتوا و صفحات</Button></>}
       primary={<Button variant="primary" icon={<Upload size={14} />} disabled={!dirty} onClick={publish}>{dirty ? 'انتشار تغییرات' : 'همه‌چیز منتشر شده'}</Button>}>
       <div className="grid gap-4 xl:grid-cols-[400px_1fr]">

@@ -18,7 +18,7 @@ export function Messaging() {
   const d = useDB(); const [tab, setTab] = useTab('send'); const N = d.nudges
   const live = N.policies.filter((p) => p.active)
   return (
-    <Page title="پیامک و پیگیری مشتری" module="marketing" sub="ارسال دستی به یک یا چند نفر، یادآوری خودکار سفارش و سبد، و کد تخفیف خودکار برای گروه‌های مشخص"
+    <Page title="پیامک و پیگیری مشتری" module="messaging" sub="ارسال دستی به یک یا چند نفر، یادآوری خودکار سفارش و سبد، و کد تخفیف خودکار برای گروه‌های مشخص"
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'send', label: 'ارسال پیام' }, { id: 'policies', label: 'سیاست‌های پیگیری خودکار', count: live.length }, { id: 'history', label: 'ارسال‌های دستی', count: N.blasts.length }, { id: 'log', label: 'گزارش ارسال', count: d.smsLog.length }]} />}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

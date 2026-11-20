@@ -20,7 +20,7 @@ export function Promotions() {
   const label = (k: string, list: [string, string][]) => list.find((x) => x[0] === k)?.[1] ?? k
   const totals = M.utm.reduce((a, u) => ({ spend: a.spend + u.spend, rev: a.rev + u.revenue, nc: a.nc + u.newCustomers }), { spend: 0, rev: 0, nc: 0 })
   return (
-    <Page title="موتور پروموشن و کمپین" module="marketing" sub="تخفیف‌های شرطی پیچیده، فروش ویژهٔ تایمردار، کش‌بک و اینکه کدام کمپین واقعاً سودآور بوده است."
+    <Page title="موتور پروموشن و کمپین" module="promotions" sub="تخفیف‌های شرطی پیچیده، فروش ویژهٔ تایمردار، کش‌بک و اینکه کدام کمپین واقعاً سودآور بوده است."
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'rules', label: 'قانون‌های تخفیف', count: M.rules.filter((r) => r.active).length }, { id: 'flash', label: 'فروش ویژه (تایمردار)' }, { id: 'utm', label: 'کمپین‌ها، UTM و ROAS' }]} />}>
       {tab === 'rules' && <div className="space-y-3">
         <div className="flex justify-end"><Button variant="primary" icon={<Plus size={14} />} onClick={() => set((x) => { x.rules.unshift({ id: `pr${Date.now().toString(36)}`, name: 'قانون تازه', conds: [{ k: 'cart', op: '≥', v: '3000000' }], action: 'pct', value: 10, start: day(0), end: day(7), budget: 10000000, used: 0, stack: false, active: false }) }, 'ساخت قانون تخفیف')}>قانون تازه</Button></div>

@@ -53,7 +53,7 @@ export function Remote() {
   const upd = (fn: (x: DB['remote']) => void, action: string) => mutate((x) => fn(x.remote), { action, target: 'کنترل از راه دور' })
   const fails = R.log.filter((m) => m.ok === false).length
   return (
-    <Page title="ربات تلگرام و فرمان پیامکی" module="settings" sub="بدون باز کردن پنل: خبر سفارش با مهلت، تأیید و جلو بردن مراحل، و شمارهٔ مشتری با رمز"
+    <Page title="ربات تلگرام و فرمان پیامکی" module="remote" sub="بدون باز کردن پنل: خبر سفارش با مهلت، تأیید و جلو بردن مراحل، و شمارهٔ مشتری با رمز"
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'sim', label: 'امتحان و پاسخ' }, { id: 'tg', label: 'ربات تلگرام' }, { id: 'sms', label: 'فرمان پیامکی' }, { id: 'events', label: 'چه خبرهایی بیاید' }, { id: 'log', label: 'پایش و گزارش', count: R.log.length }]} />}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

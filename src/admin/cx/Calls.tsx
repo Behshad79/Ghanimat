@@ -21,7 +21,7 @@ export function Calls() {
   const sel = C.calls.find((c) => c.id === open)
   const upd = (id: string, fn: (c: (typeof C.calls)[number]) => void, action: string) => mutate((x) => fn(x.calls.calls.find((c) => c.id === id)!), { action, target: id })
   return (
-    <Page title="تلفن و تماس‌ها" module="support" sub="تلفن ابری: تماس‌ها، ضبط مکالمه، صف‌ها و منوی صوتی، همه کنار پروندهٔ مشتری"
+    <Page title="تلفن و تماس‌ها" module="calls" sub="تلفن ابری: تماس‌ها، ضبط مکالمه، صف‌ها و منوی صوتی، همه کنار پروندهٔ مشتری"
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'log', label: 'تماس‌ها', count: missed.length }, { id: 'agents', label: 'کارشناسان' }, { id: 'ivr', label: 'منوی صوتی و ساعت کاری' }, { id: 'connect', label: 'اتصال تلفن ابری' }]} />}>
       <div className="space-y-4">
         {!C.provider.connected && <p className="rounded-xl bg-info-bg px-3 py-2 text-12 text-info">تلفن ابری هنوز وصل نشده است؛ داده‌های این صفحه نمونه است. از تب «اتصال تلفن ابری» شمارهٔ مجازی را وصل کنید.</p>}

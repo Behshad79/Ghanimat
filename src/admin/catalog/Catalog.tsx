@@ -301,7 +301,7 @@ export function Trash() {
   const d = useDB()
   const purge = async (ids: string[]) => { if (!(await confirm({ title: ids.length === 1 ? 'حذف دائمی این مورد؟' : `حذف دائمی ${fa(ids.length)} مورد؟`, body: 'این کار برگشت‌پذیر نیست. سوابق سفارش‌های قدیمی با اطلاعات ذخیره‌شده در خود سفارش باقی می‌مانند.', confirm: 'حذف دائمی', danger: true }))) return; mutate((x) => { x.trash = x.trash.filter((t) => !ids.includes(t.id)) }, { action: 'حذف دائمی', target: `${ids.length} مورد` }); toast(`${fa(ids.length)} مورد برای همیشه حذف شد.`) }
   return (
-    <Page title="سطل بازیافت" sub="موارد حذف‌شده تا ۳۰ روز اینجا می‌مانند؛ بازگردانی یا حذف دائمی." empty={{ title: 'سطل بازیافت خالی است.' }}>
+    <Page module="trash" title="سطل بازیافت" sub="موارد حذف‌شده تا ۳۰ روز اینجا می‌مانند؛ بازگردانی یا حذف دائمی." empty={{ title: 'سطل بازیافت خالی است.' }}>
       <DataTable name="سطل بازیافت" rows={d.trash} rowKey={(t) => t.id} empty={{ title: 'سطل بازیافت خالی است.', desc: 'هر چیزی که حذف کنید، اول اینجا می‌آید و قابل بازگردانی است.' }}
         cols={[{ key: 'label', title: 'مورد', render: (t) => t.ek === 'products' ? <Cell pid={t.data.id} a={t.label} b={t.kind} /> : <Cell a={t.label} b={t.kind} /> }, { key: 'at', title: 'زمان حذف', render: (t) => rel(t.at), sort: (t) => t.at }, { key: 'left', title: 'باقی‌مانده تا حذف خودکار', render: (t) => `${fa(Math.max(0, 30 - Math.floor((Date.now() - new Date(t.at).getTime()) / 864e5)))} روز` }]}
         actions={(t) => [{ label: 'بازگردانی', icon: <RotateCcw size={14} />, onClick: () => { restoreTrash(t.id); toast(`«${t.label}» به جای خود برگشت.`) } }, 'sep', { label: 'حذف دائمی', icon: <Trash2 size={14} />, danger: true, onClick: () => purge([t.id]) }]}

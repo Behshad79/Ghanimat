@@ -29,7 +29,7 @@ export function Ownership() {
   const units = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty, 0)
   const value = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty * l.cost, 0)
   return (
-    <Page module="warehouse" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
+    <Page module="ownership" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
       actions={<>{can('team') && <Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button>}<Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

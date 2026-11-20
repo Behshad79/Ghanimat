@@ -21,7 +21,7 @@ export function Conversations() {
   const live = W.filter((w) => !w.offHours); const rated = W.filter((w) => w.rating)
   const cur = A.find((a) => a.id === open)
   return (
-    <Page title="گفتگوها و دستیار خرید" module="support" sub="سوابق کامل گفتگوی هر مشتری با دستیار AI و ویجت پشتیبانی، با آمار و داده‌های قابل استخراج."
+    <Page title="گفتگوها و دستیار خرید" module="conversations" sub="سوابق کامل گفتگوی هر مشتری با دستیار AI و ویجت پشتیبانی، با آمار و داده‌های قابل استخراج."
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'ai', label: 'دستیار خرید AI', count: A.length }, { id: 'widget', label: 'ویجت پشتیبانی', count: W.length }, { id: 'insights', label: 'برداشت‌ها از گفتگوها' }]} />}>
       {tab === 'ai' && <div className="space-y-4">
         <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">

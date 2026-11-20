@@ -1,6 +1,8 @@
 // نقش‌های پایه؛ پس از اولین اجرا در پایگاه‌داده کپی می‌شوند و از «تیم و دسترسی» قابل ویرایش‌اند
 export type Face = 'full' | 'simple' | 'partner'
 /** deny: بخش‌هایی که حتی با modules '*' بسته‌اند (مثلاً دادهٔ محرمانهٔ مدیر کل برای مدیر کل دوم) */
+/** زیربخش‌هایی که از بخش مادر ارث می‌برند: اگر نقش، بخش مادر را داشته باشد زیربخش هم باز است؛ اگر مادر صریحاً بسته شده باشد، زیربخش هم بسته است (مگر جداگانه افزوده شود) */
+export const PARENT_MODULE: Record<string, string> = { social: 'orders', requests: 'support', calls: 'support', conversations: 'support', promotions: 'marketing', messaging: 'marketing', builder: 'content', site: 'content', experience: 'content', remote: 'settings' }
 export type RoleDef = { label: string; face: Face; modules: string[] | '*'; home: string; opens: string; custom?: boolean; desc?: string; deny?: string[] }
 /** بخش‌های محرمانهٔ مدیر کل که به‌طور پیش‌فرض برای مدیر کل دوم (شریک) بسته است؛ مدیر کل از «تیم و دسترسی» هر کدام را بخواهد باز می‌کند */
 export const OWNER_SECRET_MODULES = ['people', 'vault', 'finance', 'team', 'rules', 'settings', 'integrations', 'infra', 'trade', 'analytics']

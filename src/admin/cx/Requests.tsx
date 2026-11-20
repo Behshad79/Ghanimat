@@ -32,7 +32,7 @@ export function CustomerRequests() {
   ]
   const totalOpen = tabs.reduce((a, t) => a + (t.count ?? 0), 0)
   return (
-    <Page title="درخواست‌های مشتری" module="support" sub="هر فرم، دکمه و درخواستی که مشتری در سایت و پنل کاربری می‌زند اینجا یک صف قابل پیگیری دارد."
+    <Page title="درخواست‌های مشتری" module="requests" sub="هر فرم، دکمه و درخواستی که مشتری در سایت و پنل کاربری می‌زند اینجا یک صف قابل پیگیری دارد."
       tabs={<Tabs value={tab} onChange={setTab} tabs={tabs} />}>
       <div className="stagger mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KPI featured to={`/admin/requests?tab=${tabs.find((t) => t.count > 0)?.id ?? 'contact'}`} icon={<Bell size={17} />} label="درخواست باز" value={fa(totalOpen)} note="در همهٔ صف‌ها" />

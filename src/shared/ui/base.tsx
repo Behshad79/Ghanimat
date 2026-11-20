@@ -51,9 +51,9 @@ export function Card({ title, hint, actions, children, className, pad = true, on
   return (
     <section onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined} className={cx('rounded-2xl border border-line bg-surface', onClick && 'lift cursor-pointer hover:border-brand/40', className)}>
       {(title || actions) && (
-        <header className="flex min-h-12 items-center justify-between gap-2 border-b border-line px-5 py-2.5">
-          <h3 className="flex items-center gap-1.5 text-14 font-semibold">{title}{hint}</h3>
-          <div className="flex items-center gap-1">{actions}</div>
+        <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-2.5">
+          <h3 className="flex min-w-0 items-center gap-1.5 text-14 font-semibold">{title}{hint}</h3>
+          <div className="flex min-w-0 flex-wrap items-center gap-1 [&>*]:max-w-full">{actions}</div>
         </header>
       )}
       <div className={pad ? 'p-5' : ''}>{children}</div>

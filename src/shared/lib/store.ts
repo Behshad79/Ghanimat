@@ -1,11 +1,11 @@
 import { useSyncExternalStore } from 'react'
 import { makeSeed, type DB } from '../data/seed'
-import { BASE_ROLES, type RoleDef } from '../data/roles'
+import { BASE_ROLES, PARENT_MODULE, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 import { ledgerHook } from '../data/ledger'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v82'
+const DB_KEY = 'ghanimat-demo-db-v83'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -119,13 +119,14 @@ export const currentUser = () => db.team.find((u) => u.id === session.userId) ??
 export const effectiveRole = (s: Session = session) => s.viewAs ?? currentUser()?.role ?? 'super'
 /** مدیر کل: کارهای حساس او بدون تأیید دوم اجرا می‌شود (خودش تأییدکنندهٔ نهایی است) */
 export const isChief = (s: Session = session) => effectiveRole(s) === 'super'
-export const can = (module: string, s: Session = session) => {
+export const can = (module: string, s: Session = session): boolean => {
   // دسترسی اختصاصی هر فرد بر نقش او مقدم است (افزوده یا گرفته‌شده از نقش)
   const u = s.viewAs ? null : currentUser(); const ov = u ? db.access?.[u.id] : undefined
   if (ov?.remove.includes(module)) return false
   if (ov?.add.includes(module)) return true
   const R = ROLES[effectiveRole(s)]; if (R?.deny?.includes(module)) return false
-  const m = R?.modules; return m === '*' || (m ?? []).includes(module)
+  const p = PARENT_MODULE[module]; if (p && (R?.deny?.includes(p) || ov?.remove.includes(p))) return false
+  const m = R?.modules; return m === '*' || (m ?? []).includes(module) || (!!p && can(p, s))
 }
 /** دیدن دادهٔ محرمانهٔ مدیر کل (سود کل، بهای تمام‌شدهٔ کالای غنیمت، حاشیهٔ سود، صورت‌حساب دیگران): فقط مدیر کل، یا کسی که مدیر کل «secrets» را برایش باز کرده */
 export const canSecret = (s: Session = session) => { if (effectiveRole(s) === 'super') return true; const u = s.viewAs ? null : currentUser(); return !!(u && db.access?.[u.id]?.add.includes('secrets')) }

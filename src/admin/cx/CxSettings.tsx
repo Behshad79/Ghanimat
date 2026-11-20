@@ -30,7 +30,7 @@ export function CxSettingsPage() {
   const d = useDB(); const nav = useNavigate(); const [tab, setTab] = useTab('auth'); const n = d.cx.notifications
   const tabs = [['auth', 'ورود و ثبت‌نام'], ['search', 'جست‌وجو'], ['help', 'مرکز راهنما'], ['support', 'پشتیبانی و گفتگو'], ['notif', 'اعلان‌های مشتری'], ['wallet', 'کیف پول و برداشت'], ['referral', 'دعوت از دوستان'], ['reviews', 'دیدگاه و پرسش'], ['checkout', 'سبد و پرداخت'], ['assistant', 'دستیار خرید AI'], ['panel', 'پنل کاربری'], ['pages', 'صفحه‌های ثابت و خطا'], ['content', 'بلوک‌های محتوایی']].map(([id, label]) => ({ id, label }))
   return (
-    <Page title="تنظیمات سایت و پنل مشتری" module="content" sub="رفتار، متن و قانون‌های هر صفحه و هر حالت سایت و پنل کاربری؛ مطابق فایل طراحی مشتری."
+    <Page title="تنظیمات سایت و پنل مشتری" module="experience" sub="رفتار، متن و قانون‌های هر صفحه و هر حالت سایت و پنل کاربری؛ مطابق فایل طراحی مشتری."
       actions={<><Button onClick={() => nav('/admin/site')}>ویرایش ظاهر سایت</Button><Button variant="ghost" onClick={() => nav('/admin/requests')}>درخواست‌های مشتری</Button></>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={tabs} />}>
       <div key={tab} className="page-enter space-y-4">

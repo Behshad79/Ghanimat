@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2 } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
-import { Page, Stepper, Timeline } from '@/shared/ui/page'
+import { Page, Stepper, StickyStepBar, Timeline, useScrolledPast } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
@@ -196,6 +196,8 @@ export function OrderDetail() {
   // اقدام بعدی: اولین مرسولهٔ فعال تعیین می‌کند الان چه کاری باید انجام شود
   const live = o.shipments.find((s) => !['ship.cancelled', 'ship.delivered'].includes(s.status))
   const goShip = (sid: string) => document.getElementById(`ship-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const [sumRef, pastSum] = useScrolledPast<HTMLDivElement>()
+  const stepNames = o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']
   const nextAct: { label: string; hint: string; run?: () => void; tone?: 'wait' | 'done' } = o.status === 'order.awaiting_payment' || o.status === 'order.awaiting_credit' ? { label: 'منتظر پرداخت مشتری', hint: 'تا پرداخت کامل نشود، آماده‌سازی شروع نمی‌شود.', tone: 'wait' }
     : o.status === 'order.suspicious' ? { label: 'بازبینی سفارش مشکوک', hint: 'ارسال تا تأیید شما متوقف است.', run: () => document.getElementById('order-attention')?.scrollIntoView({ behavior: 'smooth' }) }
     : !live ? { label: o.status === 'order.cancelled' ? 'سفارش لغو شده است' : 'همهٔ مرسوله‌ها تحویل شد', hint: o.status === 'order.cancelled' ? 'بازگشت وجه را از کارت «بازگشت وجه» پیگیری کنید.' : 'کار دیگری روی این سفارش باقی نمانده است.', tone: 'done' }
@@ -218,10 +220,10 @@ export function OrderDetail() {
       </>}>
       {o.lockedBy && <div className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><Avatar name={o.lockedBy} size={20} />{o.lockedBy} همین سفارش را باز کرده است. ویرایش هم‌زمان ممکن است تعارض بسازد؛ تغییر او اول ذخیره می‌شود.</div>}
       {/* خلاصهٔ سفارش و اقدام بعدی: مهم‌ترین چیزی که اپراتور باید در یک نگاه ببیند */}
-      <Card className="mb-4" pad={false}>
+      <div ref={sumRef}><Card className="mb-4" pad={false}>
         <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
           <div className="p-4">
-            <Stepper current={step} steps={o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', 'ارسال', 'تحویل']} />
+            <Stepper current={step} steps={stepNames} />
             <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-12 sm:grid-cols-4">
               <div><dt className="text-t3">مبلغ پرداختی</dt><dd className="mt-0.5 text-15 font-bold"><Money v={o.total} /></dd></div>
               <div><dt className="text-t3">پرداخت</dt><dd className="mt-0.5 font-medium">{o.pay}</dd></div>
@@ -236,7 +238,7 @@ export function OrderDetail() {
             {live && <SlaChip at={live.sla} />}
           </div>
         </div>
-      </Card>
+      </Card></div>
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-4">
           {/* نیازمند توجه: فقط وقتی موردی باشد چیزی نشان داده می‌شود */}
@@ -335,6 +337,10 @@ export function OrderDetail() {
           <Card><ReasonLog kind="order" refId={o.id} /></Card>
         </div>
       </div>
+      <StickyStepBar show={pastSum} at={step} total={stepNames.length} label={<><bdi dir="ltr" className="font-mono">{o.id}</bdi> · {stepNames[Math.min(step, stepNames.length - 1)]} · <span className="text-t2">{nextAct.hint}</span></>}>
+        <span className="flex items-center rounded-lg border border-line"><button aria-label="سفارش قبلی" title="سفارش قبلی" disabled={idx <= 0} onClick={() => nav(`/admin/orders/${d.orders[idx - 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronRight size={16} /></button><span className="h-5 w-px bg-line" /><button aria-label="سفارش بعدی" title="سفارش بعدی" disabled={idx >= d.orders.length - 1} onClick={() => nav(`/admin/orders/${d.orders[idx + 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronLeft size={16} /></button></span>
+        {nextAct.run ? <Button variant="primary" icon={<ArrowLeft size={14} />} onClick={nextAct.run}>{nextAct.label}</Button> : <Badge tone={nextAct.tone === 'done' ? 'success' : 'warning'}>{nextAct.label}</Badge>}
+      </StickyStepBar>
       <Modal open={!!cancelSh} onClose={() => setCancelSh(null)} title={`لغو مرسولهٔ ${cancelSh?.sid ?? ''}`} footer={<><Button variant="danger" onClick={() => void doCancelShip()}>لغو مرسوله</Button><Button variant="ghost" onClick={() => setCancelSh(null)}>انصراف</Button></>}>
         <div className="space-y-3 text-13"><p>این مرسوله لغو می‌شود. مقصد بازگشت وجه را انتخاب کنید؛ پرونده تا تأیید و اعمال شما باز می‌ماند.</p><RefundDest dest={rdest} setDest={setRdest} account={racct} setAccount={setRacct} amount={cancelSh?.total ?? 0} customer={{ name: c.name, mobile: c.mobile }} /><RestockChoice value={restock} onChange={setRestock} /></div>
       </Modal>

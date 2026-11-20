@@ -332,7 +332,7 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
       {incoming && <div className="mb-3 rounded-md border border-info/30 bg-info-bg px-3 py-2 text-12 text-info">این کالا در راه است{batch ? ` (${batch.title} · رسیدن حدود ${new Date(batch.eta).toLocaleDateString('fa-IR')})` : ''}. همهٔ فیلدها، عکس‌ها و توضیحات را از الان پر کنید؛ موجودی، بارکد، کد و رنگ نهایی هنگام رسید وارد می‌شود و تا آن موقع کالا روی سایت نیست{editing?.comingSoon ? '، جز در بخش «به‌زودی»' : ''}.</div>}
       {saved && <div className="mb-3 flex items-center justify-between gap-2 rounded-md bg-info-bg px-3 py-2 text-12 text-info">پیش‌نویس قبلی بارگذاری شد.<button className="font-semibold underline" onClick={() => { mutate((x) => { delete ((x as any).drafts ?? {})[draftKey] }); setF(editing ? fromProduct(editing, d.units.filter((u) => u.productId === editing.id)) : blank()); setStep(order[0]); setSavedAt(null) }}>شروع از نو</button></div>}
       <div className="grid gap-4 lg:grid-cols-[230px_1fr]">
-        <nav aria-label="گام‌ها" className="scroll-fade flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <nav aria-label="گام‌ها" className="scroll-fade flex gap-1 overflow-x-auto lg:sticky lg:top-28 lg:max-h-[calc(100dvh-9rem)] lg:flex-col lg:self-start lg:overflow-y-auto">
           {order.map((s, i) => { const done = i < pos; const cur = s === step; return (
             <button key={s} onClick={() => go(s)} className={cx('flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-right text-13 transition-colors', cur ? 'bg-brand-tint font-semibold text-brand' : 'text-t2 hover:bg-neutral-bg')}>
               <span className={cx('grid size-6 shrink-0 place-items-center rounded-full text-11 font-bold', done ? 'bg-success-solid text-white' : cur ? 'bg-brand-solid text-white' : 'bg-neutral-bg text-t2')}>{done ? <Check size={13} /> : fa(i + 1)}</span>{STEPS[s]}
@@ -340,9 +340,10 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
         </nav>
         <Card title={<span className="flex items-center gap-2">گام {fa(pos + 1)} از {fa(order.length)}: {STEPS[step]}</span>} actions={step === 2 ? <span className="flex items-center gap-1 text-11 text-t2"><Camera size={12} />دوربین در موبایل</span> : step === 6 && landed ? <Badge tone={profit >= 0 ? 'success' : 'danger'}>سود {compactToman(profit)}</Badge> : undefined}>
           <div key={step} className="page-enter">{body[step]}</div>
-          <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
+          {/* ناوبری گام‌ها همیشه پایین صفحه می‌ماند تا برای رفتن به گام بعد لازم نباشد تا ته فرم اسکرول شود */}
+          <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-6 flex items-center justify-between gap-3 rounded-b-2xl border-t border-line bg-surface/95 px-5 py-3 pl-20 lg:pl-5 shadow-[0_-10px_24px_-18px_rgba(0,0,0,.45)] backdrop-blur">
             <Button variant="ghost" icon={<ArrowRight size={14} />} disabled={pos === 0} onClick={() => go(order[pos - 1])}>قبلی</Button>
-            <div className="h-1.5 w-32 overflow-hidden rounded-full bg-neutral-bg"><div className="h-full rounded-full bg-brand-solid transition-all" style={{ width: `${((pos + 1) / order.length) * 100}%` }} /></div>
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-1"><span className="truncate text-11 text-t2">گام {fa(pos + 1)} از {fa(order.length)} · {STEPS[step]}</span><div className="h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-neutral-bg"><div className="h-full rounded-full bg-brand-solid transition-all" style={{ width: `${((pos + 1) / order.length) * 100}%` }} /></div></div>
             {last ? <Button variant="primary" onClick={() => save('product.published')}>{incoming ? 'ذخیره (منتظر رسیدن محموله)' : partner ? 'ارسال برای تأیید نهایی' : f.scheduledAt ? 'زمان‌بندی انتشار' : 'انتشار الان'}</Button> : <Button variant="primary" onClick={() => go(order[pos + 1])}>بعدی<ArrowLeft size={14} /></Button>}
           </div>
         </Card>

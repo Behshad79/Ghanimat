@@ -7,7 +7,7 @@ import { askCopilot, Hint } from './overlay'
 import { Spark } from './charts'
 import { isZero, kpiAnim, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
 import { can, useSession } from '../lib/store'
-import { rel, signedPct } from '../lib/fa'
+import { fa, rel, signedPct } from '../lib/fa'
 import { KpiDetail } from './kpiDetail'
 
 /** قالب صفحه: عنوان و وضعیت → اقدام اصلی (فقط یکی) → محتوا. «منوی حالت‌ها» همین‌جا اعمال می‌شود (بخش ۱۸.۲). */
@@ -139,5 +139,26 @@ export function AISummary({ lines, source }: { lines: string[]; source: string }
     <Card className="border-brand/30 bg-brand-tint/40" title={<span className="flex items-center gap-1.5 text-brand"><Sparkles size={14} />خلاصهٔ امروز با AI</span>} actions={<Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? 'بستن' : 'نمایش'}</Button>}>
       {open && <><ul className="list-disc space-y-1 pr-4 text-13 leading-6">{lines.map((l) => <li key={l}>{l}</li>)}</ul><p className="mt-2 text-11 text-t3">منبع: {source} · اطمینان: متوسط · پیشنهاد AI؛ بازبینی نشده</p></>}
     </Card>
+  )
+}
+
+/** بیرون رفتن یک بخش از دید (بالای ناحیهٔ اسکرول): برای نشان دادن نوار چسبان وقتی خلاصهٔ بالای صفحه دیگر دیده نمی‌شود */
+export function useScrolledPast<T extends HTMLElement>() {
+  const ref = useRef<T>(null); const [past, setPast] = useState(false)
+  useEffect(() => { const el = ref.current; if (!el) return; const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0)), { root: el.closest('main'), threshold: 0 }); io.observe(el); return () => io.disconnect() }, [])
+  return [ref, past] as const
+}
+/** نوار چسبان پایین صفحه‌های مرحله‌دار: مرحلهٔ فعلی، پیشرفت و اقدام بعدی بدون اسکرول در دسترس می‌ماند. باید آخرین فرزند صفحه باشد. */
+export function StickyStepBar({ show = true, at, total, label, children }: { show?: boolean; at: number; total: number; label: ReactNode; children?: ReactNode }) {
+  if (!show) return null
+  const done = Math.min(total, at + 1)
+  return (
+    <div role="region" aria-label="مرحله و اقدام بعدی" className="no-print page-enter sticky bottom-0 z-20 -mx-4 mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line bg-surface/95 px-4 py-2.5 shadow-[0_-10px_24px_-18px_rgba(0,0,0,.45)] backdrop-blur md:-mx-6 md:px-6 pl-20 md:pl-40">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-12"><b>مرحلهٔ {fa(done)} از {fa(total)}</b><span className="text-t2"> · </span>{label}</p>
+        <div className="mt-1.5 h-1 w-full max-w-64 overflow-hidden rounded-full bg-neutral-bg"><div className="h-full rounded-full bg-brand-solid transition-all duration-300" style={{ width: `${(done / total) * 100}%` }} /></div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
   )
 }

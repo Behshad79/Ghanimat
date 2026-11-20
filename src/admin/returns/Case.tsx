@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Camera, Check, CircleDollarSign, ClipboardCheck, Inbox, MessageSquareText, PackageSearch, PlayCircle, Truck, Wrench } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Row, Segmented, Select, StatusBadge, Textarea, Toggle } from '@/shared/ui/base'
-import { Page } from '@/shared/ui/page'
+import { Page, StickyStepBar, useScrolledPast } from '@/shared/ui/page'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { isChief, currentUser, getDB, mutate, sendSms, useDB } from '@/shared/lib/store'
@@ -56,6 +56,7 @@ function CaseView({ kind }: { kind: Kind }) {
   const st: Stage = kind === 'return' ? retStage(c) : warStage(c)
   const sms = d.smsLog.filter((s) => s.ref === c.id)
   const label = kind === 'return' ? 'مرجوعی' : 'درخواست مرجوعی گارانتی'
+  const [topRef, pastTop] = useScrolledPast<HTMLDivElement>(); const STEPS_ = kind === 'return' ? RETURN_STEPS : WARRANTY_STEPS
 
   return (
     <Page module="returns" back={`/admin/returns${kind === 'warranty' ? '?tab=warranty' : ''}`}
@@ -63,9 +64,10 @@ function CaseView({ kind }: { kind: Kind }) {
       badge={<><StatusBadge s={c.status} />{st.who !== '—' && <Badge tone={st.who === 'ما' ? 'warning' : 'neutral'} dot={false}>اقدام با: {st.who}</Badge>}</>}
       sub={[orderId && `سفارش ${orderId}`, `ثبت درخواست: ${fday(c.createdAt ?? c.events?.[0]?.at)}`, cu?.name].filter(Boolean).join(' · ')}
       actions={<><Button icon={<MessageSquareText size={16} />} onClick={() => setMsg(true)}>پیام به مشتری</Button>{orderId && <Button onClick={() => nav(`/admin/orders/${orderId}`)}>سفارش اصلی</Button>}</>}>
-      <Card pad={false} className="mb-4"><Stepper steps={kind === 'return' ? RETURN_STEPS : WARRANTY_STEPS} at={st.step} /></Card>
+      <div ref={topRef}><Card pad={false} className="mb-4"><Stepper steps={kind === 'return' ? RETURN_STEPS : WARRANTY_STEPS} at={st.step} /></Card></div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
+          <div id="case-next" className="scroll-mt-28" />
           <NextBox st={st}>{kind === 'return' ? <ReturnNext key={`${c.id}-${c.status}`} c={c} /> : <WarrantyNext key={`${c.id}-${c.status}`} c={c} />}</NextBox>
           {kind === 'return' ? <ReturnSummary c={c} /> : <WarrantySummary c={c} />}
           <Evidence c={c} orderId={orderId} />
@@ -94,6 +96,10 @@ function CaseView({ kind }: { kind: Kind }) {
           <ReasonLog kind={kind} refId={c.id} />
         </aside>
       </div>
+      <StickyStepBar show={pastTop} at={st.step} total={STEPS_.length} label={<><bdi dir="ltr" className="font-mono">{c.id}</bdi> · {STEPS_[Math.min(st.step, STEPS_.length - 1)][0]} · <span className="text-t2">{st.next}</span></>}>
+        {st.who !== '—' && <Badge tone={st.who === 'ما' ? 'warning' : 'neutral'} dot={false}>اقدام با: {st.who}</Badge>}
+        {st.who === 'ما' && <Button variant="primary" onClick={() => document.getElementById('case-next')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>رفتن به اقدام بعدی</Button>}
+      </StickyStepBar>
       <MessageModal open={msg} onClose={() => setMsg(false)} kind={kind} c={c} />
     </Page>
   )

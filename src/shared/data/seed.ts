@@ -33,7 +33,7 @@ export type Refund = { id: string; orderId: string; customerId: string; amount: 
 export type GatewayHold = { id: string; customerId: string; items: { productId: string; unitId: string; qty: number }[]; gateway: string; amount: number; at: string; status: 'in_gateway' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'released'; endedAt?: string; note?: string; orderId?: string }
 export type Order = { refunded?: number; refundPending?: number; payHold?: { amount: number; method: 'لینک پرداخت' | 'کارت به کارت'; at: string; by: string; status: 'pending' | 'paid' | 'released' | 'waived'; ref?: string; note?: string; doneAt?: string; doneBy?: string; reminders?: number }; receiver?: { name: string; mobile: string }; edits?: { at: string; by: string; src: string; reason: string; changes: string[]; diff: number; settle?: string; sms: boolean; prev?: string; undone?: { at: string; by: string } }[]; rollbacks?: { at: string; by: string; shipId: string; from: string; to: string; reason: string; prev: { status: string; orderStatus: string; tracking: string; courier: any }; undone?: { at: string; by: string } }[]; cancelInfo?: CancelInfo; decision?: OrderDecision; customerNote?: string; customerNoteDone?: boolean; notes?: { id: string; at: string; by: string; src: 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'; text: string; act?: boolean; done?: boolean; doneBy?: string }[]; shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
-import { makeStock, type StockSale as StockSaleT } from './stock'
+import { labelCode, makeStock, type StockSale as StockSaleT } from './stock'
 import { syncQty } from './ledger'
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
@@ -674,6 +674,10 @@ export const makeSeed = () => {
     s.stock.ownerReturns.forEach((r) => r.lines.forEach((ln) => used.set(k3(r.owner, ln.productId, ln.variationId, r.warehouse), (used.get(k3(r.owner, ln.productId, ln.variationId, r.warehouse)) ?? 0) + ln.qty)))
     ;[...s.stock.lots].filter((l) => !(l.ref ?? '').startsWith('برگشت')).sort((a, b) => +new Date(a.at) - +new Date(b.at)).forEach((l) => { const key = k3(l.owner, l.productId, l.variationId, l.warehouse); const u = Math.max(0, used.get(key) ?? 0); l.qty0 = l.qty + u; used.set(key, 0) })
   }
+  // سایت ve1 یاسین: SKU هر کالا در ووکامرس همان کد مالک‌دار غنیمت است (GH- کالای غنیمت، YS- کالای خود یاسین)
+  { const e = s.stock.ext[0]; const P = (id: string) => s.products.find((p) => p.id === id)!; const code = (o: string, pid: string, suf?: string) => labelCode(s.stock, o, P(pid), suf ? { suffix: suf } : null)
+    if (e) { e.autoImport = true; e.inbox[0].lines[0].sku = code('ys', 'prx', '1'); e.inbox[1].lines[0].sku = code('gh', 'prx', '2'); e.inbox[1].lines[1].sku = code('ys', 'p8')
+      e.inbox[2].note = 'SKU این کالا کد غنیمت ندارد؛ یاسین باید کد را در ووکامرس اصلاح کند یا دستی نگاشت شود' } }
   // یکدستی دادهٔ نمونه: مبلغ کل هر سفارش = جمع کالاهای فعال − تخفیف + ارسال (و تراکنش موفق همان سفارش هم‌مبلغ)؛ موجودی کالاها از روی لات‌ها و رزرو سفارش‌های باز
   s.orders.forEach((o) => { const sub = o.shipments.flatMap((x) => x.items).filter((i) => !i.cancelled).reduce((a, i) => a + i.price * (i.qty ?? 1), 0); if (!sub) return
     const want = sub - (o.discount ?? 0) + (o.shippingFee ?? 0); if (want === o.total) return

@@ -7,7 +7,7 @@ import { toast } from '@/shared/ui/overlay'
 import { currentUser, fakeCall, mutate, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
-import type { ExtOrder, ExtSite } from '@/shared/data/stock'
+import { labelCode, scanLookup, type ExtOrder, type ExtSite, type StockSale } from '@/shared/data/stock'
 import { reserved, syncQty, takeLots } from '@/shared/data/ledger'
 import { chName, PartyChip, partyName, pv, whName } from './common'
 import { resolveCode } from './Packing'
@@ -25,6 +25,57 @@ export function detectOwner(d: DB, seller: string, pid: string, vid: string | un
   return { owner: seller, warehouse: whs[0] ?? 'tehran', why: 'موجودی ثبت‌شده‌ای پیدا نشد؛ به نام خود فروشنده ثبت می‌شود. موجودی را بررسی کنید.' }
 }
 
+type Det = { owner: string; warehouse: string; why: string }
+/** شناسایی کالای فروخته‌شده در سایت شریک از روی SKU: کد مالک‌دار غنیمت (GH-… یا YS-…) مالک را دقیق می‌گوید؛ کد بدون پیشوند و نگاشت دستی با قاعدهٔ «اول موجودی خودش» */
+export function resolveSku(d: DB, e: ExtSite, sku: string): { productId: string; variationId?: string; how: 'coded' | 'neutral' | 'map'; det: (x: DB, qty: number) => Det } | null {
+  const code = sku.trim(); if (!code) return null
+  const hit = scanLookup(d.stock, d.products, code)
+  if (hit) return { productId: hit.productId, variationId: hit.variationId, how: 'coded', det: (x, qty) => ({ owner: hit.owner, warehouse: whereStock(x, e.partyId, hit.owner, hit.productId, hit.variationId, qty), why: `کد ${code} یعنی کالای ${partyName(x.stock, hit.owner)}` }) }
+  if (/^\d{3,}/.test(code)) for (const p of d.stock.parties) { const h = scanLookup(d.stock, d.products, `${p.prefix}${d.stock.codeRule.sep}${code}`); if (h) return { productId: h.productId, variationId: h.variationId, how: 'neutral', det: (x, qty) => detectOwner(x, e.partyId, h.productId, h.variationId, qty) } }
+  const m = e.skuMap[code]; if (m) return { ...m, how: 'map', det: (x, qty) => detectOwner(x, e.partyId, m.productId, m.variationId, qty) }
+  return null
+}
+/** انبار برداشت برای کالای یک مالک: اول انبارهای همین شریک، بعد بقیهٔ انبارهای فعال */
+function whereStock(x: DB, partner: string, owner: string, pid: string, vid: string | undefined, qty: number) {
+  const whs = [...x.stock.warehouses.filter((w) => w.operator === partner && w.active), ...x.stock.warehouses.filter((w) => w.operator !== partner && w.active)].map((w) => w.id)
+  const have = (wh: string) => x.stock.lots.filter((l) => l.productId === pid && (l.variationId ?? '') === (vid ?? '') && l.owner === owner && l.warehouse === wh && l.qty > 0 && !l.hold).reduce((a, l) => a + l.qty, 0)
+  return whs.find((wh) => have(wh) >= qty) ?? whs[0] ?? 'mahabad'
+}
+/** ثبت یک سفارش سایت شریک در دفتر: موجودی همان مالک کم، فروش و سهم‌ها ثبت، موجودی سایت غنیمت به‌روز */
+export function importExt(x: DB, partner: string, oid: string, chId: string, byName: string) {
+  const e = x.stock.ext.find((z) => z.partyId === partner); const o = e?.inbox.find((z) => z.id === oid); if (!e || !o || o.status === 'imported') return false
+  const R = o.lines.map((l) => ({ l, r: resolveSku(x, e, l.sku) })); if (R.some((q) => !q.r)) { o.status = 'unmatched'; return false }
+  const at = new Date().toISOString()
+  R.forEach(({ l, r }) => { const det = r!.det(x, l.qty); const t = takeLots(x, { productId: r!.productId, variationId: r!.variationId, owner: det.owner, warehouse: det.warehouse }, l.qty)
+    x.stock.sales.unshift({ id: uid('S'), at, productId: r!.productId, variationId: r!.variationId, owner: det.owner, warehouse: det.warehouse, channel: chId, qty: l.qty, price: l.price, cost: t.cost, by: `${byName} (از ${e.url})`, ext: o.id, code: l.sku, note: det.why + (t.taken < l.qty ? ` · مغایرت موجودی: ${fa(l.qty - t.taken)} عدد بیش از موجودی ثبت‌شده` : '') }); syncQty(x, r!.productId) })
+  o.status = 'imported'; o.importedAt = at; return true
+}
+/** لغو یا مرجوعی همان سفارش در سایت شریک (وب‌هوک order.refunded): فروش برعکس و کالا به موجودی همان مالک برمی‌گردد */
+export function refundExt(x: DB, partner: string, oid: string, byName: string) {
+  const e = x.stock.ext.find((z) => z.partyId === partner); const o = e?.inbox.find((z) => z.id === oid); if (!e || !o) return
+  const at = new Date().toISOString(); const net = new Map<string, StockSale & { left: number }>()
+  x.stock.sales.filter((q) => q.ext === oid).forEach((q) => { const k = `${q.productId}|${q.variationId ?? ''}|${q.owner}|${q.warehouse}`; const c = net.get(k); if (c) c.left += q.qty; else net.set(k, { ...q, left: q.qty }) })
+  net.forEach((q) => { if (q.left <= 0) return; x.stock.sales.unshift({ ...q, id: uid('S'), at, qty: -q.left, by: `${byName} (از ${e.url})`, reversal: q.id, note: `لغو یا مرجوعی در ${e.url}` })
+    x.stock.lots.push({ id: uid('L'), productId: q.productId, variationId: q.variationId, owner: q.owner, warehouse: q.warehouse, qty: q.left, cost: q.cost, at, ref: `برگشت ${oid}: لغو یا مرجوعی در سایت شریک` }); syncQty(x, q.productId) })
+  o.status = 'refunded'; o.refundedAt = at
+}
+/** کدهایی که شریک باید در فیلد SKU کالاهای سایتش بگذارد: هر کالا × تنوع × مالکی که در انبار او موجودی دارد */
+export function partnerCodes(d: DB, partner: string) {
+  const s = d.stock; const whs = s.warehouses.filter((w) => w.operator === partner).map((w) => w.id); const m = new Map<string, { code: string; productId: string; variationId?: string; owner: string; stock: number }>()
+  s.lots.filter((l) => whs.includes(l.warehouse)).forEach((l) => { const p = d.products.find((x) => x.id === l.productId); if (!p) return; const v = p.variations?.find((x) => x.id === l.variationId)
+    const code = labelCode(s, l.owner, p, v ?? null); const c = m.get(code) ?? { code, productId: l.productId, variationId: l.variationId, owner: l.owner, stock: 0 }; if (!l.hold && !(l.expiry && +new Date(l.expiry) < Date.now())) c.stock += l.qty; m.set(code, c) })
+  return [...m.values()].sort((a, b) => a.code.localeCompare(b.code))
+}
+function PartnerCodes({ e }: { e: ExtSite }) {
+  const d = useDB(); const s = d.stock; const L = partnerCodes(d, e.partyId); const name = partyName(s, e.partyId)
+  const csv = () => { const t = '\ufeff' + [['SKU', 'Name', 'Owner', 'Stock'], ...L.map((c) => [c.code, pv(d, c.productId, c.variationId).full, partyName(s, c.owner), String(c.stock)])].map((r) => r.map((x) => `"${x.replace(/"/g, '""')}"`).join(',')).join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv;charset=utf-8' })); a.download = `sku-${e.partyId}.csv`; a.click(); toast('فایل SKU برای درون‌ریزی در ووکامرس ذخیره شد.') }
+  return <div className="rounded-xl border border-brand/30 bg-brand-tint/30 p-3">
+    <p className="flex flex-wrap items-center gap-2 text-13 font-semibold"><ScanLine size={14} className="text-brand" />کدهایی که {name} باید در SKU سایتش بگذارد<span className="flex-1" /><Button size="sm" onClick={() => { void navigator.clipboard?.writeText(L.map((c) => c.code).join('\n')); toast('همهٔ کدها کپی شد.') }}>کپی همه</Button><Button size="sm" variant="primary" onClick={csv}>فایل SKU برای ووکامرس</Button></p>
+    <p className="mt-1 text-11 leading-5 text-t2">در ووکامرس، فیلد SKU هر کالا یا هر تنوع را دقیقاً همین کد بگذارد. پیشوند کد مالک را می‌گوید: <b>GH-</b> کالای غنیمت و <b>{s.parties.find((p) => p.id === e.partyId)?.prefix}-</b> کالای خودش. هر فروش در سایت او همان لحظه با مالک درست در دفتر ثبت می‌شود، موجودی همان مالک کم می‌شود و موجودی سایت غنیمت هم خودکار به‌روز می‌شود. لغو یا مرجوعی در سایت او موجودی را برمی‌گرداند.</p>
+    <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">{L.map((c) => <li key={c.code} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-12"><bdi dir="ltr" className="font-mono font-semibold">{c.code}</bdi><span className="min-w-0 flex-1 truncate">{pv(d, c.productId, c.variationId).full}</span><PartyChip s={s} id={c.owner} />{e.pushStock && <Badge dot={false}>موجودی ارسالی: {fa(c.stock)}</Badge>}</li>)}</ul>
+  </div>
+}
+
 export function ExtTab() {
   const d = useDB(); const s = d.stock
   return <div className="space-y-4">
@@ -37,19 +88,20 @@ function ExtCard({ e }: { e: ExtSite }) {
   const d = useDB(); const s = d.stock; const nav = useNavigate(); const [busy, setBusy] = useState(false); const [sku, setSku] = useState({ code: '', pid: 'prx', vid: 'var-prx-blk' })
   const party = s.parties.find((p) => p.id === e.partyId); const chId = s.channels.find((c) => c.seller === e.partyId && c.collector === e.partyId && c.brand !== 'غنیمت')?.id ?? 've1'
   const up = (f: (x: ExtSite) => void, action: string) => mutate((x) => { const y = x.stock.ext.find((z) => z.partyId === e.partyId); if (y) f(y) }, { action, target: `${party?.name ?? e.partyId} · ${e.url}` })
-  const mapOf = (code: string) => e.skuMap[code]
-  const lineInfo = (l: ExtOrder['lines'][number]) => { const m = mapOf(l.sku); if (!m) return null; return { m, det: detectOwner(d, e.partyId, m.productId, m.variationId, l.qty) } }
+  const mapOf = (code: string) => resolveSku(d, e, code)
+  const lineInfo = (l: ExtOrder['lines'][number]) => { const r = mapOf(l.sku); if (!r) return null; return { m: r, det: r.det(d, l.qty) } }
   const importOrder = (o: ExtOrder) => {
-    if (o.lines.some((l) => !mapOf(l.sku))) return toast('اول SKUهای وصل‌نشده را به کالای غنیمت وصل کنید.', { tone: 'err' })
-    mutate((x) => { const at = new Date().toISOString(); o.lines.forEach((l) => { const m = mapOf(l.sku)!; const det = detectOwner(x, e.partyId, m.productId, m.variationId, l.qty); const t = takeLots(x, { productId: m.productId, variationId: m.variationId, owner: det.owner, warehouse: det.warehouse }, l.qty)
-      x.stock.sales.unshift({ id: uid('S'), at, productId: m.productId, variationId: m.variationId, owner: det.owner, warehouse: det.warehouse, channel: chId, qty: l.qty, price: l.price, cost: t.cost, by: `${by()} (از ${e.url})`, ext: o.id, code: l.sku, note: det.why }); syncQty(x, m.productId) })
-      const y = x.stock.ext.find((z) => z.partyId === e.partyId)!.inbox.find((z) => z.id === o.id)!; y.status = 'imported'; y.importedAt = at }, { action: 'ثبت سفارش سایت شریک در دفتر', target: `${o.id} · ${e.url}` })
-    toast(`سفارش ${o.id} ثبت شد؛ موجودی کم و سهم‌ها حساب شد.`)
+    if (o.lines.some((l) => !mapOf(l.sku))) return toast('اول SKUهای ناشناخته را اصلاح یا به کالای غنیمت وصل کنید.', { tone: 'err' })
+    mutate((x) => { importExt(x, e.partyId, o.id, chId, by()) }, { action: 'ثبت سفارش سایت شریک در دفتر', target: `${o.id} · ${e.url}` })
+    toast(`سفارش ${o.id} ثبت شد؛ موجودی همان مالک کم شد و سهم‌ها حساب شد. موجودی سایت غنیمت هم همین لحظه به‌روز شد.`)
   }
+  const refundOrder = (o: ExtOrder) => { mutate((x) => { refundExt(x, e.partyId, o.id, by()) }, { action: 'برگشت سفارش سایت شریک (لغو یا مرجوعی)', target: `${o.id} · ${e.url}` }); toast(`برگشت ${o.id} ثبت شد؛ کالا به موجودی همان مالک برگشت و سهم‌ها برعکس شد.`) }
   const sync = async () => { setBusy(true); try { await fakeCall(true, 900)
-    const keys = Object.keys(e.skuMap); const k = keys[Math.floor(Math.random() * keys.length)]
-    up((y) => { y.lastSync = new Date().toISOString(); if (y.pullOrders && k) y.inbox.unshift({ id: `ve1-${5524 + y.inbox.length}`, at: new Date().toISOString(), status: 'new', customer: 'مشتری سایت', lines: [{ sku: k, name: k, qty: 1, price: 2750000 }] }) }, 'همگام‌سازی سایت شریک')
-    toast(`همگام‌سازی انجام شد${e.pullOrders ? '؛ سفارش تازه به صندوق ورودی اضافه شد' : ''}.`) } catch { toast('سایت شریک پاسخ نداد. کلید API یا دسترسی سرور را بررسی کنید.', { tone: 'err' }) } finally { setBusy(false) } }
+    const keys = partnerCodes(d, e.partyId).filter((c) => c.stock > 0).map((c) => c.code); const k = keys[Math.floor(Math.random() * keys.length)]; const oid = `ve1-${5524 + e.inbox.length}`
+    mutate((x) => { const y = x.stock.ext.find((z) => z.partyId === e.partyId)!; y.lastSync = new Date().toISOString(); if (!y.pullOrders || !k) return
+      y.inbox.unshift({ id: oid, at: new Date().toISOString(), status: 'new', customer: 'مشتری سایت', lines: [{ sku: k, name: k, qty: 1, price: 2750000 }] })
+      if (y.autoImport) importExt(x, e.partyId, oid, chId, 'ثبت خودکار') }, { action: 'همگام‌سازی سایت شریک', target: e.url })
+    toast(!e.pullOrders || !k ? 'همگام‌سازی انجام شد.' : e.autoImport ? `سفارش تازهٔ ${oid} رسید و خودکار در دفتر ثبت شد؛ مالک از روی کد ${k} معلوم شد.` : `سفارش تازهٔ ${oid} به صندوق ورودی اضافه شد.`) } catch { toast('سایت شریک پاسخ نداد. کلید API یا دسترسی سرور را بررسی کنید.', { tone: 'err' }) } finally { setBusy(false) } }
   const stockFor = (m: { productId: string; variationId?: string }) => { const whs = s.warehouses.filter((w) => w.operator === e.partyId && w.active).map((w) => w.id); return whs.reduce((a, wh) => a + Math.max(0, s.lots.filter((l) => l.productId === m.productId && (l.variationId ?? '') === (m.variationId ?? '') && l.warehouse === wh && !l.hold).reduce((b, l) => b + l.qty, 0) - reserved(d, m.productId, m.variationId, wh)), 0) }
   const newCount = e.inbox.filter((o) => o.status !== 'imported' && o.status !== 'skipped').length
   return <Card title={<span className="flex flex-wrap items-center gap-2"><Globe size={15} />اتصال ووکامرس <bdi dir="ltr" className="font-mono text-13">{e.url}</bdi>{party && <PartyChip s={s} id={party.id} />}{e.on ? <Badge tone="success">متصل</Badge> : <Badge tone="danger">قطع</Badge>}</span>}
@@ -64,6 +116,7 @@ function ExtCard({ e }: { e: ExtSite }) {
       <Toggle on={e.pullOrders} onChange={(v) => up((y) => { y.pullOrders = v }, 'تغییر دریافت سفارش سایت شریک')} text="سفارش‌های سایت او خودکار این‌جا بیاید" />
       <Toggle on={e.pushStock} onChange={(v) => up((y) => { y.pushStock = v }, 'تغییر ارسال موجودی به سایت شریک')} text="موجودی انبار او از این‌جا به سایتش برود" />
       <Toggle on={e.webhook} onChange={(v) => up((y) => { y.webhook = v }, 'تغییر وب‌هوک سایت شریک')} text="وب‌هوک لحظه‌ای (به‌جای همگام‌سازی هر ۱۵ دقیقه)" />
+      <Toggle on={!!e.autoImport} onChange={(v) => up((y) => { y.autoImport = v }, 'تغییر ثبت خودکار سفارش سایت شریک')} text="سفارش‌هایی که کد غنیمت دارند خودکار در دفتر ثبت شوند" />
     </div>
     <p className="mt-2 flex flex-wrap items-center gap-2 text-11 text-t2"><Webhook size={13} />نشانی وب‌هوک برای ووکامرس: <bdi dir="ltr" className="rounded bg-neutral-bg px-1.5 font-mono">https://api.ghanimat.ir/hooks/woo/{e.partyId}</bdi> · رویدادها: order.created، order.updated، order.refunded · آخرین همگام‌سازی {e.lastSync ? rel(e.lastSync) : '—'}</p>
 
@@ -71,19 +124,20 @@ function ExtCard({ e }: { e: ExtSite }) {
       <div>
         <p className="mb-2 flex items-center gap-1.5 text-13 font-semibold"><ShoppingBag size={14} />صندوق سفارش‌های {e.url.replace(/^https?:\/\//, '')} {newCount > 0 && <Badge tone="warning">{fa(newCount)} منتظر ثبت</Badge>}</p>
         <ul className="space-y-2">{e.inbox.map((o) => <li key={o.id} className="rounded-xl border border-line p-3 text-12">
-          <div className="flex flex-wrap items-center gap-2"><b className="font-mono">{o.id}</b><span className="text-t2">{o.customer} · {rel(o.at)}</span><span className="flex-1" />{o.status === 'imported' ? <Badge tone="success">در دفتر ثبت شد</Badge> : o.status === 'skipped' ? <Badge>رد شد</Badge> : o.lines.some((l) => !mapOf(l.sku)) ? <Badge tone="danger">SKU ناشناخته</Badge> : <Badge tone="info">آمادهٔ ثبت</Badge>}</div>
-          <ul className="mt-2 space-y-1.5">{o.lines.map((l, i) => { const inf = lineInfo(l); return <li key={i} className="rounded-lg bg-neutral-bg px-2.5 py-1.5"><p className="flex flex-wrap items-center gap-1.5"><bdi dir="ltr" className="font-mono">{l.sku}</bdi><span>×{fa(l.qty)}</span><span className="text-t2">{toman(l.price)}</span>{inf ? <><span>← {pv(d, inf.m.productId, inf.m.variationId).full}</span><PartyChip s={s} id={inf.det.owner} /></> : <span className="text-danger">به کالای غنیمت وصل نشده</span>}</p>{inf && o.status !== 'imported' && <p className="mt-0.5 text-11 text-t2">{inf.det.why}</p>}</li> })}</ul>
+          <div className="flex flex-wrap items-center gap-2"><b className="font-mono">{o.id}</b><span className="text-t2">{o.customer} · {rel(o.at)}</span><span className="flex-1" />{o.status === 'imported' ? <><Badge tone="success">در دفتر ثبت شد</Badge><Button size="sm" variant="ghost" onClick={() => refundOrder(o)}>ثبت لغو یا مرجوعی</Button></> : o.status === 'refunded' ? <Badge tone="danger">برگشت خورد · موجودی برگشت</Badge> : o.status === 'skipped' ? <Badge>رد شد</Badge> : o.lines.some((l) => !mapOf(l.sku)) ? <Badge tone="danger">SKU ناشناخته</Badge> : <Badge tone="info">آمادهٔ ثبت</Badge>}</div>
+          <ul className="mt-2 space-y-1.5">{o.lines.map((l, i) => { const inf = lineInfo(l); return <li key={i} className="rounded-lg bg-neutral-bg px-2.5 py-1.5"><p className="flex flex-wrap items-center gap-1.5"><bdi dir="ltr" className="font-mono">{l.sku}</bdi><span>×{fa(l.qty)}</span><span className="text-t2">{toman(l.price)}</span>{inf ? <><span>← {pv(d, inf.m.productId, inf.m.variationId).full}</span><PartyChip s={s} id={inf.det.owner} /><Badge tone={inf.m.how === 'coded' ? 'success' : inf.m.how === 'neutral' ? 'info' : 'neutral'} dot={false}>{inf.m.how === 'coded' ? 'کد مالک‌دار' : inf.m.how === 'neutral' ? 'کد بدون مالک' : 'نگاشت دستی'}</Badge></> : <span className="text-danger">کد غنیمت ندارد</span>}</p>{inf && o.status !== 'imported' && <p className="mt-0.5 text-11 text-t2">{inf.det.why}</p>}</li> })}</ul>
           {o.status !== 'imported' && o.status !== 'skipped' && <div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant="primary" disabled={o.lines.some((l) => !mapOf(l.sku))} onClick={() => importOrder(o)}>ثبت در دفتر و کم کردن موجودی</Button><Button size="sm" variant="ghost" onClick={() => up((y) => { y.inbox.find((z) => z.id === o.id)!.status = 'skipped' }, `رد سفارش سایت شریک ${o.id}`)}>رد (تکراری یا آزمایشی)</Button>{o.lines.some((l) => !mapOf(l.sku)) && <Button size="sm" icon={<Link2 size={13} />} onClick={() => setSku({ ...sku, code: o.lines.find((l) => !mapOf(l.sku))!.sku })}>وصل کردن SKU</Button>}</div>}
         </li>)}</ul>
       </div>
       <div>
-        <p className="mb-2 text-13 font-semibold">نگاشت SKU سایت او به کالای غنیمت</p>
+        <PartnerCodes e={e} />
+        <p className="mb-2 mt-4 text-13 font-semibold">نگاشت دستی (فقط برای کالاهایی که هنوز کد غنیمت ندارند)</p>
         <ul className="space-y-1.5">{Object.entries(e.skuMap).map(([k, m]) => <li key={k} className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12"><bdi dir="ltr" className="font-mono">{k}</bdi><span>← {pv(d, m.productId, m.variationId).full}</span>{e.pushStock && <Badge dot={false}>موجودی ارسالی: {fa(stockFor(m))}</Badge>}<span className="flex-1" /><button aria-label={`حذف نگاشت ${k}`} className="text-t3 hover:text-danger" onClick={() => up((y) => { delete y.skuMap[k] }, `حذف نگاشت SKU ${k}`)}><Trash2 size={13} /></button></li>)}</ul>
         <div className="mt-2 space-y-2 rounded-xl border border-dashed border-line p-2.5"><Field label="SKU در سایت او"><Input className="ltr text-left font-mono" value={sku.code} onChange={(v) => setSku({ ...sku, code: v.target.value })} /></Field>
           <Field label="کالای غنیمت"><Select value={sku.pid} onChange={(v) => setSku({ ...sku, pid: v, vid: d.products.find((p) => p.id === v)?.variations?.[0]?.id ?? '' })} options={[...new Map(d.products.map((p) => [p.id, p.title])).entries()].map(([k, t]) => [k, t] as [string, string])} /></Field>
           {d.products.find((p) => p.id === sku.pid)?.variations?.length ? <Field label="تنوع"><Select value={sku.vid} onChange={(v) => setSku({ ...sku, vid: v })} options={d.products.find((p) => p.id === sku.pid)!.variations!.map((v) => [v.id, pv(d, sku.pid, v.id).vname] as [string, string])} /></Field> : null}
           <Button size="sm" variant="primary" disabled={!sku.code.trim()} onClick={() => { up((y) => { y.skuMap[sku.code.trim()] = { productId: sku.pid, variationId: d.products.find((p) => p.id === sku.pid)?.variations?.length ? sku.vid : undefined }; y.inbox.forEach((o) => { if (o.status === 'unmatched' && o.lines.every((l) => y.skuMap[l.sku])) o.status = 'new' }) }, `نگاشت SKU ${sku.code}`); setSku({ ...sku, code: '' }) }}>ذخیرهٔ نگاشت</Button></div>
-        <p className="mt-2 text-11 text-t2">اگر کالایی هم در انبار او مال خودش باشد و هم مال غنیمت، اول موجودی خودش فروخته حساب می‌شود؛ وقتی موجودی خودش تمام شود، فروش از کالای غنیمت ثبت و سهم غنیمت در <button className="text-brand underline" onClick={() => nav('/admin/ownership?tab=statement')}>صورت‌حساب</button> حساب می‌شود.</p>
+        <p className="mt-2 text-11 text-t2">اگر SKU در سایت او کد بدون پیشوند مالک (مثل ۰۰۰۲۰۱-۱) باشد یا دستی نگاشت شده باشد، اول موجودی خودش فروخته حساب می‌شود؛ وقتی موجودی خودش تمام شود، فروش از کالای غنیمت ثبت و سهم غنیمت در <button className="text-brand underline" onClick={() => nav('/admin/ownership?tab=statement')}>صورت‌حساب</button> حساب می‌شود.</p>
       </div>
     </div>
   </Card>

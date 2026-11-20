@@ -125,7 +125,7 @@ function PartyJoin({ open, onClose }: { open: boolean; onClose: () => void }) {
       if (f.store) x.stock.channels.push({ id: `${id}-store`, name: `فروش حضوری ${f.city.trim()}`, seller: id, collector: id, brand: 'غنیمت', active: true })
       if (f.own && f.site) x.stock.channels.push({ id: `${id}-site`, name: `سایت ${f.site}`, seller: id, collector: id, brand: f.site, active: true })
       if (f.account) x.team.push({ ...structuredClone(x.team.find((u) => u.id === 'u4') ?? x.team[0]), id: uid, name: f.name.trim(), role: f.role, phone: f.phone, status: 'آفلاین', twoFA: false })
-      parsed.filter((q) => q.p && q.qty > 0).forEach((q, i) => { x.stock.lots.push({ id: `L-${Date.now().toString(36).slice(-3).toUpperCase()}${i}`, productId: q.p!.id, variationId: q.v?.id, owner: id, warehouse: f.wh ? whId : 'tehran', qty: q.qty, cost: q.cost, at, ref: 'موجودی اولیهٔ پیوستن' }) })
+      parsed.filter((q) => q.p && q.qty > 0).forEach((q, i) => { x.stock.lots.push({ id: `L-${Date.now().toString(36).slice(-3).toUpperCase()}${i}`, productId: q.p!.id, variationId: q.v?.id, owner: id, warehouse: f.wh ? whId : 'tehran', qty: q.qty, qty0: q.qty, cost: q.cost, at, ref: 'موجودی اولیهٔ پیوستن' }) })
       new Set(parsed.filter((q) => q.p).map((q) => q.p!.id)).forEach((pid) => syncQty(x, pid))
     }, { action: 'پیوستن شریک تازه', target: `${f.name} (${pfx}) · ${f.city}`, after: `${f.wh ? 'انبار تازه' : 'بدون انبار'} · ${fa(parsed.filter((q) => q.p).length)} ردیف موجودی` })
     toast(`«${f.name}» پیوست${f.account ? `؛ حساب کاربری با موبایل ${f.phone} ساخته شد` : ''}.`); onClose() }

@@ -33,7 +33,7 @@ export type Refund = { id: string; orderId: string; customerId: string; amount: 
 export type GatewayHold = { id: string; customerId: string; items: { productId: string; unitId: string; qty: number }[]; gateway: string; amount: number; at: string; status: 'in_gateway' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'released'; endedAt?: string; note?: string; orderId?: string }
 export type Order = { refunded?: number; refundPending?: number; payHold?: { amount: number; method: 'لینک پرداخت' | 'کارت به کارت'; at: string; by: string; status: 'pending' | 'paid' | 'released' | 'waived'; ref?: string; note?: string; doneAt?: string; doneBy?: string; reminders?: number }; receiver?: { name: string; mobile: string }; edits?: { at: string; by: string; src: string; reason: string; changes: string[]; diff: number; settle?: string; sms: boolean; prev?: string; undone?: { at: string; by: string } }[]; rollbacks?: { at: string; by: string; shipId: string; from: string; to: string; reason: string; prev: { status: string; orderStatus: string; tracking: string; courier: any }; undone?: { at: string; by: string } }[]; cancelInfo?: CancelInfo; decision?: OrderDecision; customerNote?: string; customerNoteDone?: boolean; notes?: { id: string; at: string; by: string; src: 'تماس تلفنی' | 'پیام‌رسان' | 'حضوری' | 'داخلی'; text: string; act?: boolean; done?: boolean; doneBy?: string }[]; shipTo?: string; id: string; customerId: string; buyer?: 'person' | 'legal'; legalId?: string; deliveredAt?: string; invoiceNo?: string; createdAt: string; status: string; pay: string; total: number; discount: number; shippingFee: number; fee: number; margin: number; risk: number; channel: string; tags: string[]; lockedBy: string | null; shipments: Shipment[] }
 
-import { makeStock } from './stock'
+import { makeStock, type StockSale as StockSaleT } from './stock'
 import { syncQty } from './ledger'
 import { makeEntities, type Rec } from './entities'
 import { makeSite, makeLayout } from './site'
@@ -647,6 +647,32 @@ export const makeSeed = () => {
   { const seen = new Set<string>(); let n = 0
     s.products.forEach((p) => [p.image, ...(p.images ?? [])].filter(Boolean).forEach((src) => { if (seen.has(src)) return; seen.add(src); n++
       s.media.push({ id: `M-${String(270 + n)}`, src, name: src.split('/').pop() ?? src, alt: n % 3 ? `${p.title}، عکس واقعی همین کالا` : '', w: 500, h: 500, size: 18000 + ((n * 7919) % 40000), type: src.endsWith('.webp') ? 'webp' : 'jpg', by: n % 3 === 1 ? 'نیما' : 'بهشاد', at: new Date(Date.now() - n * 2.3 * 864e5).toISOString(), optimized: src.endsWith('.webp') }) })) }
+  // تاریخچهٔ کامل‌تر دفتر شرکا، محصول به محصول: فروش حضوری شعبه‌ها و سایت ve1 با تخفیف و کارمزد، یک برگشت از مشتری و یک برگشت کالا به مالک
+  { const hr = (h: number) => new Date(Date.now() - h * 36e5).toISOString(); let n = 0
+    s.stock.channels.push({ id: 'gh-store', name: 'فروش حضوری شعبهٔ تهران', seller: 'gh', collector: 'gh', brand: 'غنیمت', active: true })
+    const priceOf = (pid: string, vid?: string) => { const p = s.products.find((x) => x.id === pid); const v = p?.variations?.find((x) => x.id === vid); return v?.sale ?? v?.price ?? p?.price ?? p?.priceNew ?? 0 }
+    const extra: StockSaleT[] = []
+    s.stock.lots.filter((l) => l.qty > 2 && (l.owner !== 'gh' || l.warehouse === 'mahabad')).forEach((l, i) => {
+      const base = priceOf(l.productId, l.variationId); if (!base) return
+      const reps = 2 + (i % 3)
+      for (let k = 0; k < reps; k++) { n++
+        const ch = l.owner === 'ys' ? (k % 2 ? 've1' : 'ys-store') : l.warehouse === 'mahabad' ? (k % 2 ? 'gh-branch-ys' : 'ys-store') : 'gh-store'
+        const qty = 1 + ((i + k) % 3 === 0 ? 1 : 0); const price = Math.round((base * (k % 3 === 2 ? 0.97 : 1)) / 1000) * 1000
+        const disc = k % 4 === 1 ? Math.round((price * qty * 0.03) / 1000) * 1000 : 0; const fee = ch === 've1' ? Math.round(price * qty * 0.012) : 0
+        extra.push({ id: `S-H${String(n).padStart(3, '0')}`, at: hr(24 * (4 + ((i * 7 + k * 11) % 85)) + k * 3), productId: l.productId, variationId: l.variationId, owner: l.owner, warehouse: l.warehouse, channel: ch, qty, price, cost: l.cost, by: ch === 'gh-store' ? 'نیما' : 'یاسین', discount: disc || undefined, fee: fee || undefined, ext: ch === 've1' ? `ve1-${4800 + n}` : ch.endsWith('store') ? `POS-${7300 + n}` : undefined })
+      }
+    })
+    // یک برگشت از مشتری روی یکی از فروش‌های حضوری
+    const r0 = extra.find((x) => x.channel === 'ys-store' && x.qty === 2); if (r0) extra.push({ ...r0, id: `S-H${String(++n).padStart(3, '0')}`, at: new Date(+new Date(r0.at) + 3 * 864e5).toISOString(), qty: -1, discount: r0.discount ? Math.round(r0.discount / 2) : undefined, reversal: r0.id, note: 'مرجوعی مشتری در شعبه: ایراد ظاهری جعبه', by: 'یاسین' })
+    s.stock.sales.push(...extra)
+    // برگشت کالا به مالک (یوسف): یک بستهٔ گلوتاتیون با بستهٔ آسیب‌دیده
+    if (s.stock.parties.some((p) => p.id === 'yf')) s.stock.ownerReturns.push({ id: 'OR-1001', at: hr(24 * 9), owner: 'yf', warehouse: 'tehran', lines: [{ productId: 'pgl', qty: 1, batch: 'MCH-2409A' }], reason: 'بستهٔ آسیب‌دیده در حمل؛ به تأمین‌کننده برگشت', by: 'نیما', receivedBy: 'یوسف' })
+    // سند ورود هر لات: تعداد لحظهٔ ورود = باقی‌مانده + فروش خالص همان مالک از همان انبار (قدیمی‌ترین لات اول) + برگشت به مالک
+    const used = new Map<string, number>(); const k3 = (o: string, p: string, v: string | undefined, w: string) => `${o}|${p}|${v ?? ''}|${w}`
+    s.stock.sales.filter((x) => !x.unitId).forEach((x) => used.set(k3(x.owner, x.productId, x.variationId, x.warehouse), (used.get(k3(x.owner, x.productId, x.variationId, x.warehouse)) ?? 0) + x.qty))
+    s.stock.ownerReturns.forEach((r) => r.lines.forEach((ln) => used.set(k3(r.owner, ln.productId, ln.variationId, r.warehouse), (used.get(k3(r.owner, ln.productId, ln.variationId, r.warehouse)) ?? 0) + ln.qty)))
+    ;[...s.stock.lots].filter((l) => !(l.ref ?? '').startsWith('برگشت')).sort((a, b) => +new Date(a.at) - +new Date(b.at)).forEach((l) => { const key = k3(l.owner, l.productId, l.variationId, l.warehouse); const u = Math.max(0, used.get(key) ?? 0); l.qty0 = l.qty + u; used.set(key, 0) })
+  }
   // یکدستی دادهٔ نمونه: مبلغ کل هر سفارش = جمع کالاهای فعال − تخفیف + ارسال (و تراکنش موفق همان سفارش هم‌مبلغ)؛ موجودی کالاها از روی لات‌ها و رزرو سفارش‌های باز
   s.orders.forEach((o) => { const sub = o.shipments.flatMap((x) => x.items).filter((i) => !i.cancelled).reduce((a, i) => a + i.price * (i.qty ?? 1), 0); if (!sub) return
     const want = sub - (o.discount ?? 0) + (o.shippingFee ?? 0); if (want === o.total) return

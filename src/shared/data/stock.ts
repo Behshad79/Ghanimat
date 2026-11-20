@@ -10,7 +10,8 @@ export type StockWh = { id: string; name: string; city: string; operator: string
 export type Channel = { id: string; name: string; seller: string; collector: string; brand: string; active: boolean }
 /** مدل قرارداد: تقسیم سود (درصد سود برای فروشنده)، قیمت توافقی ثابت (بهای هر ورود همان مبلغ مالک است و بقیه مال فروشنده) یا کمیسیون (درصد از مبلغ فروش برای فروشنده) */
 export type Agreement = { owner: string; seller: string; sellerPct: number; note?: string; model?: 'profit_share' | 'fixed_price' | 'commission' }
-export type Lot = { id: string; productId: string; variationId?: string; owner: string; warehouse: string; qty: number; cost: number; at: string; ref?: string; hold?: boolean; expiry?: string; batch?: string }
+/** qty0: تعداد همان ورود در لحظهٔ ثبت (qty با هر فروش کم می‌شود ولی qty0 ثابت می‌ماند و سند ورود است) */
+export type Lot = { id: string; productId: string; variationId?: string; owner: string; warehouse: string; qty: number; qty0?: number; cost: number; at: string; ref?: string; hold?: boolean; expiry?: string; batch?: string }
 /** qty منفی یعنی برگشت (لغو یا مرجوعی) همان فروش؛ discount و fee جمع سهم این ردیف از تخفیف سفارش و کارمزد درگاه است */
 export type StockSale = { id: string; at: string; productId: string; variationId?: string; owner: string; warehouse: string; channel: string; qty: number; price: number; cost: number; orderId?: string; shipId?: string; unitId?: string; code?: string; by: string; discount?: number; fee?: number; auto?: boolean; reversal?: string; note?: string; ext?: string }
 export type Settlement = { id: string; at: string; from: string; to: string; amount: number; ref: string; by: string; note?: string }

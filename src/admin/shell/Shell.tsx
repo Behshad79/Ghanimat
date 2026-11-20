@@ -46,12 +46,11 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   const items = NAV.filter((n) => can(n.id, s) && (!n.soon || d.flags.showSoon))
   const core = items.filter((n) => n.group === 'امروز')
   const groups = [...new Set(items.filter((n) => n.group !== 'امروز').map((n) => n.group))]
-  const loc = useLocation(); const [q, setQ] = useState('')
+  const loc = useLocation()
   const activeN = items.filter((n) => n.path !== '/admin' && loc.pathname.startsWith(n.path)).sort((a, b) => b.path.length - a.path.length)[0]; const activeG = activeN?.also ?? activeN?.group
   // آکاردئون: فقط یک گروه باز است؛ گروه صفحهٔ فعلی خودکار باز می‌شود
   const [open, setOpen] = useState<string | null>(activeG ?? null)
   useEffect(() => { if (activeG && activeG !== 'امروز') setOpen(activeG) }, [activeG])
-  const shown = q.trim() ? items.filter((n) => n.label.includes(q.trim()) || n.group.includes(q.trim())) : null
   const pins = items.filter((i) => s.pinned.includes(i.id) && i.group !== 'امروز')
   const link = (n: (typeof NAV)[number]) => { const c = n.count?.(d) ?? 0; return (
     <NavLink key={n.id} to={n.path} end={n.path === '/admin'} onClick={onNav} title={mini ? `${n.label}${c ? ` (${fa(c)})` : ''}` : undefined}
@@ -71,9 +70,8 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
           ? <span className="flex items-center gap-2 text-20 font-bold"><img src="./brand/logo-mark.png" alt="" className="h-7" />غنیمت</span>
           : <img src="./brand/logo-full.png" alt="غنیمت" className="h-8" />}
       </div>
-      {!mini && <div className="relative shrink-0 px-2.5 pt-2.5"><Search size={13} className="pointer-events-none absolute top-1/2 right-5 mt-[5px] -translate-y-1/2 text-t3" /><input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setQ('') }} aria-label="جست‌وجو در منو" placeholder="پیدا کردن بخش…" className="h-8 w-full rounded-lg border border-line bg-neutral-bg/60 pe-2 ps-8 text-12 outline-none focus:border-brand" /></div>}
       <nav className="flex-1 space-y-2 overflow-y-auto p-2" aria-label="منوی اصلی">
-        {shown ? (shown.length ? <div className="space-y-0.5">{shown.map(link)}</div> : <p className="px-3 py-2 text-12 text-t3">بخشی با این نام نیست.</p>) : <>
+        <>
           <div className="space-y-0.5">{core.map(link)}</div>
           {pins.length > 0 && <div className="space-y-0.5"><Head>سنجاق‌شده‌های من</Head>{pins.map(link)}</div>}
           <div className={cx(!mini && 'border-t border-line pt-2')}>
@@ -87,7 +85,7 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
                 {isOpen && <div className={cx('space-y-0.5', !mini && 'mt-0.5 mb-1.5 border-r-2 border-line pr-1.5 mr-3')}>{gi.map(link)}</div>}
               </div>) })}
           </div>
-        </>}
+        </>
       </nav>
       {!mobile && <button onClick={() => setSession({ collapsed: !s.collapsed })} title="جمع و باز کردن منو (کلید [ )" className="flex h-10 shrink-0 items-center justify-center gap-2 border-t border-line text-12 text-t3 hover:text-t1"><ChevronsRight size={15} className={cx('transition-transform', mini && 'rotate-180')} />{!mini && <>جمع‌کردن منو<Kbd>[</Kbd></>}</button>}
     </aside>

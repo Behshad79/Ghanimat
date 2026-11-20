@@ -17,6 +17,7 @@ import { payoutBetween } from '@/shared/data/payout'
 import { PartyManager } from './Parties'
 import { PerformanceTab, StatementTab } from './Statement'
 import { ExtTab } from './ExtSites'
+import { ProductLedgerTab } from './ProductLedger'
 
 const uid = (p: string) => `${p}-${Date.now().toString(36).slice(-5).toUpperCase()}`
 const by = () => currentUser()?.name ?? 'پنل'
@@ -31,7 +32,7 @@ export function Ownership() {
   return (
     <Page module="ownership" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
       actions={<>{can('team') && <Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button>}<Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'ledger', label: 'گردش و کارت کالا' }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {s.parties.filter((p) => p.active && (sec || p.id === me)).map((p) => <Card key={p.id} onClick={() => setTab('stock')}><div className="flex items-center justify-between"><PartyChip s={s} id={p.id} /><span className="text-11 text-t2">{p.kind === 'self' ? 'خودمان' : 'شریک'}</span></div><p className="mt-2 text-20 font-bold">{fa(units(p.id))} <span className="text-12 font-normal text-t2">عدد موجود</span></p><p className="text-12 text-t2">ارزش به بهای تمام‌شده: {toman(value(p.id))}</p></Card>)}
         <Card onClick={() => setTab('settle')}><p className="flex items-center gap-1.5 text-12 text-t2"><HandCoins size={14} />ماندهٔ تسویه</p>{bal.length ? bal.map((b) => <p key={b.a + b.b} className="mt-1.5 text-13"><b>{partyName(s, b.net > 0 ? b.a : b.b)}</b> به <b>{partyName(s, b.net > 0 ? b.b : b.a)}</b> <span className="font-bold text-warning">{toman(Math.abs(b.net))}</span></p>) : <p className="mt-2 text-13 text-success">همه تسویه است.</p>}</Card>
@@ -40,6 +41,7 @@ export function Ownership() {
       {tab === 'sales' && <SalesTab />}
       {tab === 'statement' && <StatementTab />}
       {tab === 'settle' && <SettleTab />}
+      {tab === 'ledger' && <ProductLedgerTab />}
       {tab === 'perf' && <PerformanceTab />}
       {tab === 'ext' && <ExtTab />}
       {tab === 'codes' && <CodesTab />}
@@ -92,7 +94,7 @@ function IntakeModal({ open, onClose, preset }: { open: boolean; onClose: () => 
   const prod = d.products.find((x) => x.id === f.pid); const needs = !!prod?.needsExpiry; const minShelf = s.parties.find((p) => p.id === f.owner)?.payout?.minShelfDays ?? 0
   const shelfDays = f.expiry ? Math.round((+new Date(f.expiry) - Date.now()) / 864e5) : null
   const ok = f.qty > 0 && f.cost > 0 && (!needs || (!!f.expiry && !!f.batch.trim() && !!(prod?.irc || f.irc.trim())))
-  const save = () => { mutate((x) => { x.stock.lots.unshift({ id: uid('L'), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, qty: f.qty, cost: f.cost, at: new Date().toISOString(), ref: f.ref || `ورود توسط ${by()}`, expiry: f.expiry || undefined, batch: f.batch.trim() || undefined }); if (f.irc.trim()) { const q = x.products.find((y) => y.id === f.pid); if (q) q.irc = f.irc.trim() } syncQty(x, f.pid) }, { action: 'ورود موجودی با مالک مشخص', target: `${pv(d, f.pid, f.vid).full} · ${partyName(s, f.owner)} · ${whName(s, f.wh)}` }); toast(`${fa(f.qty)} عدد به نام ${partyName(s, f.owner)} در ${whName(s, f.wh)} ثبت شد.`); onClose() }
+  const save = () => { mutate((x) => { x.stock.lots.unshift({ id: uid('L'), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, qty: f.qty, qty0: f.qty, cost: f.cost, at: new Date().toISOString(), ref: f.ref || `ورود توسط ${by()}`, expiry: f.expiry || undefined, batch: f.batch.trim() || undefined }); if (f.irc.trim()) { const q = x.products.find((y) => y.id === f.pid); if (q) q.irc = f.irc.trim() } syncQty(x, f.pid) }, { action: 'ورود موجودی با مالک مشخص', target: `${pv(d, f.pid, f.vid).full} · ${partyName(s, f.owner)} · ${whName(s, f.wh)}` }); toast(`${fa(f.qty)} عدد به نام ${partyName(s, f.owner)} در ${whName(s, f.wh)} ثبت شد.`); onClose() }
   return <Modal open={open} onClose={onClose} title="ورود موجودی با مالک مشخص" wide footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" disabled={!ok} onClick={save}>ثبت ورود</Button></>}>
     <div className="space-y-3"><ProductPicker pid={f.pid} vid={f.vid} onChange={(pid, vid) => setF({ ...f, pid, vid })} />
       <div className="grid gap-3 sm:grid-cols-2"><Field label="مالک (تأمین‌کننده)" help="کسی که پول این کالا را داده است"><Select value={f.owner} onChange={(v) => setF({ ...f, owner: v })} options={s.parties.filter((p) => p.active).map((p) => [p.id, `${p.name} (${p.prefix})`] as [string, string])} /></Field><Field label="انبار محل نگهداری"><Select value={f.wh} onChange={(v) => setF({ ...f, wh: v })} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} /></Field></div>

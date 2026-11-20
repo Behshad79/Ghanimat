@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeftRight, Barcode as BarcodeIcon, Building2, HandCoins, Info, PackagePlus, Plus, Printer, ReceiptText, ScanLine, Trash2, Users, Warehouse } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Select, Tabs, Toggle } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
@@ -41,7 +41,7 @@ export function Ownership() {
 
 /* ───────── موجودی ───────── */
 function StockTab() {
-  const d = useDB(); const s = d.stock; const [intake, setIntake] = useState(false); const [move, setMove] = useState(false)
+  const d = useDB(); const s = d.stock; const [sp] = useSearchParams(); const [intake, setIntake] = useState(sp.get('intake') === '1'); const [move, setMove] = useState(false)
   const whs = s.warehouses.filter((w) => w.active)
   const rows = productsWithLots(d).flatMap((p) => (p.variations?.length ? p.variations.map((v) => ({ p, vid: v.id })) : [{ p, vid: undefined as string | undefined }])).filter((r) => s.lots.some((l) => l.productId === r.p.id && (l.variationId ?? '') === (r.vid ?? '')))
   return (

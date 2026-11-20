@@ -94,7 +94,7 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
   )
 }
 
-const QUICK = [['کالا از لینک', '/admin/catalog/import'], ['سفارش دستی', '/admin/orders?new=1'], ['کد تخفیف', '/admin/pricing?tab=codes&new=1'], ['تیکت', '/admin/support'], ['قانون یا پارامتر', '/admin/rules']] as const
+const QUICK = [['افزودن کالا', '/admin/catalog/new'], ['کالا از لینک آمازون یا دیجی‌کالا', '/admin/catalog/import'], ['ورود موجودی با مالک', '/admin/ownership?tab=stock&intake=1'], ['سفارش دستی', '/admin/orders?new=1'], ['کد تخفیف', '/admin/pricing?tab=codes&new=1'], ['تیکت', '/admin/support'], ['قانون یا پارامتر', '/admin/rules']] as const
 
 function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void; onAI: () => void }) {
   const s = useSession(); const d = useDB(); const nav = useNavigate()

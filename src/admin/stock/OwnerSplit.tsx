@@ -1,4 +1,5 @@
 import { Info, Plus, Trash2, Wand2 } from 'lucide-react'
+import { MoneyInput } from '@/shared/ui/money'
 import { Button, Field, Input, Select, Toggle } from '@/shared/ui/base'
 import { useDB } from '@/shared/lib/store'
 import { fa } from '@/shared/lib/fa'
@@ -31,7 +32,7 @@ export function OwnerSplit({ f, set, cost }: { f: F; set: (p: Partial<F>) => voi
         <Field label="مالک"><Select value={r.owner} onChange={(v) => up(i, { owner: v })} options={s.parties.filter((p) => p.active).map((p) => [p.id, p.name] as [string, string])} /></Field>
         <Field label="انبار"><Select value={r.warehouse} onChange={(v) => up(i, { warehouse: v })} options={s.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} /></Field>
         <Field label="تعداد"><Input type="number" min={0} className="ltr text-left font-mono" value={r.qty} onChange={(e) => up(i, { qty: Math.max(0, +e.target.value) })} /></Field>
-        <Field label="بهای تمام‌شدهٔ واحد"><Input type="number" min={0} className="ltr text-left font-mono" value={r.cost || ''} onChange={(e) => up(i, { cost: Math.max(0, +e.target.value) })} /></Field>
+        <Field label="بهای تمام‌شدهٔ هر عدد (تومان)"><MoneyInput hint={false} value={r.cost} onChange={(n) => up(i, { cost: n })} aria-label="بهای تمام‌شدهٔ هر عدد به تومان" /></Field>
         <Button variant="ghost" aria-label="حذف ردیف" icon={<Trash2 size={14} />} onClick={() => set({ ownSplit: rows.filter((_, j) => j !== i) })} />
       </div>)}</div>
       <div className="flex flex-wrap gap-2"><Button size="sm" icon={<Plus size={13} />} onClick={() => set({ ownSplit: [...rows, { variationId: vars[0]?.id, owner: s.parties.find((p) => p.id !== owner)?.id ?? owner, warehouse: 'mahabad', qty: 1, cost }] })}>افزودن ردیف</Button><Button size="sm" variant="ghost" icon={<Wand2 size={13} />} onClick={() => set({ ownSplit: auto() })}>ساخت دوباره از موجودی بالا</Button></div>

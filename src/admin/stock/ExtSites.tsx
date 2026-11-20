@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MoneyInput } from '@/shared/ui/money'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, CircleAlert, Globe, Link2, RefreshCw, ScanLine, ShoppingBag, Store, Trash2, Webhook } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Select, Toggle } from '@/shared/ui/base'
@@ -103,7 +104,7 @@ function StoreSale() {
     <p className="mt-1 text-11 text-t2">ارسال از {whName(s, wh)} · کانال {channel ? chName(s, channel.id) : '—'}</p>
     {cart.length > 0 && <ul className="mt-3 space-y-2">{cart.map((l, i) => <li key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2.5 text-12"><CheckCircle2 size={15} className="text-success" /><span className="flex-1">{pv(d, l.productId, l.variationId).full}</span><PartyChip s={s} id={l.owner} />
       <label className="flex items-center gap-1">تعداد<Input type="number" min={1} className="ltr h-8 w-16 text-center font-mono" value={l.qty} onChange={(e) => setCart(cart.map((x, j) => (j === i ? { ...x, qty: Math.max(1, +e.target.value) } : x)))} /></label>
-      <label className="flex items-center gap-1">قیمت<Input type="number" className="ltr h-8 w-32 text-left font-mono" value={l.price} onChange={(e) => setCart(cart.map((x, j) => (j === i ? { ...x, price: +e.target.value } : x)))} /></label>
+      <label className="flex items-center gap-1">قیمت<MoneyInput hint={false} className="w-40" value={l.price} onChange={(n) => setCart(cart.map((x, j) => (j === i ? { ...x, price: n } : x)))} /></label>
       <button aria-label="حذف" className="text-t3 hover:text-danger" onClick={() => setCart(cart.filter((_, j) => j !== i))}><Trash2 size={14} /></button></li>)}</ul>}
     {cart.length > 0 && <div className="mt-3 flex items-center gap-3"><Button variant="primary" onClick={save}>ثبت فروش {toman(cart.reduce((a, l) => a + l.qty * l.price, 0))}</Button>{cart.some((l) => l.owner !== channel?.seller) && <p className="flex items-center gap-1 text-12 text-warning"><CircleAlert size={13} />بعضی اقلام مال {partyName(s, cart.find((l) => l.owner !== channel?.seller)!.owner)} است؛ سهمش خودکار حساب می‌شود.</p>}</div>}
   </Card>

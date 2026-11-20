@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MoneyInput } from '@/shared/ui/money'
 import { useNavigate } from 'react-router-dom'
 import { ExternalLink, Pencil, PlusCircle, Printer, ScanSearch, ShoppingCart } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Select } from '@/shared/ui/base'
@@ -42,7 +43,7 @@ export function Inspect({ station, initial }: { station: string; initial?: strin
             {v && <div className="mt-2 flex flex-wrap gap-1.5">{(p.attrs ?? []).filter((a) => a.forVar).map((a) => <Badge key={attrKey(a)} dot={false}>{axisOf(d, a).name}: {valLabel(d, a, v.opts[attrKey(a)] ?? '—')}</Badge>)}</div>}
             {unit && <p className="mt-2 text-12">واحد <bdi dir="ltr" className="font-mono">{unit.id}</bdi> · سریال <bdi dir="ltr" className="font-mono">{unit.serial}</bdi> · <span className="text-t2">{unit.status}</span></p>}
             <p className="mt-2 flex flex-wrap items-center gap-2 text-12"><span className="text-t2">کد اسکن‌شده:</span><bdi dir="ltr" className="font-mono">{hit.code}</bdi><span className="text-t2">مالک این جعبه:</span><PartyChip s={d.stock} id={hit.owner} /></p></div>
-          <div className="text-left"><p className="text-11 text-t2">قیمت فروش</p>{price === null ? <p className="text-20 font-bold">{toman(curPrice)}</p> : <div className="flex gap-1"><Input autoFocus className="ltr h-9 w-36 text-left font-mono" value={price} onChange={(e) => setPrice(e.target.value)} /><Button size="sm" variant="primary" onClick={savePrice}>ذخیره</Button></div>}{price === null && <button className="text-11 text-brand underline" onClick={() => setPrice(String(curPrice))}>تغییر قیمت</button>}</div>
+          <div className="text-left"><p className="text-11 text-t2">قیمت فروش</p>{price === null ? <p className="text-20 font-bold">{toman(curPrice)}</p> : <div className="flex items-start gap-1"><MoneyInput autoFocus className="w-48" value={Number(price.replace(/\D/g, '')) || 0} onChange={(n) => setPrice(String(n))} /><Button size="sm" variant="primary" onClick={savePrice}>ذخیره</Button></div>}{price === null && <button className="text-11 text-brand underline" onClick={() => setPrice(String(curPrice))}>تغییر قیمت</button>}</div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="primary" icon={<ShoppingCart size={14} />} onClick={() => setManual(true)}>ثبت سفارش دستی با این کالا</Button>
@@ -83,7 +84,7 @@ function AddToOrder({ open, onClose, pid, vid, unitId, price, station }: { open:
   return <Modal open={open} onClose={onClose} title="افزودن به سفارش دیگر" footer={<><Button onClick={onClose}>انصراف</Button><Button variant="primary" disabled={!o} onClick={save}>افزودن به سفارش</Button></>}>
     <div className="space-y-3 text-13">
       <Field label="سفارش باز (هنوز ارسال‌نشده)"><Select value={oid} onChange={setOid} options={[['', 'انتخاب کنید…'], ...cands.map((x) => [x.id, `${x.id} · ${d.customers.find((c) => c.id === x.customerId)?.name ?? ''} · ${toman(x.total)}`] as [string, string])]} /></Field>
-      <div className="grid grid-cols-2 gap-3">{!unitId && <Field label="تعداد"><Input type="number" min={1} className="ltr text-left font-mono" value={qty} onChange={(e) => setQty(Math.max(1, +e.target.value))} /></Field>}<Field label="قیمت هر عدد"><Input type="number" className="ltr text-left font-mono" value={pr} onChange={(e) => setPr(+e.target.value)} /></Field></div>
+      <div className="grid grid-cols-2 gap-3">{!unitId && <Field label="تعداد"><Input type="number" min={1} className="ltr text-left font-mono" value={qty} onChange={(e) => setQty(Math.max(1, +e.target.value))} /></Field>}<Field label="قیمت هر عدد (تومان)"><MoneyInput value={pr} onChange={setPr} /></Field></div>
       {o && o.status !== 'order.awaiting_payment' && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">این سفارش پرداخت شده است؛ {toman(pr * (unitId ? 1 : qty))} مابه‌التفاوت ثبت و تا پرداخت، ارسال قفل می‌شود.</p>}
     </div>
   </Modal>

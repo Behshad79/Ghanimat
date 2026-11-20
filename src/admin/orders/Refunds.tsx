@@ -17,6 +17,14 @@ const STEPS: [Refund['status'], string][] = [['requested', 'ثبت درخواس�
 const W_STEPS: [Refund['status'], string][] = [['requested', 'ثبت درخواست'], ['approved', 'تأیید'], ['done', 'واریز به کیف پول']]
 export const REFUND_LABEL: Record<Refund['status'], [string, 'neutral' | 'info' | 'warning' | 'success' | 'danger']> = { requested: ['منتظر تأیید', 'warning'], approved: ['تأییدشده؛ منتظر اعمال', 'info'], sent: ['در صف بانک', 'info'], done: ['واریز شد', 'success'], failed: ['ناموفق', 'danger'] }
 const SLA_H = 72
+/** متنی که مشتری در جزئیات سفارش لغوشده یا مرجوعی می‌بیند (هماهنگ با فیگمای پنل مشتری) */
+const CUSTOMER_SEES: Record<Refund['status'], (r: Refund) => string> = {
+  requested: (r) => `بازگشت ${toman(r.amount)} ثبت شد و در حال بررسی است. مقصد: ${r.dest}.`,
+  approved: (r) => (r.dest === 'کیف پول' ? `بازگشت ${toman(r.amount)} تأیید شد و به‌زودی در کیف پول شما می‌نشیند.` : `بازگشت ${toman(r.amount)} تأیید شد و به‌زودی به بانک ارسال می‌شود.`),
+  sent: (r) => `${toman(r.amount)} با ${r.via ?? 'انتقال بانکی'} ارسال شد؛ تا ۷۲ ساعت کاری به حساب شما می‌نشیند.`,
+  done: (r) => `${toman(r.amount)} به ${r.dest} واریز شد${r.ref && r.ref !== r.id ? ` · شمارهٔ پیگیری ${r.ref}` : ''}.`,
+  failed: (r) => `واریز ${toman(r.amount)} انجام نشد${r.failWhy ? ` (${r.failWhy})` : ''}. شبای درست را ثبت کنید یا انتقال به کیف پول را انتخاب کنید.`,
+}
 const who = () => currentUser()?.name ?? 'کاربر'
 const now = () => new Date().toISOString()
 
@@ -64,6 +72,7 @@ function RefundRow({ r }: { r: Refund }) {
   return <li className="rounded-xl border border-line p-3">
     <div className="flex flex-wrap items-center gap-2 text-13"><b className="ltr font-mono text-12">{r.id}</b><b>{toman(r.amount)}</b><span className="text-t2">به {r.dest}</span><Badge tone={tone}>{lab}</Badge>{late && <Badge tone="danger" dot={false}>بیش از {fa(SLA_H)} ساعت</Badge>}<span className="mr-auto text-11 text-t3">{r.source} · {rel(r.at)}</span></div>
     <ol className="mt-2 flex items-center gap-1 text-11">{FLOW.map(([s, l], i) => <li key={s} className="flex flex-1 items-center gap-1"><span className={cx('grid size-5 shrink-0 place-items-center rounded-full text-[10px]', i < idx || r.status === 'done' ? 'bg-success-solid text-white' : i === idx ? (r.status === 'failed' ? 'bg-danger-solid text-white' : 'bg-brand-solid text-white') : 'bg-neutral-bg text-t3')}>{i < idx || r.status === 'done' ? '✓' : fa(i + 1)}</span><span className={cx('truncate', i === idx ? 'font-semibold' : 'text-t3')}>{i === idx && r.status === 'failed' ? 'ناموفق' : l}</span>{i < FLOW.length - 1 && <span className="h-px flex-1 bg-line" />}</li>)}</ol>
+    <p className="mt-1.5 rounded-lg bg-neutral-bg px-2.5 py-1 text-11 text-t2"><span className="font-medium text-t1">مشتری در پنل می‌بیند:</span> {CUSTOMER_SEES[r.status](r)}</p>
     {(r.ref || r.via || r.account || r.failWhy) && <p className="mt-1.5 text-11 text-t2">{r.via && `روش: ${r.via}`}{r.account && <> · مقصد: <bdi dir="ltr" className="font-mono">{r.account}</bdi></>}{r.ref && <> · پیگیری: <bdi dir="ltr" className="font-mono">{r.ref}</bdi></>}{r.failWhy && <span className="text-danger"> · علت ناموفق: {r.failWhy}</span>}</p>}
     <div className="mt-2 flex flex-wrap gap-1.5">
       {r.status === 'requested' && <Button size="sm" variant="primary" icon={<CheckCircle2 size={12} />} onClick={() => { const cap = Number(getDB().rules.find((q) => q.key === 'refund_cap')?.value ?? 20000000); if (r.amount > cap && !isChief()) return toast(`مبلغ از سقف ${toman(cap)} بیشتر است و فقط مدیر کل تأیید می‌کند.`, { tone: 'err' }); step(r.id, (q) => { q.status = 'approved' }, 'تأیید', r.amount > cap ? 'تأیید دوم مدیر کل' : undefined) }}>تأیید</Button>}

@@ -1,7 +1,7 @@
 // دفتر خودکار موجودی شرکا: هر جای پنل که مرسوله‌ای بسته‌بندی، لغو، برگشت یا به عقب برگردانده شود،
 // اینجا بعد از همان تغییر اجرا می‌شود تا موجودی مالک، ردیف فروش و سهم تسویه همیشه درست بماند.
 import type { DB, Order, Shipment } from './seed'
-import type { Lot, StockSale } from './stock'
+import type { AdjustKind, Lot, StockSale } from './stock'
 import { fa } from '../lib/fa'
 
 export const PACKED = ['ship.packed', 'ship.handed', 'ship.in_transit', 'ship.pickup_ready', 'ship.delivered']
@@ -132,4 +132,27 @@ export function ledgerHook(prev: DB, next: DB, by: string) {
       const pid = r.productId ?? next.units.find((u) => u.id === r.unitId)?.productId; if (!pid) return
       reverseSales(next, { orderId: r.orderId, productId: pid, qty: 1 }, `مرجوعی ${r.id}`, by, 'hold') } })
   }
+}
+
+/** میز موجودی: هر تغییر دستی موجودی یک مالک در یک انبار، با اثر درست روی لات‌ها، فروش و موجودی سایت */
+export function adjustStock(x: DB, a: { productId: string; variationId?: string; owner: string; warehouse: string; kind: AdjustKind; qty: number; price?: number; cost?: number; note?: string; by: string; channel?: string }) {
+  const at = new Date().toISOString(); const n = Math.abs(Math.round(a.qty)); if (!n) return { ok: false, msg: 'تعداد صفر است.' }
+  const key = { productId: a.productId, variationId: a.variationId, owner: a.owner, warehouse: a.warehouse }
+  const lastCost = () => [...x.stock.lots].reverse().find((l) => l.productId === a.productId && (l.variationId ?? '') === (a.variationId ?? '') && l.owner === a.owner)?.cost ?? x.products.find((p) => p.id === a.productId)?.cost ?? 0
+  const live = () => x.stock.lots.filter((l) => l.productId === a.productId && (l.variationId ?? '') === (a.variationId ?? '') && l.owner === a.owner && l.warehouse === a.warehouse && l.qty > 0 && !l.hold && !expired(l)).reduce((t, l) => t + l.qty, 0)
+  const held = x.stock.lots.filter((l) => l.productId === a.productId && (l.variationId ?? '') === (a.variationId ?? '') && l.owner === a.owner && l.warehouse === a.warehouse && l.qty > 0 && l.hold)
+  const push = (qty: number, extra: Partial<Lot>) => x.stock.lots.push({ id: id('L'), ...key, qty, qty0: qty, cost: a.cost ?? lastCost(), at, ...extra })
+  let delta = 0
+  if (a.kind === 'intake') { push(n, { ref: `ورود سریع از میز موجودی${a.note ? `: ${a.note}` : ''}` }); delta = 0 }
+  else if (a.kind === 'count' && a.qty > 0) { push(n, { ref: `اصلاح شمارش (+${fa(n)})${a.note ? `: ${a.note}` : ''}` }); delta = n }
+  else if (a.kind === 'release') { const have = held.reduce((t, l) => t + l.qty, 0); if (have < n) return { ok: false, msg: `فقط ${fa(have)} عدد کنار گذاشته شده است.` }; let left = n; let cost = 0; for (const l of held) { const t = Math.min(l.qty, left); l.qty -= t; left -= t; cost += t * l.cost; if (!left) break } push(n, { cost: Math.round(cost / n), ref: 'برگشت به فروش از میز موجودی' }) }
+  else { if (live() < n) return { ok: false, msg: `موجودی قابل فروش این مالک در این انبار ${fa(live())} عدد است.` }
+    const t = takeLots(x, key, n)
+    if (a.kind === 'hold') push(n, { cost: t.cost, hold: true, ref: `کنار گذاشته از فروش${a.note ? `: ${a.note}` : ''}` })
+    else if (a.kind === 'sale') x.stock.sales.unshift({ id: id('S'), at, ...key, channel: a.channel ?? 'gh-store', qty: n, price: a.price ?? 0, cost: t.cost, by: a.by, note: `فروش حضوری ثبت‌شده از میز موجودی${a.note ? `: ${a.note}` : ''}` })
+    else delta = -n }
+  x.stock.adjusts = x.stock.adjusts ?? []
+  x.stock.adjusts.unshift({ id: id('ADJ'), at, by: a.by, ...key, kind: a.kind, delta: a.kind === 'count' ? (a.qty > 0 ? n : -n) : a.kind === 'loss' ? -n : a.kind === 'intake' ? n : a.kind === 'hold' ? -n : a.kind === 'release' ? n : -n, note: a.note, price: a.price })
+  syncQty(x, a.productId)
+  return { ok: true, delta }
 }

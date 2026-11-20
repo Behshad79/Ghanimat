@@ -18,6 +18,7 @@ import { PartyManager } from './Parties'
 import { PerformanceTab, StatementTab } from './Statement'
 import { ExtTab } from './ExtSites'
 import { ProductLedgerTab } from './ProductLedger'
+import { StockDesk } from './StockDesk'
 
 const uid = (p: string) => `${p}-${Date.now().toString(36).slice(-5).toUpperCase()}`
 const by = () => currentUser()?.name ?? 'پنل'
@@ -31,7 +32,7 @@ export function Ownership() {
   const value = (o: string) => s.lots.filter((l) => l.owner === o).reduce((a, l) => a + l.qty * l.cost, 0)
   return (
     <Page module="ownership" title="مالکیت و تسویهٔ موجودی" sub="هر عدد کالا: مال کیست، کجاست، چه کسی فروخت و سهم هر طرف چقدر است"
-      actions={<>{can('team') && <Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button>}<Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
+      actions={<>{can('team') && <Button variant="ghost" icon={<ReceiptText size={14} />} onClick={() => nav('/admin/team?tab=audit')}>لاگ فعالیت‌ها</Button>}<Button variant="ghost" icon={<Warehouse size={14} />} onClick={() => nav('/admin/warehouse')}>انبار و موجودی</Button><Button icon={<ScanLine size={14} />} onClick={() => nav('/admin/packing')}>ایستگاه بسته‌بندی</Button></>}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'موجودی به تفکیک مالک' }, { id: 'sales', label: 'فروش و سهم‌ها', count: s.sales.length }, { id: 'statement', label: 'صورت‌حساب من' }, { id: 'settle', label: 'تسویه بین شرکا', count: bal.length || undefined }, { id: 'ledger', label: 'گردش و کارت کالا' }, { id: 'perf', label: 'عملکرد' }, { id: 'ext', label: 'سایت شرکا و فروش حضوری' }, { id: 'codes', label: 'کدگذاری و بارکد' }, { id: 'setup', label: 'شرکا، انبارها و قرارداد سهم' }]} />}>
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {s.parties.filter((p) => p.active && (sec || p.id === me)).map((p) => <Card key={p.id} onClick={() => setTab('stock')}><div className="flex items-center justify-between"><PartyChip s={s} id={p.id} /><span className="text-11 text-t2">{p.kind === 'self' ? 'خودمان' : 'شریک'}</span></div><p className="mt-2 text-20 font-bold">{fa(units(p.id))} <span className="text-12 font-normal text-t2">عدد موجود</span></p><p className="text-12 text-t2">ارزش به بهای تمام‌شده: {toman(value(p.id))}</p></Card>)}
@@ -57,17 +58,7 @@ function StockTab() {
   const rows = productsWithLots(d).flatMap((p) => (p.variations?.length ? p.variations.map((v) => ({ p, vid: v.id })) : [{ p, vid: undefined as string | undefined }])).filter((r) => s.lots.some((l) => l.productId === r.p.id && (l.variationId ?? '') === (r.vid ?? '')))
   return (
     <div className="space-y-4">
-      <Card pad={false} title="موجودی هر کالا: انبار × مالک" hint="یک کالا یا یک تنوع (ترکیب رنگ، حافظه و هر ویژگی دیگر) می‌تواند هم‌زمان در چند انبار و مال چند نفر باشد؛ عدد سایت جمع همهٔ این خانه‌هاست." actions={<div className="flex gap-2"><Button size="sm" icon={<Undo2 size={13} />} onClick={() => setRet({})}>برگشت کالا به مالک</Button><Button size="sm" icon={<ArrowLeftRight size={13} />} onClick={() => setMove(true)}>انتقال بین انبارها</Button><Button size="sm" variant="primary" icon={<PackagePlus size={13} />} onClick={() => setIntake(true)}>ورود موجودی</Button></div>}>
-        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-13">
-          <thead><tr className="border-b border-line text-right text-12 text-t2"><th className="px-4 py-2.5 font-medium">کالا و تنوع</th>{whs.map((w) => <th key={w.id} className="px-3 py-2.5 font-medium">{w.name}<span className="block text-[10px] font-normal">گرداننده: {partyName(s, w.operator)}</span></th>)}<th className="px-3 py-2.5 font-medium">جمع به تفکیک مالک</th></tr></thead>
-          <tbody>{rows.map(({ p, vid }) => { const { vname } = pv(d, p.id, vid); const tot = new Map<string, number>(); return (
-            <tr key={p.id + (vid ?? '')} className="border-b border-line align-top last:border-0">
-              <td className="px-4 py-3"><p className="font-medium">{p.title}</p>{vname && <p className="text-12 text-t2">{vname}</p>}</td>
-              {whs.map((w) => { const m = ownersAt(s, p.id, vid, w.id); m.forEach((n, o) => tot.set(o, (tot.get(o) ?? 0) + n)); return <td key={w.id} className="px-3 py-3"><div className="flex flex-wrap gap-1">{[...m].filter(([, n]) => n > 0).map(([o, n]) => <PartyChip key={o} s={s} id={o} n={n} />)}{![...m].some(([, n]) => n > 0) && <span className="text-t3">—</span>}</div></td> })}
-              <td className="px-3 py-3"><div className="flex flex-wrap gap-1">{[...tot].map(([o, n]) => <PartyChip key={o} s={s} id={o} n={n} />)}</div><p className="mt-1 text-11 text-t2">کل: {fa([...tot.values()].reduce((a, b) => a + b, 0))} عدد</p></td>
-            </tr>) })}</tbody>
-        </table></div>
-      </Card>
+      <StockDesk onIntake={() => setIntake(true)} />
       <ExpiryAlerts onReturn={(pre) => setRet(pre)} />
       <Card title="ورودها و لات‌های موجودی" pad={false}>
         <DataTable name="لات‌های موجودی" empty={{ title: 'لاتی ثبت نشده است' }} rows={[...s.lots].sort((a, b) => +new Date(b.at) - +new Date(a.at))} rowKey={(l) => l.id} search={(l) => `${l.id} ${pv(d, l.productId, l.variationId).full} ${partyName(s, l.owner)} ${l.ref ?? ''}`}

@@ -19,17 +19,17 @@ const day = (iso: string) => new Date(iso).toLocaleDateString('fa-IR')
 const dtm = (iso: string) => new Date(iso).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' })
 
 /** یک ردیف گردش: ورود، فروش، برگشت از مشتری یا برگشت به مالک */
-type Mv = { at: string; kind: 'in' | 'move' | 'sale' | 'back' | 'owner'; doc: string; orderId?: string; qty: number; note: string; wh: string; sale?: StockSale
+type Mv = { at: string; kind: 'in' | 'move' | 'sale' | 'back' | 'owner' | 'adj'; doc: string; orderId?: string; qty: number; note: string; wh: string; sale?: StockSale
   price?: number; disc?: number; fee?: number; revenue?: number; cost?: number; owner?: number; seller?: number; sellerId?: string; handling?: number; pay?: string }
-type Group = { key: string; owner: string; pid: string; vid?: string; name: string; onHand: number; hold: number; sold: number; back: number; ownerRet: number; received: number
+type Group = { key: string; owner: string; pid: string; vid?: string; name: string; onHand: number; hold: number; sold: number; back: number; ownerRet: number; adj: number; received: number
   pSold: number; pBack: number; revenue: number; costT: number; ownerTotal: number; sellerShare: number; handling: number; disc: number; fee: number; orders: number; last?: string; mv: Mv[] }
 
-const KIND: Record<Mv['kind'], [string, 'neutral' | 'info' | 'success' | 'danger' | 'warning']> = { in: ['ورود موجودی', 'info'], move: ['انتقال بین انبار', 'neutral'], sale: ['فروش', 'success'], back: ['برگشت از مشتری', 'danger'], owner: ['برگشت به مالک', 'warning'] }
+const KIND: Record<Mv['kind'], [string, 'neutral' | 'info' | 'success' | 'danger' | 'warning']> = { in: ['ورود موجودی', 'info'], move: ['انتقال بین انبار', 'neutral'], sale: ['فروش', 'success'], back: ['برگشت از مشتری', 'danger'], owner: ['برگشت به مالک', 'warning'], adj: ['تغییر دستی', 'neutral'] }
 
 /** محاسبهٔ گردش هر کالا × تنوع × مالک؛ ورودی کل از اتحاد «موجودی فعلی + فروش خالص + برگشت به مالک» به دست می‌آید تا هر عدد قابل ردیابی باشد */
 export function ledgerGroups(d: DB, f: { owner: string; wh: string; since: number; q: string }) {
   const s = d.stock; const m = new Map<string, Group>()
-  const g = (owner: string, pid: string, vid?: string) => { const k = `${owner}|${pid}|${vid ?? ''}`; let x = m.get(k); if (!x) { x = { key: k, owner, pid, vid, name: pv(d, pid, vid).full, onHand: 0, hold: 0, sold: 0, back: 0, ownerRet: 0, received: 0, pSold: 0, pBack: 0, revenue: 0, costT: 0, ownerTotal: 0, sellerShare: 0, handling: 0, disc: 0, fee: 0, orders: 0, mv: [] }; m.set(k, x) } return x }
+  const g = (owner: string, pid: string, vid?: string) => { const k = `${owner}|${pid}|${vid ?? ''}`; let x = m.get(k); if (!x) { x = { key: k, owner, pid, vid, name: pv(d, pid, vid).full, onHand: 0, hold: 0, sold: 0, back: 0, ownerRet: 0, adj: 0, received: 0, pSold: 0, pBack: 0, revenue: 0, costT: 0, ownerTotal: 0, sellerShare: 0, handling: 0, disc: 0, fee: 0, orders: 0, mv: [] }; m.set(k, x) } return x }
   const okOwner = (o: string) => f.owner === 'all' || o === f.owner; const okWh = (w: string) => f.wh === 'all' || w === f.wh
   s.lots.forEach((l) => { if (!okOwner(l.owner) || !okWh(l.warehouse)) return; const x = g(l.owner, l.productId, l.variationId)
     if (l.hold || expired(l)) x.hold += l.qty; else x.onHand += l.qty
@@ -49,8 +49,10 @@ export function ledgerGroups(d: DB, f: { owner: string; wh: string; since: numbe
     if (x.orderId) { const o = ords.get(G.key) ?? new Set(); o.add(x.orderId); ords.set(G.key, o) }
     if (!G.last || x.at > G.last) G.last = x.at })
   s.ownerReturns.forEach((r) => { if (!okOwner(r.owner) || !okWh(r.warehouse)) return; r.lines.forEach((ln) => { const G = g(r.owner, ln.productId, ln.variationId); G.ownerRet += ln.qty; G.mv.push({ at: r.at, kind: 'owner', doc: r.id, qty: -ln.qty, wh: r.warehouse, note: `${r.reason}${ln.batch ? ` · بچ ${ln.batch}` : ''} · تحویل‌گیرنده: ${r.receivedBy ?? '—'}` }) }) })
+  ;(s.adjusts ?? []).forEach((a) => { if (!okOwner(a.owner) || !okWh(a.warehouse)) return; const G = g(a.owner, a.productId, a.variationId); if (a.kind === 'count' || a.kind === 'loss') G.adj += a.delta
+    if (a.kind !== 'sale' && a.kind !== 'intake') G.mv.push({ at: a.at, kind: 'adj', doc: a.id, qty: a.delta, wh: a.warehouse, note: `${({ hold: 'کنار گذاشتن از فروش', release: 'برگشت به فروش', count: 'اصلاح شمارش', loss: 'خراب یا مفقود' } as Record<string, string>)[a.kind] ?? a.kind} · ${a.by}${a.note ? ` · ${a.note}` : ''}` }) })
   const q = f.q.trim()
-  return [...m.values()].map((G) => ({ ...G, received: G.onHand + G.hold + (G.sold - G.back) + G.ownerRet, orders: ords.get(G.key)?.size ?? 0, mv: G.mv.sort((a, b) => +new Date(b.at) - +new Date(a.at)) }))
+  return [...m.values()].map((G) => ({ ...G, received: G.onHand + G.hold + (G.sold - G.back) + G.ownerRet - G.adj, orders: ords.get(G.key)?.size ?? 0, mv: G.mv.sort((a, b) => +new Date(b.at) - +new Date(a.at)) }))
     .filter((G) => !q || G.name.includes(q) || G.mv.some((v) => v.doc.includes(q))).sort((a, b) => b.revenue - a.revenue || a.name.localeCompare(b.name, 'fa'))
 }
 
@@ -84,7 +86,7 @@ export function ProductLedgerTab() {
         <Button size="sm" icon={<Download size={13} />} onClick={csv}>خروجی اکسل</Button>
         <Button size="sm" variant="primary" icon={<Printer size={13} />} onClick={() => printSolo(printRef.current)}>چاپ گزارش کامل</Button>
       </div>
-      <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2"><Scale size={14} className="mt-0.5 shrink-0 text-brand" />هر کالا با یک اتحاد ساده کنترل می‌شود: <b className="text-t1">کل ورودی = موجودی فعلی + نگه‌داشته + فروش خالص + برگشت به مالک</b>. هر ردیف فروش به سفارش یا سند خودش وصل است و مبلغ، تخفیف، کارمزد و سهم هر طرف را جدا نشان می‌دهد؛ دوره فقط ستون‌های فروش و مبلغ را فیلتر می‌کند.</p>
+      <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2"><Scale size={14} className="mt-0.5 shrink-0 text-brand" />هر کالا با یک اتحاد ساده کنترل می‌شود: <b className="text-t1">کل ورودی = موجودی فعلی + نگه‌داشته + فروش خالص + برگشت به مالک − اصلاح شمارش و خرابی</b>. هر ردیف فروش به سفارش یا سند خودش وصل است و مبلغ، تخفیف، کارمزد و سهم هر طرف را جدا نشان می‌دهد؛ دوره فقط ستون‌های فروش و مبلغ را فیلتر می‌کند.</p>
     </Card>
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <Card><p className="text-12 text-t2">کالا و تنوع</p><p className="mt-1 text-20 font-bold">{fa(G.length)}</p><p className="text-11 text-t2">{fa(sum('received'))} عدد ورودی کل · {fa(sum('onHand'))} موجود</p></Card>
@@ -113,7 +115,7 @@ export function ProductLedgerTab() {
         <div className="grid grid-cols-2 gap-2 text-12 sm:grid-cols-5">
           {([['کل ورودی', cur.received], ['موجود', cur.onHand], ['نگه‌داشته یا منقضی', cur.hold], ['فروش خالص', cur.sold - cur.back], ['برگشت به مالک', cur.ownerRet]] as [string, number][]).map(([k, v]) => <div key={k} className="rounded-lg bg-neutral-bg p-2.5"><p className="text-t2">{k}</p><p className="text-16 font-bold">{fa(v)}</p></div>)}
         </div>
-        <p className="rounded-lg border border-success/30 bg-success-bg/40 px-3 py-2 text-12">کنترل: {fa(cur.onHand)} موجود + {fa(cur.hold)} نگه‌داشته + {fa(cur.sold - cur.back)} فروش خالص ({fa(cur.sold)} فروش − {fa(cur.back)} برگشت) + {fa(cur.ownerRet)} برگشت به مالک = <b>{fa(cur.received)}</b> عدد ورودی کل.</p>
+        <p className="rounded-lg border border-success/30 bg-success-bg/40 px-3 py-2 text-12">کنترل: {fa(cur.onHand)} موجود + {fa(cur.hold)} نگه‌داشته + {fa(cur.sold - cur.back)} فروش خالص ({fa(cur.sold)} فروش − {fa(cur.back)} برگشت) + {fa(cur.ownerRet)} برگشت به مالک{cur.adj ? ` ${cur.adj > 0 ? '−' : '+'} ${fa(Math.abs(cur.adj))} اصلاح شمارش و خرابی` : ''} = <b>{fa(cur.received)}</b> عدد ورودی کل.</p>
         <MvTable g={cur} money={money} onSale={setSale} onPeek={setPeek} onOrder={(id) => nav(`/admin/orders/${id}`)} />
       </div>}
     </Drawer>

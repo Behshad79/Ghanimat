@@ -1,4 +1,5 @@
 import { sendSms } from '@/shared/lib/store'
+import { StockDesk } from '../stock/StockDesk'
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { WarehouseDetail } from '../warehouse/WarehouseDetail'
 import { useEffect, useState } from 'react'
@@ -59,9 +60,9 @@ export function Warehouse() {
   return (
     <Page title="انبار و موجودی" module="warehouse" sub={`محدوده: ${s.scope === 'all' ? 'همهٔ انبارها' : WAREHOUSE[s.scope]}`}
       empty={{ title: 'انبار خالی است.', desc: 'با دریافت اولین محموله، واحدها ساخته می‌شوند و به صف QC می‌آیند.', action: <Button variant="primary" onClick={() => nav('/admin/supply')}>ثبت محمولهٔ ورودی</Button> }}
-      actions={<Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button>}
+      actions={<><Button variant="ghost" onClick={() => nav('/admin/ownership')}>مالکیت و تسویه</Button><Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button></>}
       primary={qc.length > 0 ? <Button variant="primary" onClick={() => { setTab('qc'); setFocus(qc[0].id) }}>شروع QC ({fa(qc.length)} واحد)</Button> : undefined}
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'نمای موجودی' }, { id: 'map', label: 'نقشهٔ قفسه‌ها' }, { id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'نمای موجودی و میز موجودی' }, { id: 'map', label: 'نقشهٔ قفسه‌ها' }, { id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
       {tab === 'qc' && <QueueCard list={qc} label="بازرسی این واحد" action={setFocus} emptyT="صف QC خالی است." emptyD="واحدهای دریافت‌شده بعد از ثبت ورود، اینجا می‌آیند." />}
       {tab === 'photo' && <QueueCard list={photo} label="ثبت عکس‌ها و ارسال به انتشار" action={(id) => move([id], 'unit.ready', 'عکاسی کامل شد')} emptyT="صف عکاسی خالی است." emptyD="واحدهایی که QC را گذرانده‌اند برای عکاسی اینجا می‌آیند." />}
       {tab === 'publish' && <DataTable name="صف انتشار" rows={ready} rowKey={(u) => u.id} onRow={(u) => nav(`/admin/catalog/unit/${u.id}`)} empty={{ title: 'واحدی آمادهٔ انتشار نیست.', desc: 'واحدها بعد از QC، عکاسی و قیمت‌گذاری اینجا می‌آیند.' }}
@@ -69,6 +70,7 @@ export function Warehouse() {
         bulk={(ids, clear) => <Button size="sm" variant="primary" onClick={() => { move(ids, 'unit.published', 'انتشار'); clear() }}>انتشار {fa(ids.length)} واحد</Button>} />}
       {tab === 'map' && <WarehouseMap />}
       {tab === 'stock' && <div className="space-y-4">
+        <StockDesk />
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {(() => { const qtyP = d.products.filter((p) => p.mode !== 'serial' && p.status === 'product.published'); const qn = (p: (typeof qtyP)[number]) => (inScope('tehran') ? p.qty?.tehran ?? 0 : 0) + (inScope('mahabad') ? p.qty?.mahabad ?? 0 : 0); const units = q('unit.published').length; const qty = qtyP.reduce((a, p) => a + qn(p), 0)
             return <><KPI label="موجودی قابل فروش" value={`${fa(units + qty)} عدد`} note={`${fa(units)} واحد سریال‌دار · ${fa(qty)} عدد کالای تعدادی`} to="/admin/catalog?tab=units" /><KPI label="ارزش موجودی (فروش)" value={compactToman(d.units.filter((u) => inScope(u.warehouse) && ['unit.published', 'unit.ready', 'unit.reserved'].includes(u.status)).reduce((a, u) => a + u.price, 0) + qtyP.reduce((a, p) => a + qn(p) * (p.price ?? p.priceNew ?? 0), 0))} note="سریال‌دار و تعدادی، به قیمت فروش" /></> })()}

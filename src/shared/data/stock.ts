@@ -24,7 +24,10 @@ export type ExtOrder = { id: string; at: string; status: 'new' | 'imported' | 's
 export type OwnerReturn = { id: string; at: string; owner: string; warehouse: string; lines: { productId: string; variationId?: string; qty: number; batch?: string; expiry?: string }[]; reason: string; by: string; receivedBy?: string }
 /** زمان رسیدن پول هر روش پرداخت به حساب ما: چند درصد، چند روز بعد از پرداخت مشتری */
 export type PayTerm = { match: string; label: string; tranches: { days: number; pct: number }[] }
-export type StockDB = { parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean }; pickRule: PickRule; rules: CostRules; channelMap: Record<string, string>; ext: ExtSite[]; payTerms: PayTerm[]; ownerReturns: OwnerReturn[] }
+/** تغییر دستی موجودی از «میز موجودی»: فروش حضوری، کنار گذاشتن از فروش، برگرداندن به فروش، اصلاح شمارش، ورود تازه، خرابی یا مفقودی */
+export type AdjustKind = 'sale' | 'hold' | 'release' | 'count' | 'intake' | 'loss'
+export type StockAdjust = { id: string; at: string; by: string; productId: string; variationId?: string; owner: string; warehouse: string; kind: AdjustKind; delta: number; note?: string; price?: number }
+export type StockDB = { adjusts?: StockAdjust[]; parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean }; pickRule: PickRule; rules: CostRules; channelMap: Record<string, string>; ext: ExtSite[]; payTerms: PayTerm[]; ownerReturns: OwnerReturn[] }
 
 const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
 export const makeStock = (): StockDB => ({

@@ -542,6 +542,74 @@ export const makeSeed = () => {
     mo('GH-10531', 'زرین‌پال', 24 * 11, [['pgl', 850000, 3]])
     mo('GH-10532', 'درگاه ملت', 24 * 2, [['pfs', 1450000, 2]])
     ;['pgl', 'pfs'].forEach((pid) => { const p = s.products.find((x) => x.id === pid)!; p.qty = { tehran: s.stock.lots.filter((l) => l.productId === pid && (!l.expiry || +new Date(l.expiry) > Date.now())).reduce((a, l) => a + l.qty, 0), mahabad: 0 } }) }
+  // دادهٔ نمونهٔ بیشتر: کالا در دسته‌های بیشتر (با مالک و انبار)، مشتری، سفارش در همهٔ وضعیت‌ها و دیدگاه
+  { const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString(); const inD = (dd: number) => new Date(Date.now() + dd * 864e5).toISOString()
+    const tpl = s.products.find((x) => x.id === 'p8')!
+    const IMG: Record<string, string> = { 'گوشی موبایل': './products/p7-500.webp', 'هدفون': './products/p5-500.webp', 'لپ‌تاپ': './products/p3-500.webp', 'ساعت هوشمند': './products/p4-500.webp', 'تبلت': './products/p6-500.webp', 'کتاب‌خوان': './products/p8-500.webp' }
+    // [id, عنوان, انگلیسی, برند, دسته, قیمت, بهای تمام‌شده, تهران-غنیمت, مهاباد-غنیمت, مهاباد-یاسین, ستاره، نظر، بازدید، وضعیت]
+    const L: [string, string, string, string, string, number, number, number, number, number, number, number, number, string][] = [
+      ['n01', 'گوشی شیائومی Redmi Note 13 Pro ۲۵۶ گیگ', 'Xiaomi Redmi Note 13 Pro 256GB', 'شیائومی', 'گوشی موبایل', 21900000, 17600000, 6, 2, 4, 4.4, 31, 3880, 'product.published'],
+      ['n02', 'گوشی اپل iPhone 15 ظرفیت ۱۲۸ گیگ', 'Apple iPhone 15 128GB', 'اپل', 'گوشی موبایل', 78900000, 69500000, 3, 0, 1, 4.7, 26, 5120, 'product.published'],
+      ['n03', 'گوشی سامسونگ Galaxy S24 FE', 'Samsung Galaxy S24 FE 256GB', 'سامسونگ', 'گوشی موبایل', 42500000, 36200000, 2, 1, 0, 4.3, 12, 2210, 'product.published'],
+      ['n04', 'هدفون بی‌سیم اپل AirPods Pro 2 (USB-C)', 'Apple AirPods Pro 2 USB-C', 'اپل', 'هدفون', 13900000, 11300000, 9, 2, 3, 4.8, 64, 6900, 'product.published'],
+      ['n05', 'هدفون سامسونگ Galaxy Buds3 Pro', 'Samsung Galaxy Buds3 Pro', 'سامسونگ', 'هدفون', 11400000, 9200000, 4, 0, 2, 4.4, 15, 1840, 'product.published'],
+      ['n06', 'هدفون جی‌بی‌ال Tune 770NC', 'JBL Tune 770NC', 'جی‌بی‌ال', 'هدفون', 6400000, 4900000, 7, 3, 0, 4.2, 22, 2370, 'product.published'],
+      ['n07', 'لپ‌تاپ لنوو IdeaPad Slim 5', 'Lenovo IdeaPad Slim 5 14 Ryzen 7', 'لنوو', 'لپ‌تاپ', 56800000, 48900000, 2, 0, 0, 4.5, 8, 1430, 'product.published'],
+      ['n08', 'لپ‌تاپ ایسوس Zenbook 14 OLED', 'ASUS Zenbook 14 OLED UX3405', 'ایسوس', 'لپ‌تاپ', 71500000, 61800000, 1, 0, 1, 4.6, 5, 980, 'product.published'],
+      ['n09', 'ساعت هوشمند سامسونگ Galaxy Watch7', 'Samsung Galaxy Watch7 44mm', 'سامسونگ', 'ساعت هوشمند', 15800000, 12900000, 3, 1, 2, 4.3, 11, 1650, 'product.published'],
+      ['n10', 'ساعت هوشمند گارمین Forerunner 265', 'Garmin Forerunner 265', 'گارمین', 'ساعت هوشمند', 29700000, 25100000, 2, 0, 0, 4.7, 7, 760, 'product.published'],
+      ['n11', 'تبلت سامسونگ Galaxy Tab S9 FE', 'Samsung Galaxy Tab S9 FE 128GB', 'سامسونگ', 'تبلت', 27400000, 23100000, 3, 0, 2, 4.4, 9, 1290, 'product.published'],
+      ['n12', 'کتاب‌خوان کوبو Clara BW', 'Kobo Clara BW', 'کوبو', 'کتاب‌خوان', 9800000, 7700000, 2, 2, 0, 4.5, 6, 540, 'product.published'],
+      ['n13', 'پاوربانک انکر ۲۰ هزار ۶۵ وات', 'Anker PowerCore 20000 65W', 'انکر', 'لوازم جانبی', 3450000, 2500000, 14, 4, 6, 4.6, 48, 4120, 'product.published'],
+      ['n14', 'شارژر دیواری سامسونگ ۴۵ وات', 'Samsung 45W Super Fast Charger', 'سامسونگ', 'لوازم جانبی', 1690000, 1150000, 22, 6, 8, 4.5, 37, 3010, 'product.published'],
+      ['n15', 'کابل اپل USB-C به USB-C یک متری', 'Apple USB-C Woven Cable 1m', 'اپل', 'لوازم جانبی', 990000, 640000, 30, 10, 0, 4.4, 19, 2050, 'product.published'],
+      ['n16', 'قاب سیلیکونی اصل iPhone 16 Pro', 'Apple Silicone Case iPhone 16 Pro', 'اپل', 'لوازم جانبی', 2450000, 1700000, 8, 0, 4, 4.3, 14, 1580, 'product.published'],
+      ['n17', 'اسپیکر بلوتوثی جی‌بی‌ال Flip 6', 'JBL Flip 6', 'جی‌بی‌ال', 'اسپیکر', 6900000, 5300000, 5, 2, 3, 4.7, 41, 3330, 'product.published'],
+      ['n18', 'اسپیکر هوشمند آمازون Echo Dot 5', 'Amazon Echo Dot 5th Gen', 'آمازون', 'اسپیکر', 3900000, 2900000, 6, 0, 0, 4.1, 10, 1110, 'product.published'],
+      ['n19', 'کنسول بازی سونی PlayStation 5 Slim', 'Sony PlayStation 5 Slim Digital', 'سونی', 'کنسول بازی', 46900000, 40200000, 2, 0, 1, 4.8, 33, 7240, 'product.published'],
+      ['n20', 'دسته بازی سونی DualSense', 'Sony DualSense Wireless Controller', 'سونی', 'کنسول بازی', 4790000, 3700000, 10, 3, 4, 4.6, 28, 2690, 'product.published'],
+      ['n21', 'دوربین ورزشی گوپرو HERO12 Black', 'GoPro HERO12 Black', 'گوپرو', 'دوربین', 31800000, 27100000, 1, 0, 1, 4.5, 6, 870, 'product.published'],
+      ['n22', 'عطر دیور Sauvage ادو پرفیوم ۱۰۰ میل', 'Dior Sauvage EDP 100ml', 'دیور', 'عطر', 12800000, 10100000, 4, 0, 3, 4.7, 24, 4410, 'product.published'],
+      ['n23', 'ماشین اصلاح فیلیپس OneBlade', 'Philips OneBlade QP2724', 'فیلیپس', 'لوازم شخصی', 3200000, 2350000, 6, 2, 0, 4.4, 17, 1720, 'product.published'],
+      ['n24', 'گوشی گوگل Pixel 9', 'Google Pixel 9 128GB', 'گوگل', 'گوشی موبایل', 64900000, 57200000, 0, 0, 0, 4.6, 0, 210, 'product.draft'],
+    ]
+    L.forEach(([id, title, en, brand, cat, price, cost, tg, mg, my, rating, reviews, views, status], k) => {
+      const code = `GH-P-${String(205 + k).padStart(6, '0')}`; const pid = `p${id}`
+      s.products.push({ ...structuredClone(tpl), id: pid, code, title, en, brand, category: cat, status, mode: 'qty', kind: 'simple', variations: undefined, attrs: undefined, priceNew: price, price, compareAt: k % 5 === 0 ? Math.round(price * 1.08 / 10000) * 10000 : undefined, cost, image: IMG[cat] ?? '', images: IMG[cat] ? [IMG[cat]] : [], rating, reviews, views, cvr: Math.round((1 + (k % 4) * 0.8) * 10) / 10, health: 60 + (k * 7) % 38, fastEligible: tg > 0, seller: my > 0 ? 'غنیمت و یاسین' : 'غنیمت', torob: k % 3 !== 0, partner: false, featured: k % 6 === 0, owner: 'gh', needsExpiry: cat === 'عطر' ? true : undefined, irc: cat === 'عطر' ? `12283${String(41000000000 + k * 7919)}` : undefined, qty: { tehran: tg, mahabad: mg + my } } as Product)
+      ;([['gh', 'tehran', tg], ['gh', 'mahabad', mg], ['ys', 'mahabad', my]] as [string, string, number][]).forEach(([owner, wh, q], j) => { if (q > 0) s.stock.lots.push({ id: `L-N${id}${j}`, productId: pid, owner, warehouse: wh, qty: q, cost: owner === 'ys' ? Math.round(cost * 0.97 / 10000) * 10000 : cost, at: ago(24 * (10 + k)), ref: owner === 'ys' ? 'خرید یاسین از اربیل' : 'IN-1405-09', expiry: cat === 'عطر' ? inD(900) : undefined, batch: cat === 'عطر' ? `SV-${24 + (k % 3)}A${k}` : undefined }) })
+    })
+    ;['شیائومی', 'لنوو', 'ایسوس', 'گارمین', 'کوبو', 'جی‌بی‌ال', 'گوپرو', 'دیور', 'فیلیپس', 'گوگل'].forEach((b, i) => { const B = s.entities.brands as unknown as { id: string; name: string }[]; if (!B.some((x) => x.name === b)) B.push({ id: `brn${i}`, name: b, en: '', origin: '—', products: 1, active: true } as never) })
+    ;['اسپیکر', 'کنسول بازی', 'دوربین', 'عطر', 'لوازم شخصی'].forEach((c, i) => { const C = s.entities.categories as unknown as { id: string; name: string }[]; if (!C.some((x) => x.name === c)) C.push({ id: `catn${i}`, name: c, parent: 'الکترونیک', slug: `new-${i}`, template: '—', faq: 0, active: true } as never) })
+    // مشتری‌های بیشتر
+    const C0 = s.customers.find((c) => c.id === 'c2')!
+    const CU: [string, string, string, string, string][] = [['علی رضایی', '09121230011', 'تهران', 'تهران', 'منطقهٔ ۲، سعادت‌آباد'], ['فاطمه کریمی', '09351230012', 'شیراز', 'فارس', 'معالی‌آباد'], ['محمد حسینی', '09141230013', 'مهاباد', 'آذربایجان غربی', 'کوی فرهنگیان'], ['زهرا نوری', '09191230014', 'مشهد', 'خراسان رضوی', 'وکیل‌آباد'], ['رضا قاسمی', '09121230015', 'تهران', 'تهران', 'منطقهٔ ۱، زعفرانیه'], ['سارا محمدی', '09371230016', 'رشت', 'گیلان', 'گلسار'], ['حسین اکبری', '09141230017', 'ارومیه', 'آذربایجان غربی', 'شهرک باهنر'], ['مریم جعفری', '09121230018', 'کرج', 'البرز', 'جهانشهر'], ['امید طاهری', '09131230019', 'اصفهان', 'اصفهان', 'خیابان چهارباغ'], ['نرگس صالحی', '09121230020', 'تهران', 'تهران', 'منطقهٔ ۵، شهرک غرب'], ['بهزاد شریفی', '09141230021', 'مهاباد', 'آذربایجان غربی', 'خیابان جمهوری'], ['لیلا مقدم', '09171230022', 'بوشهر', 'بوشهر', 'خیابان لیان']]
+    CU.forEach(([name, mobile, city, province, district], i) => s.customers.push({ ...structuredClone(C0), id: `c${20 + i}`, name, mobile, city, email: `user${20 + i}@example.com`, orders: 1 + (i % 4), ltv: (1 + (i % 4)) * (8000000 + i * 1300000), aov: 8000000 + i * 1300000, segment: i % 5 === 0 ? 'VIP' : i % 3 === 0 ? 'جدید' : 'وفادار', wallet: i % 4 === 0 ? 350000 : 0, tags: [], addr: { ...C0.addr!, province, city, district, postal: String(1000000000 + i * 7919131) } }))
+    // سفارش‌های بیشتر با کالاهای تازه، مشتری‌های تازه، هر دو انبار و همهٔ وضعیت‌ها
+    const base = s.orders.find((o) => o.id === 'GH-10412')!
+    const FLOW: [string, string][] = [['order.delivered', 'ship.delivered'], ['order.delivered', 'ship.delivered'], ['order.shipped', 'ship.in_transit'], ['order.shipped', 'ship.handed'], ['order.preparing', 'ship.packed'], ['order.preparing', 'ship.picking'], ['order.paid', 'ship.pending'], ['order.awaiting_payment', 'ship.pending'], ['order.delivered', 'ship.delivered'], ['order.cancelled', 'ship.cancelled']]
+    const PAYS = ['زرین‌پال', 'اسنپ‌پی (۴ قسط)', 'درگاه ملت', 'دیجی‌پی', 'کارت به کارت', 'ترب‌پی', 'زرین‌پال', 'کیف پول + زرین‌پال']
+    const pubN = s.products.filter((x) => x.id.startsWith('pn') && x.status === 'product.published')
+    for (let i = 0; i < 36; i++) {
+      const [os, ss] = FLOW[i % FLOW.length]; const p1 = pubN[(i * 5) % pubN.length]; const p2 = i % 3 === 0 ? pubN[(i * 7 + 2) % pubN.length] : null
+      const wh = i % 4 === 1 ? 'mahabad' : 'tehran'; const meth = wh === 'mahabad' ? 'پست پیشتاز' : ['تحویل سریع (پیک)', 'پست پیشتاز', 'تیپاکس'][i % 3]; const fee = /پیک/.test(meth) ? 185000 : /تیپاکس/.test(meth) ? 140000 : 90000
+      const items = [{ productId: p1.id, unitId: '', qty: i % 7 === 0 ? 2 : 1, price: p1.price ?? p1.priceNew }, ...(p2 && p2.id !== p1.id ? [{ productId: p2.id, unitId: '', qty: 1, price: p2.price ?? p2.priceNew }] : [])]
+      const sub = items.reduce((a, x) => a + x.price * x.qty, 0); const disc = i % 6 === 0 ? Math.round(sub * 0.04 / 10000) * 10000 : 0
+      const at = ago(3 + i * 17 + (i % 5) * 3); const id = `GH-${10540 + i}`; const pay = PAYS[i % PAYS.length]
+      const o = structuredClone(base)
+      Object.assign(o, { id, customerId: `c${20 + (i % 12)}`, createdAt: at, status: os, pay, channel: ['سایت', 'سایت', 'اپلیکیشن', 'اینستاگرام دایرکت', 'ترب'][i % 5], total: sub + fee - disc, discount: disc, shippingFee: fee, fee: Math.round(sub * (pay.includes('اسنپ') ? 0.06 : 0.01)), tags: i % 9 === 0 ? ['هدیه'] : [], edits: undefined, payHold: undefined, refunded: undefined, refundPending: undefined, decision: undefined, notes: [], cancelInfo: os === 'order.cancelled' ? { by: 'مشتری', reason: 'از خرید منصرف شدم', at, amount: sub + fee - disc, to: 'کیف پول', refund: 'بازگشت داده شد', refundAt: at } : undefined })
+      const sent = ['ship.handed', 'ship.in_transit', 'ship.delivered'].includes(ss)
+      o.shipments = [{ ...structuredClone(base.shipments[0]), id: `${id}-1`, warehouse: wh, method: meth, shipFee: fee, status: ss, items, sla: new Date(Date.now() + ((i % 6) - 2) * 5 * 36e5).toISOString(), allocReason: wh === 'mahabad' ? 'موجودی کافی در انبار مهاباد و نزدیکی به مشتری' : 'موجودی تهران کافی بود.', tracking: sent && /پست|تیپاکس/.test(meth) ? `1204${String(77000000000 + i * 7919)}` : '', courier: null, deliveredAt: ss === 'ship.delivered' ? ago(i * 17 - 20 > 0 ? i * 17 - 20 : 1) : undefined, pack: undefined } as Order['shipments'][number]]
+      s.orders.push(o)
+      s.txns.push({ ...s.txns[0], id: `TX-N${i}`, orderId: id, amount: o.total, gateway: pay, ref: String(55120000000 + i * 913), status: os === 'order.awaiting_payment' ? 'pay.unknown' : 'pay.success', at })
+      // دفتر شرکا: هر قلم بسته‌بندی‌شده با مالکش (کالای مهاباد به‌ترتیب اول از یاسین)
+      if (['ship.packed', 'ship.handed', 'ship.in_transit', 'ship.delivered'].includes(ss)) items.forEach((it, k) => { const owner = wh === 'mahabad' && s.stock.lots.some((l) => l.productId === it.productId && l.owner === 'ys') ? 'ys' : 'gh'; const lot = s.stock.lots.find((l) => l.productId === it.productId && l.owner === owner)
+        s.stock.sales.unshift({ id: `S-N${i}${k}`, at, productId: it.productId, owner, warehouse: wh, channel: o.channel === 'ترب' || o.channel === 'اینستاگرام دایرکت' || o.channel === 'اپلیکیشن' || o.channel === 'سایت' ? 'gh-site' : 'gh-site', qty: it.qty, price: it.price, cost: lot?.cost ?? Math.round(it.price * 0.82), orderId: id, shipId: `${id}-1`, by: wh === 'mahabad' ? 'یاسین' : 'نیما', discount: Math.round(disc * it.price * it.qty / sub), fee: Math.round(o.fee * it.price * it.qty / sub) }) })
+    }
+    // دیدگاه‌های بیشتر
+    const R0 = s.reviews[0]
+    const TX: [number, string][] = [[5, 'اصل بود و پلمپ. بستهٔ ارسالی هم خیلی تمیز بود.'], [4, 'کیفیت خوب، فقط ارسال یک روز دیرتر رسید.'], [5, 'قیمتش از بازار بهتر بود و فاکتور رسمی هم داد.'], [3, 'کالا سالم بود ولی جعبه کمی ضربه خورده بود.'], [5, 'پشتیبانی تلفنی خیلی خوب راهنمایی کرد.'], [4, 'از عکس‌های واقعی واحد راضی بودم؛ همان چیزی بود که دیدم.'], [2, 'رنگ با عکس سایت کمی فرق داشت.'], [5, 'دومین خریدم از غنیمت بود؛ باز هم راضی.']]
+    pubN.slice(0, 16).forEach((p, i) => { const [r, t] = TX[i % TX.length]; s.reviews.push({ ...structuredClone(R0), id: `RV-N${i}`, productId: p.id, customerId: `c${20 + (i % 12)}`, rating: r, text: t, status: i % 4 === 0 ? 'review.pending' : 'review.approved', verified: i % 5 !== 0, at: ago(10 + i * 21), ai: 'سالم', media: [] }) })
+  }
   // پرتال شرکای مستقل فعلاً غیرفعال است؛ یاسین جزئی از غنیمت است و از «مالکیت و تسویه» مدیریت می‌شود
   s.partners.forEach((p) => { p.status = 'در انتظار تأیید' })
   // سابقهٔ بسته‌بندی با اسکن برای چند مرسولهٔ ارسال‌شده (تب «تاریخچه» ایستگاه)

@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (319 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (355 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -97,17 +97,17 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| کپی کالا | [38](../../src/admin/catalog/Catalog.tsx#L38) |
-| انتقال کالا به سطل بازیافت | [43](../../src/admin/catalog/Catalog.tsx#L43) |
-| تعدیل موجودی | [74](../../src/admin/catalog/Catalog.tsx#L74) |
-| ویرایش واحد | [85](../../src/admin/catalog/Catalog.tsx#L85) |
-| تغییر وضعیت فروش واحد | [118](../../src/admin/catalog/Catalog.tsx#L118) |
-| انتقال واحد به سطل بازیافت | [120](../../src/admin/catalog/Catalog.tsx#L120) |
-| انتشار گروهی | [160](../../src/admin/catalog/Catalog.tsx#L160) |
-| توقف فروش گروهی | [161](../../src/admin/catalog/Catalog.tsx#L161) |
-| حذف گروهی کالا | [163](../../src/admin/catalog/Catalog.tsx#L163) |
-| چاپ برچسب کالا | [278](../../src/admin/catalog/Catalog.tsx#L278) |
-| حذف دائمی | [299](../../src/admin/catalog/Catalog.tsx#L299) |
+| کپی کالا | [39](../../src/admin/catalog/Catalog.tsx#L39) |
+| انتقال کالا به سطل بازیافت | [44](../../src/admin/catalog/Catalog.tsx#L44) |
+| تعدیل موجودی | [75](../../src/admin/catalog/Catalog.tsx#L75) |
+| ویرایش واحد | [86](../../src/admin/catalog/Catalog.tsx#L86) |
+| تغییر وضعیت فروش واحد | [119](../../src/admin/catalog/Catalog.tsx#L119) |
+| انتقال واحد به سطل بازیافت | [121](../../src/admin/catalog/Catalog.tsx#L121) |
+| انتشار گروهی | [161](../../src/admin/catalog/Catalog.tsx#L161) |
+| توقف فروش گروهی | [162](../../src/admin/catalog/Catalog.tsx#L162) |
+| حذف گروهی کالا | [164](../../src/admin/catalog/Catalog.tsx#L164) |
+| چاپ برچسب کالا | [281](../../src/admin/catalog/Catalog.tsx#L281) |
+| حذف دائمی | [302](../../src/admin/catalog/Catalog.tsx#L302) |
 ### `src/admin/catalog/Choices.tsx` — ماژول `products`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -173,10 +173,10 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| پیش‌ساخت صفحهٔ کالای در راه | [121](../../src/admin/catalog/Wizard.tsx#L121) |
-| بارگذاری تصویر کالا | [164](../../src/admin/catalog/Wizard.tsx#L164) |
-| افزودن ویژگی به قالب | [185](../../src/admin/catalog/Wizard.tsx#L185) |
-| بارگذاری آیکون خط کارت | [390](../../src/admin/catalog/Wizard.tsx#L390) |
+| پیش‌ساخت صفحهٔ کالای در راه | [127](../../src/admin/catalog/Wizard.tsx#L127) |
+| بارگذاری تصویر کالا | [174](../../src/admin/catalog/Wizard.tsx#L174) |
+| افزودن ویژگی به قالب | [195](../../src/admin/catalog/Wizard.tsx#L195) |
+| بارگذاری آیکون خط کارت | [401](../../src/admin/catalog/Wizard.tsx#L401) |
 ### `src/admin/customer/Customer360.tsx` — ماژول `customers`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -251,28 +251,49 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| اعلام کمبود تأمین به مشتری | [88](../../src/admin/orders/Decision.tsx#L88) |
+| اعلام کمبود تأمین به مشتری | [111](../../src/admin/orders/Decision.tsx#L111) |
+### `src/admin/orders/DeliverConfirm.tsx` — ماژول `orders`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| ثبت تحویل به مشتری | [34](../../src/admin/orders/DeliverConfirm.tsx#L34) |
+### `src/admin/orders/History.tsx` — ماژول `orders`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| برگرداندن وضعیت مرسوله | [33](../../src/admin/orders/History.tsx#L33) |
 ### `src/admin/orders/OrderEvents.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ارسال گزینه‌های جایگزین به مشتری | [30](../../src/admin/orders/OrderEvents.tsx#L30) |
-| تغییر مقصد بازگشت وجه به کیف پول | [109](../../src/admin/orders/OrderEvents.tsx#L109) |
+| ارسال گزینه‌های جایگزین به مشتری | [34](../../src/admin/orders/OrderEvents.tsx#L34) |
+| تغییر مقصد بازگشت وجه به کیف پول | [122](../../src/admin/orders/OrderEvents.tsx#L122) |
 ### `src/admin/orders/OrderTools.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت سفارش دستی | [37](../../src/admin/orders/OrderTools.tsx#L37) |
-| ویرایش سفارش | [87](../../src/admin/orders/OrderTools.tsx#L87) |
-| ویرایش نشانی سفارش | [117](../../src/admin/orders/OrderTools.tsx#L117) |
-| تماس تلفنی | [138](../../src/admin/orders/OrderTools.tsx#L138) |
+| ثبت سفارش دستی | [40](../../src/admin/orders/OrderTools.tsx#L40) |
+| ویرایش سفارش | [131](../../src/admin/orders/OrderTools.tsx#L131) |
+| ویرایش نشانی سفارش | [210](../../src/admin/orders/OrderTools.tsx#L210) |
+| تماس تلفنی | [231](../../src/admin/orders/OrderTools.tsx#L231) |
+### `src/admin/orders/PaymentInfo.tsx` — ماژول `orders`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| استعلام وضعیت تراکنش از درگاه | [48](../../src/admin/orders/PaymentInfo.tsx#L48) |
 ### `src/admin/orders/Progress.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت مأمور ارسال و پلاک | [43](../../src/admin/orders/Progress.tsx#L43) |
-| ثبت کد رهگیری پستی | [90](../../src/admin/orders/Progress.tsx#L90) |
-| تغییر روش ارسال | [115](../../src/admin/orders/Progress.tsx#L115) |
+| ثبت مأمور ارسال و پلاک | [45](../../src/admin/orders/Progress.tsx#L45) |
+| ثبت کد رهگیری پستی | [93](../../src/admin/orders/Progress.tsx#L93) |
+| تغییر روش ارسال | [118](../../src/admin/orders/Progress.tsx#L118) |
+### `src/admin/orders/Refunds.tsx` — ماژول `orders`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| حذف پروندهٔ بازگشت وجه | [57](../../src/admin/orders/Refunds.tsx#L57) |
+| واریز بازگشت وجه به کیف پول | [71](../../src/admin/orders/Refunds.tsx#L71) |
 ### `src/admin/orders/ReturnTools.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -289,9 +310,9 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر ویجت‌های خانه | [34](../../src/admin/pages/Home.tsx#L34) |
-| حذف ویجت سنجاق‌شده | [102](../../src/admin/pages/Home.tsx#L102) |
-| باز کردن رخداد | [134](../../src/admin/pages/Home.tsx#L134) |
+| تغییر ویجت‌های خانه | [36](../../src/admin/pages/Home.tsx#L36) |
+| حذف ویجت سنجاق‌شده | [94](../../src/admin/pages/Home.tsx#L94) |
+| باز کردن رخداد | [126](../../src/admin/pages/Home.tsx#L126) |
 ### `src/admin/pages/Insights.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -316,41 +337,41 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| اصلاح موجودی طبق سایت شریک | [83](../../src/admin/pages/Ops.tsx#L83) |
-| بازنشستگی ارائه‌دهنده | [147](../../src/admin/pages/Ops.tsx#L147) |
-| تست اتصال | [156](../../src/admin/pages/Ops.tsx#L156) |
-| تغییر پیش‌فرض | [157](../../src/admin/pages/Ops.tsx#L157) |
-| فعال‌سازی ارائه‌دهنده | [158](../../src/admin/pages/Ops.tsx#L158) |
-| افزودن ارائه‌دهنده | [163](../../src/admin/pages/Ops.tsx#L163) |
-| توقف موقت ارائه‌دهنده | [167](../../src/admin/pages/Ops.tsx#L167) |
-| نامعتبر کردن گارانتی | [232](../../src/admin/pages/Ops.tsx#L232) |
-| معتبر کردن دوبارهٔ گارانتی | [233](../../src/admin/pages/Ops.tsx#L233) |
-| الحاق کد رهگیری با اسکن | [281](../../src/admin/pages/Ops.tsx#L281) |
-| ثبت کد رهگیری از فایل باجه | [309](../../src/admin/pages/Ops.tsx#L309) |
+| اصلاح موجودی طبق سایت شریک | [85](../../src/admin/pages/Ops.tsx#L85) |
+| بازنشستگی ارائه‌دهنده | [149](../../src/admin/pages/Ops.tsx#L149) |
+| تست اتصال | [158](../../src/admin/pages/Ops.tsx#L158) |
+| تغییر پیش‌فرض | [159](../../src/admin/pages/Ops.tsx#L159) |
+| فعال‌سازی ارائه‌دهنده | [160](../../src/admin/pages/Ops.tsx#L160) |
+| افزودن ارائه‌دهنده | [165](../../src/admin/pages/Ops.tsx#L165) |
+| توقف موقت ارائه‌دهنده | [169](../../src/admin/pages/Ops.tsx#L169) |
+| نامعتبر کردن گارانتی | [234](../../src/admin/pages/Ops.tsx#L234) |
+| معتبر کردن دوبارهٔ گارانتی | [235](../../src/admin/pages/Ops.tsx#L235) |
+| الحاق کد رهگیری با اسکن | [284](../../src/admin/pages/Ops.tsx#L284) |
+| ثبت کد رهگیری از فایل باجه | [313](../../src/admin/pages/Ops.tsx#L313) |
 ### `src/admin/pages/Orders.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تخصیص سفارش به انباردار | [85](../../src/admin/pages/Orders.tsx#L85) |
-| الحاق کد رهگیری | [104](../../src/admin/pages/Orders.tsx#L104) |
-| ثبت پیک با لینک | [124](../../src/admin/pages/Orders.tsx#L124) |
-| لغو مرسوله | [166](../../src/admin/pages/Orders.tsx#L166) |
-| درخواست بازگشت وجه | [174](../../src/admin/pages/Orders.tsx#L174) |
-| بازگشت وجه | [175](../../src/admin/pages/Orders.tsx#L175) |
-| تأیید سفارش مشکوک | [197](../../src/admin/pages/Orders.tsx#L197) |
-| یادداشت داخلی | [239](../../src/admin/pages/Orders.tsx#L239) |
-| ساخت تیکت | [249](../../src/admin/pages/Orders.tsx#L249) |
+| تخصیص سفارش به انباردار | [97](../../src/admin/pages/Orders.tsx#L97) |
+| الحاق کد رهگیری | [117](../../src/admin/pages/Orders.tsx#L117) |
+| ثبت پیک با لینک | [138](../../src/admin/pages/Orders.tsx#L138) |
+| لغو مرسوله | [185](../../src/admin/pages/Orders.tsx#L185) |
+| درخواست بازگشت وجه | [193](../../src/admin/pages/Orders.tsx#L193) |
+| بازگشت وجه | [194](../../src/admin/pages/Orders.tsx#L194) |
+| تأیید سفارش مشکوک | [253](../../src/admin/pages/Orders.tsx#L253) |
+| یادداشت داخلی | [312](../../src/admin/pages/Orders.tsx#L312) |
+| ساخت تیکت | [322](../../src/admin/pages/Orders.tsx#L322) |
 ### `src/admin/pages/Org.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر مجوز | [46](../../src/admin/pages/Org.tsx#L46) |
-| درخواست تغییر قانون | [61](../../src/admin/pages/Org.tsx#L61) |
-| تغییر قانون کسب‌وکار | [63](../../src/admin/pages/Org.tsx#L63) |
-| تعریف پارامتر کسب‌وکار | [72](../../src/admin/pages/Org.tsx#L72) |
-| ارسال پیامک آزمایشی | [100](../../src/admin/pages/Org.tsx#L100) |
-| آزمایش زنجیرهٔ اعلان | [103](../../src/admin/pages/Org.tsx#L103) |
-| ارسال گزارش وضعیت فنی | [128](../../src/admin/pages/Org.tsx#L128) |
+| تغییر مجوز | [45](../../src/admin/pages/Org.tsx#L45) |
+| درخواست تغییر قانون | [60](../../src/admin/pages/Org.tsx#L60) |
+| تغییر قانون کسب‌وکار | [62](../../src/admin/pages/Org.tsx#L62) |
+| تعریف پارامتر کسب‌وکار | [71](../../src/admin/pages/Org.tsx#L71) |
+| ارسال پیامک آزمایشی | [99](../../src/admin/pages/Org.tsx#L99) |
+| آزمایش زنجیرهٔ اعلان | [102](../../src/admin/pages/Org.tsx#L102) |
+| ارسال گزارش وضعیت فنی | [127](../../src/admin/pages/Org.tsx#L127) |
 ### `src/admin/pages/People.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -371,12 +392,12 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر قیمت گروهی (مدیر کل) | [27](../../src/admin/pages/Revenue.tsx#L27) |
-| درخواست تغییر قیمت گروهی | [28](../../src/admin/pages/Revenue.tsx#L28) |
-| استعلام تراکنش | [65](../../src/admin/pages/Revenue.tsx#L65) |
-| تأیید درخواست | [84](../../src/admin/pages/Revenue.tsx#L84) |
-| رد درخواست | [84](../../src/admin/pages/Revenue.tsx#L84) |
-| بازسازی فید کانال | [99](../../src/admin/pages/Revenue.tsx#L99) |
+| تغییر قیمت گروهی (مدیر کل) | [28](../../src/admin/pages/Revenue.tsx#L28) |
+| درخواست تغییر قیمت گروهی | [29](../../src/admin/pages/Revenue.tsx#L29) |
+| استعلام تراکنش | [66](../../src/admin/pages/Revenue.tsx#L66) |
+| تأیید درخواست | [87](../../src/admin/pages/Revenue.tsx#L87) |
+| رد درخواست | [87](../../src/admin/pages/Revenue.tsx#L87) |
+| بازسازی فید کانال | [102](../../src/admin/pages/Revenue.tsx#L102) |
 ### `src/admin/pages/SellerSettings.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -393,12 +414,12 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تحویل به پست و ثبت رهگیری (شریک) | [33](../../src/admin/partner/Partner.tsx#L33) |
-| ثبت فروش حضوری در شعبه | [34](../../src/admin/partner/Partner.tsx#L34) |
-| ثبت اختلاف تسویه | [100](../../src/admin/partner/Partner.tsx#L100) |
-| اصلاح ناهماهنگی (شریک) | [120](../../src/admin/partner/Partner.tsx#L120) |
-| اعلام «ندارم» پس از فروش (شریک) | [127](../../src/admin/partner/Partner.tsx#L127) |
-| ارسال کالای جدید شریک برای تأیید | [130](../../src/admin/partner/Partner.tsx#L130) |
+| تحویل به پست و ثبت رهگیری (شریک) | [35](../../src/admin/partner/Partner.tsx#L35) |
+| ثبت فروش حضوری در شعبه | [36](../../src/admin/partner/Partner.tsx#L36) |
+| ثبت اختلاف تسویه | [102](../../src/admin/partner/Partner.tsx#L102) |
+| اصلاح ناهماهنگی (شریک) | [122](../../src/admin/partner/Partner.tsx#L122) |
+| اعلام «ندارم» پس از فروش (شریک) | [129](../../src/admin/partner/Partner.tsx#L129) |
+| ارسال کالای جدید شریک برای تأیید | [132](../../src/admin/partner/Partner.tsx#L132) |
 ### `src/admin/partner/PartnerOps.tsx` — ماژول `partners`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -409,9 +430,9 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| افزودن شعبه یا شریک فروش | [56](../../src/admin/partner/PartnersAdmin.tsx#L56) |
-| تغییر مدل سرمایهٔ محموله | [93](../../src/admin/partner/PartnersAdmin.tsx#L93) |
-| ثبت محمولهٔ شعبه | [109](../../src/admin/partner/PartnersAdmin.tsx#L109) |
+| افزودن شعبه یا شریک فروش | [62](../../src/admin/partner/PartnersAdmin.tsx#L62) |
+| تغییر مدل سرمایهٔ محموله | [99](../../src/admin/partner/PartnersAdmin.tsx#L99) |
+| ثبت محمولهٔ شعبه | [115](../../src/admin/partner/PartnersAdmin.tsx#L115) |
 ### `src/admin/people/People.tsx` — ماژول `people`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -492,12 +513,12 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| نتیجهٔ بازرسی مرجوعی | [196](../../src/admin/returns/Case.tsx#L196) |
-| تأیید بازگشت وجه | [232](../../src/admin/returns/Case.tsx#L232) |
-| ارسال مجدد کالای ردشدهٔ مرجوعی | [258](../../src/admin/returns/Case.tsx#L258) |
-| تعویض واحد گارانتی | [397](../../src/admin/returns/Case.tsx#L397) |
-| دریافت واحد مرجوعی | [426](../../src/admin/returns/Case.tsx#L426) |
-| بازگشت وجه | [450](../../src/admin/returns/Case.tsx#L450) |
+| نتیجهٔ بازرسی مرجوعی | [197](../../src/admin/returns/Case.tsx#L197) |
+| تأیید بازگشت وجه | [233](../../src/admin/returns/Case.tsx#L233) |
+| ارسال مجدد کالای ردشدهٔ مرجوعی | [259](../../src/admin/returns/Case.tsx#L259) |
+| تعویض واحد گارانتی | [398](../../src/admin/returns/Case.tsx#L398) |
+| دریافت واحد مرجوعی | [427](../../src/admin/returns/Case.tsx#L427) |
+| بازگشت وجه | [455](../../src/admin/returns/Case.tsx#L455) |
 ### `src/admin/settings/FeedsApi.tsx` — ماژول `settings`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -520,19 +541,19 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| درخواست از مدیر | [101](../../src/admin/simple/Simple.tsx#L101) |
-| تأیید سفارش (حالت سریع) | [126](../../src/admin/simple/Simple.tsx#L126) |
-| لغو سفارش (حالت سریع) | [127](../../src/admin/simple/Simple.tsx#L127) |
-| بسته آماده شد (حالت سریع) | [137](../../src/admin/simple/Simple.tsx#L137) |
-| پاسخ به مشتری (حالت سریع) | [167](../../src/admin/simple/Simple.tsx#L167) |
-| کاهش موجودی (حالت سریع) | [186](../../src/admin/simple/Simple.tsx#L186) |
-| افزایش موجودی (حالت سریع) | [186](../../src/admin/simple/Simple.tsx#L186) |
-| تغییر قیمت (حالت سریع) | [187](../../src/admin/simple/Simple.tsx#L187) |
-| ثبت سفارش تلفنی (حالت سریع) | [206](../../src/admin/simple/Simple.tsx#L206) |
-| دریافت مرجوعی (حالت سریع) | [231](../../src/admin/simple/Simple.tsx#L231) |
-| مغایرت مرجوعی با عکس ارسال (حالت سریع) | [232](../../src/admin/simple/Simple.tsx#L232) |
-| تأیید دیدگاه (حالت سریع) | [243](../../src/admin/simple/Simple.tsx#L243) |
-| رد دیدگاه (حالت سریع) | [243](../../src/admin/simple/Simple.tsx#L243) |
+| درخواست از مدیر | [102](../../src/admin/simple/Simple.tsx#L102) |
+| تأیید سفارش (حالت سریع) | [127](../../src/admin/simple/Simple.tsx#L127) |
+| لغو سفارش (حالت سریع) | [128](../../src/admin/simple/Simple.tsx#L128) |
+| بسته آماده شد (حالت سریع) | [138](../../src/admin/simple/Simple.tsx#L138) |
+| پاسخ به مشتری (حالت سریع) | [168](../../src/admin/simple/Simple.tsx#L168) |
+| کاهش موجودی (حالت سریع) | [187](../../src/admin/simple/Simple.tsx#L187) |
+| افزایش موجودی (حالت سریع) | [187](../../src/admin/simple/Simple.tsx#L187) |
+| تغییر قیمت (حالت سریع) | [188](../../src/admin/simple/Simple.tsx#L188) |
+| ثبت سفارش تلفنی (حالت سریع) | [207](../../src/admin/simple/Simple.tsx#L207) |
+| دریافت مرجوعی (حالت سریع) | [232](../../src/admin/simple/Simple.tsx#L232) |
+| مغایرت مرجوعی با عکس ارسال (حالت سریع) | [233](../../src/admin/simple/Simple.tsx#L233) |
+| تأیید دیدگاه (حالت سریع) | [244](../../src/admin/simple/Simple.tsx#L244) |
+| رد دیدگاه (حالت سریع) | [244](../../src/admin/simple/Simple.tsx#L244) |
 ### `src/admin/site/SiteEditor.tsx` — ماژول `site`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -552,17 +573,71 @@
 | ثبت واریز بانکی | [80](../../src/admin/social/Social.tsx#L80) |
 | تغییر روش اتصال کارت | [88](../../src/admin/social/Social.tsx#L88) |
 | افزودن کارت بانکی | [92](../../src/admin/social/Social.tsx#L92) |
+### `src/admin/stock/ExtSites.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| ثبت سفارش سایت شریک در دفتر | [46](../../src/admin/stock/ExtSites.tsx#L46) |
+| ثبت فروش حضوری با اسکن | [100](../../src/admin/stock/ExtSites.tsx#L100) |
+### `src/admin/stock/Inspect.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| تغییر قیمت از استعلام اسکن | [30](../../src/admin/stock/Inspect.tsx#L30) |
+| افزودن کالا به سفارش از استعلام اسکن | [82](../../src/admin/stock/Inspect.tsx#L82) |
+### `src/admin/stock/OrderLedger.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| تغییر کانال تسویهٔ سفارش | [18](../../src/admin/stock/OrderLedger.tsx#L18) |
+### `src/admin/stock/Ownership.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| ورود موجودی با مالک مشخص | [95](../../src/admin/stock/Ownership.tsx#L95) |
+| انتقال موجودی بین انبارها | [114](../../src/admin/stock/Ownership.tsx#L114) |
+| ثبت فروش خارج از سایت | [149](../../src/admin/stock/Ownership.tsx#L149) |
+| ثبت پرداخت تسویه بین شرکا | [188](../../src/admin/stock/Ownership.tsx#L188) |
+| تغییر قاعدهٔ کد تنوع | [204](../../src/admin/stock/Ownership.tsx#L204) |
+| حذف بارکد اختصاصی | [211](../../src/admin/stock/Ownership.tsx#L211) |
+| ثبت بارکد اختصاصی شریک | [212](../../src/admin/stock/Ownership.tsx#L212) |
+| تغییر قرارداد سهم | [222](../../src/admin/stock/Ownership.tsx#L222) |
+| تغییر قاعدهٔ اولویت برداشت | [228](../../src/admin/stock/Ownership.tsx#L228) |
+| تغییر قاعدهٔ تخفیف در تسویه | [229](../../src/admin/stock/Ownership.tsx#L229) |
+| تغییر قاعدهٔ کارمزد در تسویه | [230](../../src/admin/stock/Ownership.tsx#L230) |
+| نگاشت کانال سفارش به کانال تسویه | [234](../../src/admin/stock/Ownership.tsx#L234) |
+| افزودن انبار تازه | [240](../../src/admin/stock/Ownership.tsx#L240) |
+| افزودن کانال فروش | [245](../../src/admin/stock/Ownership.tsx#L245) |
+| تغییر مدل قرارداد سهم | [250](../../src/admin/stock/Ownership.tsx#L250) |
+| افزودن قاعدهٔ زمان رسیدن پول | [261](../../src/admin/stock/Ownership.tsx#L261) |
+| تغییر زمان رسیدن پول روش پرداخت | [285](../../src/admin/stock/Ownership.tsx#L285) |
+| حذف قاعدهٔ زمان رسیدن پول | [290](../../src/admin/stock/Ownership.tsx#L290) |
+| برگشت کالا به مالک | [318](../../src/admin/stock/Ownership.tsx#L318) |
+### `src/admin/stock/Packing.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| تأیید بسته‌بندی با اسکن | [97](../../src/admin/stock/Packing.tsx#L97) |
+### `src/admin/stock/Parties.tsx` — ماژول `stock`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| حذف شریک | [32](../../src/admin/stock/Parties.tsx#L32) |
+| فعال‌سازی دوبارهٔ شریک | [36](../../src/admin/stock/Parties.tsx#L36) |
+| ویرایش شریک | [60](../../src/admin/stock/Parties.tsx#L60) |
+| غیرفعال‌سازی شریک | [92](../../src/admin/stock/Parties.tsx#L92) |
+| پیوستن شریک تازه | [130](../../src/admin/stock/Parties.tsx#L130) |
 ### `src/admin/team/Access.tsx` — ماژول `team`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ویرایش نقش | [51](../../src/admin/team/Access.tsx#L51) |
-| ساخت نقش تازه | [52](../../src/admin/team/Access.tsx#L52) |
-| حذف نقش | [58](../../src/admin/team/Access.tsx#L58) |
-| انتقال اعضا و حذف نقش | [85](../../src/admin/team/Access.tsx#L85) |
-| تغییر نقش عضو | [107](../../src/admin/team/Access.tsx#L107) |
-| برگرداندن دسترسی به نقش | [115](../../src/admin/team/Access.tsx#L115) |
-| دعوت عضو تیم | [130](../../src/admin/team/Access.tsx#L130) |
+| ویرایش نقش | [52](../../src/admin/team/Access.tsx#L52) |
+| ساخت نقش تازه | [53](../../src/admin/team/Access.tsx#L53) |
+| حذف نقش | [59](../../src/admin/team/Access.tsx#L59) |
+| انتقال اعضا و حذف نقش | [86](../../src/admin/team/Access.tsx#L86) |
+| تغییر نقش عضو | [110](../../src/admin/team/Access.tsx#L110) |
+| برگرداندن دسترسی به نقش | [118](../../src/admin/team/Access.tsx#L118) |
+| دعوت عضو تیم | [134](../../src/admin/team/Access.tsx#L134) |
 ### `src/admin/warehouse/PutAway.tsx` — ماژول `warehouse`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -609,11 +684,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت مرسوله | [300](../../src/shared/data/seed.ts#L300) |
-| پیش‌نویس پاسخ تیکت | [301](../../src/shared/data/seed.ts#L301) |
-| درخواست بازگشت وجه | [302](../../src/shared/data/seed.ts#L302) |
-| مشاهدهٔ دادهٔ حساس | [303](../../src/shared/data/seed.ts#L303) |
-| تغییر موجودی | [304](../../src/shared/data/seed.ts#L304) |
+| تغییر وضعیت مرسوله | [306](../../src/shared/data/seed.ts#L306) |
+| پیش‌نویس پاسخ تیکت | [307](../../src/shared/data/seed.ts#L307) |
+| درخواست بازگشت وجه | [308](../../src/shared/data/seed.ts#L308) |
+| مشاهدهٔ دادهٔ حساس | [309](../../src/shared/data/seed.ts#L309) |
+| تغییر موجودی | [310](../../src/shared/data/seed.ts#L310) |
 ### `src/shared/lib/fx.ts` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -623,7 +698,7 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| بازگردانی از سطل بازیافت | [113](../../src/shared/lib/store.ts#L113) |
+| بازگردانی از سطل بازیافت | [154](../../src/shared/lib/store.ts#L154) |
 ### `src/shared/ui/base.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -644,7 +719,7 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ویرایش دلیل | [40](../../src/shared/ui/reason.tsx#L40) |
+| ویرایش دلیل | [41](../../src/shared/ui/reason.tsx#L41) |
 ### `src/shared/ui/table.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

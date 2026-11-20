@@ -100,6 +100,16 @@
   "admin-warehouse.jpg"
  ],
  [
+  "/admin/ownership",
+  "/admin/ownership",
+  "admin-ownership.jpg"
+ ],
+ [
+  "/admin/packing",
+  "/admin/packing",
+  "admin-packing.jpg"
+ ],
+ [
   "/admin/shipping",
   "/admin/shipping",
   "admin-shipping.jpg"

@@ -112,6 +112,8 @@
 | `LineIcon` | `src/shared/ui/lineIcons.tsx` |
 | `useIconKeys` | `src/shared/ui/lineIcons.tsx` |
 | `RowMenu` | `src/shared/ui/menu.tsx` |
+| `moneyWords` | `src/shared/ui/money.tsx` |
+| `MoneyInput` | `src/shared/ui/money.tsx` |
 | `useCountUp` | `src/shared/ui/motion.tsx` |
 | `CountUp` | `src/shared/ui/motion.tsx` |
 | `Modal` | `src/shared/ui/overlay.tsx` |

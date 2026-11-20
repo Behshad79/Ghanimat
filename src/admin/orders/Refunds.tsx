@@ -1,7 +1,7 @@
 // بازگشت وجه، یک پرونده برای هر بازگشت: ثبت ← تأیید ← ارسال به بانک ← واریز شد (با شمارهٔ پیگیری)، یا ناموفق ← تلاش دوباره یا تغییر مقصد.
 // از لغو سفارش یا قلم، لغو مرسوله، ویرایش سفارش، تصمیم کمبود و بازگشت دستی ساخته می‌شود؛ پس از واریز، سفارش به‌روز می‌شود.
 import { useState } from 'react'
-import { Banknote, CheckCircle2, Clock, Copy, Phone, RotateCcw, Send, Wallet, XCircle } from 'lucide-react'
+import { Banknote, CheckCircle2, Clock, Copy, Pencil, Phone, RotateCcw, Send, Trash2, Wallet, XCircle } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented } from '@/shared/ui/base'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { askReason } from '@/shared/ui/reason'
@@ -44,7 +44,18 @@ function step(id: string, fn: (r: Refund) => void, label: string, note?: string,
 }
 
 function RefundRow({ r }: { r: Refund }) {
-  const [send, setSend] = useState(false); const [done, setDone] = useState(false)
+  const [send, setSend] = useState(false); const [done, setDone] = useState(false); const [edit, setEdit] = useState<{ amount: string; dest: string; account: string; note: string } | null>(null)
+  const editable = ['requested', 'approved', 'failed'].includes(r.status)
+  const lockWhy = r.status === 'sent' ? 'در صف بانک است؛ اگر برگشت خورد «ناموفق» را بزنید تا دوباره قابل ویرایش شود.' : r.status === 'done' ? 'واریز شده و سند مالی است؛ ویرایش یا حذف نمی‌شود.' : ''
+  const order = getDB().orders.find((o) => o.id === r.orderId); const others = (getDB().refunds ?? []).filter((q) => q.orderId === r.orderId && q.id !== r.id).reduce((a, q) => a + q.amount, 0); const cap = Math.max(r.amount, (order?.total ?? r.amount) - others)
+  const saveEdit = () => { if (!edit) return; const n = Number(edit.amount.replace(/\D/g, '')); if (!n) return toast('مبلغ را وارد کنید.', { tone: 'err' }); if (n > cap) return toast(`مبلغ از سقف قابل بازگشت این سفارش (${toman(cap)}) بیشتر است.`, { tone: 'err' })
+    const changed = n !== r.amount || edit.dest !== r.dest; const parts = [n !== r.amount && `مبلغ ${toman(r.amount)} ← ${toman(n)}`, edit.dest !== r.dest && `مقصد ${r.dest} ← ${edit.dest}`, (edit.account || '') !== (r.account || '') && 'شمارهٔ حساب عوض شد', (edit.note || '') !== (r.note || '') && 'یادداشت'].filter(Boolean).join(' · ')
+    if (!parts) { setEdit(null); return }
+    step(r.id, (q) => { q.amount = n; q.dest = edit.dest; q.account = edit.account.trim() || undefined; q.note = edit.note.trim() || undefined; if (changed && q.status === 'approved') q.status = 'requested'; if (q.status === 'failed') { q.status = 'requested'; q.failWhy = undefined } }, 'ویرایش', parts + (changed && r.status !== 'requested' ? ' · نیاز به تأیید دوباره' : ''))
+    toast(changed && r.status !== 'requested' ? 'ویرایش شد و چون مبلغ یا مقصد عوض شد، دوباره منتظر تأیید است.' : 'پروندهٔ بازگشت وجه ویرایش شد.'); setEdit(null) }
+  const del = async () => { const why = await askReason({ kind: 'order', ref: r.orderId, status: 'حذف پروندهٔ بازگشت وجه', title: `دلیل حذف ${r.id} (${toman(r.amount)})` }); if (!why) return
+    mutate((x) => { x.refunds = x.refunds.filter((q) => q.id !== r.id); syncOrder(x, r.orderId) }, { action: 'حذف پروندهٔ بازگشت وجه', target: r.orderId, before: `${r.id} · ${toman(r.amount)} · ${r.dest} · ${REFUND_LABEL[r.status][0]}`, after: `حذف شد: ${why}` })
+    toast(`پروندهٔ ${r.id} حذف شد؛ دلیل و جزئیات در لاگ ممیزی ماند.`) }
   const [via, setVia] = useState(VIA_OF[r.dest] ?? 'پایا (شبا)'); const [acct, setAcct] = useState(r.account ?? ''); const [ref, setRef] = useState('')
   const FLOW = r.dest === 'کیف پول' ? W_STEPS : STEPS
   const idx = r.status === 'failed' ? 2 : FLOW.findIndex(([s]) => s === r.status)
@@ -61,7 +72,21 @@ function RefundRow({ r }: { r: Refund }) {
       {r.status === 'sent' && <Button size="sm" variant="primary" icon={<Banknote size={12} />} onClick={() => setDone(true)}>ثبت واریز</Button>}
       {r.status === 'sent' && <Button size="sm" variant="ghost" icon={<XCircle size={12} />} onClick={async () => { const w = await askReason({ kind: 'order', ref: r.orderId, status: 'بازگشت وجه ناموفق', title: 'علت برگشت خوردن واریز' }); if (w) step(r.id, (q) => { q.status = 'failed'; q.failWhy = w }, 'ناموفق', w, (q) => `واریز ${toman(q.amount)} سفارش ${q.orderId} انجام نشد (${w}). برای ثبت شبای درست یا انتقال به کیف پول با پشتیبانی تماس بگیرید.`) }}>ناموفق</Button>}
       {['approved', 'failed', 'requested'].includes(r.status) && r.dest !== 'کیف پول' && <Button size="sm" variant="ghost" icon={<Wallet size={12} />} onClick={async () => { if (!(await confirm({ title: 'انتقال به کیف پول مشتری؟', body: `${toman(r.amount)} همین حالا به کیف پول مشتری واریز می‌شود.`, confirm: 'واریز به کیف پول' }))) return; step(r.id, (q) => { q.dest = 'کیف پول'; q.status = 'done'; q.doneAt = now(); q.ref = q.id }, 'واریز شد', 'تغییر مقصد به کیف پول', (q) => `${toman(q.amount)} بابت سفارش ${q.orderId} به کیف پول شما واریز شد.`); mutate((x) => { const c = x.customers.find((q) => q.id === r.customerId); if (c) c.wallet += r.amount }, { action: 'واریز بازگشت وجه به کیف پول', target: r.orderId }) }}>واریز به کیف پول</Button>}
+      <span className="mr-auto flex gap-1">
+        <Button size="sm" variant="ghost" icon={<Pencil size={12} />} disabled={!editable} title={lockWhy || 'ویرایش مبلغ، مقصد، شمارهٔ حساب یا یادداشت'} onClick={() => setEdit({ amount: String(r.amount), dest: r.dest, account: r.account ?? '', note: r.note ?? '' })}>ویرایش</Button>
+        <Button size="sm" variant="ghost" icon={<Trash2 size={12} />} disabled={!editable} title={lockWhy || 'حذف پرونده با ثبت دلیل'} onClick={() => void del()}>حذف</Button>
+      </span>
     </div>
+    {!editable && lockWhy && <p className="mt-1 text-[10px] text-t3">{lockWhy}</p>}
+    <Modal open={!!edit} onClose={() => setEdit(null)} title={`ویرایش بازگشت وجه ${r.id}`} footer={<><Button variant="primary" onClick={saveEdit}>ذخیرهٔ تغییرات</Button><Button variant="ghost" onClick={() => setEdit(null)}>انصراف</Button></>}>
+      {edit && <div className="space-y-3">
+        <Field label="مبلغ (تومان)" help={`حداکثر قابل بازگشت برای این سفارش: ${toman(cap)}`}><Input className="ltr text-left font-mono" inputMode="numeric" value={edit.amount ? Number(edit.amount.replace(/\D/g, '')).toLocaleString('en-US') : ''} onChange={(e) => setEdit({ ...edit, amount: e.target.value })} /></Field>
+        <Field label="مقصد"><Segmented size="sm" value={edit.dest} onChange={(v) => setEdit({ ...edit, dest: v })} options={DESTS.map((x) => [x, x] as [string, string])} /></Field>
+        {(edit.dest === 'کارت به کارت' || edit.dest === 'شبا (پایا)') && <Field label={edit.dest === 'کارت به کارت' ? 'شمارهٔ کارت مشتری' : 'شمارهٔ شبای مشتری'}><Input className="ltr" value={edit.account} onChange={(e) => setEdit({ ...edit, account: e.target.value })} /></Field>}
+        <Field label="یادداشت (اختیاری)"><Input value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} /></Field>
+        {r.status !== 'requested' && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">اگر مبلغ یا مقصد را عوض کنید، پرونده دوباره به «منتظر تأیید» برمی‌گردد.</p>}
+      </div>}
+    </Modal>
     <details className="mt-1.5 text-11 text-t2"><summary className="cursor-pointer">سابقهٔ مراحل ({fa(r.log.length)})</summary><ul className="mt-1 space-y-0.5 pr-3">{r.log.map((l, i) => <li key={i}>{new Date(l.at).toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' })} · <b>{l.step}</b> · {l.by}{l.note ? ` · ${l.note}` : ''}</li>)}</ul></details>
     <Modal open={send} onClose={() => setSend(false)} title={`ارسال ${toman(r.amount)} به بانک`} footer={<><Button variant="primary" disabled={acct.replace(/\s/g, '').length < 16} onClick={() => { step(r.id, (q) => { q.status = 'sent'; q.via = via; q.account = acct.trim(); q.sentAt = now(); q.failWhy = undefined }, 'ارسال به بانک', `${via} · ${acct.trim()}`, (q) => `بازگشت ${toman(q.amount)} سفارش ${q.orderId} با ${via} ارسال شد و حداکثر تا ۷۲ ساعت کاری به حساب شما می‌نشیند.`); setSend(false); toast('در صف بانک ثبت شد؛ پس از واریز، شمارهٔ پیگیری را ثبت کنید.') }}>ثبت ارسال</Button><Button variant="ghost" onClick={() => setSend(false)}>انصراف</Button></>}>
       <div className="space-y-3"><Field label="روش"><Segmented size="sm" value={via} onChange={setVia} options={['پایا (شبا)', 'ساتنا', 'کارت به کارت', 'برگشت از درگاه'].map((x) => [x, x] as [string, string])} /></Field>

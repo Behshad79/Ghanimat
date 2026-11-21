@@ -33,7 +33,8 @@ export const itemLines = (x: DB, it: InItem) => labelLines(x.stock, it)
 
 /** رسید محموله در انبار ورودی: موجودی همهٔ رسیده‌ها به نام مالک در همان انبار ثبت می‌شود و برای سهم انبارهای دیگر حواله ساخته می‌شود */
 export function landBatch(x: DB, batchId: string, got: Record<string, number>, by: string): string[] {
-  const b = x.incoming.find((q) => q.id === batchId)!; const at = b.landing ?? 'tehran'; const made: string[] = []
+  const b = x.incoming.find((q) => q.id === batchId); if (!b || b.receivedAt) return [] // رسید دوباره (دوبار کلیک یا دو کاربر هم‌زمان) موجودی را دوبار ثبت نمی‌کند
+  const at = b.landing ?? 'tehran'; const made: string[] = []
   const outs = new Map<string, ManifestLine[]>()
   b.items.forEach((it) => {
     const p = ensureProduct(x, b, it, 'product.draft'); if (p.status === 'product.incoming') p.status = 'product.draft'
@@ -70,12 +71,18 @@ export function linesFromStock(x: DB, from: string, owner?: string): ManifestLin
 
 /** تحویل حواله در انبار مقصد: به اندازهٔ «رسیده» از انبار مبدأ برداشته و با همان مالک و بها در مقصد ثبت می‌شود */
 export function receiveManifest(x: DB, id: string, by: string) {
-  const m = x.stock.manifests!.find((q) => q.id === id)!; const touched = new Set<string>()
+  const m = x.stock.manifests?.find((q) => q.id === id); const touched = new Set<string>()
+  // فقط حوالهٔ ارسال‌شده تحویل گرفته می‌شود؛ تحویل دوباره یا تحویل حوالهٔ ارسال‌نشده هیچ موجودی‌ای جابه‌جا نمی‌کند
+  if (!m || m.status !== 'sent') return { short: false, products: [] as string[] }
+  const lack: string[] = []
   m.lines.forEach((ln) => { if (!ln.productId || !ln.received) return
     const t = takeLots(x, { productId: ln.productId, variationId: ln.variationId, owner: ln.owner, warehouse: m.from }, ln.received)
-    x.stock.lots.unshift({ id: mid('L') + ln.key.length, productId: ln.productId, variationId: ln.variationId, owner: ln.owner, warehouse: m.to, qty: ln.received, qty0: ln.received, cost: t.cost, at: now(), ref: `حوالهٔ ${m.id}` })
+    // فقط همان مقداری که واقعاً در مبدأ بود منتقل می‌شود؛ کمبود مبدأ به‌عنوان مغایرت ثبت می‌شود تا موجودی از هیچ ساخته نشود
+    if (t.taken < ln.received) lack.push(`${ln.code}: ${ln.received - t.taken} عدد در موجودی مبدأ نبود`)
+    if (t.taken > 0) x.stock.lots.unshift({ id: mid('L') + ln.key.length, productId: ln.productId, variationId: ln.variationId, owner: ln.owner, warehouse: m.to, qty: t.taken, qty0: t.taken, cost: t.cost, at: now(), ref: `حوالهٔ ${m.id}` })
     touched.add(ln.productId) })
-  const short = m.lines.some((l) => l.received < l.qty) || m.issues.some((i) => i.kind === 'damaged')
+  lack.forEach((note) => m.issues.push({ at: now(), by, code: note.split(':')[0], kind: 'short', note: `مغایرت دفتری: ${note.split(': ')[1]}` }))
+  const short = lack.length > 0 || m.lines.some((l) => l.received < l.qty) || m.issues.some((i) => i.kind === 'damaged')
   m.status = short ? 'partial' : 'received'; m.receivedAt = now(); m.receivedBy = by
   m.lines.filter((l) => l.received < l.qty).forEach((l) => m.issues.push({ at: now(), by, code: l.code, kind: 'short', note: `${l.qty - l.received} عدد کمتر رسید` }))
   m.events.push({ at: now(), by, text: short ? 'تحویل با مغایرت ثبت شد' : 'تحویل کامل با اسکن' })

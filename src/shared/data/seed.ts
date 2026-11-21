@@ -212,7 +212,7 @@ const makeSeedBase = () => ({
   ] as WCard[],
   txns: [
     { id: 'TX-90811', orderId: 'GH-10481', amount: 147400000, gateway: 'زرین‌پال', ref: '48120099731', status: 'pay.success', at: ago(18) },
-    { id: 'TX-90810', orderId: 'GH-10480', amount: 38500000, gateway: 'اسنپ‌پی', ref: 'SP-7781200', status: 'pay.unknown', at: ago(42) },
+    { id: 'TX-90810', orderId: 'GH-10480', amount: 15000000, gateway: 'اسنپ‌پی', ref: 'SP-7781200', status: 'pay.unknown', at: ago(42) },
     { id: 'TX-90808', orderId: 'GH-10479', amount: 102495000, gateway: 'درگاه ملت', ref: '90011247781', status: 'pay.success', at: ago(60 * 2) },
     { id: 'TX-90805', orderId: 'GH-10478', amount: 30900000, gateway: 'ترب‌پی', ref: 'TP-220871', status: 'pay.success', at: ago(60 * 3) },
     { id: 'TX-90801', orderId: '', amount: 24500000, gateway: 'زرین‌پال', ref: '48120099102', status: 'pay.unknown', at: ago(60 * 5) },
@@ -641,7 +641,7 @@ export const makeSeed = () => {
   { const h = (x: number) => new Date(Date.now() - x * 36e5).toISOString(); const L = (at: string, step: string, note?: string) => ({ at, by: 'بهشاد', step, note })
     s.refunds.push(
       { id: 'RF-1004', orderId: 'GH-10479', customerId: s.orders.find((o) => o.id === 'GH-10479')?.customerId ?? 'c3', amount: 9900000, source: 'لغو یک قلم', dest: 'کارت بانکی', at: h(80), by: 'بهشاد', status: 'sent', via: 'پایا (شبا)', account: 'IR12 0120 0000 0000 0123 4567 89', sentAt: h(78), log: [L(h(80), 'ثبت درخواست', 'لغو یک قلم'), L(h(80), 'تأیید'), L(h(78), 'ارسال به بانک', 'پایا (شبا)')] },
-      { id: 'RF-1003', orderId: 'GH-10480', customerId: s.orders.find((o) => o.id === 'GH-10480')?.customerId ?? 'c4', amount: 38500000, source: 'لغو سفارش', dest: 'همان روش پرداخت', at: h(5), by: 'سارا', status: 'requested', log: [L(h(5), 'ثبت درخواست', 'لغو سفارش · بالاتر از سقف تأیید')] },
+      { id: 'RF-1003', orderId: 'GH-10480', customerId: s.orders.find((o) => o.id === 'GH-10480')?.customerId ?? 'c4', amount: 15000000, source: 'لغو سفارش', dest: 'همان روش پرداخت', at: h(5), by: 'سارا', status: 'requested', log: [L(h(5), 'ثبت درخواست', 'لغو سفارش · بالاتر از سقف تأیید')] },
       { id: 'RF-1002', orderId: 'GH-10458', customerId: 'c1', amount: 15000000, source: 'مرجوعی', dest: 'کارت بانکی', at: h(30), by: 'بهشاد', status: 'failed', via: 'پایا (شبا)', account: 'IR55 0170 0000 0000 9988 7766 55', failWhy: 'شبا به نام مشتری نیست', log: [L(h(30), 'ثبت درخواست', 'مرجوعی'), L(h(30), 'تأیید'), L(h(28), 'ارسال به بانک', 'پایا (شبا)'), L(h(6), 'ناموفق', 'شبا به نام مشتری نیست')] },
       { id: 'RF-1001', orderId: 'GH-10466', customerId: s.orders.find((o) => o.id === 'GH-10466')?.customerId ?? 'c2', amount: 2400000, source: 'ویرایش سفارش', dest: 'کیف پول', at: h(50), by: 'بهشاد', status: 'done', ref: 'RF-1001', doneAt: h(50), log: [L(h(50), 'ثبت درخواست', 'ویرایش سفارش'), L(h(50), 'واریز شد', 'به کیف پول مشتری')] })
     s.refunds.forEach((r) => { const o = s.orders.find((q) => q.id === r.orderId); if (o) { o.refunded = (o.refunded ?? 0) + (r.status === 'done' ? r.amount : 0); o.refundPending = (o.refundPending ?? 0) + (r.status !== 'done' ? r.amount : 0) } })
@@ -707,6 +707,8 @@ export const makeSeed = () => {
         events: [{ at: ago2(240), by: 'بهشاد', text: 'ساخت حواله' }, { at: ago2(236), by: 'بهشاد', text: 'ارسال با تیپاکس · ۱۰ عدد اسکن شد' }, { at: ago2(230), by: 'یاسین', text: 'تحویل کامل با اسکن' }] },
     ] }
   new Set(s.stock.lots.map((l) => l.productId)).forEach((pid) => syncQty(s, pid))
+  // هم‌خوانی دادهٔ نمونه: مرسولهٔ پستیِ «تحویل حامل» یا «در مسیر» بدون کد رهگیری نمی‌ماند
+  s.orders.forEach((o) => o.shipments.forEach((sh, i) => { if (['ship.handed', 'ship.in_transit'].includes(sh.status) && /پست|تیپاکس|باربری/.test(sh.method) && !sh.tracking) { sh.tracking = `2364${String(o.id.replace(/\D/g, '')).padStart(6, '0')}${i + 1}0071`; sh.trackingCarrier = sh.trackingCarrier ?? (/تیپاکس/.test(sh.method) ? 'تیپاکس' : 'پست پیشتاز') } }))
   return s
 }
 export type DB = ReturnType<typeof makeSeedBase>

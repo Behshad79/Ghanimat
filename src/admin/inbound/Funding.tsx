@@ -36,6 +36,7 @@ export function FundingEditor({ b, set }: { b: InBatch; set: (b: InBatch) => voi
       <button type="button" aria-label="حذف پول‌دهنده" onClick={() => set({ ...b, funding: F.filter((_, j) => j !== i) })} className="mb-1 grid size-9 place-items-center rounded-lg text-t2 hover:bg-danger-bg hover:text-danger"><Trash2 size={14} /></button>
       {(f.cur ?? c) !== c && <div className="flex flex-wrap items-center gap-2 rounded-lg bg-brand-tint/40 px-3 py-1.5 text-12 sm:col-span-5">
         {(f.cur ?? c) !== 'تومان' && <label className="flex items-center gap-1.5">نرخ هر {f.cur} به تومان<Input className="ltr h-8 w-28 text-left font-mono" inputMode="numeric" value={f.rate ? String(f.rate) : ''} onChange={(e) => upd(i, { rate: num(e.target.value) })} aria-label={`نرخ ${f.cur}`} /></label>}
+        {(f.cur ?? c) !== 'تومان' && !f.rate && <span className="font-semibold text-danger">نرخ را بنویسید؛ بدون نرخ، این ردیف در تطبیق صفر حساب می‌شود.</span>}
         <span className="text-t2">برابر با <b className="text-t1">{money(fundIn(f, b), c)}</b> به ارز محموله{c !== 'تومان' ? ` (نرخ ${fa(b.rate ?? 0)})` : ''}؛ تطبیق با همین عدد انجام می‌شود.</span></div>}
     </div>)}
     {F.length > 0 && <p className="text-12">جمع پول به ارز محموله: <b>{money(F.reduce((a, f) => a + fundIn(f, b), 0), c)}</b>{c !== 'تومان' && b.rate ? <span className="text-t2"> · حدود {compactToman(F.reduce((a, f) => a + fundIn(f, b), 0) * b.rate)}</span> : null}</p>}

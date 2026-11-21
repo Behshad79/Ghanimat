@@ -34,9 +34,12 @@ const JM = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', mont
 const monthKey = (iso: string | Date) => JM.format(typeof iso === 'string' ? new Date(iso) : iso)
 const SALE = ['order.paid', 'order.preparing', 'order.shipped', 'order.delivered', 'order.pickup_ready', 'order.needs_decision', 'order.returned']
 
+/** بازهٔ گزارش؛ تاریخ نامعتبر نادیده گرفته می‌شود و اگر «از» بعد از «تا» باشد، جابه‌جا می‌شوند */
 function range(o: Opts, first: number): [number, number] {
-  const end = o.preset === 'custom' && o.to ? +new Date(o.to) + 864e5 - 1 : Date.now()
-  const start = o.preset === 'custom' && o.from ? +new Date(o.from) : o.preset === 'all' ? first : end - Number(o.preset) * 864e5
+  const valid = (t: string) => !!t && Number.isFinite(+new Date(t))
+  let end = o.preset === 'custom' && valid(o.to) ? +new Date(o.to) + 864e5 - 1 : Date.now()
+  let start = o.preset === 'custom' ? (valid(o.from) ? +new Date(o.from) : end - 90 * 864e5) : o.preset === 'all' ? (Number.isFinite(first) ? first : end - 90 * 864e5) : end - (Number(o.preset) || 90) * 864e5
+  if (start > end) [start, end] = [end - 864e5 + 1, start + 864e5 - 1]
   return [start, end]
 }
 const sum = <T,>(A: T[], f: (x: T) => number) => A.reduce((a, x) => a + (f(x) || 0), 0)
@@ -109,6 +112,7 @@ export function InvestorReport() {
       <div className="space-y-4 xl:sticky xl:top-2 xl:self-start">
         <Card title="بازه و واحد" collapsible={false}><div className="space-y-3">
           <Segmented size="sm" value={o.preset} onChange={(v) => setO({ preset: v })} options={[['30', '۳۰ روز'], ['90', '۹۰ روز'], ['180', '۶ ماه'], ['all', 'از ابتدا'], ['custom', 'سفارشی']]} />
+          {o.preset === 'custom' && o.from && o.to && +new Date(o.from) > +new Date(o.to) && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">«از» بعد از «تا» بود؛ گزارش با بازهٔ جابه‌جاشده ساخته می‌شود.</p>}
           {o.preset === 'custom' && <div className="grid grid-cols-2 gap-2"><Field label="از"><Input type="date" value={o.from} onChange={(e) => setO({ from: e.target.value })} /></Field><Field label="تا"><Input type="date" value={o.to} onChange={(e) => setO({ to: e.target.value })} /></Field></div>}
           <p className="text-12 text-t2">{jday(from)} تا {jday(to)} · {fa(Math.round(span / 864e5))} روز</p>
           <Field label="واحد مبلغ‌ها"><Segmented size="sm" value={o.unit} onChange={(v) => setO({ unit: v as Unit })} options={[['toman', 'تومان'], ['mt', 'میلیون تومان'], ['usd', 'دلار']]} /></Field>

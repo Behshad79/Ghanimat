@@ -5,7 +5,7 @@ import { CONDITION, SOURCE } from '../data/statuses'
 import { ledgerHook } from '../data/ledger'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v97'
+const DB_KEY = 'ghanimat-demo-db-v98'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
@@ -59,6 +59,8 @@ export function mutate(fn: (d: DB) => void, log?: { action: string; target: stri
 }
 /** برای Undo: عکس فوری از داده و تابع بازگردانی */
 export function snapshot() { const prev = db; return () => { db = prev; syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) } }
+/** دسترسی فقط‌خواندنی برای تست خودکار و پشتیبانی (در نسخهٔ نمایشی) */
+if (typeof window !== 'undefined') (window as unknown as { __ghanimat?: unknown }).__ghanimat = { getDB: () => db }
 export function resetDB() { db = makeSeed(); syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
 
 // ───── نقش‌ها و حساب‌های نمونه (بخش ۱۸.۳) ─────

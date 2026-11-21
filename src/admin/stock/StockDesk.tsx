@@ -41,7 +41,16 @@ export function StockDesk({ onIntake }: { onIntake?: () => void }) {
   }, [d, q, owner, low, wh]) // eslint-disable-line react-hooks/exhaustive-deps
   const recent = (s.adjusts ?? []).slice(0, 6)
   const edit0 = can('catalog')
-  return <Card pad={false} title={<span className="flex items-center gap-1.5"><SlidersHorizontal size={15} />میز موجودی: تغییر آنی موجودی هر مالک در هر انبار</span>}
+  // سفارش‌های باز بیش از موجودی زندهٔ یک انبار رزرو کرده‌اند: این سفارش‌ها بدون تأمین یا انتقال ارسال نمی‌شوند
+  const over = (() => { const L: { pid: string; vid?: string; wh: string; live: number; res: number }[] = []; const seen = new Set<string>()
+    s.lots.forEach((l) => { const k = `${l.productId}|${l.variationId ?? ''}|${l.warehouse}`; if (seen.has(k)) return; seen.add(k)
+      const live = s.lots.filter((q) => q.productId === l.productId && (q.variationId ?? '') === (l.variationId ?? '') && q.warehouse === l.warehouse && q.qty > 0 && !q.hold && !expired(q)).reduce((a, q) => a + q.qty, 0)
+      const res = reserved(d, l.productId, l.variationId, l.warehouse); if (res > live) L.push({ pid: l.productId, vid: l.variationId, wh: l.warehouse, live, res }) })
+    return L })()
+  return <>{over.length > 0 && <div role="alert" className="mb-3 rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-12 text-danger"><b className="block text-13">رزرو سفارش‌های باز از موجودی بیشتر است</b>
+    <ul className="mt-1 space-y-0.5">{over.map((x) => <li key={`${x.pid}${x.vid}${x.wh}`}>{pv(d, x.pid, x.vid).full} · {whName(s, x.wh)}: {fa(x.res)} عدد رزرو، {fa(x.live)} عدد موجود</li>)}</ul>
+    <p className="mt-1 text-11">موجودی را اصلاح کنید، از انبار دیگر حواله بزنید یا سفارش را به «تصمیم مشتری» بفرستید. <button type="button" className="font-semibold underline" onClick={() => nav('/admin/orders')}>سفارش‌ها</button></p></div>}
+  <Card pad={false} title={<span className="flex items-center gap-1.5"><SlidersHorizontal size={15} />میز موجودی: تغییر آنی موجودی هر مالک در هر انبار</span>}
     hint="روی هر عدد بزنید: فروش حضوری، کنار گذاشتن از فروش، برگرداندن، اصلاح شمارش، ورود تازه یا خرابی. موجودی سایت همان لحظه به‌روز می‌شود."
     actions={<div className="flex flex-wrap gap-2"><Button size="sm" icon={<PackagePlus size={13} />} onClick={() => onIntake ? onIntake() : nav('/admin/ownership?tab=stock&intake=1')}>افزودن کالا به موجودی</Button><Button size="sm" variant="ghost" onClick={() => nav('/admin/catalog/new')}>کالای تازه در کاتالوگ</Button></div>}>
     <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
@@ -67,7 +76,7 @@ export function StockDesk({ onIntake }: { onIntake?: () => void }) {
     </table>{rows.length === 0 && <p className="p-5 text-12 text-t2">کالایی با این فیلترها نیست.</p>}</div>
     {recent.length > 0 && <div className="border-t border-line p-4"><p className="mb-2 text-12 font-semibold">آخرین تغییرهای دستی</p><ul className="space-y-1 text-12">{recent.map((a) => <li key={a.id} className="flex flex-wrap items-center gap-1.5"><Badge tone={a.delta < 0 ? 'warning' : 'success'} dot={false}>{KLABEL[a.kind]}</Badge><span>{pv(d, a.productId, a.variationId).full}</span><span className="font-mono">{a.delta > 0 ? '+' : '−'}{fa(Math.abs(a.delta))}</span><PartyChip s={s} id={a.owner} /><span className="text-t2">در {whName(s, a.warehouse)} · {a.by} · {rel(a.at)}{a.note ? ` · ${a.note}` : ''}</span></li>)}</ul></div>}
     <CellEditor c={cell} onClose={() => setCell(null)} />
-  </Card>
+  </Card></>
 }
 
 function CellEditor({ c, onClose }: { c: Cell | null; onClose: () => void }) {

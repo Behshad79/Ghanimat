@@ -143,7 +143,7 @@ function ExtCard({ e }: { e: ExtSite }) {
     toast(`سفارش ${o.id} ثبت شد؛ موجودی همان مالک کم شد و سهم‌ها حساب شد. موجودی سایت غنیمت هم همین لحظه به‌روز شد.`)
   }
   const refundOrder = (o: ExtOrder) => { mutate((x) => { refundExt(x, e.partyId, o.id, by()) }, { action: 'برگشت سفارش سایت شریک (لغو یا مرجوعی)', target: `${o.id} · ${e.url}` }); toast(`برگشت ${o.id} ثبت شد؛ کالا به موجودی همان مالک برگشت و سهم‌ها برعکس شد.`) }
-  const sync = async () => { if (e.paused) { toast('همگام‌سازی این سایت با «توقف فوری» بسته است؛ از «ورود بار و حواله ← توقف و انتقال» ازسرگیری کنید.', { tone: 'err' }); return } setBusy(true); try { await fakeCall(true, 900)
+  const sync = async () => { if (e.paused) { toast('همگام‌سازی این سایت با «توقف فوری» بسته است؛ از «تأمین و ورود بار ← توقف و انتقال» ازسرگیری کنید.', { tone: 'err' }); return } setBusy(true); try { await fakeCall(true, 900)
     const keys = partnerCodes(d, e.partyId).filter((c) => c.stock > 0).map((c) => c.code); const k = keys[Math.floor(Math.random() * keys.length)]; const oid = `ve1-${5524 + e.inbox.length}`
     mutate((x) => { const y = x.stock.ext.find((z) => z.partyId === e.partyId)!; y.lastSync = new Date().toISOString(); if (!y.pullOrders || !k) return
       y.inbox.unshift({ id: oid, at: new Date().toISOString(), status: 'new', customer: 'مشتری سایت', lines: [{ sku: k, name: k, qty: 1, price: 2750000 }] })

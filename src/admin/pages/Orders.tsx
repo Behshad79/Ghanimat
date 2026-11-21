@@ -228,7 +228,7 @@ export function OrderDetail() {
     : live.status === 'ship.picking' ? { label: 'بسته‌بندی با اسکن', hint: `مرسولهٔ ${live.id}: هر قلم را اسکن کنید`, run: () => void openPack(live.id) }
     : live.status === 'ship.partner_confirm' ? { label: 'منتظر تأیید موجودی شریک', hint: 'پیامک و پیام‌رسان برای او ارسال شده است.', tone: 'wait' }
     : live.status === 'ship.packed' ? { label: /پست|تیپاکس|باربری/.test(live.method) ? 'ثبت تحویل به پست و کد رهگیری' : 'ثبت پیک و تحویل بسته', hint: `مرسولهٔ ${live.id} آمادهٔ ارسال است`, run: () => goShip(live.id) }
-    : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است؛ گام پایانی`, run: () => goShip(live.id), tone: 'deliver' }
+    : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است؛ گام پایانی`, run: () => { goShip(live.id); setTimeout(() => (document.querySelector(`#ship-${live.id} .deliver-cta`) as HTMLElement | null)?.click(), 380) }, tone: 'deliver' }
   return (
     <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · ${c.name}`}
       actions={<>

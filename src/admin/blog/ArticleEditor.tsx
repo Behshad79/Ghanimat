@@ -66,7 +66,7 @@ function BlockForm({ b, set, post }: { b: Block; set: (p: Partial<Block>) => voi
 export function ArticleEditor() {
   const { id = '' } = useParams(); const d = useDB(); const nav = useNavigate(); const post = d.blog.posts.find((p) => p.id === id)
   const [side, setSide] = useState('settings'); const [ins, setIns] = useState<number | null>(null); const [q, setQ] = useState(''); const [prev, setPrev] = useState<null | 'desk' | 'mob'>(null); const [drag, setDrag] = useState<number | null>(null); const [focus, setFocus] = useState<string | null>(null)
-  if (!post) return <Page title="مقاله پیدا نشد" back="/admin/blog"><Card><Button onClick={() => nav('/admin/blog')}>بازگشت به وبلاگ</Button></Card></Page>
+  if (!post) return <Page title="مقاله پیدا نشد" back="/admin/blog"><Card><p className="mb-3 text-13 text-t2">مقاله‌ای با این نشانی نیست. ممکن است حذف شده یا نشانی آن عوض شده باشد.</p><Button onClick={() => nav('/admin/blog')}>بازگشت به وبلاگ</Button></Card></Page>
   const up = (fn: (p: Post) => void, log?: string) => mutate((x) => fn(x.blog.posts.find((p) => p.id === id)!), log ? { action: log, target: post.title } : undefined)
   const setB = (bid: string, patch: Partial<Block>) => up((p) => { Object.assign(p.blocks.find((b) => b.id === bid)!, patch) })
   const insert = (t: BlockT, at = ins) => { if (at === null) return; const blk = nb(t); up((p) => { p.blocks.splice(at, 0, blk) }, 'افزودن بلوک به مقاله'); setIns(null); setQ(''); setFocus(blk.id) }

@@ -32,8 +32,11 @@ const now = () => new Date().toISOString()
 export function createRefund(x: DB, r: { orderId: string; customerId: string; amount: number; source: string; dest: string; note?: string; account?: string }) {
   if (!r.amount || r.amount <= 0) return
   x.refunds ??= []
+  // سقف: جمع بازگشت‌های فعال یک سفارش از مبلغ کل همان سفارش بیشتر نمی‌شود
+  const o = x.orders.find((q) => q.id === r.orderId); const open = x.refunds.filter((q) => q.orderId === r.orderId && q.status !== 'failed').reduce((a, q) => a + q.amount, 0)
+  if (o) { const room = Math.max(0, o.total - open); if (room <= 0) return; if (r.amount > room) r = { ...r, amount: room, note: `${r.note ? `${r.note} · ` : ''}مبلغ به سقف باقی‌ماندهٔ سفارش (${room.toLocaleString('fa-IR')} تومان) محدود شد` } }
   // هیچ بازگشتی خودکار تأیید یا اجرا نمی‌شود؛ پرونده باز می‌ماند تا خودمان تأیید و اعمال کنیم
-  const id = `RF-${String(1000 + x.refunds.length + 1)}`; const at = now(); const by = who()
+  const id = `RF-${String(1 + Math.max(1000, ...x.refunds.map((q) => Number(q.id.replace(/\D/g, '')) || 0)))}`; const at = now(); const by = who()
   const rf: Refund = { id, ...r, at, by, status: 'requested', log: [{ at, by, step: 'ثبت درخواست', note: `${r.source} · مقصد: ${r.dest}${r.account ? ` · ${r.account}` : ''}` }] }
   x.refunds.unshift(rf); syncOrder(x, r.orderId)
 }

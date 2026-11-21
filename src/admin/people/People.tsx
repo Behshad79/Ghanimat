@@ -89,7 +89,7 @@ export function People() {
 export function PersonFile() {
   const { id = '' } = useParams(); const d = useDB(); const nav = useNavigate(); const e = d.people.find((x) => x.id === id); const [tab, setTab] = useTab('id')
   const [pay, setPay] = useState<PayItem | null>(null); const [slip, setSlip] = useState(false); const [note, setNote] = useState(''); const [loan, setLoan] = useState({ title: '', amount: '', n: '6' })
-  if (!e) return <Page title="پرونده پیدا نشد" module="people"><Card><Button onClick={() => nav('/admin/people')}>بازگشت به فهرست</Button></Card></Page>
+  if (!e) return <Page title="پرونده پیدا نشد" module="people"><Card><p className="mb-3 text-13 text-t2">پرونده‌ای با این شناسه در منابع انسانی نیست؛ ممکن است بایگانی شده باشد.</p><Button onClick={() => nav('/admin/people')}>بازگشت به فهرست</Button></Card></Page>
   const cfg = d.peopleCfg; const s = payslip(e, cfg)
   const up = (fn: (x: Employee) => void, action: string) => mutate((x) => fn(x.people.find((y) => y.id === id)!), { action, target: e.name })
   const txt = (k: keyof Employee, l: string, ltr?: boolean) => <Field label={l}><Input className={ltr ? 'ltr text-left font-mono' : ''} value={String(e[k] ?? '')} onChange={(ev) => up((x) => { (x[k] as string) = ev.target.value }, `ویرایش ${l}`)} /></Field>

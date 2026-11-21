@@ -48,7 +48,7 @@ function CaseView({ kind }: { kind: Kind }) {
   const { id = '' } = useParams(); const d = useDB(); const nav = useNavigate()
   const c = (kind === 'return' ? d.returns : d.warranties).find((x) => x.id === id) as C | undefined
   const [msg, setMsg] = useState(false)
-  if (!c) return <Page title="پرونده پیدا نشد" back="/admin/returns"><Card><p className="p-6 text-center text-13 text-t2">پرونده‌ای با شمارهٔ {id} نیست.</p></Card></Page>
+  if (!c) return <Page title="پرونده پیدا نشد" back="/admin/returns"><Card><div className="p-6 text-center text-13 text-t2"><p>پرونده‌ای با شمارهٔ <bdi dir="ltr" className="font-mono">{id}</bdi> نیست. شماره را بررسی کنید یا از فهرست مرجوعی و گارانتی پیدایش کنید.</p><Button className="mt-3" onClick={() => history.back()}>بازگشت</Button></div></Card></Page>
   const cu = d.customers.find((x) => x.id === c.customerId)
   const unit = d.units.find((u) => u.id === c.unitId)
   const prod = d.products.find((p) => p.id === (unit?.productId ?? c.productId))

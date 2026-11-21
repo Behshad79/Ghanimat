@@ -174,7 +174,7 @@ function TopBar({ onMenu, onCmd, onAI }: { onMenu: () => void; onCmd: () => void
 function BackToTop({ main }: { main: React.RefObject<HTMLElement | null> }) {
   const [on, setOn] = useState(false)
   useEffect(() => { const m = main.current; if (!m) return; const f = () => setOn(m.scrollTop > 900); m.addEventListener('scroll', f, { passive: true }); return () => m.removeEventListener('scroll', f) }, [main])
-  return <button type="button" aria-label="بازگشت به بالای صفحه" title="بازگشت به بالا" onClick={() => main.current?.scrollTo({ top: 0, behavior: 'smooth' })} className={cx('no-print fixed bottom-24 left-6 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface text-t1 shadow-float transition-all duration-200 hover:text-brand lg:bottom-28', on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0')}><ArrowUp size={18} /></button>
+  return <button type="button" aria-label="بازگشت به بالای صفحه" title="بازگشت به بالا" onClick={() => main.current?.scrollTo({ top: 0, behavior: 'smooth' })} className={cx('no-print fixed right-4 bottom-20 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface text-t1 shadow-float transition-all duration-200 hover:text-brand lg:right-auto lg:bottom-28 lg:left-6', on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0')}><ArrowUp size={18} /></button>
 }
 
 /** ناوبری پایین موبایل با ۵ آیتم (بخش ۵.۸) */
@@ -186,7 +186,7 @@ function MobileNav({ onMore, onAI }: { onMore: () => void; onAI: () => void }) {
   )
   return (
     <>
-      <button aria-label="دستیار غنیمت" onClick={onAI} className="no-print fixed bottom-20 left-4 z-30 grid size-12 place-items-center rounded-full bg-brand-solid text-white shadow-float lg:hidden"><Sparkles size={20} /></button>
+      <button aria-label="دستیار هوشمند غنیمت" title="دستیار هوشمند" onClick={onAI} className="ai-fab no-print fixed bottom-20 left-4 z-30 grid size-12 place-items-center rounded-full text-brand lg:hidden"><Sparkles size={20} /><span aria-hidden className="absolute -top-1 -right-1 rounded-full bg-brand-solid px-1 text-[9px] font-bold leading-[14px] text-white">AI</span></button>
       <nav className="no-print flex h-16 shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="ناوبری موبایل">
         <Item to="/admin" icon={<HomeIcon size={20} />} label="خانه" />
         <Item to="/admin/orders" icon={<ShoppingBag size={20} />} label="سفارش‌ها" n={NAV.find((x) => x.id === 'orders')!.count!(d)} />

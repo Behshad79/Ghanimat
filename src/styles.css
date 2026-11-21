@@ -256,3 +256,10 @@ table td .font-mono, table td bdi.font-mono { white-space: nowrap; }
 .msg-tail-out::after, .msg-tail-in::after { content: ''; position: absolute; bottom: 0; width: 10px; height: 14px; background: inherit; }
 .msg-tail-out::after { left: -6px; clip-path: path('M10 0 C10 8 6 12 0 14 L10 14 Z'); }
 .msg-tail-in::after { right: -6px; clip-path: path('M0 0 C0 8 4 12 10 14 L0 14 Z'); }
+
+/* دو دکمهٔ شناور با هویت جدا: پیام‌رسان تیم (مربع گرد سرمه‌ای با نقطهٔ زرد غنیمت) و دستیار هوشمند (دایرهٔ سفید با حلقهٔ آبی) */
+.msg-fab { background: linear-gradient(150deg, #1d2266 0%, #10123d 100%); box-shadow: 0 10px 24px -8px rgba(16,18,61,.55), inset 0 1px 0 rgba(255,255,255,.12); }
+.msg-fab.is-open { background: #0000ff; }
+.msg-head { background: linear-gradient(150deg, #1d2266 0%, #10123d 70%), #10123d; position: relative; }
+.msg-head::after { content: ''; position: absolute; inset: auto 0 0 0; height: 2px; background: linear-gradient(90deg, #ffc24b, #0000ff); opacity: .9; }
+.ai-fab { background: var(--color-surface, #fff); box-shadow: 0 0 0 2px rgba(0,0,255,.9), 0 0 0 5px rgba(0,0,255,.12), 0 10px 22px -8px rgba(0,0,255,.45); }

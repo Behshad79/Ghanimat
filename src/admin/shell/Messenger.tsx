@@ -2,7 +2,7 @@
 // لینک خودکار به سفارش و حواله و محموله، و اعلان کوچک وقتی پیام تازه می‌رسد. میان‌بر: Ctrl+J
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, BellOff, Check, CheckCheck, Copy, FileText, MessageCircle, Paperclip, Pin, Plus, Reply, Search, SendHorizontal, Smile, Trash2, Users, X } from 'lucide-react'
+import { ArrowRight, BellOff, Check, CheckCheck, Copy, FileText, MessageCircle, MessagesSquare, Paperclip, Pin, Plus, Reply, Search, SendHorizontal, Smile, Trash2, Users, X } from 'lucide-react'
 import { cx } from '@/shared/ui/base'
 import { toast } from '@/shared/ui/overlay'
 import { currentUser, getDB, mutate, useDB } from '@/shared/lib/store'
@@ -104,13 +104,15 @@ export function Messenger() {
     </div> })()}
     {/* دکمهٔ شناور */}
     <button type="button" aria-label={`پیام‌رسان تیم${badge ? `، ${badge} پیام خوانده‌نشده` : ''}`} title="پیام‌رسان تیم (Ctrl+J)" onClick={() => { setOpen(!open); setNotice(null) }}
-      className={cx('no-print fixed bottom-[8.5rem] left-4 z-[44] grid size-14 place-items-center rounded-full text-white shadow-float transition-transform hover:scale-105 lg:bottom-5 lg:left-6', open ? 'bg-[#10123d]' : 'bg-[linear-gradient(135deg,#0000ff,#3d3dff)]')}>
-      {open ? <X size={22} /> : <MessageCircle size={24} />}
-      {!open && badge > 0 && <><span className="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-danger-solid px-1 text-11 font-bold leading-4">{fa(badge)}</span><span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-brand-solid/30" /></>}
+      className={cx('msg-fab group no-print fixed bottom-[8.75rem] left-4 z-[44] grid size-12 place-items-center rounded-[18px] text-white transition-transform hover:-translate-y-0.5 lg:bottom-5 lg:left-6 lg:size-14 lg:rounded-[20px]', open && 'is-open')}>
+      {open ? <X size={22} /> : <MessagesSquare size={23} strokeWidth={2.1} />}
+      {!open && <span aria-hidden className="absolute -bottom-0.5 -left-0.5 size-3 rounded-full border-2 border-surface bg-[#ffc24b]" />}
+      {!open && <span aria-hidden className="pointer-events-none absolute left-full ml-2 hidden whitespace-nowrap rounded-lg bg-[#10123d] px-2.5 py-1 text-11 font-semibold opacity-0 shadow-float transition-opacity group-hover:opacity-100 lg:block">پیام‌رسان تیم</span>}
+      {!open && badge > 0 && <><span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-danger-solid px-1 text-11 font-bold leading-4">{fa(badge)}</span><span aria-hidden className="absolute inset-0 animate-ping rounded-[18px] bg-[#10123d]/25" /></>}
     </button>
     {open && <div role="dialog" aria-label="پیام‌رسان تیم" className="no-print anim-pop fixed inset-x-2 top-16 bottom-2 z-[46] flex flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-2xl lg:inset-x-auto lg:top-auto lg:bottom-24 lg:left-6 lg:h-[min(600px,calc(100vh-140px))] lg:w-[392px]">
       {view === 'list' && <>
-        <header className="bg-[linear-gradient(135deg,#0000ff,#2b2bff)] px-4 pt-4 pb-3 text-white">
+        <header className="msg-head px-4 pt-4 pb-3 text-white">
           <div className="flex items-center gap-2"><b className="text-16">پیام‌رسان تیم</b><span className="rounded-full bg-white/15 px-2 py-0.5 text-11">{fa(team.filter((m) => m.status === 'آنلاین').length)} آنلاین</span>
             <button type="button" onClick={() => setView('new')} className="mr-auto flex h-8 items-center gap-1 rounded-full bg-white/15 px-3 text-12 font-semibold hover:bg-white/25"><Plus size={14} />گفت‌وگوی تازه</button>
             <button type="button" aria-label="بستن" onClick={() => setOpen(false)} className="grid size-8 place-items-center rounded-full hover:bg-white/15"><X size={16} /></button></div>

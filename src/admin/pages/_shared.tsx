@@ -88,3 +88,6 @@ export function OrderLink({ id }: { id: string }) {
   const nav = useNavigate(); const oid = id.match(/GH-\d+/)?.[0] ?? id
   return <button type="button" title={`سفارش ${oid}`} onClick={(e) => { e.stopPropagation(); nav(`/admin/orders/${oid}`) }} className="ltr font-mono text-12 text-t1 underline-offset-4 hover:text-brand hover:underline">{id}</button>
 }
+
+/** لینک صفحهٔ کالا در سایت (برای کالای منتشرشده) */
+export const storeUrl = (p?: { id: string; en?: string }) => p ? `https://ghanimat.ir/product/${p.id}/${(p.en ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : ''

@@ -2,7 +2,9 @@
 // در حالت تفکیک محموله سهم هر انبار را می‌شمارد، و اگر صفحهٔ کالا ساخته نشده یا آمادهٔ انتشار است همان‌جا پیشنهاد می‌دهد.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Eye, PackageCheck, RotateCcw, Send, Sparkles } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Eye, Link2, PackageCheck, RotateCcw, Send, Sparkles } from 'lucide-react'
+import { copyText } from '@/shared/ui/base'
+import { storeUrl } from '../pages/_shared'
 import { Badge, Button, Card, cx, Segmented, Select } from '@/shared/ui/base'
 import { toast } from '@/shared/ui/overlay'
 import { getDB, myParty, mutate, useDB } from '@/shared/lib/store'
@@ -69,7 +71,7 @@ export function ScanCheck() {
         <div className="space-y-1">
           <p><span className="text-t2">مالک:</span> <b>{s.parties.find((q) => q.id === last.r!.owner)?.name}{s.parties.find((q) => q.id === last.r!.owner)?.brandName ? ` (${s.parties.find((q) => q.id === last.r!.owner)?.brandName})` : ''}</b>{mode === 'owner' && <span className="text-t2"> · {last.r.owner === operatorOf(here) ? `درست است، مال ${whName(s, here)} است` : `مال شما نیست؛ باید به ${whName(s, s.warehouses.find((w) => w.operator === last.r!.owner)?.id ?? 'tehran')} برود`}</span>}</p>
           {last.r.batchId && <p><span className="text-t2">محموله:</span> {last.r.batchId}{last.r.split ? ` · سهم‌ها: ${Object.entries(last.r.split).filter(([, q]) => q).map(([w, q]) => `${whName(s, w)} ${fa(q)}`).join('، ')}` : ''}</p>}
-          {p ? <p><span className="text-t2">صفحهٔ کالا:</span> {p.status === 'product.published' ? <Badge tone="success">منتشر شده</Badge> : <Badge tone="warning">{p.status === 'product.incoming' ? 'در راه' : 'پیش‌نویس'} · آمادگی {fa(p.health)}٪</Badge>}{lots.length > 0 && <span className="mr-2 text-t2">موجودی این مالک در {whName(s, here)}: {fa(inHere)}</span>}</p> : <p className="font-semibold text-warning">برای این کالا هنوز صفحه ساخته نشده است.</p>}
+          {p ? <p><span className="text-t2">صفحهٔ کالا:</span> {p.status === 'product.published' ? <span className="inline-flex flex-wrap items-center gap-1.5"><Badge tone="success">منتشر شده</Badge><a href={storeUrl(p)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"><ExternalLink size={12} />مشاهده در سایت</a><button type="button" className="inline-flex items-center gap-1 text-t2 hover:text-brand" onClick={() => { copyText(storeUrl(p)); toast('لینک صفحهٔ کالا کپی شد.') }}><Link2 size={12} />کپی لینک</button><button type="button" className="text-t2 hover:text-brand" onClick={() => nav(`/admin/catalog/${p.id}`)}>صفحه در پنل</button></span> : <Badge tone="warning">{p.status === 'product.incoming' ? 'در راه' : 'پیش‌نویس'} · آمادگی {fa(p.health)}٪</Badge>}{lots.length > 0 && <span className="mr-2 text-t2">موجودی این مالک در {whName(s, here)}: {fa(inHere)}</span>}</p> : <p className="font-semibold text-warning">برای این کالا هنوز صفحه ساخته نشده است.</p>}
           {inbound && <p className="font-semibold text-info">این کالا در حوالهٔ {inbound.id} در راه {whName(s, here)} است؛ با تحویل حواله ثبت می‌شود.</p>}
         </div>
         <div className="flex flex-col gap-1.5">

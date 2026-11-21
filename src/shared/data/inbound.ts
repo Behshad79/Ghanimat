@@ -2,7 +2,7 @@
 // برچسب مالک‌دار از همان لحظهٔ ثبت؛ حوالهٔ بین انبارها با چک‌لیست اسکن؛ و ابزار تشخیص «این کالا باید دست چه کسی باشد».
 import type { DB } from './seed'
 import { labelCode, scanLookup, type StockDB } from './stock'
-import type { Alloc, InBatch, InItem, InVariant } from './incoming'
+import type { Alloc, FundAdj, InBatch, InItem, InVariant } from './incoming'
 
 export const CURRENCIES = ['دلار', 'درهم', 'دینار', 'یورو', 'لیر', 'تومان'] as const
 export const BUY_SOURCES = ['آمازون', 'نون (Noon)', 'بازار اربیل', 'بازار سلیمانیه', 'فروشگاه رسمی', 'عمده‌فروش', 'یوسف', 'سایر'] as const
@@ -82,4 +82,30 @@ export const BNPL_MODEL: Record<Bnpl['model'], string> = {
   after_delivery: 'تسویهٔ یک‌جا با ما بعد از تأیید تحویل (منهای کارمزد)',
   after_purchase: 'تسویهٔ یک‌جا با ما بعد از خرید (منهای کارمزد)',
   per_installment: 'واریز به ما هم‌زمان با پرداخت هر قسط مشتری',
+}
+
+/** دلیل‌های آماده برای اختلاف پول و کالا. «بدهی» یعنی خریدار باید این مبلغ را به صاحب پول برگرداند */
+export const ADJ_KINDS: { k: string; debt?: boolean; refund?: boolean }[] = [
+  { k: 'خرج سفر و اقامت' }, { k: 'کرایه و باربری در مبدأ' }, { k: 'کارمزد خرید یا صرافی' }, { k: 'پول برگشتی نقد', refund: true },
+  { k: 'برداشت شخصی خریدار (بدهی)', debt: true }, { k: 'کالای خراب یا گم‌شده در مسیر' }, { k: 'سایر' },
+]
+export const isDebt = (a: FundAdj) => !!ADJ_KINDS.find((x) => x.k === a.kind)?.debt
+/** ارزش کالای هر مالک در یک محموله: به ارز خرید و به تومان (با سهم حمل و گمرک) */
+export function ownerValues(b: InBatch) {
+  const out: Record<string, { qty: number; cur: number; toman: number; extra: number }> = {}
+  b.items.forEach((it) => { const L = landed(b, it); (it.variants?.length ? it.variants : [null]).forEach((v) => allocOf(it, v).forEach((a) => {
+    const o = (out[a.owner] ??= { qty: 0, cur: 0, toman: 0, extra: 0 }); o.qty += a.qty; o.cur += (it.unitCost ?? 0) * a.qty; o.toman += L.unit * a.qty; o.extra += L.share * a.qty })) })
+  return out
+}
+/** تطبیق پول و کالا برای هر نفر: پولی که داده − ارزش کالایی که مالکش است − هزینه‌ها و برگشتی‌های توضیح‌داده‌شده = مانده */
+export type ReconRow = { party: string; paid: number; goods: number; explained: number; debt: number; diff: number; qty: number; toman: number; extra: number; ok: boolean }
+export function fundRecon(b: InBatch): { rows: ReconRow[]; paid: number; goods: number; diff: number; ok: boolean; hasFunding: boolean } {
+  const ov = ownerValues(b); const F = b.funding ?? []; const A = b.adjusts ?? []
+  const ids = [...new Set([...Object.keys(ov), ...F.map((f) => f.party), ...A.map((a) => a.party)])]
+  const rows = ids.map((party) => { const paid = F.filter((f) => f.party === party).reduce((x, f) => x + f.amount, 0); const goods = ov[party]?.cur ?? 0
+    const explained = A.filter((a) => a.party === party).reduce((x, a) => x + a.amount, 0); const debt = A.filter((a) => a.party === party && isDebt(a)).reduce((x, a) => x + a.amount, 0)
+    const diff = Math.round((paid - goods - explained) * 100) / 100; const tol = Math.max(1, paid * 0.002)
+    return { party, paid, goods, explained, debt, diff, qty: ov[party]?.qty ?? 0, toman: ov[party]?.toman ?? 0, extra: ov[party]?.extra ?? 0, ok: Math.abs(diff) <= tol } })
+  const paid = rows.reduce((x, r) => x + r.paid, 0); const goods = rows.reduce((x, r) => x + r.goods, 0)
+  return { rows, paid, goods, diff: rows.reduce((x, r) => x + r.diff, 0), ok: rows.every((r) => r.ok), hasFunding: F.length > 0 }
 }

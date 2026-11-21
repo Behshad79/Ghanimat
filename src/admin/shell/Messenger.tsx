@@ -97,20 +97,20 @@ export function Messenger() {
   const th = tid ? mine.find((t) => t.id === tid) : undefined
   return <>
     {/* اعلان کوچک بالای دکمه */}
-    {notice && !open && (() => { const t = mine.find((x) => x.id === notice.thread); const m = mem(notice.from); return <div role="status" className="no-print anim-pop fixed bottom-[12.5rem] left-4 z-[45] w-[min(88vw,320px)] cursor-pointer rounded-2xl border border-line bg-surface p-3 shadow-float lg:bottom-24 lg:left-6" onClick={() => openThread(notice.thread)}>
+    {notice && !open && (() => { const t = mine.find((x) => x.id === notice.thread); const m = mem(notice.from); return <div role="status" className="no-print anim-pop fixed bottom-[12.5rem] left-4 z-[38] w-[min(88vw,320px)] cursor-pointer rounded-2xl border border-line bg-surface p-3 shadow-float lg:bottom-24 lg:left-6" onClick={() => openThread(notice.thread)}>
       <div className="flex items-start gap-2.5"><Avatar m={m} size={36} /><div className="min-w-0 flex-1"><p className="flex items-center gap-1 text-12"><b>{m?.name}</b>{t?.kind === 'group' && <span className="truncate text-t2">در {t.name}</span>}<span className="mr-auto text-11 text-t3">همین حالا</span></p><p className="mt-0.5 line-clamp-2 text-12 text-t2">{notice.text ?? (notice.files?.length ? `📎 ${notice.files[0].name}` : '')}</p></div>
         <button type="button" aria-label="بستن اعلان" onClick={(e) => { e.stopPropagation(); setNotice(null) }} className="text-t3 hover:text-t1"><X size={14} /></button></div>
       <p className="mt-2 text-11 font-semibold text-brand">پاسخ بدهید ←</p>
     </div> })()}
     {/* دکمهٔ شناور */}
     <button type="button" aria-label={`پیام‌رسان تیم${badge ? `، ${badge} پیام خوانده‌نشده` : ''}`} title="پیام‌رسان تیم (Ctrl+J)" onClick={() => { setOpen(!open); setNotice(null) }}
-      className={cx('msg-fab group no-print fixed bottom-[8.75rem] left-4 z-[44] grid size-12 place-items-center rounded-[18px] text-white transition-transform hover:-translate-y-0.5 lg:bottom-5 lg:left-6 lg:size-14 lg:rounded-[20px]', open && 'is-open')}>
+      className={cx('msg-fab group no-print fixed bottom-[8.75rem] left-4 z-[37] grid size-12 place-items-center rounded-[18px] text-white transition-transform hover:-translate-y-0.5 lg:bottom-5 lg:left-6 lg:size-14 lg:rounded-[20px]', open && 'is-open')}>
       {open ? <X size={22} /> : <MessagesSquare size={23} strokeWidth={2.1} />}
       {!open && <span aria-hidden className="absolute -bottom-0.5 -left-0.5 size-3 rounded-full border-2 border-surface bg-[#ffc24b]" />}
       {!open && <span aria-hidden className="pointer-events-none absolute left-full ml-2 hidden whitespace-nowrap rounded-lg bg-[#10123d] px-2.5 py-1 text-11 font-semibold opacity-0 shadow-float transition-opacity group-hover:opacity-100 lg:block">پیام‌رسان تیم</span>}
       {!open && badge > 0 && <><span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full border-2 border-surface bg-danger-solid px-1 text-11 font-bold leading-4">{fa(badge)}</span><span aria-hidden className="absolute inset-0 animate-ping rounded-[18px] bg-[#10123d]/25" /></>}
     </button>
-    {open && <div role="dialog" aria-label="پیام‌رسان تیم" className="no-print anim-pop fixed inset-x-2 top-16 bottom-2 z-[46] flex flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-2xl lg:inset-x-auto lg:top-auto lg:bottom-24 lg:left-6 lg:h-[min(600px,calc(100vh-140px))] lg:w-[392px]">
+    {open && <div role="dialog" aria-label="پیام‌رسان تیم" className="no-print anim-pop fixed inset-x-2 top-16 bottom-2 z-[39] flex flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-2xl lg:inset-x-auto lg:top-auto lg:bottom-24 lg:left-6 lg:h-[min(600px,calc(100vh-140px))] lg:w-[392px]">
       {view === 'list' && <>
         <header className="msg-head px-4 pt-4 pb-3 text-white">
           <div className="flex items-center gap-2"><b className="text-16">پیام‌رسان تیم</b><span className="rounded-full bg-white/15 px-2 py-0.5 text-11">{fa(team.filter((m) => m.status === 'آنلاین').length)} آنلاین</span>

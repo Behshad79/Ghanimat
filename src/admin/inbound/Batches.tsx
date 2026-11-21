@@ -18,6 +18,7 @@ import { IN_ROUTES, IN_STAGES, type Alloc, type InBatch, type InItem, type InVar
 import { allocOf, BUY_SOURCES, CURRENCIES, itemLabel, itemQty, itemSplit, labelLines, landed, ownersOf, varSuffix } from '@/shared/data/inbound'
 import { PartyChip, partyLogo, whName } from '../stock/common'
 import { ensureProduct, landBatch, mid } from './ops'
+import { FundingEditor, FundOverview, FundPanel } from './Funding'
 
 const me = () => currentUser()?.name ?? 'پنل'
 const usd = () => Math.round(((getDB().storeCfg?.fx?.rates?.['دلار'] ?? 61500) * 1.12) / 100) * 100
@@ -56,6 +57,7 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
       <span className="flex flex-wrap gap-1.5 text-11 text-t2"><span className="rounded-full bg-neutral-bg px-2 py-1">{fa(open.flatMap((b) => b.items).length)} قلم · {fa(units)} عدد در راه</span><span className="rounded-full bg-neutral-bg px-2 py-1">ارزش {compactToman(value)}</span><span className="rounded-full bg-neutral-bg px-2 py-1">غنیمت {fa(byOwner('gh'))} · Ve1 {fa(byOwner('ys'))}</span>{open.flatMap((b) => b.items).some((it) => !it.productId) && <span className="rounded-full bg-warning-bg px-2 py-1 text-warning">{fa(open.flatMap((b) => b.items).filter((it) => !it.productId).length)} صفحه نساخته</span>}</span>
       <span className="mr-auto flex gap-2"><Button icon={<Zap size={14} />} onClick={newSingle} title="یک کالا که رفیقی آورده یا از جایی برداشته‌اید؛ بدون ساختن محموله">تک‌کالا</Button><Button variant="primary" icon={<Plus size={14} />} onClick={newBatch}>محمولهٔ تازه</Button></span>
     </div>
+    {view === 'open' && !q.trim() && <FundOverview />}
     {list.length === 0 && <Card><EmptyState title={view === 'open' ? 'محمولهٔ بازی نیست.' : 'هنوز محموله‌ای رسید نشده است.'} desc="خرید عراق، دبی، آمازون یا تأمین‌کنندهٔ داخلی را از همان روز خرید ثبت کنید." action={<Button variant="primary" onClick={newBatch}>محمولهٔ تازه</Button>} /></Card>}
     {list.map((b, bi) => { const expanded = isOpen(b.id, bi); const fin = batchFin(d, b); const si = IN_STAGES.indexOf(b.stage as (typeof IN_STAGES)[number]); const dl = Math.ceil((+new Date(b.eta) - Date.now()) / 864e5)
       const tot = b.items.reduce((a, it) => a + itemQty(it), 0); const split: Record<string, number> = {}; b.items.forEach((it) => Object.entries(itemSplit(it)).forEach(([w, q]) => { split[w] = (split[w] ?? 0) + q }))
@@ -88,6 +90,7 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
               </tr> })}
           </tbody></table></div>}
         {!b.receivedAt && <QuickAdd batch={b} />}
+        {!b.single && <FundPanel b={b} onEdit={() => setForm(structuredClone(b))} />}
         <FinStrip b={b} fin={fin} />
         </>}
       </Card> })}
@@ -137,7 +140,7 @@ function BatchForm({ b, onClose }: { b: InBatch; onClose: () => void }) {
   return <Modal open onClose={onClose} wide title={exists ? `ویرایش محمولهٔ ${b.id}` : 'محمولهٔ تازه'} footer={<><Button variant="primary" disabled={!f.title.trim()} onClick={save}>{exists ? 'ذخیره' : 'ثبت محموله'}</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="sm:col-span-2"><Field label="عنوان محموله"><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="مثلاً خرید اربیل · آذر یا خرید از یوسف" /></Field></div>
-      <Field label="خریدار"><Select value={f.buyer ?? 'gh'} onChange={(v) => setF({ ...f, buyer: v })} options={d.stock.parties.filter((p) => p.active).map((p) => [p.id, p.brandName ? `${p.name} (${p.brandName})` : p.name] as [string, string])} other={false} /></Field>
+      <Field label="خریدار" help="کسی که می‌رود و می‌خرد؛ لازم نیست مالک کالاها یا صاحب پول باشد"><Select value={f.buyer ?? 'gh'} onChange={(v) => setF({ ...f, buyer: v })} options={d.stock.parties.filter((p) => p.active).map((p) => [p.id, p.brandName ? `${p.name} (${p.brandName})` : p.name] as [string, string])} other={false} /></Field>
       <Field label="خرید از (تأمین‌کننده یا بازار)"><Input value={f.supplier ?? ''} onChange={(e) => setF({ ...f, supplier: e.target.value })} placeholder="بازار اربیل، آمازون، یوسف…" /></Field>
       <Field label="مسیر"><Select value={f.route} onChange={(v) => setF({ ...f, route: v })} options={IN_ROUTES} /></Field>
       <Field label="انبار ورودی (اول کجا می‌رسد)"><Select value={f.landing ?? 'tehran'} onChange={(v) => setF({ ...f, landing: v })} options={d.stock.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} other={false} /></Field>
@@ -153,6 +156,7 @@ function BatchForm({ b, onClose }: { b: InBatch; onClose: () => void }) {
       {d.storeCfg.trade.modules.imports && ([['ntsw', 'شمارهٔ ثبت سفارش (NTSW)', false], ['sata', 'کد رهگیری تأمین ارز', false], ['kotaj', 'شمارهٔ کوتاژ اظهارنامه', false], ['customsValue', 'ارزش گمرکی (تومان)', true], ['duties', 'حقوق ورودی (تومان)', true], ['customsVat', 'ارزش افزودهٔ گمرکی (تومان)', true]] as const).map(([k, l, num]) => <Field key={k} label={l}><Input className="ltr text-left" value={String((f.trade as Record<string, string | number> | undefined)?.[k] ?? '')} onChange={(e) => setF({ ...f, trade: { ...(f.trade ?? {}), [k]: num ? Number(e.target.value.replace(/\D/g, '')) || 0 : e.target.value } })} /></Field>)}
       {d.storeCfg.trade.modules.warehouse && <Field label="شناسهٔ رسید سامانهٔ جامع انبارها"><Input className="ltr text-left" value={f.trade?.nwms ?? ''} onChange={(e) => setF({ ...f, trade: { ...(f.trade ?? {}), nwms: e.target.value } })} /></Field>}
     </div>}
+    <FundingEditor b={f} set={setF} />
     <p className="mt-3 rounded-lg bg-neutral-bg px-3 py-2 text-11 text-t2">هزینهٔ حمل، گمرک و سایر به نسبت ارزش روی بهای هر کالا پخش می‌شود و بهای تمام‌شدهٔ لات‌ها با همین عدد ثبت می‌شود.</p>
   </Modal>
 }

@@ -15,7 +15,7 @@ export type ManifestIssue = { at: string; by: string; code: string; kind: 'wrong
 export type Manifest = {
   id: string; from: string; to: string; status: 'draft' | 'packing' | 'sent' | 'received' | 'partial' | 'cancelled'
   createdAt: string; by: string; batchId?: string; note?: string; reason?: string; carrier?: string; tracking?: string
-  sentAt?: string; sentBy?: string; receivedAt?: string; receivedBy?: string
+  sentAt?: string; sentBy?: string; arrivedAt?: string; arrivedBy?: string; receivedAt?: string; receivedBy?: string
   lines: ManifestLine[]; issues: ManifestIssue[]; events: { at: string; by: string; text: string }[]
 }
 export const MANIFEST_STATUS: Record<Manifest['status'], { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' | 'purple' }> = {
@@ -23,6 +23,17 @@ export const MANIFEST_STATUS: Record<Manifest['status'], { label: string; tone: 
   received: { label: 'تحویل کامل', tone: 'success' }, partial: { label: 'تحویل با مغایرت', tone: 'warning' }, cancelled: { label: 'لغو شد', tone: 'danger' },
 }
 
+/** مرحلهٔ دیداری حواله برای رنگ کارت: در مبدأ، در راه، رسیده و منتظر اسکن نهایی، تمام‌شده، با مغایرت، لغو */
+export type ManifestPhase = 'origin' | 'transit' | 'arrived' | 'done' | 'issue' | 'cancel'
+export function manifestPhase(m: Manifest): ManifestPhase {
+  if (m.status === 'cancelled') return 'cancel'; if (m.status === 'received') return 'done'; if (m.status === 'partial') return 'issue'
+  if (m.status === 'sent') return m.arrivedAt || m.lines.some((l) => l.received > 0) ? 'arrived' : 'transit'
+  return 'origin'
+}
+export const PHASE: Record<ManifestPhase, { label: string; cls: string }> = {
+  origin: { label: 'در مبدأ · جمع‌آوری', cls: 'ph-origin' }, transit: { label: 'در راه', cls: 'ph-transit' }, arrived: { label: 'رسیده · منتظر اسکن نهایی', cls: 'ph-arrived' },
+  done: { label: 'تحویل کامل', cls: 'ph-done' }, issue: { label: 'تحویل با مغایرت', cls: 'ph-issue' }, cancel: { label: 'لغو شد', cls: 'ph-cancel' },
+}
 /** پسوند تنوع روی برچسب: V1، V2 … (بعد از ساخت صفحه، همین پسوند روی تنوع کالا می‌نشیند تا برچسب‌ها عوض نشوند) */
 export const varSuffix = (i: number) => `V${i + 1}`
 /** کد برچسب یک قلم یا تنوع محموله، پیش از آنکه صفحهٔ کالا ساخته شده باشد */

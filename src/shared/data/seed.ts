@@ -690,6 +690,10 @@ export const makeSeed = () => {
     const ln = (o: string, pid: string, vid: string | undefined, suf: string | undefined, qty: number, packed: number, received = 0) => ({ key: `${pid}|${vid ?? ''}|${o}`, owner: o, code: L(o, pid, suf), title: P(pid).title, vname: vid ? (suf === '1' ? 'مشکی' : 'سفید') : undefined, productId: pid, variationId: vid, qty, packed, received })
     const ago2 = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
     s.stock.manifests = [
+      { id: 'HV-1405-024', from: 'mahabad', to: 'tehran', status: 'partial', createdAt: ago2(400), by: 'یاسین', reason: 'سهم تهران از خرید آمازون مهر', carrier: 'باربری', tracking: '9930412', sentAt: ago2(392), sentBy: 'یاسین', arrivedAt: ago2(330), receivedAt: ago2(326), receivedBy: 'بهشاد',
+        lines: [ln('gh', 'prx', 'var-prx-blk', '1', 6, 6, 5), ln('ys', 'p8', undefined, undefined, 2, 2, 2)],
+        issues: [{ at: ago2(326), by: 'بهشاد', code: L('gh', 'prx', '1'), kind: 'short', note: '۱ عدد کمتر رسید؛ با باربری پیگیری شد' }],
+        events: [{ at: ago2(400), by: 'یاسین', text: 'ساخت حواله' }, { at: ago2(392), by: 'یاسین', text: 'ارسال با باربری · ۸ عدد اسکن شد' }, { at: ago2(330), by: 'بهشاد', text: 'بار به انبار تهران رسید؛ منتظر اسکن نهایی' }, { at: ago2(326), by: 'بهشاد', text: 'تحویل با مغایرت ثبت شد' }] },
       { id: 'HV-1405-033', from: 'mahabad', to: 'tehran', status: 'sent', createdAt: ago2(30), by: 'یاسین', reason: 'سهم تهران از خرید اربیل', carrier: 'تیپاکس', tracking: '24052210874', sentAt: ago2(20), sentBy: 'یاسین',
         lines: [ln('gh', 'prx', 'var-prx-blk', '1', 4, 4, 2), ln('gh', 'prx', 'var-prx-wht', '2', 3, 3, 0), ln('ys', 'p8', undefined, undefined, 2, 2, 1)], issues: [],
         events: [{ at: ago2(30), by: 'یاسین', text: 'ساخت حواله' }, { at: ago2(20), by: 'یاسین', text: 'ارسال با تیپاکس · ۹ عدد اسکن شد' }, { at: ago2(1), by: 'بهشاد', text: 'شروع تحویل با اسکن' }] },

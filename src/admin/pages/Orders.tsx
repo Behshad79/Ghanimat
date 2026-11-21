@@ -1,7 +1,7 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2 } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, PackageCheck, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2 } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, StickyStepBar, Timeline, useScrolledPast } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
@@ -33,6 +33,7 @@ import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../
 import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
 import { OrderReturns, ReturnShipButton } from '../orders/OrderReturns'
+import { DeliveredCelebration } from '../orders/Delivered'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
 import { OrderLedger } from '../stock/OrderLedger'
 import { guardForeign, myWarehouses } from '../stock/foreign'
@@ -199,14 +200,14 @@ export function OrderDetail() {
   const goShip = (sid: string) => document.getElementById(`ship-${sid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   const [sumRef, pastSum] = useScrolledPast<HTMLDivElement>()
   const stepNames = o.shipments.length && o.shipments.every((x) => /حضوری/.test(x.method)) ? ['پرداخت', 'تأیید', 'آماده‌سازی', 'آماده در شعبه', step > 4 ? 'تحویل شد' : 'تحویل حضوری'] : ['پرداخت', 'تأیید', 'آماده‌سازی', step > 3 ? 'ارسال شد' : 'ارسال', step > 4 ? 'تحویل شد' : 'تحویل']
-  const nextAct: { label: string; hint: string; run?: () => void; tone?: 'wait' | 'done' } = o.status === 'order.awaiting_payment' || o.status === 'order.awaiting_credit' ? { label: 'منتظر پرداخت مشتری', hint: 'تا پرداخت کامل نشود، آماده‌سازی شروع نمی‌شود.', tone: 'wait' }
+  const nextAct: { label: string; hint: string; run?: () => void; tone?: 'wait' | 'done' | 'deliver' } = o.status === 'order.awaiting_payment' || o.status === 'order.awaiting_credit' ? { label: 'منتظر پرداخت مشتری', hint: 'تا پرداخت کامل نشود، آماده‌سازی شروع نمی‌شود.', tone: 'wait' }
     : o.status === 'order.suspicious' ? { label: 'بازبینی سفارش مشکوک', hint: 'ارسال تا تأیید شما متوقف است.', run: () => document.getElementById('order-attention')?.scrollIntoView({ behavior: 'smooth' }) }
     : !live ? { label: o.status === 'order.cancelled' ? 'سفارش لغو شده است' : 'همهٔ مرسوله‌ها تحویل شد', hint: o.status === 'order.cancelled' ? 'بازگشت وجه را از کارت «بازگشت وجه» پیگیری کنید.' : 'کار دیگری روی این سفارش باقی نمانده است.', tone: 'done' }
     : live.status === 'ship.pending' ? { label: 'شروع جمع‌آوری', hint: `مرسولهٔ ${live.id} از ${WAREHOUSE[live.warehouse]}`, run: () => advance(live.id, 'ship.picking', 'شروع جمع‌آوری') }
     : live.status === 'ship.picking' ? { label: 'بسته‌بندی با اسکن', hint: `مرسولهٔ ${live.id}: هر قلم را اسکن کنید`, run: () => void openPack(live.id) }
     : live.status === 'ship.partner_confirm' ? { label: 'منتظر تأیید موجودی شریک', hint: 'پیامک و پیام‌رسان برای او ارسال شده است.', tone: 'wait' }
     : live.status === 'ship.packed' ? { label: /پست|تیپاکس|باربری/.test(live.method) ? 'ثبت تحویل به پست و کد رهگیری' : 'ثبت پیک و تحویل بسته', hint: `مرسولهٔ ${live.id} آمادهٔ ارسال است`, run: () => goShip(live.id) }
-    : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است`, run: () => goShip(live.id) }
+    : { label: 'ثبت تحویل به مشتری', hint: `مرسولهٔ ${live.id} در مسیر است؛ گام پایانی`, run: () => goShip(live.id), tone: 'deliver' }
   return (
     <Page module="orders" back="/admin/orders" title={<span className="ltr font-mono">{o.id}</span>} badge={<><StatusBadge s={o.status} />{o.tags.map((t) => <Badge key={t} dot={false}>{t}</Badge>)}</>} sub={`ثبت ${rel(o.createdAt)} · کانال ${o.channel} · ${c.name}`}
       actions={<>
@@ -232,9 +233,9 @@ export function OrderDetail() {
               <div><dt className="text-t3">ارسال</dt><dd className="mt-0.5 font-medium">{o.shipments.length ? `${fa(o.shipments.length)} مرسوله · ${[...new Set(o.shipments.map((x) => WAREHOUSE[x.warehouse]))].join('، ')}` : '—'}</dd></div>
             </dl>
           </div>
-          <div className={cx('flex flex-col justify-center gap-2 border-t border-line p-4 lg:w-80 lg:border-t-0 lg:border-r', nextAct.tone === 'done' ? 'bg-success-bg/50' : nextAct.tone === 'wait' ? 'bg-warning-bg/50' : 'bg-brand-tint/30')}>
+          <div className={cx('flex flex-col justify-center gap-2 border-t border-line p-4 lg:w-80 lg:border-t-0 lg:border-r', nextAct.tone === 'done' || nextAct.tone === 'deliver' ? 'bg-success-bg/50' : nextAct.tone === 'wait' ? 'bg-warning-bg/50' : 'bg-brand-tint/30')}>
             <p className="text-11 font-medium text-t3">اقدام بعدی</p>
-            {nextAct.run ? <Button variant="primary" size="lg" icon={<ArrowLeft size={16} />} onClick={nextAct.run} className="justify-center">{nextAct.label}</Button> : <p className={cx('text-15 font-bold', nextAct.tone === 'done' ? 'text-success' : 'text-warning')}>{nextAct.label}</p>}
+            {nextAct.run ? (nextAct.tone === 'deliver' ? <Button size="lg" icon={<PackageCheck size={17} />} onClick={nextAct.run} className="deliver-cta justify-center border-0">{nextAct.label}</Button> : <Button variant="primary" size="lg" icon={<ArrowLeft size={16} />} onClick={nextAct.run} className="justify-center">{nextAct.label}</Button>) : <p className={cx('text-15 font-bold', nextAct.tone === 'done' ? 'text-success' : 'text-warning')}>{nextAct.label}</p>}
             <p className="text-12 text-t2">{nextAct.hint}</p>
             {live && <SlaChip at={live.sla} />}
           </div>
@@ -339,9 +340,10 @@ export function OrderDetail() {
           <Card><ReasonLog kind="order" refId={o.id} /></Card>
         </div>
       </div>
+      <DeliveredCelebration o={o} />
       <StickyStepBar show={pastSum} at={step} total={stepNames.length} label={<><bdi dir="ltr" className="font-mono">{o.id}</bdi> · {stepNames[Math.min(step, stepNames.length - 1)]} · <span className="text-t2">{nextAct.hint}</span></>}>
         <span className="flex items-center rounded-lg border border-line"><button aria-label="سفارش قبلی" title="سفارش قبلی" disabled={idx <= 0} onClick={() => nav(`/admin/orders/${d.orders[idx - 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronRight size={16} /></button><span className="h-5 w-px bg-line" /><button aria-label="سفارش بعدی" title="سفارش بعدی" disabled={idx >= d.orders.length - 1} onClick={() => nav(`/admin/orders/${d.orders[idx + 1].id}`)} className="grid size-9 place-items-center text-t2 hover:text-brand disabled:opacity-40"><ChevronLeft size={16} /></button></span>
-        {nextAct.run ? <Button variant="primary" icon={<ArrowLeft size={14} />} onClick={nextAct.run}>{nextAct.label}</Button> : <Badge tone={nextAct.tone === 'done' ? 'success' : 'warning'}>{nextAct.label}</Badge>}
+        {nextAct.run ? (nextAct.tone === 'deliver' ? <Button icon={<PackageCheck size={14} />} onClick={nextAct.run} className="deliver-cta border-0">{nextAct.label}</Button> : <Button variant="primary" icon={<ArrowLeft size={14} />} onClick={nextAct.run}>{nextAct.label}</Button>) : <Badge tone={nextAct.tone === 'done' ? 'success' : 'warning'}>{nextAct.label}</Badge>}
       </StickyStepBar>
       <Modal open={!!cancelSh} onClose={() => setCancelSh(null)} title={`لغو مرسولهٔ ${cancelSh?.sid ?? ''}`} footer={<><Button variant="danger" onClick={() => void doCancelShip()}>لغو مرسوله</Button><Button variant="ghost" onClick={() => setCancelSh(null)}>انصراف</Button></>}>
         <div className="space-y-3 text-13"><p>این مرسوله لغو می‌شود. مقصد بازگشت وجه را انتخاب کنید؛ پرونده تا تأیید و اعمال شما باز می‌ماند.</p><RefundDest dest={rdest} setDest={setRdest} account={racct} setAccount={setRacct} amount={cancelSh?.total ?? 0} customer={{ name: c.name, mobile: c.mobile }} /><RestockChoice value={restock} onChange={setRestock} /></div>

@@ -37,8 +37,8 @@ export function DeliverConfirm({ o, sid }: { o: Order; sid: string }) {
   }
   const lookup = async () => { setBusy(true); try { await fakeCall(true) } catch { /* نمونه */ } setBusy(false); setTr(trackOf(s, name || c?.name || 'گیرنده')) }
   return <>
-    <Button variant="primary" icon={<PackageCheck size={14} />} onClick={() => setOpen(true)}>ثبت تحویل به مشتری</Button>
-    <Modal open={open} onClose={() => setOpen(false)} title={`ثبت تحویل به مشتری · ${sid}`} footer={<><Button variant="primary" icon={<CheckCircle2 size={14} />} disabled={!name.trim()} onClick={() => save('ثبت دستی', new Date(at).toISOString(), name.trim())}>ثبت دستی تحویل</Button><Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button></>}>
+    <Button icon={<PackageCheck size={14} />} onClick={() => setOpen(true)} className="deliver-cta border-0">ثبت تحویل به مشتری</Button>
+    <Modal open={open} onClose={() => setOpen(false)} title={`ثبت تحویل به مشتری · ${sid}`} footer={<><Button icon={<CheckCircle2 size={14} />} className="border-0 bg-[#12733f] text-white hover:bg-[#0e5c32]" disabled={!name.trim()} onClick={() => save('ثبت دستی', new Date(at).toISOString(), name.trim())}>ثبت دستی تحویل</Button><Button variant="ghost" onClick={() => setOpen(false)}>انصراف</Button></>}>
       <div className="space-y-3 text-13">
         <p className="rounded-lg bg-brand-tint/50 px-3 py-2 text-12 text-brand">این یعنی بسته به دست مشتری یا نمایندهٔ او رسیده است. «تحویل پیک شد» مرحلهٔ قبل است، یعنی بسته از انبار به پیک یا پست داده شده.</p>
         {canTrack ? <div className="rounded-xl border border-line p-3">

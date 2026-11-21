@@ -146,6 +146,17 @@ button:disabled { cursor: not-allowed; }
 .check-pop { transform-origin: center; animation: check-pop .35s ease-out both; }
 .check-draw { stroke-dasharray: 18; animation: check-draw .3s .15s ease-out both; }
 .rot-in { animation: rot-in .32s cubic-bezier(.2,.7,.2,1) both; }
+/* گام پایانی سفارش: دکمهٔ سبز «ثبت تحویل» با هالهٔ آرام و جشن کوتاه بعد از تحویل */
+@keyframes deliver-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(18,115,63,.45); } 50% { box-shadow: 0 0 0 7px rgba(18,115,63,0); } }
+.deliver-cta { background: #12733f; color: #fff; animation: deliver-glow 2.2s ease-in-out infinite; }
+.deliver-cta:hover:not(:disabled) { background: #0e5c32; }
+@keyframes ring-burst { from { transform: scale(.6); opacity: .7; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes confetti { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes truck-in { from { transform: translateX(60px); opacity: 0; } 60% { opacity: 1; } to { transform: translateX(0); opacity: 1; } }
+.ring-burst { animation: ring-burst .9s ease-out both; }
+.confetti { animation: confetti 1.1s cubic-bezier(.2,.7,.2,1) both; }
+.truck-in { animation: truck-in .55s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .deliver-cta, .ring-burst, .confetti, .truck-in { animation: none; } }
 /* کارت پیونددار: ۲ پیکسل بالا آمدن در هاور (taste-skill) */
 table td .font-mono, table td bdi.font-mono { white-space: nowrap; }
 .tab-bar { transition: left .28s cubic-bezier(.2,.7,.2,1), width .28s cubic-bezier(.2,.7,.2,1); }

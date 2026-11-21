@@ -60,7 +60,7 @@ export function Warehouse() {
   return (
     <Page title="انبار و موجودی" module="warehouse" sub={`محدوده: ${s.scope === 'all' ? 'همهٔ انبارها' : WAREHOUSE[s.scope]}`}
       empty={{ title: 'انبار خالی است.', desc: 'با دریافت اولین محموله، واحدها ساخته می‌شوند و به صف QC می‌آیند.', action: <Button variant="primary" onClick={() => nav('/admin/inbound?tab=batches')}>ثبت محمولهٔ ورودی</Button> }}
-      actions={<><Button variant="ghost" onClick={() => nav('/admin/ownership')}>مالکیت و تسویه</Button><Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button></>}
+      actions={<><Button variant="ghost" onClick={() => nav('/admin/ownership')}>شرکا و تسویه</Button><Button icon={<ScanLine size={14} />} onClick={() => setScan('')}>اسکن بارکد</Button></>}
       primary={qc.length > 0 ? <Button variant="primary" onClick={() => { setTab('qc'); setFocus(qc[0].id) }}>شروع QC ({fa(qc.length)} واحد)</Button> : undefined}
       tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'stock', label: 'نمای موجودی و میز موجودی' }, { id: 'map', label: 'نقشهٔ قفسه‌ها' }, { id: 'qc', label: 'صف QC', count: qc.length }, { id: 'photo', label: 'صف عکاسی', count: photo.length }, { id: 'publish', label: 'صف انتشار', count: ready.length }, { id: 'sync', label: 'همگام‌سازی شریک', count: d.syncIssues.length }]} />}>
       {tab === 'qc' && <QueueCard list={qc} label="بازرسی این واحد" action={setFocus} emptyT="صف QC خالی است." emptyD="واحدهای دریافت‌شده بعد از ثبت ورود، اینجا می‌آیند." />}

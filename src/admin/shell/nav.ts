@@ -29,7 +29,7 @@ export const NAV: NavItem[] = [
   { id: 'media', label: 'کتابخانهٔ رسانه', icon: Images, path: '/admin/media', group: 'کالا و کاتالوگ', count: (d) => d.media.filter((m) => !m.alt).length },
   { id: 'inbound', label: 'تأمین و ورود بار', icon: Truck, path: '/admin/inbound', group: 'انبار و تأمین', count: (d) => (d.stock?.manifests ?? []).filter((m) => ['draft', 'packing', 'sent'].includes(m.status)).length + d.incoming.filter((b) => !b.receivedAt).length },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'انبار و تأمین', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
-  { id: 'ownership', label: 'مالکیت و تسویهٔ شرکا', icon: HandCoins, path: '/admin/ownership', group: 'انبار و تأمین' },
+  { id: 'ownership', label: 'شرکا و تسویه', icon: HandCoins, path: '/admin/ownership', group: 'انبار و تأمین' },
   { id: 'trade', label: 'امور بازرگانی', icon: Landmark, path: '/admin/trade', group: 'انبار و تأمین' },
   { id: 'pricing', label: 'قیمت‌گذاری و تخفیف‌ها', icon: Tags, path: '/admin/pricing', group: 'فروش و قیمت' },
   { id: 'promotions', label: 'موتور پروموشن و کمپین', icon: BadgePercent, path: '/admin/promotions', group: 'فروش و قیمت' },

@@ -32,7 +32,7 @@ export function ControlTab() {
     { action: 'ازسرگیری شریک بعد از توقف فوری', target: pid })
     toast('همه‌چیز برگشت؛ موجودی دوباره در سایت است و انبار و همگام‌سازی باز شد.') }
   return <div className="space-y-4">
-    <div className="flex items-start gap-2 rounded-xl bg-warning-bg px-4 py-3 text-12 text-warning"><ShieldAlert size={16} className="mt-0.5 shrink-0" /><span>برای وقتی که شریکی مدتی نیست، اختلافی پیش آمده یا باید فوراً جلوی فروش یا ارسال را گرفت. هر بخش جدا قابل توقف است، می‌تواند تاریخ پایان داشته باشد، در لاگ ممیزی ثبت می‌شود و با یک کلیک برمی‌گردد. برای پایان کامل همکاری از «مالکیت و تسویه ← شرکا» غیرفعال‌سازی را بزنید.</span></div>
+    <div className="flex items-start gap-2 rounded-xl bg-warning-bg px-4 py-3 text-12 text-warning"><ShieldAlert size={16} className="mt-0.5 shrink-0" /><span>برای وقتی که شریکی مدتی نیست، اختلافی پیش آمده یا باید فوراً جلوی فروش یا ارسال را گرفت. هر بخش جدا قابل توقف است، می‌تواند تاریخ پایان داشته باشد، در لاگ ممیزی ثبت می‌شود و با یک کلیک برمی‌گردد. برای پایان کامل همکاری از «شرکا و تسویه ← شرکا» غیرفعال‌سازی را بزنید.</span></div>
     <div className="grid gap-4 lg:grid-cols-2">{partners.map((p) => { const ps = p.pause; const on = live(ps); const whs = s.warehouses.filter((w) => w.operator === p.id)
       return <Card key={p.id} title={<span className="flex items-center gap-2">{partyLogo(p) && <img src={partyLogo(p)} alt="" className="size-6 object-contain" />}{p.name}{p.brandName && <span className="text-t2">({p.brandName})</span>}{on ? <Badge tone="danger">متوقف</Badge> : p.active ? <Badge tone="success">فعال</Badge> : <Badge>غیرفعال</Badge>}</span>}>
         <div className="space-y-3 text-12">

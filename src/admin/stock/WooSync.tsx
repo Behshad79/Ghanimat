@@ -50,7 +50,7 @@ export function WooSync({ e, batch }: { e: ExtSite; batch?: string }) {
       <span className="mr-auto flex flex-wrap gap-1.5"><Segmented size="sm" value={f} onChange={setF} options={[['diff', `ناهمگام (${fa(diff.length)})`], ['all', `همه (${fa(rows.length)})`]]} />
         <Button size="sm" icon={<CloudDownload size={13} />} loading={busy === 'pull'} disabled={!e.on} onClick={() => void pull()}>خواندن از سایت</Button>
         <Button size="sm" variant="primary" icon={<CloudUpload size={13} />} loading={busy === 'push'} disabled={!e.on || !diff.length} onClick={() => void push(diff)}>ارسال {fa(diff.length)} مورد به سایت</Button></span></div>
-    {!e.on && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">اتصال سایت {name} خاموش است؛ از «مالکیت و تسویهٔ شرکا ← سایت و مغازهٔ شریک» روشنش کنید.</p>}
+    {!e.on && <p className="rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning">اتصال سایت {name} خاموش است؛ از «شرکا و تسویه ← سایت و مغازهٔ شریک» روشنش کنید.</p>}
     <p className="text-11 leading-5 text-t2">SKU هر کالا در سایت {name} همان کد برچسبی است که این‌جا ساخته شده. کالایی که از محموله می‌آید، حتی پیش از ساخت صفحه در غنیمت، با همین کد در سایت او ساخته می‌شود. فروشش هم با همین کد به کالا و مالک درست وصل می‌شود.</p>
     <div className="max-h-80 overflow-auto rounded-lg border border-line"><table className="w-full min-w-[720px] text-12"><thead><tr className="sticky top-0 bg-surface-2 text-t2">{['SKU (کد غنیمت)', 'کالا', 'مالک', 'موجودی ما', 'در سایت', 'وضعیت', ''].map((h, i) => <th key={i} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
       {list.map((r) => { const st = stateOf(r); const x = rmap.get(r.code); return <tr key={r.code} className="border-t border-line">

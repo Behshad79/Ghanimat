@@ -38,7 +38,7 @@ export function OwnerSplit({ f, set, cost }: { f: F; set: (p: Partial<F>) => voi
       <div className="flex flex-wrap gap-2"><Button size="sm" icon={<Plus size={13} />} onClick={() => set({ ownSplit: [...rows, { variationId: vars[0]?.id, owner: s.parties.find((p) => p.id !== owner)?.id ?? owner, warehouse: 'mahabad', qty: 1, cost }] })}>افزودن ردیف</Button><Button size="sm" variant="ghost" icon={<Wand2 size={13} />} onClick={() => set({ ownSplit: auto() })}>ساخت دوباره از موجودی بالا</Button></div>
       <div className="flex flex-wrap gap-1.5">{s.parties.map((p) => { const n = rows.filter((r) => r.owner === p.id).reduce((a, r) => a + r.qty, 0); return n ? <PartyChip key={p.id} s={s} id={p.id} n={n} /> : null })}</div>
       {checks.length > 0 && <p className="flex items-start gap-1.5 rounded-lg bg-warning-bg px-3 py-2 text-12 text-warning"><Info size={14} className="mt-0.5 shrink-0" />جمع ردیف‌ها با موجودی واردشده نمی‌خواند: {checks.map((c) => `${vname(c.vid) || 'کالا'} در ${c.w === 'tehran' ? 'تهران' : 'مهاباد'} ${fa(c.got)} از ${fa(c.need)}`).join('؛ ')}. هنگام ثبت، موجودی تهران و مهاباد از روی همین ردیف‌ها تنظیم می‌شود.</p>}
-      <p className="text-11 text-t2">ردیف انبارهای تازه (مثلاً شیراز) فقط در «مالکیت و تسویهٔ موجودی» شمرده می‌شود تا سایت آن شهر راه بیفتد.</p>
+      <p className="text-11 text-t2">ردیف انبارهای تازه (مثلاً شیراز) فقط در «شرکا و تسویه» شمرده می‌شود تا سایت آن شهر راه بیفتد.</p>
     </>}
   </div>
 }

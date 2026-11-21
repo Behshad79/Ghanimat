@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, StickyStepBar, Timeline, useScrolledPast } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
-import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
+import { confirm, Drawer, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress, rollShipped } from '../orders/Progress'
 import { canSecret, currentUser, isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
@@ -37,6 +37,7 @@ import { OrderReturns, ReturnShipButton } from '../orders/OrderReturns'
 import { DeliveredCelebration } from '../orders/Delivered'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
 import { QuickPrint } from '../print/QuickPrint'
+import { StoreSale } from '../stock/ExtSites'
 import { OrderLedger } from '../stock/OrderLedger'
 import { guardForeign, myWarehouses } from '../stock/foreign'
 import { partyLogo } from '../stock/common'
@@ -63,7 +64,7 @@ export function Orders() {
   const setWh = (v: string) => { setWhRaw(v); try { localStorage.setItem(`gh-orders-wh-${uid}`, v) } catch { /* فقط در حافظه */ } }
   const [own, setOwnRaw] = useState(() => { try { return localStorage.getItem(`gh-orders-own-${uid}`) ?? 'all' } catch { return 'all' } })
   const setOwn = (v: string) => { setOwnRaw(v); try { localStorage.setItem(`gh-orders-own-${uid}`, v) } catch { /* فقط در حافظه */ } }
-  const [manual, setManual] = useState(sp.get('new') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
+  const [manual, setManual] = useState(sp.get('new') === '1'); const [store, setStore] = useState(sp.get('store') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
   /** مالک کالاهای هر سفارش: بعد از بسته‌بندی از فروش ثبت‌شده، قبل از آن از موجودی همان انبار (مالک‌هایی که این کالا را دارند) */
   const ownersOf = (o: Order) => { const sold = d.stock.sales.filter((x) => x.orderId === o.id).map((x) => x.owner); if (sold.length) return new Set(sold)
     return new Set(o.shipments.flatMap((s) => s.items.flatMap((it) => d.stock.lots.filter((l) => l.productId === it.productId && l.warehouse === s.warehouse && l.qty > 0).map((l) => l.owner)))) }
@@ -98,7 +99,7 @@ export function Orders() {
     { key: 'age', title: 'ثبت', hideMobile: true, render: (o) => <span className="text-12 text-t3">{rel(o.createdAt)}</span>, sort: (o) => o.createdAt },
   ]
   return (
-    <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>} actions={<Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch&range=today')}>چاپ گروهی</Button>}
+    <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>} actions={<><Button icon={<ScanLine size={14} />} onClick={() => setStore(true)} title="فروش در مغازه با اسکن برچسب؛ مالک کالا از کد معلوم است">فروش حضوری</Button><Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch&range=today')}>چاپ گروهی</Button></>}
       empty={{ title: 'هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های سایت و کانال‌های فروش اینجا نمایش داده می‌شوند. برای سفارش تلفنی یا حضوری، سفارش دستی ثبت کنید.', action: <Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button> }}
       tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : dated.filter(f).length }))} />}>
       {tab !== 'pickup' && <DateFilter r={dr} set={setDr} count={rows.length} total={d.orders.filter((o) => whOk(o) && ownOk(o)).filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).length} extra={scope} />}
@@ -117,6 +118,7 @@ export function Orders() {
           <Button size="sm" onClick={() => { const undo = snapshot(); mutate((x) => x.orders.filter((o) => ids.includes(o.id)).forEach((o) => (o.lockedBy = null, o.tags = [...new Set([...o.tags, 'تخصیص: نیما'])])), { action: 'تخصیص سفارش به انباردار', target: ids.join('، ') }); toast(`${fa(ids.length)} سفارش به نیما تخصیص یافت.`, { undo }); clear() }}>تخصیص به انباردار</Button>
         </>} />}
       <ManualOrder open={manual} onClose={() => setManual(false)} />
+      <Drawer open={store} onClose={() => setStore(false)} width={760} title="فروش حضوری در مغازه"><StoreSale /></Drawer>
     </Page>
   )
 }

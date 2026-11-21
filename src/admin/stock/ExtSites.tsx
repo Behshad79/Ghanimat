@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { MoneyInput } from '@/shared/ui/money'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, CircleAlert, Globe, Link2, RefreshCw, ScanLine, ShoppingBag, Store, Trash2, Webhook } from 'lucide-react'
-import { Badge, Button, Card, Field, Input, Select, Toggle } from '@/shared/ui/base'
-import { toast } from '@/shared/ui/overlay'
+import { CheckCircle2, CircleAlert, Globe, Link2, Plug, Plus, RefreshCw, ScanLine, ShoppingBag, Store, Trash2, Webhook } from 'lucide-react'
+import { Badge, Button, Card, Field, Input, Segmented, Select, Toggle } from '@/shared/ui/base'
+import { Modal, toast } from '@/shared/ui/overlay'
 import { currentUser, fakeCall, mutate, useDB } from '@/shared/lib/store'
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
@@ -89,11 +89,46 @@ function PartnerCodes({ e }: { e: ExtSite }) {
 }
 
 export function ExtTab() {
-  const d = useDB(); const s = d.stock
+  const d = useDB(); const s = d.stock; const [add, setAdd] = useState<string | null>(null)
+  const partners = s.parties.filter((p) => p.kind !== 'self' && p.active)
   return <div className="space-y-4">
+    <Card title={<span className="flex items-center gap-1.5"><Plug size={15} />سایت‌های متصل شرکا</span>} collapsible={false} actions={<Button size="sm" variant="primary" icon={<Plus size={13} />} disabled={!partners.some((p) => !s.ext.some((e) => e.partyId === p.id))} onClick={() => setAdd(partners.find((p) => !s.ext.some((e) => e.partyId === p.id))?.id ?? '')}>اتصال سایت تازه</Button>}>
+      <p className="mb-3 text-12 leading-6 text-t2">هر شریکی که سایت دارد با API وصل می‌شود: ووکامرس با کلید REST، یا هر سایت دیگری با API اختصاصی. سفارش‌های آن‌جا خودکار این‌جا می‌آید، SKU هر کالا همان کد برچسب غنیمت است و مالک هر فروش دقیق شناخته می‌شود. موجودی هم از این‌جا به سایت او می‌رود.</p>
+      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{partners.map((p) => { const e = s.ext.find((x) => x.partyId === p.id); return <li key={p.id} className="flex items-center gap-2 rounded-xl border border-line p-3 text-12">
+        <PartyChip s={s} id={p.id} /><span className="min-w-0 flex-1">{e ? <><bdi dir="ltr" className="block truncate font-mono">{e.url.replace(/^https?:\/\//, '')}</bdi><span className="text-11 text-t2">{e.kind === 'custom' ? 'API اختصاصی' : 'ووکامرس'} · {e.lastSync ? `همگام ${rel(e.lastSync)}` : 'هنوز همگام نشده'}</span></> : <span className="text-t3">سایت متصل ندارد</span>}</span>
+        {e ? <Badge tone={e.paused ? 'danger' : e.on ? 'success' : 'neutral'}>{e.paused ? 'متوقف' : e.on ? 'متصل' : 'خاموش'}</Badge> : <Button size="sm" onClick={() => setAdd(p.id)}>اتصال سایت</Button>}
+      </li> })}{partners.length === 0 && <li className="text-12 text-t2">هنوز شریکی ثبت نشده؛ از تب «شرکا و قرارداد» شریک تازه اضافه کنید.</li>}</ul>
+    </Card>
     {s.ext.map((e) => <ExtCard key={e.partyId} e={e} />)}
-    <StoreSale />
+    {add !== null && <SiteConnect partyId={add} onClose={() => setAdd(null)} />}
   </div>
+}
+
+/** اتصال سایت تازهٔ یک شریک: ووکامرس (کلید و رمز REST) یا API اختصاصی (نشانی پایه و توکن)؛ با آزمون اتصال پیش از ذخیره */
+export function SiteConnect({ partyId, onClose }: { partyId: string; onClose: () => void }) {
+  const d = useDB(); const s = d.stock; const free = s.parties.filter((p) => p.kind !== 'self' && p.active && !s.ext.some((e) => e.partyId === p.id))
+  const [f, setF] = useState({ party: partyId || free[0]?.id || '', kind: 'woocommerce' as ExtSite['kind'], url: s.parties.find((p) => p.id === partyId)?.site ? `https://${s.parties.find((p) => p.id === partyId)!.site!.replace(/^https?:\/\//, '')}` : 'https://', key: '', secret: '', pullOrders: true, pushStock: true })
+  const [test, setTest] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle')
+  const valid = f.party && /^https?:\/\/[^/]+\.[a-z]{2,}/i.test(f.url) && f.key.trim().length >= 6 && (f.kind === 'custom' || f.secret.trim().length >= 6)
+  const run = async () => { setTest('busy'); try { await fakeCall(true, 900); setTest('ok') } catch { setTest('fail') } }
+  const save = () => { if (!valid) return; const pid = f.party; const name = partyName(s, pid)
+    mutate((x) => { x.stock.ext.push({ partyId: pid, kind: f.kind, url: f.url.replace(/\/$/, ''), key: f.key.trim(), secret: f.secret.trim(), on: true, pullOrders: f.pullOrders, pushStock: f.pushStock, webhook: f.kind === 'woocommerce', autoImport: true, skuMap: {}, inbox: [] })
+      if (!x.stock.channels.some((c) => c.seller === pid && c.brand !== 'غنیمت')) x.stock.channels.push({ id: `${pid}-site`, name: `سایت ${f.url.replace(/^https?:\/\//, '')}`, seller: pid, collector: pid, brand: f.url.replace(/^https?:\/\//, ''), active: true }) },
+      { action: 'اتصال سایت شریک', target: `${name} · ${f.url}`, after: f.kind === 'custom' ? 'API اختصاصی' : 'ووکامرس' })
+    toast(`سایت ${name} وصل شد؛ حالا کدهای SKU را از کارت همین سایت برایش بفرستید.`); onClose() }
+  return <Modal open onClose={onClose} wide title="اتصال سایت شریک" footer={<><Button variant="primary" disabled={!valid} onClick={save}>ذخیره و اتصال</Button><Button loading={test === 'busy'} disabled={!valid} onClick={() => void run()}>آزمون اتصال</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="شریک"><Select value={f.party} onChange={(v) => setF({ ...f, party: v })} other={false} options={(partyId ? [...free, s.parties.find((p) => p.id === partyId)!].filter((p, i, A) => p && A.findIndex((q) => q?.id === p.id) === i) : free).map((p) => [p.id, p.name] as [string, string])} /></Field>
+      <Field label="نوع سایت"><Segmented value={f.kind} onChange={(v) => setF({ ...f, kind: v as ExtSite['kind'] })} options={[['woocommerce', 'ووکامرس (وردپرس)'], ['custom', 'API اختصاصی']]} /></Field>
+      <div className="sm:col-span-2"><Field label="نشانی سایت" help={f.kind === 'custom' ? 'نشانی پایهٔ API، مثلاً https://api.shop.ir/v1' : 'نشانی اصلی فروشگاه، مثلاً https://ve1.ir'}><Input className="ltr text-left" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field></div>
+      <Field label={f.kind === 'custom' ? 'توکن دسترسی' : 'Consumer Key'} help={f.kind === 'custom' ? 'توکنی که برنامه‌نویس سایت او می‌دهد (Bearer)' : 'ووکامرس ← تنظیمات ← پیشرفته ← REST API، با دسترسی خواندن و نوشتن'}><Input className="ltr text-left font-mono" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} /></Field>
+      {f.kind === 'woocommerce' && <Field label="Consumer Secret"><Input type="password" className="ltr text-left font-mono" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} /></Field>}
+      <div className="flex flex-wrap gap-4 text-12 sm:col-span-2"><Toggle on={f.pullOrders} onChange={(v) => setF({ ...f, pullOrders: v })} text="سفارش‌های سایت او این‌جا بیاید" /><Toggle on={f.pushStock} onChange={(v) => setF({ ...f, pushStock: v })} text="موجودی از این‌جا به سایتش برود" /></div>
+    </div>
+    {test === 'ok' && <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-2 text-12 text-success"><CheckCircle2 size={14} />اتصال برقرار است؛ API پاسخ داد و دسترسی خواندن و نوشتن دارد.</p>}
+    {test === 'fail' && <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-danger-bg px-3 py-2 text-12 text-danger"><CircleAlert size={14} />API پاسخ نداد؛ نشانی، کلید و دسترسی را بررسی کنید.</p>}
+    {f.kind === 'custom' && <p className="mt-3 rounded-lg bg-neutral-bg px-3 py-2 text-11 leading-5 text-t2">برای API اختصاصی، سایت او باید سه کار را پشتیبانی کند: فهرست سفارش‌ها با SKU هر قلم، ثبت یا به‌روزرسانی کالا با SKU، و تغییر موجودی با SKU. قرارداد پیشنهادی در مستندات توسعه (06-api-contract) آمده است.</p>}
+  </Modal>
 }
 
 function ExtCard({ e }: { e: ExtSite }) {
@@ -116,7 +151,7 @@ function ExtCard({ e }: { e: ExtSite }) {
     toast(!e.pullOrders || !k ? 'همگام‌سازی انجام شد.' : e.autoImport ? `سفارش تازهٔ ${oid} رسید و خودکار در دفتر ثبت شد؛ مالک از روی کد ${k} معلوم شد.` : `سفارش تازهٔ ${oid} به صندوق ورودی اضافه شد.`) } catch { toast('سایت شریک پاسخ نداد. کلید API یا دسترسی سرور را بررسی کنید.', { tone: 'err' }) } finally { setBusy(false) } }
   const stockFor = (m: { productId: string; variationId?: string }) => { const whs = s.warehouses.filter((w) => w.operator === e.partyId && w.active).map((w) => w.id); return whs.reduce((a, wh) => a + Math.max(0, s.lots.filter((l) => l.productId === m.productId && (l.variationId ?? '') === (m.variationId ?? '') && l.warehouse === wh && !l.hold).reduce((b, l) => b + l.qty, 0) - reserved(d, m.productId, m.variationId, wh)), 0) }
   const newCount = e.inbox.filter((o) => o.status !== 'imported' && o.status !== 'skipped').length
-  return <Card title={<span className="flex flex-wrap items-center gap-2"><Globe size={15} />اتصال ووکامرس <bdi dir="ltr" className="font-mono text-13">{e.url}</bdi>{party && <PartyChip s={s} id={party.id} />}{e.on ? <Badge tone="success">متصل</Badge> : <Badge tone="danger">قطع</Badge>}</span>}
+  return <Card title={<span className="flex flex-wrap items-center gap-2"><Globe size={15} />{e.kind === 'custom' ? 'API اختصاصی' : 'اتصال ووکامرس'} <bdi dir="ltr" className="font-mono text-13">{e.url}</bdi>{party && <PartyChip s={s} id={party.id} />}{e.on ? <Badge tone="success">متصل</Badge> : <Badge tone="danger">قطع</Badge>}</span>}
     hint="سایت شریک با REST API و وب‌هوک ووکامرس وصل می‌شود: هر سفارش آن‌جا خودکار این‌جا می‌آید، کالایش با SKU شناخته می‌شود و مالک (کالای خودش یا کالای غنیمت) تشخیص داده می‌شود."
     actions={<div className="flex gap-2"><Button size="sm" icon={<RefreshCw size={13} />} loading={busy} onClick={() => void sync()}>همگام‌سازی همین حالا</Button><Toggle on={e.on} onChange={(v) => up((y) => { y.on = v }, v ? 'وصل کردن سایت شریک' : 'قطع اتصال سایت شریک')} text={e.on ? 'روشن' : 'خاموش'} /></div>}>
     {e.paused && <p className="mb-3 rounded-lg bg-danger-bg px-3 py-2 text-12 text-danger">همگام‌سازی این سایت با «توقف فوری» بسته است: نه سفارشی دریافت می‌شود و نه موجودی ارسال.</p>}
@@ -157,7 +192,7 @@ function ExtCard({ e }: { e: ExtSite }) {
 }
 
 /** فروش حضوری با اسکن: شریک در مغازه برچسب جعبه را اسکن می‌کند؛ مالک از روی کد معلوم است و فروش با یک دکمه در دفتر می‌رود */
-function StoreSale() {
+export function StoreSale() {
   const d = useDB(); const s = d.stock; const me = s.parties.find((p) => p.userId === currentUser()?.id)?.id
   const stores = s.channels.filter((c) => c.active && c.id !== 'gh-site' && !s.ext.some((e) => s.channels.find((x) => x.seller === e.partyId && x.brand !== 'غنیمت')?.id === c.id))
   const [ch, setCh] = useState(stores.find((c) => c.seller === me)?.id ?? stores[0]?.id ?? ''); const [code, setCode] = useState(''); const [cart, setCart] = useState<{ code: string; productId: string; variationId?: string; owner: string; qty: number; price: number }[]>([]); const [err, setErr] = useState('')

@@ -679,7 +679,8 @@ export const makeSeed = () => {
   // سایت ve1 یاسین: SKU هر کالا در ووکامرس همان کد مالک‌دار غنیمت است (GH- کالای غنیمت، YS- کالای خود یاسین)
   { const e = s.stock.ext[0]; const P = (id: string) => s.products.find((p) => p.id === id)!; const code = (o: string, pid: string, suf?: string) => labelCode(s.stock, o, P(pid), suf ? { suffix: suf } : null)
     if (e) { e.autoImport = true; e.inbox[0].lines[0].sku = code('ys', 'prx', '1'); e.inbox[1].lines[0].sku = code('gh', 'prx', '2'); e.inbox[1].lines[1].sku = code('ys', 'p8')
-      e.inbox[2].note = 'SKU این کالا کد غنیمت ندارد؛ یاسین باید کد را در ووکامرس اصلاح کند یا دستی نگاشت شود' } }
+      e.inbox[2].note = 'SKU این کالا کد غنیمت ندارد؛ یاسین باید کد را در ووکامرس اصلاح کند یا دستی نگاشت شود'
+      e.inbox.push({ id: 've1-5534', at: new Date(Date.now() - 12 * 60e3).toISOString(), status: 'new', customer: 'م. رسولی', lines: [{ sku: 'YS-000402-V1', name: 'JBL Flip 6 Black', qty: 1, price: 7900000 }], note: 'کالای محمولهٔ یاسین که هنوز صفحه‌اش در غنیمت ساخته نشده؛ با همان کد برچسب شناخته می‌شود' } as never) } }
   // یکدستی دادهٔ نمونه: مبلغ کل هر سفارش = جمع کالاهای فعال − تخفیف + ارسال (و تراکنش موفق همان سفارش هم‌مبلغ)؛ موجودی کالاها از روی لات‌ها و رزرو سفارش‌های باز
   s.orders.forEach((o) => { const sub = o.shipments.flatMap((x) => x.items).filter((i) => !i.cancelled).reduce((a, i) => a + i.price * (i.qty ?? 1), 0); if (!sub) return
     const want = sub - (o.discount ?? 0) + (o.shippingFee ?? 0); if (want === o.total) return

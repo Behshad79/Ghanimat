@@ -20,6 +20,7 @@ import { allocOf, BUY_SOURCES, CURRENCIES, itemLabel, itemQty, itemSplit, labelL
 import { PartyChip, partyLogo, whName } from '../stock/common'
 import { ensureProduct, landBatch, mid } from './ops'
 import { FundingEditor, FundOverview, FundPanel } from './Funding'
+import { WooBatchStrip } from '../stock/WooSync'
 
 const me = () => currentUser()?.name ?? 'پنل'
 const usd = () => Math.round(((getDB().storeCfg?.fx?.rates?.['دلار'] ?? 61500) * 1.12) / 100) * 100
@@ -94,6 +95,7 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
               </tr> })}
           </tbody></table></div>}
         {!b.receivedAt && <QuickAdd batch={b} />}
+        <WooBatchStrip batch={b.id} />
         {!b.single && <FundPanel b={b} onEdit={() => setForm(structuredClone(b))} />}
         <FinStrip b={b} fin={fin} />
         </>}

@@ -19,6 +19,7 @@ export function PartyChip({ s, id, n }: { s: StockDB; id: string; n?: number }) 
 export function pv(d: DB, pid: string, vid?: string) {
   const p = d.products.find((x) => x.id === pid && (!vid || x.variations?.some((v) => v.id === vid))) ?? d.products.find((x) => x.id === pid)
   const v = vid ? p?.variations?.find((x) => x.id === vid) : undefined
+  if (!p && pid.startsWith('pending:')) { const t = 'کالای محموله (صفحه هنگام ثبت فروش ساخته می‌شود)'; return { p, v, name: t, vname: '', full: t } }
   return { p, v, name: p?.title ?? pid, vname: v && p ? varLabel(d, p.attrs ?? [], v) : '', full: `${p?.title ?? pid}${v && p ? ` · ${varLabel(d, p.attrs ?? [], v)}` : ''}` }
 }
 export const codeFor = (d: DB, owner: string, pid: string, vid?: string) => { const { p, v } = pv(d, pid, vid); return p ? labelCode(d.stock, owner, p, v ?? null) : pid }

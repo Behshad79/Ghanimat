@@ -1,10 +1,11 @@
 // حوالهٔ بین انبارها: فهرست چاپی با بارکد، جمع‌آوری با اسکن (چک‌لیست: نه چیزی جا بماند نه اشتباه برود)، ارسال، و تحویل با اسکن در مقصد
 import { useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeft, Check, Clock, Eye, History, MapPin, PackageCheck, Plus, Printer, ScanLine, Send, Truck, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Check, Clock, Download, Eye, History, MapPin, PackageCheck, Plus, Printer, ScanLine, Send, Truck, X } from 'lucide-react'
 import { Badge, Button, Card, cx, EmptyState, Field, Input, Progress, Segmented, Select } from '@/shared/ui/base'
 import { confirm, Drawer, Modal, toast } from '@/shared/ui/overlay'
 import { Barcode } from '@/shared/ui/codes'
 import { printSolo } from '@/shared/lib/printSolo'
+import { printPages, saveBlob, toPdf } from '@/shared/lib/printOut'
 import { currentUser, getDB, myParty, mutate, notify, useDB } from '@/shared/lib/store'
 import { fa, rel } from '@/shared/lib/fa'
 import { MANIFEST_STATUS, manifestPhase, PHASE, resolveCode, type Manifest } from '@/shared/data/inbound'
@@ -118,7 +119,7 @@ function NewManifest({ onClose }: { onClose: (id?: string) => void }) {
 /** جزئیات حواله با حالت جمع‌آوری یا تحویل با اسکن */
 export function ManifestView({ id, onClose }: { id: string; onClose: () => void }) {
   const d = useDB(); const s = d.stock; const m = (s.manifests ?? []).find((q) => q.id === id); const sheet = useRef<HTMLDivElement>(null)
-  const [last, setLast] = useState<null | { ok: boolean; text: string; sub?: string }>(null); const [ship, setShip] = useState(false)
+  const [last, setLast] = useState<null | { ok: boolean; text: string; sub?: string }>(null); const [ship, setShip] = useState(false); const [print, setPrint] = useState(false)
   if (!m) return null
   const t = manifestTotals(m); const st = MANIFEST_STATUS[m.status]
   const mode: 'pack' | 'recv' | null = ['draft', 'packing'].includes(m.status) ? 'pack' : m.status === 'sent' ? 'recv' : null
@@ -151,7 +152,7 @@ export function ManifestView({ id, onClose }: { id: string; onClose: () => void 
     footer={<div className="flex w-full flex-wrap gap-2">
       {mode === 'pack' && <Button variant="primary" icon={<Send size={14} />} disabled={!t.packed} onClick={() => setShip(true)}>ارسال ({fa(t.packed)} از {fa(t.qty)})</Button>}
       {mode === 'recv' && <Button variant="primary" className="recv-solid" icon={<PackageCheck size={14} />} disabled={!t.received} onClick={() => void finish()}>ثبت تحویل ({fa(t.received)} از {fa(t.qty)})</Button>}
-      <Button variant="ghost" icon={<Printer size={14} />} onClick={() => printSolo(sheet.current)}>چاپ حواله و بارکدها</Button>
+      <Button variant="ghost" icon={<Printer size={14} />} onClick={() => setPrint(true)}>چاپ حواله و بارکدها</Button>
       {['draft', 'packing'].includes(m.status) && <Button variant="ghost" className="mr-auto" icon={<X size={14} />} onClick={async () => { if (await confirm({ title: 'حواله لغو شود؟', body: 'موجودی جابه‌جا نشده است؛ فقط حواله بسته می‌شود.', confirm: 'لغو حواله', danger: true })) { upd((q) => { q.status = 'cancelled'; q.events.push({ at: now(), by: me(), text: 'لغو حواله' }) }, 'لغو حواله'); onClose() } }}>لغو</Button>}
     </div>}>
     <div className="space-y-4">
@@ -195,7 +196,36 @@ export function ManifestView({ id, onClose }: { id: string; onClose: () => void 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th>✓</th><th>کالا</th><th>مالک</th><th>تعداد</th><th>بارکد</th></tr></thead><tbody>{m.lines.map((l) => <tr key={l.key}><td style={{ width: 24, border: '1px solid #999' }} /><td>{l.title}{l.vname ? ` · ${l.vname}` : ''}</td><td>{s.parties.find((p) => p.id === l.owner)?.name}</td><td>{l.qty}</td><td><Barcode value={l.code} height={30} module={1.4} /></td></tr>)}</tbody></table>
       <p style={{ marginTop: 24 }}>امضای ارسال‌کننده: ................ امضای تحویل‌گیرنده: ................</p></div>
     {ship && <ShipModal m={m} onSend={send} onClose={() => setShip(false)} />}
+    {print && <ManifestPrint m={m} onClose={() => setPrint(false)} />}
   </Drawer>
+}
+
+/** چاپ حواله: پیش‌نمایش برگهٔ A4 با بارکد هر خط و جای امضا؛ دانلود PDF همیشه کار می‌کند، چاپ مستقیم اگر مرورگر اجازه دهد */
+function ManifestPrint({ m, onClose }: { m: Manifest; onClose: () => void }) {
+  const d = useDB(); const s = d.stock; const ref = useRef<HTMLDivElement>(null); const [busy, setBusy] = useState<string | null>(null); const t = manifestTotals(m)
+  const pages = () => (ref.current ? [{ el: ref.current, paper: 'A4' }] : [])
+  const pdf = async () => { setBusy('pdf'); try { saveBlob(await toPdf(pages()), `ghanimat-${m.id}.pdf`); toast('PDF حواله ذخیره شد.') } catch (e) { toast(`ساخت PDF ناموفق بود: ${(e as Error).message}`, { tone: 'err' }) } finally { setBusy(null) } }
+  const print = async () => { setBusy('print'); const ok = await printPages(pages()); setBusy(null); if (!ok) { try { printSolo(ref.current?.parentElement ?? null) } catch { /* */ } toast('اگر پنجرهٔ چاپ باز نشد، «دانلود PDF» را بزنید و فایل را چاپ کنید.') } }
+  return <Modal open onClose={onClose} xl title={<span className="flex items-center gap-1.5"><Printer size={16} />چاپ حوالهٔ <bdi dir="ltr" className="font-mono">{m.id}</bdi></span>}
+    footer={<div className="flex w-full gap-2"><Button variant="primary" icon={<Download size={14} />} loading={busy === 'pdf'} onClick={() => void pdf()}>دانلود PDF</Button><Button icon={<Printer size={14} />} loading={busy === 'print'} onClick={() => void print()}>چاپ</Button><Button variant="ghost" className="mr-auto" onClick={onClose}>بستن</Button></div>}>
+    <div className="max-h-[65vh] overflow-auto rounded-xl bg-neutral-bg p-4">
+      <div ref={ref} className="mx-auto bg-white text-[#10123d]" style={{ width: 794, minHeight: 1000, padding: '40px 44px', fontSize: 12 }}>
+        <div className="mb-4 flex items-center justify-between border-b-2 border-[#10123d] pb-3"><img src="./brand/logo-full.png" alt="غنیمت" style={{ height: 28 }} /><div className="text-left"><b className="block text-[16px]">حوالهٔ انتقال بین انبارها</b><bdi dir="ltr" className="font-mono text-[13px]">{m.id}</bdi></div></div>
+        <div className="mb-4 grid grid-cols-3 gap-2 text-[11px]">
+          <div className="rounded-lg border border-[#e3e5f2] p-2"><span className="text-[#5b5f86]">مبدأ</span><b className="block text-[13px]">{whName(s, m.from)}</b></div>
+          <div className="rounded-lg border border-[#e3e5f2] p-2"><span className="text-[#5b5f86]">مقصد</span><b className="block text-[13px]">{whName(s, m.to)}</b></div>
+          <div className="rounded-lg border border-[#e3e5f2] p-2"><span className="text-[#5b5f86]">تاریخ و ثبت</span><b className="block text-[12px]">{new Date(m.createdAt).toLocaleDateString('fa-IR')} · {m.by}</b></div>
+          <div className="col-span-2 rounded-lg border border-[#e3e5f2] p-2"><span className="text-[#5b5f86]">دلیل</span><b className="block">{m.reason ?? '—'}</b></div>
+          <div className="rounded-lg border border-[#e3e5f2] p-2"><span className="text-[#5b5f86]">حمل</span><b className="block">{m.carrier ?? '—'}{m.tracking ? ` · ${m.tracking}` : ''}</b></div>
+        </div>
+        <div className="mb-4 flex justify-center"><div style={{ width: 260 }}><Barcode value={m.id} height={40} module={1.6} /></div></div>
+        <table className="w-full border-collapse text-[11px]"><thead><tr>{['✓', 'کالا', 'مالک', 'تعداد', 'رسیده', 'بارکد'].map((h) => <th key={h} className="border-b-2 border-[#10123d] bg-[#f3f4fb] px-2 py-1.5 text-right">{h}</th>)}</tr></thead>
+          <tbody>{m.lines.map((l) => <tr key={l.key}><td className="w-7 border-b border-[#e3e5f2] px-2 py-2"><span className="block size-4 border-2 border-[#10123d]" /></td><td className="border-b border-[#e3e5f2] px-2 py-2"><b>{l.title}</b>{l.vname ? ` · ${l.vname}` : ''}<bdi dir="ltr" className="block font-mono text-[10px] text-[#5b5f86]">{l.code}</bdi></td><td className="border-b border-[#e3e5f2] px-2 py-2">{s.parties.find((p) => p.id === l.owner)?.name}</td><td className="border-b border-[#e3e5f2] px-2 py-2 font-bold">{fa(l.qty)}</td><td className="border-b border-[#e3e5f2] px-2 py-2"><span className="inline-block w-10 border-b border-dashed border-[#10123d]">&nbsp;</span></td><td className="border-b border-[#e3e5f2] px-2 py-2"><div style={{ width: 150 }}><Barcode value={l.code} height={30} module={1.2} /></div></td></tr>)}</tbody>
+          <tfoot><tr><td colSpan={3} className="border-t-2 border-[#10123d] px-2 py-1.5 font-bold">جمع</td><td className="border-t-2 border-[#10123d] px-2 py-1.5 font-bold">{fa(t.qty)}</td><td colSpan={2} className="border-t-2 border-[#10123d]" /></tr></tfoot></table>
+        <div className="mt-10 grid grid-cols-3 gap-6 text-[11px]">{['امضای ارسال‌کننده', 'امضای حمل‌کننده', 'امضای تحویل‌گیرنده'].map((x) => <div key={x} className="border-t border-[#10123d] pt-1 text-center text-[#5b5f86]">{x}</div>)}</div>
+      </div>
+    </div>
+  </Modal>
 }
 
 function ShipModal({ m, onSend, onClose }: { m: Manifest; onSend: (carrier: string, tracking: string) => void; onClose: () => void }) {

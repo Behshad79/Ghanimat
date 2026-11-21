@@ -11,6 +11,9 @@ import { labelCode, scanLookup, type ExtOrder, type ExtSite, type StockSale } fr
 import { reserved, syncQty, takeLots } from '@/shared/data/ledger'
 import { chName, PartyChip, partyName, pv, whName } from './common'
 import { resolveCode } from './Packing'
+import { resolveCode as resolveInbound } from '@/shared/data/inbound'
+import { ensureProduct } from '../inbound/ops'
+import { WooSync } from './WooSync'
 
 const by = () => currentUser()?.name ?? 'پنل'
 const uid = (p: string) => `${p}-${Date.now().toString(36).slice(-4).toUpperCase()}${Math.random().toString(36).slice(2, 4).toUpperCase()}`
@@ -33,7 +36,16 @@ export function resolveSku(d: DB, e: ExtSite, sku: string): { productId: string;
   if (hit) return { productId: hit.productId, variationId: hit.variationId, how: 'coded', det: (x, qty) => ({ owner: hit.owner, warehouse: whereStock(x, e.partyId, hit.owner, hit.productId, hit.variationId, qty), why: `کد ${code} یعنی کالای ${partyName(x.stock, hit.owner)}` }) }
   if (/^\d{3,}/.test(code)) for (const p of d.stock.parties) { const h = scanLookup(d.stock, d.products, `${p.prefix}${d.stock.codeRule.sep}${code}`); if (h) return { productId: h.productId, variationId: h.variationId, how: 'neutral', det: (x, qty) => detectOwner(x, e.partyId, h.productId, h.variationId, qty) } }
   const m = e.skuMap[code]; if (m) return { ...m, how: 'map', det: (x, qty) => detectOwner(x, e.partyId, m.productId, m.variationId, qty) }
+  // کد برچسب قلم محموله که صفحه‌اش هنوز ساخته نشده: هنگام ثبت فروش، صفحهٔ پیش‌نویس با همان کد ساخته می‌شود
+  const b = resolveInbound(d, code); if (b?.batchId && b.itemId) return { productId: b.productId ?? `pending:${b.batchId}|${b.itemId}|${b.variantId ?? ''}`, variationId: b.variationId, how: 'coded', det: (x, qty) => ({ owner: b.owner, warehouse: whereStock(x, e.partyId, b.owner, b.productId ?? '', b.variationId, qty), why: `کد ${code} از محمولهٔ ${b.batchId} یعنی کالای ${partyName(x.stock, b.owner)}` }) }
   return null
+}
+/** اگر کالای فروخته‌شده هنوز صفحه ندارد، صفحهٔ پیش‌نویس با همان کد و پسوند تنوع ساخته می‌شود تا فروش و موجودی به آن وصل شود */
+function materialize(x: DB, r: { productId: string; variationId?: string }) {
+  if (!r.productId.startsWith('pending:')) return r
+  const [bid, iid, vid] = r.productId.slice(8).split('|'); const b = x.incoming.find((q) => q.id === bid); const it = b?.items.find((q) => q.id === iid); if (!b || !it) return r
+  const p = ensureProduct(x, b, it, 'product.draft'); const v = vid ? it.variants?.find((q) => q.id === vid) : undefined
+  return { productId: p.id, variationId: v ? p.variations?.find((q) => q.suffix === v.suffix)?.id : undefined }
 }
 /** انبار برداشت برای کالای یک مالک: اول انبارهای همین شریک، بعد بقیهٔ انبارهای فعال */
 function whereStock(x: DB, partner: string, owner: string, pid: string, vid: string | undefined, qty: number) {
@@ -46,7 +58,7 @@ export function importExt(x: DB, partner: string, oid: string, chId: string, byN
   const e = x.stock.ext.find((z) => z.partyId === partner); const o = e?.inbox.find((z) => z.id === oid); if (!e || !o || o.status === 'imported') return false
   const R = o.lines.map((l) => ({ l, r: resolveSku(x, e, l.sku) })); if (R.some((q) => !q.r)) { o.status = 'unmatched'; return false }
   const at = new Date().toISOString()
-  R.forEach(({ l, r }) => { const det = r!.det(x, l.qty); const t = takeLots(x, { productId: r!.productId, variationId: r!.variationId, owner: det.owner, warehouse: det.warehouse }, l.qty)
+  R.forEach(({ l, r: r0 }) => { const mm = materialize(x, r0!); const r = { ...r0!, ...mm }; const det = r0!.det(x, l.qty); const t = takeLots(x, { productId: r!.productId, variationId: r!.variationId, owner: det.owner, warehouse: det.warehouse }, l.qty)
     x.stock.sales.unshift({ id: uid('S'), at, productId: r!.productId, variationId: r!.variationId, owner: det.owner, warehouse: det.warehouse, channel: chId, qty: l.qty, price: l.price, cost: t.cost, by: `${byName} (از ${e.url})`, ext: o.id, code: l.sku, note: det.why + (t.taken < l.qty ? ` · مغایرت موجودی: ${fa(l.qty - t.taken)} عدد بیش از موجودی ثبت‌شده` : '') }); syncQty(x, r!.productId) })
   o.status = 'imported'; o.importedAt = at; return true
 }
@@ -131,7 +143,7 @@ function ExtCard({ e }: { e: ExtSite }) {
         </li>)}</ul>
       </div>
       <div>
-        <PartnerCodes e={e} />
+        <PartnerCodes e={e} /><WooSync e={e} />
         <p className="mb-2 mt-4 text-13 font-semibold">نگاشت دستی (فقط برای کالاهایی که هنوز کد غنیمت ندارند)</p>
         <ul className="space-y-1.5">{Object.entries(e.skuMap).map(([k, m]) => <li key={k} className="flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg px-2.5 py-1.5 text-12"><bdi dir="ltr" className="font-mono">{k}</bdi><span>← {pv(d, m.productId, m.variationId).full}</span>{e.pushStock && <Badge dot={false}>موجودی ارسالی: {fa(stockFor(m))}</Badge>}<span className="flex-1" /><button aria-label={`حذف نگاشت ${k}`} className="text-t3 hover:text-danger" onClick={() => up((y) => { delete y.skuMap[k] }, `حذف نگاشت SKU ${k}`)}><Trash2 size={13} /></button></li>)}</ul>
         <div className="mt-2 space-y-2 rounded-xl border border-dashed border-line p-2.5"><Field label="SKU در سایت او"><Input className="ltr text-left font-mono" value={sku.code} onChange={(v) => setSku({ ...sku, code: v.target.value })} /></Field>

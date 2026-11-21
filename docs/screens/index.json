@@ -105,6 +105,11 @@
   "admin-treasury.jpg"
  ],
  [
+  "/admin/investor-report",
+  "/admin/investor-report",
+  "admin-investor-report.jpg"
+ ],
+ [
   "/admin/warehouse",
   "/admin/warehouse",
   "admin-warehouse.jpg"
@@ -113,6 +118,11 @@
   "/admin/ownership",
   "/admin/ownership",
   "admin-ownership.jpg"
+ ],
+ [
+  "/admin/inbound",
+  "/admin/inbound",
+  "admin-inbound.jpg"
  ],
  [
   "/admin/packing",

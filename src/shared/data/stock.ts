@@ -21,7 +21,7 @@ export type CustomCode = { code: string; productId: string; variationId?: string
 
 export type PickRule = 'fifo' | 'own_first' | 'partner_first' | 'cost_low'
 export type CostRules = { discount: 'shared' | 'seller'; fee: 'shared' | 'seller' }
-export type ExtSite = { partyId: string; kind: 'woocommerce'; url: string; key: string; secret: string; on: boolean; lastSync?: string; pullOrders: boolean; pushStock: boolean; autoImport?: boolean; skuMap: Record<string, { productId: string; variationId?: string }>; inbox: ExtOrder[]; webhook: boolean }
+export type ExtSite = { paused?: boolean; partyId: string; kind: 'woocommerce'; url: string; key: string; secret: string; on: boolean; lastSync?: string; pullOrders: boolean; pushStock: boolean; autoImport?: boolean; skuMap: Record<string, { productId: string; variationId?: string }>; inbox: ExtOrder[]; webhook: boolean }
 export type ExtOrder = { id: string; at: string; status: 'new' | 'imported' | 'skipped' | 'unmatched' | 'refunded'; refundedAt?: string; lines: { sku: string; name: string; qty: number; price: number }[]; customer: string; note?: string; importedAt?: string }
 export type OwnerReturn = { id: string; at: string; owner: string; warehouse: string; lines: { productId: string; variationId?: string; qty: number; batch?: string; expiry?: string }[]; reason: string; by: string; receivedBy?: string }
 /** زمان رسیدن پول هر روش پرداخت به حساب ما: چند درصد، چند روز بعد از پرداخت مشتری */

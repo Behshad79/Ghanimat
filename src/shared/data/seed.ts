@@ -16,7 +16,7 @@ export type BuyItem = { id: string; productId?: string; name: string; qty: numbe
 /** اطلاعات بازرگانی کالا (فقط با فعال‌شدن «امور بازرگانی») */
 export type TradeInfo = { hsCode?: string; iranCode?: string; trackCode?: string; hamta?: string; origin?: string }
 export type PricePoint = { pid: string; at: string; price: number; by: string }
-export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; subCats?: string[]; kind?: 'simple' | 'variable'; attrs?: PAttr[]; variations?: Variation[]; defaultVar?: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; comingSoon?: string; incoming?: string; owner?: string; needsExpiry?: boolean; irc?: string; /** کالای تازه که از ورود موجودی ساخته شده و هنوز در سایت نیست */ exclusive?: { owner: string; at: string; by: string; note?: string; specs?: string; warehouse?: string; batchId?: string; assignee?: string }; pdp?: Pdp
+export type Product = { id: string; image: string; images?: string[]; imagePos?: string; title: string; en: string; brand: string; category: string; subCats?: string[]; kind?: 'simple' | 'variable'; attrs?: PAttr[]; variations?: Variation[]; defaultVar?: string; status: string; mode: string; qty?: { tehran: number; mahabad: number }; priceNew: number; price?: number; compareAt?: number; cost?: number; rating: number; reviews: number; views: number; cvr: number; health: number; fastEligible: boolean; seller: string; torob: boolean; partner?: boolean; featured?: boolean; comingSoon?: string; incoming?: string; owner?: string; needsExpiry?: boolean; irc?: string; /** کالای تازه که از ورود موجودی ساخته شده و هنوز در سایت نیست */ fromBatch?: { batchId: string; itemId: string }; exclusive?: { owner: string; at: string; by: string; note?: string; specs?: string; warehouse?: string; batchId?: string; assignee?: string }; pdp?: Pdp
   code?: string; ean?: string; model?: string; specs?: Record<string, string>; keyFeatures?: string; short?: string; long?: string; box?: string; pros?: string; cons?: string; condition?: string; grade?: string; source?: string; originLabel?: string; supplier?: string; warehouse?: string; currency?: string; costFx?: number; rate?: number; extraCost?: number; discount?: number; weight?: number; dims?: string; shipClass?: string; insurance?: boolean; install?: boolean; warrantyType?: string; warrantyMonths?: number; warrantyTerms?: string; metaTitle?: string; metaDesc?: string; slug?: string; scheduledAt?: string; video?: string }
 /** ویژگی کالای متغیر: سراسری (از ویژگی‌های فروشگاه) یا اختصاصی همین کالا */
 export type PAttr = { axis: string; name?: string; values: string[]; forVar: boolean; visible: boolean }
@@ -684,6 +684,19 @@ export const makeSeed = () => {
     const want = sub - (o.discount ?? 0) + (o.shippingFee ?? 0); if (want === o.total) return
     const old = [o.total, o.total + (o.shippingFee ?? 0), o.total - (o.discount ?? 0) + (o.shippingFee ?? 0)]
     s.txns.filter((t) => t.orderId === o.id && old.includes(t.amount)).forEach((t) => { t.amount = want }); o.total = want })
+  // حوالهٔ نمونه: یاسین از مهاباد برای انبار تهران جمع می‌کند (با چک‌لیست اسکن) و یک حوالهٔ قبلی که کامل تحویل شد
+  { const P = (id: string) => s.products.find((p) => p.id === id)!; const L = (o: string, pid: string, suf?: string) => labelCode(s.stock, o, P(pid), suf ? { suffix: suf } : null)
+    const ln = (o: string, pid: string, vid: string | undefined, suf: string | undefined, qty: number, packed: number, received = 0) => ({ key: `${pid}|${vid ?? ''}|${o}`, owner: o, code: L(o, pid, suf), title: P(pid).title, vname: vid ? (suf === '1' ? 'مشکی' : 'سفید') : undefined, productId: pid, variationId: vid, qty, packed, received })
+    const ago2 = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
+    s.stock.manifests = [
+      { id: 'HV-1405-031', from: 'mahabad', to: 'tehran', status: 'packing', createdAt: ago2(5), by: 'یاسین', reason: 'تأمین موجودی انبار تهران', carrier: 'تیپاکس',
+        lines: [ln('gh', 'prx', 'var-prx-blk', '1', 5, 3), ln('gh', 'prx', 'var-prx-wht', '2', 5, 5), ln('ys', 'p8', undefined, undefined, 3, 1)],
+        issues: [{ at: ago2(1), by: 'یاسین', code: L('ys', 'prx', '1'), kind: 'wrong', note: 'کالای یاسین (YS) اسکن شد؛ در این حواله نیست و کنار گذاشته شد' }],
+        events: [{ at: ago2(5), by: 'یاسین', text: 'ساخت حواله' }, { at: ago2(1), by: 'یاسین', text: 'شروع جمع‌آوری با اسکن' }] },
+      { id: 'HV-1405-027', from: 'tehran', to: 'mahabad', status: 'received', createdAt: ago2(240), by: 'بهشاد', reason: 'موجودی شعبهٔ مهاباد', carrier: 'تیپاکس', tracking: '24051987331', sentAt: ago2(236), sentBy: 'بهشاد', receivedAt: ago2(230), receivedBy: 'یاسین',
+        lines: [ln('gh', 'prx', 'var-prx-blk', '1', 5, 5, 5), ln('gh', 'prx', 'var-prx-wht', '2', 5, 5, 5)], issues: [],
+        events: [{ at: ago2(240), by: 'بهشاد', text: 'ساخت حواله' }, { at: ago2(236), by: 'بهشاد', text: 'ارسال با تیپاکس · ۱۰ عدد اسکن شد' }, { at: ago2(230), by: 'یاسین', text: 'تحویل کامل با اسکن' }] },
+    ] }
   new Set(s.stock.lots.map((l) => l.productId)).forEach((pid) => syncQty(s, pid))
   return s
 }

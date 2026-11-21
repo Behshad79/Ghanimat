@@ -27,6 +27,7 @@ export const NAV: NavItem[] = [
   { id: 'catalog', label: 'کالا و کاتالوگ', icon: PackageSearch, path: '/admin/catalog', group: 'کالا و انبار', count: (d) => d.partnerQueue.length },
   { id: 'warehouse', label: 'انبار و موجودی', icon: Warehouse, path: '/admin/warehouse', group: 'کالا و انبار', count: (d) => d.units.filter((u) => ['unit.qc', 'unit.photo', 'unit.ready'].includes(u.status)).length },
   { id: 'ownership', label: 'مالکیت و تسویهٔ موجودی', icon: HandCoins, path: '/admin/ownership', group: 'کالا و انبار' },
+  { id: 'inbound', label: 'ورود بار و حواله', icon: Truck, path: '/admin/inbound', group: 'کالا و انبار', count: (d) => (d.stock?.manifests ?? []).filter((m) => ['draft', 'packing', 'sent'].includes(m.status)).length + d.incoming.filter((b) => !b.receivedAt).length },
   { id: 'supply', label: 'تأمین و خرید', icon: Boxes, path: '/admin/supply', group: 'کالا و انبار' },
   { id: 'trade', label: 'امور بازرگانی', icon: Landmark, path: '/admin/trade', group: 'کالا و انبار' },
   { id: 'readiness', label: 'آمادگی کالا و محتوا', icon: ListChecks, path: '/admin/readiness', group: 'کالا و انبار', count: (d) => d.contentQueue.filter((c) => c.status === 'آماده انتشار').length },

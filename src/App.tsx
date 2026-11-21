@@ -48,6 +48,7 @@ import { currentUser, ROLES, useSession } from './shared/lib/store'
 import { MediaPage } from './admin/media/Media'
 import { TradePage } from './admin/trade/Trade'
 import { Ownership } from './admin/stock/Ownership'
+import { Inbound } from './admin/inbound/Inbound'
 import { Packing } from './admin/stock/Packing'
 
 export function App() {
@@ -85,6 +86,7 @@ export function App() {
               <Route path="*" element={<NotFound />} />
               <Route path="warehouse" element={<Warehouse />} />
               <Route path="ownership" element={<Ownership />} />
+              <Route path="inbound" element={<Inbound />} />
               <Route path="packing" element={<Packing />} />
               <Route path="shipping" element={<Shipping />} />
               <Route path="print" element={<PrintCenter />} />

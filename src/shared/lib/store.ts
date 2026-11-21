@@ -157,9 +157,12 @@ export function restoreTrash(id: string) {
 }
 /** کد داخلی بعدی محصول یا واحد (قالب و شمارنده از تنظیمات) */
 export function takeCode(kind: 'product' | 'unit'): string {
-  const f = getDB().codeFormat
-  const n = kind === 'product' ? f.nextProduct : f.nextUnit
-  mutate((x) => { if (kind === 'product') x.codeFormat.nextProduct++; else x.codeFormat.nextUnit++ })
+  const d = getDB(); const f = d.codeFormat
+  // کدی که روی کالا، واحد یا قلم محموله‌ای نشسته رد می‌شود (شمارهٔ ۶ رقمی آخر کد ملاک است، چون برچسب مالک‌دار همان را نشان می‌دهد)
+  const used = new Set<string>((kind === 'product' ? [...d.products.map((p) => p.code), ...d.incoming.flatMap((b) => b.items.map((i) => i.code))] : d.units.map((u) => u.code)).filter(Boolean).map((c) => String(c).replace(/\D/g, '').slice(-6)))
+  let n = kind === 'product' ? f.nextProduct : f.nextUnit
+  while (used.has(String(n).padStart(6, '0').slice(-6))) n++
+  mutate((x) => { if (kind === 'product') x.codeFormat.nextProduct = n + 1; else x.codeFormat.nextUnit = n + 1 })
   return `${kind === 'product' ? f.product : f.unit}${String(n).padStart(kind === 'product' ? f.pDigits : f.uDigits, '0')}`
 }
 

@@ -15,7 +15,10 @@ export function reserved(x: DB, pid: string, vid: string | undefined, wh: string
   return x.orders.reduce((a, o) => a + o.shipments.filter((s) => s.warehouse === wh && OPEN_SHIP.includes(s.status)).reduce((b, s) => b + s.items.filter((i) => !i.cancelled && i.productId === pid && (vid === undefined || (i.variationId ?? '') === (vid ?? ''))).reduce((c, i) => c + i.qty, 0), 0), 0)
 }
 export const expired = (l: Lot, now = Date.now()) => !!l.expiry && +new Date(l.expiry) < now
-const liveLot = (x: DB, l: Lot) => !l.hold && !expired(l) && x.stock.parties.find((p) => p.id === l.owner)?.active !== false && x.stock.warehouses.find((w) => w.id === l.warehouse)?.active !== false
+/** لات قابل فروش: نگه‌داشته یا منقضی نیست، مالکش فعال است و فروشش متوقف نشده، و انبارش باز است و ارسالش متوقف نشده */
+const paused = (p?: { until?: string } | null) => !!p && (!p.until || +new Date(p.until) > Date.now())
+const liveLot = (x: DB, l: Lot) => { const o = x.stock.parties.find((p) => p.id === l.owner); const w = x.stock.warehouses.find((q) => q.id === l.warehouse)
+  return !l.hold && !expired(l) && o?.active !== false && !(o?.pause?.sell && paused(o.pause)) && w?.active !== false && !(w?.pause?.ship && paused(w.pause)) }
 
 /** موجودی سایت = موجودی فیزیکی مالکان فعال در انبارهای فعال، منهای رزرو سفارش‌های باز */
 export function syncQty(x: DB, pid: string) {

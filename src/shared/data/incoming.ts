@@ -1,12 +1,30 @@
 // کالاهای در راه: خریدی که هنوز نرسیده (آمازون، اربیل و…) تا در فاصلهٔ رسیدن، صفحهٔ کالا، محتوا و «به‌زودی» از قبل آماده شود
 const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString()
 export const IN_STAGES = ['خرید شد', 'در انبار مبدأ', 'در مسیر اربیل', 'رسیده به اربیل', 'در مرز', 'ترخیص شد', 'رسید به انبار'] as const
-export const IN_ROUTES = ['آمازون → اربیل → مرز', 'خرید مستقیم اربیل', 'خرید مستقیم سلیمانیه', 'دبی → بندر'] 
-export type InItem = { id: string; name: string; qty: number; unitCost?: number; color?: string; amazonUrl?: string; productId?: string; note?: string; arrived?: { qty: number; ean?: string; code?: string; color?: string; note?: string; at: string } }
-export type InBatch = { id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
+export const IN_ROUTES = ['آمازون → اربیل → مرز', 'خرید مستقیم اربیل', 'خرید مستقیم سلیمانیه', 'دبی → بندر', 'خرید داخلی (تأمین‌کنندهٔ ایران)'] 
+/** تنوع خریداری‌شده (مثلاً «مشکی» ۳ عدد یا «۱۲۸ گیگ» ۴ عدد) با تقسیم بین انبارها؛ suffix روی برچسب می‌نشیند */
+export type InVariant = { id: string; label: string; qty: number; suffix: string; split?: Record<string, number> }
+export type InItem = { id: string; name: string; qty: number; unitCost?: number; color?: string; amazonUrl?: string; productId?: string; note?: string; arrived?: { qty: number; ean?: string; code?: string; color?: string; note?: string; at: string }
+  /** مالک کالا (پیشوند برچسب)، کد داخلی رزروشده، تنوع‌ها و تقسیم انبار، قیمت پیشنهادی فروش، محل خرید، مشخصات و عکس‌ها */
+  owner?: string; code?: string; variants?: InVariant[]; split?: Record<string, number>; sellPrice?: number; source?: string; specs?: string; photos?: string[]; brand?: string; category?: string; by?: string; at?: string
+  /** موجودی رسیده به هر انبار (بعد از ثبت رسید) */
+  landedAt?: Record<string, number> }
+export type InBatch = { buyer?: string; landing?: string; by?: string; id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
 
 export function makeIncoming(): InBatch[] {
   return [
+    { id: 'IN-1405-Y1', title: 'خرید یاسین از اربیل · آذر', buyer: 'ys', landing: 'mahabad', by: 'یاسین', route: 'خرید مستقیم اربیل', supplier: 'بازار اربیل (مجیدی‌مال) و آمازون', orderedAt: day(-3), eta: day(4), stage: 'در مرز', currency: 'دلار', rate: 68900, freight: 18000000, customs: 24000000, other: 3000000, paid: 0, note: 'یاسین خودش همراه بار است؛ از مرز باشماق تا مهاباد',
+      items: [
+        { id: 'ii20', name: 'گوشی سامسونگ Galaxy A55 5G', qty: 7, owner: 'gh', code: 'GH-P-000401', unitCost: 365, sellPrice: 31900000, source: 'بازار اربیل', brand: 'سامسونگ', category: 'گوشی موبایل', amazonUrl: 'https://www.amazon.com/dp/B0CWL5JRN8', specs: '۸ گیگ رم، دو سیم‌کارت، کارتن پلمب', by: 'یاسین', at: day(-3),
+          variants: [{ id: 'v1', label: 'مشکی · ۱۲۸ گیگ', qty: 3, suffix: 'V1', split: { tehran: 3 } }, { id: 'v2', label: 'آبی روشن · ۲۵۶ گیگ', qty: 4, suffix: 'V2', split: { tehran: 2, mahabad: 2 } }] },
+        { id: 'ii21', name: 'اسپیکر بلوتوثی JBL Flip 6', qty: 8, owner: 'ys', code: 'GH-P-000402', unitCost: 89, sellPrice: 7900000, source: 'آمازون', brand: 'جی‌بی‌ال', category: 'اسپیکر', amazonUrl: 'https://www.amazon.com/dp/B09GJVTRNZ', by: 'یاسین', at: day(-3),
+          variants: [{ id: 'v1', label: 'مشکی', qty: 5, suffix: 'V1', split: { mahabad: 3, tehran: 2 } }, { id: 'v2', label: 'قرمز', qty: 3, suffix: 'V2', split: { mahabad: 3 } }] },
+        { id: 'ii22', name: 'ردیاب اپل AirTag بستهٔ ۴ عددی', qty: 6, owner: 'gh', code: 'GH-P-000403', unitCost: 95, sellPrice: 8400000, source: 'فروشگاه رسمی', brand: 'اپل', category: 'لوازم جانبی', split: { tehran: 6 }, by: 'یاسین', at: day(-3) },
+        { id: 'ii23', name: 'ساعت هوشمند Garmin Forerunner 265', qty: 2, owner: 'ys', code: 'GH-P-000404', unitCost: 410, sellPrice: 36500000, source: 'آمازون', brand: 'گارمین', category: 'ساعت هوشمند', specs: 'سایز ۴۶ میلی‌متر، صفحهٔ AMOLED', split: { mahabad: 2 }, by: 'یاسین', at: day(-3) },
+      ] },
+    { id: 'IN-1405-B1', title: 'خرید بهشاد از یوسف', buyer: 'gh', landing: 'tehran', by: 'بهشاد', route: 'خرید داخلی (تأمین‌کنندهٔ ایران)', supplier: 'یوسف', orderedAt: day(-1), eta: day(2), stage: 'خرید شد', currency: 'تومان', rate: 1, paid: 74000000,
+      items: [{ id: 'ii24', name: 'هدفون سونی WH-1000XM5', qty: 4, owner: 'gh', code: 'GH-P-000405', unitCost: 18500000, sellPrice: 22900000, source: 'یوسف', brand: 'سونی', category: 'هدفون', by: 'بهشاد', at: day(-1),
+        variants: [{ id: 'v1', label: 'مشکی', qty: 2, suffix: 'V1', split: { tehran: 2 } }, { id: 'v2', label: 'نقره‌ای', qty: 2, suffix: 'V2', split: { tehran: 1, mahabad: 1 } }] }] },
     { id: 'IN-1405-08', title: 'خرید آمازون آبان', route: 'آمازون → اربیل → مرز', supplier: 'انبار آمازون اربیل', orderedAt: day(-6), eta: day(20), stage: 'در مسیر اربیل', currency: 'دلار', rate: 61500, freight: 42000000, customs: 65000000, other: 8000000, paid: 400000000, note: 'بار هوایی تا اربیل، بعد زمینی تا مرز باشماق',
       items: [
         { id: 'ii1', name: 'AirPods Pro 2 (USB-C)', qty: 30, unitCost: 189, amazonUrl: 'https://www.amazon.com/dp/B0CHWRXH8B', productId: 'pin1' },

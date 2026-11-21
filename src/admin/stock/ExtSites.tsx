@@ -96,7 +96,7 @@ function ExtCard({ e }: { e: ExtSite }) {
     toast(`سفارش ${o.id} ثبت شد؛ موجودی همان مالک کم شد و سهم‌ها حساب شد. موجودی سایت غنیمت هم همین لحظه به‌روز شد.`)
   }
   const refundOrder = (o: ExtOrder) => { mutate((x) => { refundExt(x, e.partyId, o.id, by()) }, { action: 'برگشت سفارش سایت شریک (لغو یا مرجوعی)', target: `${o.id} · ${e.url}` }); toast(`برگشت ${o.id} ثبت شد؛ کالا به موجودی همان مالک برگشت و سهم‌ها برعکس شد.`) }
-  const sync = async () => { setBusy(true); try { await fakeCall(true, 900)
+  const sync = async () => { if (e.paused) { toast('همگام‌سازی این سایت با «توقف فوری» بسته است؛ از «ورود بار و حواله ← توقف و انتقال» ازسرگیری کنید.', { tone: 'err' }); return } setBusy(true); try { await fakeCall(true, 900)
     const keys = partnerCodes(d, e.partyId).filter((c) => c.stock > 0).map((c) => c.code); const k = keys[Math.floor(Math.random() * keys.length)]; const oid = `ve1-${5524 + e.inbox.length}`
     mutate((x) => { const y = x.stock.ext.find((z) => z.partyId === e.partyId)!; y.lastSync = new Date().toISOString(); if (!y.pullOrders || !k) return
       y.inbox.unshift({ id: oid, at: new Date().toISOString(), status: 'new', customer: 'مشتری سایت', lines: [{ sku: k, name: k, qty: 1, price: 2750000 }] })
@@ -107,6 +107,7 @@ function ExtCard({ e }: { e: ExtSite }) {
   return <Card title={<span className="flex flex-wrap items-center gap-2"><Globe size={15} />اتصال ووکامرس <bdi dir="ltr" className="font-mono text-13">{e.url}</bdi>{party && <PartyChip s={s} id={party.id} />}{e.on ? <Badge tone="success">متصل</Badge> : <Badge tone="danger">قطع</Badge>}</span>}
     hint="سایت شریک با REST API و وب‌هوک ووکامرس وصل می‌شود: هر سفارش آن‌جا خودکار این‌جا می‌آید، کالایش با SKU شناخته می‌شود و مالک (کالای خودش یا کالای غنیمت) تشخیص داده می‌شود."
     actions={<div className="flex gap-2"><Button size="sm" icon={<RefreshCw size={13} />} loading={busy} onClick={() => void sync()}>همگام‌سازی همین حالا</Button><Toggle on={e.on} onChange={(v) => up((y) => { y.on = v }, v ? 'وصل کردن سایت شریک' : 'قطع اتصال سایت شریک')} text={e.on ? 'روشن' : 'خاموش'} /></div>}>
+    {e.paused && <p className="mb-3 rounded-lg bg-danger-bg px-3 py-2 text-12 text-danger">همگام‌سازی این سایت با «توقف فوری» بسته است: نه سفارشی دریافت می‌شود و نه موجودی ارسال.</p>}
     <div className="grid gap-3 lg:grid-cols-3">
       <Field label="نشانی سایت"><Input className="ltr text-left" value={e.url} onChange={(v) => up((y) => { y.url = v.target.value }, 'تغییر نشانی سایت شریک')} /></Field>
       <Field label="Consumer Key" help="از ووکامرس ← تنظیمات ← پیشرفته ← REST API با دسترسی خواندن و نوشتن"><Input className="ltr text-left font-mono" value={e.key} onChange={(v) => up((y) => { y.key = v.target.value }, 'تغییر کلید API سایت شریک')} /></Field>

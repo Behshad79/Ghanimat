@@ -249,3 +249,10 @@ table td .font-mono, table td bdi.font-mono { white-space: nowrap; }
 
 /* کارت‌های شاخص داخل پنجره و کشو: ستون‌ها بر اساس عرض خود پنجره، نه عرض صفحه؛ هر کارت دست‌کم ۲۶۰ پیکسل تا عنوان کامل دیده شود */
 [data-dialog-body] .grid:has(> [data-kpi]) { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+/* پیام‌رسان: زمینهٔ طرح‌دار ملایم با رنگ برند و دم حباب پیام (مثل تلگرام) */
+.msg-bg { background-color: #e9ebfb; background-image: radial-gradient(circle at 12px 12px, rgba(0,0,255,.07) 2px, transparent 2.5px), radial-gradient(circle at 36px 30px, rgba(255,194,75,.18) 1.6px, transparent 2px), linear-gradient(160deg, rgba(0,0,255,.05), rgba(255,194,75,.06)); background-size: 48px 48px, 48px 48px, 100% 100%; }
+[data-theme='dark'] .msg-bg { background-color: #0f1126; background-image: radial-gradient(circle at 12px 12px, rgba(120,120,255,.12) 2px, transparent 2.5px), radial-gradient(circle at 36px 30px, rgba(255,194,75,.1) 1.6px, transparent 2px); background-size: 48px 48px, 48px 48px; }
+.msg-tail-out::after, .msg-tail-in::after { content: ''; position: absolute; bottom: 0; width: 10px; height: 14px; background: inherit; }
+.msg-tail-out::after { left: -6px; clip-path: path('M10 0 C10 8 6 12 0 14 L10 14 Z'); }
+.msg-tail-in::after { right: -6px; clip-path: path('M0 0 C0 8 4 12 10 14 L0 14 Z'); }

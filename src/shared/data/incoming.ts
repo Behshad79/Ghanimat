@@ -11,7 +11,7 @@ export type InItem = { id: string; name: string; qty: number; unitCost?: number;
   owner?: string; code?: string; variants?: InVariant[]; split?: Record<string, number>; alloc?: Alloc[]; attrs?: { name: string; values: string[] }[]; sellPrice?: number; source?: string; specs?: string; photos?: string[]; brand?: string; category?: string; by?: string; at?: string
   /** موجودی رسیده به هر انبار (بعد از ثبت رسید) */
   landedAt?: Record<string, number> }
-export type InBatch = { buyer?: string; landing?: string; by?: string; id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
+export type InBatch = { single?: boolean; buyer?: string; landing?: string; by?: string; id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
 
 export function makeIncoming(): InBatch[] {
   return [

@@ -1,7 +1,7 @@
 // عملیات ورود بار و حواله روی پایگاه داده: ساخت کالا از قلم محموله، رسید در انبار ورودی، ساخت حواله، جمع‌آوری و تحویل با اسکن
 import type { DB, Product } from '@/shared/data/seed'
 import type { InBatch, InItem } from '@/shared/data/incoming'
-import { itemLabel, itemQty, landed, type Manifest, type ManifestLine } from '@/shared/data/inbound'
+import { itemQty, labelLines, landed, ownersOf, type Manifest, type ManifestLine } from '@/shared/data/inbound'
 import { labelCode } from '@/shared/data/stock'
 import { syncQty, takeLots } from '@/shared/data/ledger'
 
@@ -18,20 +18,18 @@ export function ensureProduct(x: DB, b: InBatch, it: InItem, status: 'product.in
   const pid = `p${Date.now().toString(36)}${it.id}`; const cost = landed(b, it).unit
   const vars = it.variants?.length ? it.variants : null
   const p = { ...(tpl as unknown as Product), id: pid, code: it.code, title: it.name, en: it.name, brand: it.brand || 'بدون برند', category: it.category || 'سایر', subCats: [], status, mode: 'qty',
-    kind: vars ? 'variable' : 'simple', attrs: vars ? [{ axis: VAR_AXIS, name: VAR_AXIS, values: vars.map((v) => v.label), forVar: true, visible: true }] : [],
-    variations: vars ? vars.map((v) => ({ id: `var-${pid}-${v.suffix.toLowerCase()}`, opts: { [VAR_AXIS]: v.label }, suffix: v.suffix, qty: { tehran: 0, mahabad: 0 }, enabled: true, price: it.sellPrice || undefined })) : undefined,
+    kind: vars ? 'variable' : 'simple', attrs: vars ? (it.attrs?.length && vars.every((v) => v.opts) ? it.attrs.map((a) => ({ axis: 'local', name: a.name, values: a.values, forVar: true, visible: true })) : [{ axis: 'local', name: VAR_AXIS, values: vars.map((v) => v.label), forVar: true, visible: true }]) : [],
+    variations: vars ? vars.map((v) => ({ id: `var-${pid}-${v.suffix.toLowerCase()}`, opts: it.attrs?.length && v.opts ? v.opts : { [VAR_AXIS]: v.label }, suffix: v.suffix, qty: { tehran: 0, mahabad: 0 }, enabled: true, price: it.sellPrice || undefined })) : undefined,
     defaultVar: undefined, qty: { tehran: 0, mahabad: 0 }, priceNew: it.sellPrice ?? 0, price: undefined, compareAt: undefined, cost, image: it.photos?.[0] ?? '', images: it.photos ?? [], short: it.specs ?? '',
-    rating: 0, reviews: 0, views: 0, cvr: 0, health: 20, featured: false, torob: false, incoming: b.id, owner: it.owner && it.owner !== 'gh' ? it.owner : undefined, partner: it.owner && it.owner !== 'gh' ? true : undefined,
+    rating: 0, reviews: 0, views: 0, cvr: 0, health: 20, featured: false, torob: false, incoming: b.id, owner: (() => { const o = ownersOf(it); return o.length === 1 && o[0] !== 'gh' ? o[0] : undefined })(), partner: ownersOf(it).some((o) => o !== 'gh') || undefined,
     pdp: { ...((tpl.pdp as object) ?? {}), videos: [], flaws: [], variantGroup: '', variantLabel: '', variant: undefined, amazonUrl: it.amazonUrl, cardLines: undefined, featured: false, covered: '', notCovered: '' },
     fromBatch: { batchId: b.id, itemId: it.id } } as unknown as Product
   x.products.unshift(p); it.productId = pid
   return p
 }
 
-/** خط‌های یک قلم با کد برچسب (هر تنوع یک خط) */
-export function itemLines(x: DB, it: InItem): { v?: InItem['variants'] extends (infer T)[] | undefined ? T : never; code: string; qty: number; split: Record<string, number> }[] {
-  return it.variants?.length ? it.variants.map((v) => ({ v, code: itemLabel(x.stock, it, v), qty: v.qty, split: v.split ?? {} })) : [{ code: itemLabel(x.stock, it, null), qty: it.qty, split: it.split ?? {} }]
-}
+/** خط‌های یک قلم با کد برچسب: هر تنوع × هر مالک یک خط */
+export const itemLines = (x: DB, it: InItem) => labelLines(x.stock, it)
 
 /** رسید محموله در انبار ورودی: موجودی همهٔ رسیده‌ها به نام مالک در همان انبار ثبت می‌شود و برای سهم انبارهای دیگر حواله ساخته می‌شود */
 export function landBatch(x: DB, batchId: string, got: Record<string, number>, by: string): string[] {
@@ -40,13 +38,13 @@ export function landBatch(x: DB, batchId: string, got: Record<string, number>, b
   b.items.forEach((it) => {
     const p = ensureProduct(x, b, it, 'product.draft'); if (p.status === 'product.incoming') p.status = 'product.draft'
     const cost = landed(b, it).unit; let total = 0
-    itemLines(x, it).forEach(({ v, code, split }) => {
-      const key = `${it.id}|${v?.id ?? ''}`; const q = Math.max(0, got[key] ?? 0); if (!q) return; total += q
+    itemLines(x, it).forEach(({ v, owner, code, split }) => {
+      const key = `${it.id}|${v?.id ?? ''}|${owner}`; const q = Math.max(0, got[key] ?? 0); if (!q) return; total += q
       const vid = v ? p.variations?.find((y) => y.suffix === v.suffix)?.id : undefined
-      x.stock.lots.unshift({ id: mid('L') + it.id + (v?.suffix ?? ''), productId: p.id, variationId: vid, owner: it.owner ?? 'gh', warehouse: at, qty: q, qty0: q, cost, at: now(), ref: `${b.id} · ${b.title}` })
+      x.stock.lots.unshift({ id: mid('L') + it.id + (v?.suffix ?? '') + owner, productId: p.id, variationId: vid, owner, warehouse: at, qty: q, qty0: q, cost, at: now(), ref: `${b.id} · ${b.title}` })
       // سهم انبارهای دیگر، به اندازهٔ آنچه واقعاً رسیده
       let left = q; Object.entries(split).filter(([w]) => w !== at).forEach(([w, n]) => { const send = Math.min(left, n || 0); if (!send) return; left -= send
-        const L = outs.get(w) ?? []; L.push({ key: `${p.id}|${vid ?? ''}|${it.owner ?? 'gh'}`, owner: it.owner ?? 'gh', code, title: p.title, vname: v?.label, qty: send, packed: 0, received: 0, productId: p.id, variationId: vid, batchId: b.id, itemId: it.id, variantId: v?.id }); outs.set(w, L) })
+        const L = outs.get(w) ?? []; L.push({ key: `${p.id}|${vid ?? ''}|${owner}`, owner, code, title: p.title, vname: v?.label, qty: send, packed: 0, received: 0, productId: p.id, variationId: vid, batchId: b.id, itemId: it.id, variantId: v?.id }); outs.set(w, L) })
     })
     it.landedAt = { ...(it.landedAt ?? {}), [at]: total }; it.arrived = { qty: total, at: now() }
     syncQty(x, p.id)

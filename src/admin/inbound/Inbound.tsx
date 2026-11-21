@@ -6,7 +6,7 @@ import { Page } from '@/shared/ui/page'
 import { toast } from '@/shared/ui/overlay'
 import { mutate, useDB } from '@/shared/lib/store'
 import { fa, toman } from '@/shared/lib/fa'
-import { itemQty, landed } from '@/shared/data/inbound'
+import { itemQty, landed, ownersOf } from '@/shared/data/inbound'
 import { useTab } from '../pages/_shared'
 import { PartyChip, whName } from '../stock/common'
 import { fillChecks } from '../catalog/NewItemsQueue'
@@ -49,7 +49,7 @@ function BuildQueue() {
         return <tr key={`${b.id}${it.id}`} className="border-t border-line">
           <td className="p-2"><span className="flex items-center gap-2">{(it.photos?.[0] || p?.image) ? <img src={it.photos?.[0] || p?.image} alt="" className="size-10 rounded-lg object-cover" /> : <span className="grid size-10 place-items-center rounded-lg bg-neutral-bg text-t3"><Sparkles size={14} /></span>}<span><b className="block max-w-56 truncate">{p?.title ?? it.name}</b>{it.amazonUrl && <a href={it.amazonUrl} target="_blank" rel="noreferrer" className="text-11 text-brand">لینک خرید</a>}</span></span></td>
           <td className="p-2"><span className="font-mono">{b.id}</span><span className="block text-11 text-t2">{b.receivedAt ? 'رسیده' : b.stage}</span></td>
-          <td className="p-2"><PartyChip s={s} id={it.owner ?? 'gh'} /></td>
+          <td className="p-2"><span className="flex flex-col gap-1">{ownersOf(it).map((o) => <PartyChip key={o} s={s} id={o} />)}</span></td>
           <td className="p-2">{fa(itemQty(it))} عدد{it.landedAt && <span className="block text-11 text-success">{Object.entries(it.landedAt).map(([w, q]) => `${whName(s, w)} ${fa(q)}`).join('، ')}</span>}{tq > 0 && <Badge tone="success" dot={false}>در تهران: {fa(tq)}</Badge>}</td>
           <td className="p-2">{toman(L.unit)}<span className="block text-11 text-t2">{it.sellPrice ? toman(it.sellPrice) : '—'}</span></td>
           <td className="p-2">{p ? <div className="w-32"><Progress value={Math.round((n / Math.max(1, c.length)) * 100)} tone={n === c.length ? 'success' : 'warning'} /><span className="text-11 text-t2">{n === c.length ? 'کامل' : `کم: ${c.filter((x) => !x.ok).slice(0, 2).map((x) => x.label).join('، ')}`}</span></div> : <span className="text-warning">صفحه ساخته نشده</span>}</td>

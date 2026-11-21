@@ -3,10 +3,12 @@ const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString()
 export const IN_STAGES = ['خرید شد', 'در انبار مبدأ', 'در مسیر اربیل', 'رسیده به اربیل', 'در مرز', 'ترخیص شد', 'رسید به انبار'] as const
 export const IN_ROUTES = ['آمازون → اربیل → مرز', 'خرید مستقیم اربیل', 'خرید مستقیم سلیمانیه', 'دبی → بندر', 'خرید داخلی (تأمین‌کنندهٔ ایران)'] 
 /** تنوع خریداری‌شده (مثلاً «مشکی» ۳ عدد یا «۱۲۸ گیگ» ۴ عدد) با تقسیم بین انبارها؛ suffix روی برچسب می‌نشیند */
-export type InVariant = { id: string; label: string; qty: number; suffix: string; split?: Record<string, number> }
+/** سهم هر مالک در هر انبار: «۲ عدد مال یاسین، دست بهشاد در تهران» یعنی { owner: 'ys', wh: 'tehran', qty: 2 } */
+export type Alloc = { owner: string; wh: string; qty: number }
+export type InVariant = { id: string; label: string; qty: number; suffix: string; split?: Record<string, number>; opts?: Record<string, string>; alloc?: Alloc[] }
 export type InItem = { id: string; name: string; qty: number; unitCost?: number; color?: string; amazonUrl?: string; productId?: string; note?: string; arrived?: { qty: number; ean?: string; code?: string; color?: string; note?: string; at: string }
   /** مالک کالا (پیشوند برچسب)، کد داخلی رزروشده، تنوع‌ها و تقسیم انبار، قیمت پیشنهادی فروش، محل خرید، مشخصات و عکس‌ها */
-  owner?: string; code?: string; variants?: InVariant[]; split?: Record<string, number>; sellPrice?: number; source?: string; specs?: string; photos?: string[]; brand?: string; category?: string; by?: string; at?: string
+  owner?: string; code?: string; variants?: InVariant[]; split?: Record<string, number>; alloc?: Alloc[]; attrs?: { name: string; values: string[] }[]; sellPrice?: number; source?: string; specs?: string; photos?: string[]; brand?: string; category?: string; by?: string; at?: string
   /** موجودی رسیده به هر انبار (بعد از ثبت رسید) */
   landedAt?: Record<string, number> }
 export type InBatch = { buyer?: string; landing?: string; by?: string; id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }

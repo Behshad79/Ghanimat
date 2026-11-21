@@ -14,8 +14,8 @@ import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
 import { fetchRate, type FxCur } from '@/shared/lib/fx'
 import type { DB } from '@/shared/data/seed'
 import { itemSales } from '../catalog/BatchLedger'
-import { IN_ROUTES, IN_STAGES, type InBatch, type InItem, type InVariant } from '@/shared/data/incoming'
-import { BUY_SOURCES, CURRENCIES, itemLabel, itemQty, itemSplit, landed, varSuffix } from '@/shared/data/inbound'
+import { IN_ROUTES, IN_STAGES, type Alloc, type InBatch, type InItem, type InVariant } from '@/shared/data/incoming'
+import { allocOf, BUY_SOURCES, CURRENCIES, itemLabel, itemQty, itemSplit, labelLines, landed, ownersOf, varSuffix } from '@/shared/data/inbound'
 import { PartyChip, partyLogo, whName } from '../stock/common'
 import { ensureProduct, landBatch, mid } from './ops'
 
@@ -31,7 +31,7 @@ const pctMargin = (sell: number, cost: number) => (sell > 0 && cost > 0 ? Math.r
 export function BatchesTab({ onManifests }: { onManifests: () => void }) {
   const d = useDB(); const nav = useNavigate(); const s = d.stock
   const [form, setForm] = useState<InBatch | null>(null); const [wiz, setWiz] = useState<{ b: string; it?: InItem } | null>(null); const [grid, setGrid] = useState<string | null>(null)
-  const [land, setLand] = useState<string | null>(null); const [labels, setLabels] = useState<string | null>(null); const [view, setView] = useState<'open' | 'done'>('open')
+  const [land, setLand] = useState<string | null>(null); const [labels, setLabels] = useState<{ b: string; only?: string } | null>(null); const [view, setView] = useState<'open' | 'done'>('open')
   const open = d.incoming.filter((b) => !b.receivedAt); const done = d.incoming.filter((b) => b.receivedAt)
   const [q, setQ] = useState(''); const [shut, setShut] = useState<Record<string, boolean>>({})
   const norm = (t: string) => t.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -39,7 +39,7 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
   const isOpen = (id: string, i: number) => shut[id] === undefined ? i === 0 || !!q.trim() : !shut[id]
   const units = open.flatMap((b) => b.items).reduce((a, it) => a + itemQty(it), 0)
   const value = open.reduce((a, b) => a + b.items.reduce((x, it) => x + landed(b, it).unit * itemQty(it), 0), 0)
-  const byOwner = (o: string) => open.flatMap((b) => b.items).filter((it) => (it.owner ?? 'gh') === o).reduce((a, it) => a + itemQty(it), 0)
+  const byOwner = (o: string) => open.flatMap((b) => b.items).flatMap((it) => (it.variants?.length ? it.variants.flatMap((v) => allocOf(it, v)) : allocOf(it))).filter((a) => a.owner === o).reduce((x, a) => x + a.qty, 0)
   const newBatch = () => { const mine = myParty(); const wh = s.warehouses.find((w) => w.operator === mine && w.active)?.id ?? 'tehran'
     setForm({ id: `IN-${Date.now().toString(36).slice(-4).toUpperCase()}`, title: '', buyer: mine, landing: wh, by: me(), route: mine === 'gh' ? IN_ROUTES[4] : IN_ROUTES[1], orderedAt: new Date().toISOString(), eta: new Date(Date.now() + 7 * 864e5).toISOString(), stage: IN_STAGES[0], items: [], currency: mine === 'gh' ? 'تومان' : 'دلار', rate: mine === 'gh' ? 1 : usd(), freight: 0, customs: 0, other: 0 }) }
   const build = (b: InBatch, it: InItem) => { let pid = it.productId
@@ -58,7 +58,7 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
       return <Card key={b.id} pad={false} title={<span className="flex flex-wrap items-center gap-2"><button type="button" aria-expanded={expanded} aria-label={expanded ? 'بستن محموله' : 'باز کردن محموله'} onClick={() => setShut({ ...shut, [b.id]: expanded })} className="grid size-7 place-items-center rounded-lg hover:bg-neutral-bg"><ChevronDown size={16} className={cx('transition-transform', expanded && 'rotate-180')} /></button><button type="button" className="text-right hover:text-brand" onClick={() => setShut({ ...shut, [b.id]: expanded })}>{b.title || 'محمولهٔ بدون عنوان'}</button><Badge dot={false}>{b.id}</Badge>{b.buyer && <PartyChip s={s} id={b.buyer} />}{!b.receivedAt && <Badge tone={dl < 0 ? 'danger' : dl <= 2 ? 'warning' : 'info'}>{dl < 0 ? `${fa(-dl)} روز تأخیر` : dl === 0 ? 'امروز می‌رسد' : `${fa(dl)} روز تا رسیدن`}</Badge>}{b.receivedAt && <Badge tone="success">رسید {rel(b.receivedAt)}</Badge>}</span>}
         actions={<span className="flex flex-wrap gap-1.5">
           {!b.receivedAt && <><Button size="sm" icon={<Plus size={13} />} onClick={() => setWiz({ b: b.id })}>افزودن کالا (گام‌به‌گام)</Button><Button size="sm" icon={<Table2 size={13} />} onClick={() => setGrid(b.id)}>ویرایش جدولی</Button></>}
-          <Button size="sm" variant="ghost" icon={<Printer size={13} />} disabled={!b.items.length} onClick={() => setLabels(b.id)}>برچسب‌ها</Button>
+          <Button size="sm" variant="ghost" icon={<Printer size={13} />} disabled={!b.items.length} onClick={() => setLabels({ b: b.id })}>برچسب‌ها</Button>
           <Button size="sm" variant="ghost" icon={<Pencil size={13} />} onClick={() => setForm(structuredClone(b))}>محموله</Button>
           {!b.receivedAt && <Button size="sm" variant="primary" icon={<PackageCheck size={13} />} disabled={!b.items.length} onClick={() => setLand(b.id)}>رسید در {whName(s, b.landing ?? 'tehran')}</Button>}
         </span>}>
@@ -74,11 +74,11 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
             {b.items.map((it) => { const p = it.productId ? d.products.find((x) => x.id === it.productId) : undefined; const L = landed(b, it); const mg = pctMargin(it.sellPrice ?? 0, L.unit); const sp = itemSplit(it)
               return <tr key={it.id} className="border-t border-line align-top">
                 <td className="p-2"><span className="flex gap-2">{it.photos?.[0] || p?.image ? <img src={it.photos?.[0] || p?.image} alt="" className="size-11 shrink-0 rounded-lg object-cover" /> : <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-neutral-bg text-t3"><Camera size={16} /></span>}<span className="min-w-0"><b className="block max-w-60 truncate">{p?.title ?? it.name}</b><span className="text-11 text-t2">{it.source ?? '—'}{it.brand ? ` · ${it.brand}` : ''}</span>{it.amazonUrl && <a href={it.amazonUrl} target="_blank" rel="noreferrer" className="mr-1 inline-flex items-center gap-0.5 text-11 text-brand"><ExternalLink size={10} />لینک</a>}{it.specs && <span className="block max-w-60 truncate text-11 text-t3">{it.specs}</span>}</span></span></td>
-                <td className="p-2">{it.variants?.length ? <ul className="space-y-0.5">{it.variants.map((v) => <li key={v.id}>{v.label} <b className="tnum">× {fa(v.qty)}</b></li>)}</ul> : <b className="tnum">× {fa(it.qty)}</b>}</td>
-                <td className="p-2"><PartyChip s={s} id={it.owner ?? 'gh'} /></td>
+                <td className="p-2"><ul className="space-y-1">{(it.variants?.length ? it.variants : [null]).map((v, vi) => { const A = allocOf(it, v); return <li key={v?.id ?? vi}>{v && <span>{v.label} </span>}<b className="tnum">× {fa(A.reduce((x, a) => x + a.qty, 0))}</b><span className="mt-0.5 flex flex-wrap gap-1">{A.map((a, k) => { const o = s.parties.find((p) => p.id === a.owner); return <span key={k} className="rounded px-1.5 text-11" style={{ background: `${o?.color ?? '#666'}14`, color: o?.color }}><bdi dir="ltr" className="font-mono">{o?.prefix}</bdi> {fa(a.qty)}{a.wh ? ` · ${whName(s, a.wh)}` : ''}</span> })}</span></li> })}</ul></td>
+                <td className="p-2"><span className="flex flex-col gap-1">{ownersOf(it).map((o) => <PartyChip key={o} s={s} id={o} />)}</span></td>
                 <td className="p-2">{Object.keys(sp).length ? Object.entries(sp).map(([w, q]) => <span key={w} className="block">{whName(s, w)}: <b className="tnum">{fa(q)}</b></span>) : <span className="text-warning">تعیین نشده</span>}{it.landedAt && <span className="mt-0.5 block text-11 text-success">رسید: {Object.entries(it.landedAt).map(([w, q]) => `${whName(s, w)} ${fa(q)}`).join('، ')}</span>}</td>
                 <td className="p-2"><span className="block">{b.currency && b.currency !== 'تومان' ? `${fa(it.unitCost ?? 0)} ${b.currency} ← ` : ''}<b>{toman(L.unit)}</b></span><span className="block text-t2">فروش: {it.sellPrice ? toman(it.sellPrice) : '—'}{mg !== null && <span className={cx('mr-1', mg < 10 ? 'text-danger' : 'text-success')}>({fa(mg)}٪)</span>}</span></td>
-                <td className="p-2">{(it.variants?.length ? it.variants : [null]).map((v, i) => <bdi key={i} dir="ltr" className="block font-mono text-11">{itemLabel(s, it, v)}</bdi>)}</td>
+                <td className="p-2">{labelLines(s, it).map((ln, i) => <bdi key={i} dir="ltr" className="block font-mono text-11" style={{ color: s.parties.find((p) => p.id === ln.owner)?.color }}>{ln.code} ×{ln.qty}</bdi>)}</td>
                 <td className="p-2">{p ? <span className="flex flex-col items-start gap-1"><Badge tone={p.status === 'product.published' ? 'success' : p.health >= 70 ? 'info' : 'warning'} dot={false}>{p.status === 'product.published' ? 'منتشر شده' : `آمادگی ${fa(p.health)}٪`}</Badge><Button size="sm" variant="ghost" icon={<Pencil size={12} />} onClick={() => nav(`/admin/catalog/${p.id}/edit?step=0&from=batch`)}>ادامه</Button><span className="flex gap-2 text-11"><button type="button" className="text-t2 hover:text-brand" title="سناریوی اینستاگرام پیش از رسیدن" onClick={() => { mutate((x) => { x.contentQueue.unshift({ id: `cq${Date.now().toString(36)}`, productId: p.id, channel: 'اینستاگرام', kind: 'ریلز', status: 'ایده', due: new Date(Math.max(Date.now() + 864e5, +new Date(b.eta) - 864e5)).toISOString(), owner: me(), note: `معرفی ${p.title} پیش از رسیدن` } as never) }, { action: 'سناریوی معرفی کالای در راه', target: p.title }); toast('سناریوی اینستاگرام به صف محتوا رفت.') }}>+ سناریو</button><button type="button" className="text-t2 hover:text-brand" onClick={() => { mutate((x) => { (x as unknown as { comingSoon?: unknown }); const q = x.products.find((y) => y.id === p.id); if (q) q.comingSoon = q.comingSoon ? undefined : b.eta }, { action: 'به‌زودی کالای در راه', target: p.title }); toast(p.comingSoon ? 'از «به‌زودی» برداشته شد.' : 'در «به‌زودی» با تاریخ رسیدن نمایش داده می‌شود.') }}>{p.comingSoon ? '− به‌زودی' : '+ به‌زودی'}</button></span></span> : <Button size="sm" icon={<Sparkles size={12} />} onClick={() => build(b, it)}>ساخت صفحه</Button>}</td>
                 <td className="p-2">{!b.receivedAt && <span className="flex gap-1"><button type="button" aria-label={`ویرایش ${it.name}`} className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-brand-tint hover:text-brand" onClick={() => setWiz({ b: b.id, it })}><Pencil size={13} /></button><button type="button" aria-label={`حذف ${it.name}`} className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-danger-bg hover:text-danger" onClick={async () => { if (await confirm({ title: `«${it.name}» از محموله حذف شود؟`, body: 'برچسب‌هایی که برای این قلم چاپ شده دیگر شناخته نمی‌شوند.', confirm: 'حذف', danger: true })) mutate((x) => { const bb = x.incoming.find((q) => q.id === b.id)!; bb.items = bb.items.filter((q) => q.id !== it.id) }, { action: 'حذف قلم از محموله', target: `${b.id} · ${it.name}` }) }}><Trash2 size={13} /></button></span>}</td>
               </tr> })}
@@ -88,10 +88,10 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
         </>}
       </Card> })}
     {form && <BatchForm b={form} onClose={() => setForm(null)} />}
-    {wiz && <ItemWizard batch={d.incoming.find((b) => b.id === wiz.b)!} edit={wiz.it} onClose={() => setWiz(null)} />}
+    {wiz && <ItemWizard batch={d.incoming.find((b) => b.id === wiz.b)!} edit={wiz.it} onClose={(pr) => { const bid = wiz.b; setWiz(null); if (pr) setLabels({ b: bid, only: pr }) }} />}
     {grid && <BatchGrid batch={d.incoming.find((b) => b.id === grid)!} onClose={() => setGrid(null)} />}
     {land && <LandModal batch={d.incoming.find((b) => b.id === land)!} onClose={(made) => { setLand(null); if (made?.length) onManifests() }} />}
-    {labels && <LabelSheet batch={d.incoming.find((b) => b.id === labels)!} onClose={() => setLabels(null)} />}
+    {labels && <LabelSheet batch={d.incoming.find((b) => b.id === labels.b)!} only={labels.only} onClose={() => setLabels(null)} />}
   </div>
 }
 
@@ -117,7 +117,7 @@ function QuickAdd({ batch }: { batch: InBatch }) {
   const d = useDB(); const s = d.stock; const [t, setT] = useState(''); const [n, setN] = useState('1'); const [owner, setOwner] = useState(batch.buyer ?? 'gh')
   const landing = batch.landing ?? 'tehran'
   const add = () => { const raw = t.trim(); if (!raw) return; const url = /^https?:\/\//i.test(raw) ? raw : ''; const name = url ? nameFromUrl(url) || 'کالای تازه (نام را اصلاح کنید)' : raw; const qty = Math.max(1, Number(n.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))) || 1)
-    const it: InItem = { id: `ii${Date.now().toString(36)}`, name, qty, amazonUrl: url || undefined, source: url ? sourceFromUrl(url) || undefined : undefined, owner, code: takeCode('product'), split: { [landing]: qty }, by: me(), at: new Date().toISOString() }
+    const it: InItem = { id: `ii${Date.now().toString(36)}`, name, qty, amazonUrl: url || undefined, source: url ? sourceFromUrl(url) || undefined : undefined, owner, code: takeCode('product'), alloc: [{ owner, wh: landing, qty }], by: me(), at: new Date().toISOString() }
     mutate((x) => { x.incoming.find((y) => y.id === batch.id)!.items.push(it) }, { action: 'افزودن سریع کالا به محموله', target: `${batch.id} · ${name}` }); setT(''); setN('1'); toast(`«${name}» با ${fa(qty)} عدد اضافه شد؛ تنوع، بها و تقسیم انبار را با ✎ کامل کنید.`) }
   return <form onSubmit={(e) => { e.preventDefault(); add() }} className="flex flex-wrap items-center gap-2 border-t border-dashed border-line px-4 py-2.5">
     <Zap size={14} className="text-brand" /><Input className="h-9 min-w-60 flex-1 text-12" value={t} onChange={(e) => setT(e.target.value)} placeholder="افزودن سریع: لینک کالا یا نام را بنویسید و Enter بزنید" aria-label="افزودن سریع" />
@@ -153,37 +153,76 @@ function BatchForm({ b, onClose }: { b: InBatch; onClose: () => void }) {
   </Modal>
 }
 
-type Draft = { name: string; amazonUrl: string; source: string; brand: string; category: string; specs: string; photos: string[]; hasVar: boolean; variants: InVariant[]; qty: number; split: Record<string, number>; owner: string; unitCost: number; sellPrice: number }
-const STEPS = ['لینک و نام', 'تنوع و تعداد', 'مالک و انبار', 'بها و قیمت', 'مرور و برچسب']
+type Draft = { name: string; amazonUrl: string; source: string; brand: string; category: string; specs: string; photos: string[]; hasVar: boolean; attrs: { name: string; values: string[] }[]; variants: InVariant[]; alloc: Alloc[]; unitCost: number; sellPrice: number }
+const STEPS = ['لینک و نام', 'تنوع‌ها', 'مالکیت، انبار و تعداد', 'بها و قیمت', 'مرور و برچسب']
+const ATTR_PRESETS: Record<string, string[]> = { رنگ: ['مشکی', 'سفید', 'نقره‌ای', 'آبی', 'طلایی', 'قرمز', 'سبز', 'بنفش'], حافظه: ['۶۴ گیگ', '۱۲۸ گیگ', '۲۵۶ گیگ', '۵۱۲ گیگ', '۱ ترابایت'], رم: ['۴ گیگ', '۶ گیگ', '۸ گیگ', '۱۲ گیگ', '۱۶ گیگ'], سایز: ['S', 'M', 'L', 'XL', '۴۱ میلی‌متر', '۴۵ میلی‌متر'], مدل: [], گارانتی: ['گارانتی شرکتی', 'بدون گارانتی'] }
+/** همهٔ ترکیب‌های ویژگی‌ها: رنگ × حافظه × … */
+const combos = (attrs: Draft['attrs']) => attrs.filter((a) => a.name && a.values.length).reduce<Record<string, string>[]>((acc, a) => acc.flatMap((c) => a.values.map((v) => ({ ...c, [a.name]: v }))), [{}]).filter((c) => Object.keys(c).length)
+const comboLabel = (o: Record<string, string>) => Object.values(o).join(' · ')
+const sumA = (A: Alloc[]) => A.reduce((a, x) => a + (x.qty || 0), 0)
+const getQ = (A: Alloc[], owner: string, wh: string) => A.find((a) => a.owner === owner && a.wh === wh)?.qty ?? 0
+const setQ = (A: Alloc[], owner: string, wh: string, qty: number): Alloc[] => [...A.filter((a) => !(a.owner === owner && a.wh === wh)), ...(qty > 0 ? [{ owner, wh, qty }] : [])]
+/** جملهٔ خلاصهٔ یک تقسیم: «۵ عدد · غنیمت ۳، یاسین ۲ · انبار تهران ۵» */
+function allocText(A: Alloc[], pn: (id: string) => string, wn: (id: string) => string) {
+  const by = (k: 'owner' | 'wh') => { const m = new Map<string, number>(); A.forEach((a) => m.set(a[k], (m.get(a[k]) ?? 0) + a.qty)); return [...m] }
+  return `${fa(sumA(A))} عدد · ${by('owner').map(([o, q]) => `${pn(o)} ${fa(q)}`).join('، ')} · ${by('wh').map(([w, q]) => `${wn(w)} ${fa(q)}`).join('، ')}`
+}
+
+/** جدول مالکیت × محل نگهداری یک تنوع: سطرها مالک (پولش را داده)، ستون‌ها انبار (دست کیست) */
+function AllocGrid({ A, set, owners, whs, title }: { A: Alloc[]; set: (A: Alloc[]) => void; owners: { id: string; name: string; color: string; logo?: string }[]; whs: { id: string; name: string }[]; title: string }) {
+  return <div className="rounded-xl border border-line">
+    <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2 text-12"><b>{title}</b><span className="tnum text-t2">جمع: <b className="text-t1">{fa(sumA(A))}</b></span></div>
+    <table className="w-full text-12"><thead><tr className="text-t2"><th className="p-2 text-right font-medium">مالک ↓ / انبار ←</th>{whs.map((w) => <th key={w.id} className="p-2 text-right font-medium">{w.name}</th>)}<th className="p-2 text-right font-medium">جمع مالک</th></tr></thead><tbody>
+      {owners.map((o) => <tr key={o.id} className="border-t border-line"><td className="p-2"><span className="flex items-center gap-1.5 font-semibold" style={{ color: o.color }}>{o.logo && <img src={o.logo} alt="" className="size-4 object-contain" />}{o.name}</span></td>
+        {whs.map((w) => <td key={w.id} className="p-1.5"><Input type="number" min={0} aria-label={`${o.name} در ${w.name}`} className={cx('ltr h-9 w-20 text-center', getQ(A, o.id, w.id) > 0 && 'border-brand bg-brand-tint/40 font-semibold')} value={getQ(A, o.id, w.id) || ''} placeholder="0" onChange={(e) => set(setQ(A, o.id, w.id, Math.max(0, +e.target.value || 0)))} /></td>)}
+        <td className="p-2 tnum text-t2">{fa(A.filter((a) => a.owner === o.id).reduce((x, a) => x + a.qty, 0))}</td></tr>)}
+      <tr className="border-t border-line text-t2"><td className="p-2">جمع انبار</td>{whs.map((w) => <td key={w.id} className="p-2 tnum">{fa(A.filter((a) => a.wh === w.id).reduce((x, a) => x + a.qty, 0))}</td>)}<td /></tr>
+    </tbody></table>
+  </div>
+}
+
 /** ورود گام‌به‌گام یک کالا */
-function ItemWizard({ batch, edit, onClose }: { batch: InBatch; edit?: InItem; onClose: () => void }) {
+function ItemWizard({ batch, edit, onClose }: { batch: InBatch; edit?: InItem; onClose: (printItem?: string) => void }) {
   const d = useDB(); const s = d.stock; const whs = s.warehouses.filter((w) => w.active); const landing = batch.landing ?? 'tehran'
-  const [st, setSt] = useState(0)
-  const [f, setF] = useState<Draft>(() => edit ? { name: edit.name, amazonUrl: edit.amazonUrl ?? '', source: edit.source ?? '', brand: edit.brand ?? '', category: edit.category ?? '', specs: edit.specs ?? '', photos: edit.photos ?? [], hasVar: !!edit.variants?.length, variants: edit.variants ?? [], qty: edit.qty, split: edit.split ?? { [landing]: edit.qty }, owner: edit.owner ?? 'gh', unitCost: edit.unitCost ?? 0, sellPrice: edit.sellPrice ?? 0 }
-    : { name: '', amazonUrl: '', source: '', brand: '', category: '', specs: '', photos: [], hasVar: false, variants: [], qty: 1, split: { [landing]: 1 }, owner: batch.buyer ?? myParty(), unitCost: 0, sellPrice: 0 })
+  const owners = s.parties.filter((p) => p.active).map((p) => ({ id: p.id, name: p.brandName ? `${p.name} (${p.brandName})` : p.name, color: p.color, logo: partyLogo(p) }))
+  const pn = (id: string) => s.parties.find((p) => p.id === id)?.name ?? id; const wn = (id: string) => whName(s, id)
+  const [st, setSt] = useState(0); const [defOwner, setDefOwner] = useState(edit?.owner ?? batch.buyer ?? myParty()); const [defWh, setDefWh] = useState(landing)
+  const [f, setF] = useState<Draft>(() => edit ? { name: edit.name, amazonUrl: edit.amazonUrl ?? '', source: edit.source ?? '', brand: edit.brand ?? '', category: edit.category ?? '', specs: edit.specs ?? '', photos: edit.photos ?? [], hasVar: !!edit.variants?.length,
+      attrs: edit.attrs ?? (edit.variants?.length ? [{ name: 'تنوع', values: edit.variants.map((v) => v.label) }] : []), variants: (edit.variants ?? []).map((v) => ({ ...v, alloc: allocOf(edit, v), opts: v.opts ?? (edit.attrs ? undefined : { تنوع: v.label }) })), alloc: edit.variants?.length ? [] : allocOf(edit), unitCost: edit.unitCost ?? 0, sellPrice: edit.sellPrice ?? 0 }
+    : { name: '', amazonUrl: '', source: '', brand: '', category: '', specs: '', photos: [], hasVar: false, attrs: [{ name: 'رنگ', values: [] }], variants: [], alloc: [], unitCost: 0, sellPrice: 0 })
   const set = (p: Partial<Draft>) => setF({ ...f, ...p })
   const cats = useMemo(() => [...new Set(d.products.map((p) => p.category))].filter(Boolean), [d])
-  const total = f.hasVar ? f.variants.reduce((a, v) => a + v.qty, 0) : f.qty
-  const splitSum = (sp: Record<string, number>) => Object.values(sp).reduce((a, q) => a + (q || 0), 0)
-  const splitOk = f.hasVar ? f.variants.every((v) => splitSum(v.split ?? {}) === v.qty) : splitSum(f.split) === f.qty
-  const probe: InItem = { id: edit?.id ?? 'new', name: f.name, qty: total, owner: f.owner, code: edit?.code ?? `GH-P-${String(d.codeFormat.nextProduct).padStart(d.codeFormat.pDigits, '0')}`, variants: f.hasVar ? f.variants : undefined }
+  // ترکیب‌ها را از ویژگی‌ها می‌سازد و تقسیم ترکیب‌های قبلی را نگه می‌دارد
+  const regen = (attrs: Draft['attrs']) => { const C = combos(attrs); const old = new Map(f.variants.map((v) => [comboLabel(v.opts ?? { تنوع: v.label }), v]))
+    let n = Math.max(0, ...f.variants.map((v) => +v.suffix.replace(/\D/g, '') || 0))
+    return C.map((o) => { const k = comboLabel(o); const ov = old.get(k); if (ov) return { ...ov, opts: o, label: k }; n += 1; return { id: `v${n}${Math.random().toString(36).slice(2, 4)}`, label: k, opts: o, qty: 0, suffix: varSuffix(n - 1), alloc: [] } }) }
+  const setAttrs = (attrs: Draft['attrs']) => set({ attrs, variants: regen(attrs) })
+  const [valIn, setValIn] = useState<Record<number, string>>({})
+  const addVal = (i: number, v: string) => { const t = v.trim(); if (!t) return; const A = f.attrs.map((a, k) => (k === i && !a.values.includes(t) ? { ...a, values: [...a.values, t] } : a)); setAttrs(A); setValIn({ ...valIn, [i]: '' }) }
+  const variants = f.hasVar ? f.variants : []
+  const total = f.hasVar ? variants.reduce((a, v) => a + sumA(v.alloc ?? []), 0) : sumA(f.alloc)
+  const probe: InItem = { id: edit?.id ?? 'new', name: f.name, qty: total, owner: defOwner, code: edit?.code ?? `GH-P-${String(d.codeFormat.nextProduct).padStart(d.codeFormat.pDigits, '0')}`, variants: f.hasVar ? variants.map((v) => ({ ...v, qty: sumA(v.alloc ?? []) })) : undefined, alloc: f.hasVar ? undefined : f.alloc }
   const L = landed({ ...batch, items: [...batch.items.filter((x) => x.id !== edit?.id), { ...probe, unitCost: f.unitCost }] }, { ...probe, unitCost: f.unitCost })
-  const ok = [f.name.trim().length >= 2, total > 0 && (!f.hasVar || f.variants.every((v) => v.label.trim() && v.qty > 0)), splitOk, true, true]
+  const ok = [f.name.trim().length >= 2, !f.hasVar || variants.length > 0, total > 0, true, true]
   const dupOf = f.name.trim().length > 3 ? d.products.find((p) => p.title.trim() === f.name.trim() || p.en?.toLowerCase().trim() === f.name.toLowerCase().trim()) : undefined
-  const setVar = (i: number, p: Partial<InVariant>) => set({ variants: f.variants.map((v, k) => (k === i ? { ...v, ...p, split: p.qty !== undefined && Object.keys(v.split ?? {}).length <= 1 ? { [Object.keys(v.split ?? {})[0] ?? landing]: p.qty } : { ...(v.split ?? {}), ...(p.split ?? {}) } } : v)) })
-  const addVar = (label = '') => set({ variants: [...f.variants, { id: `v${f.variants.length + 1}${Date.now().toString(36).slice(-2)}`, label, qty: 1, suffix: varSuffix(f.variants.length), split: { [landing]: 1 } }] })
-  const allTo = (w: string) => f.hasVar ? set({ variants: f.variants.map((v) => ({ ...v, split: { [w]: v.qty } })) }) : set({ split: { [w]: f.qty } })
-  const save = () => {
+  const setVarA = (i: number, A: Alloc[]) => set({ variants: f.variants.map((v, k) => (k === i ? { ...v, alloc: A, qty: sumA(A) } : v)) })
+  /** پر کردن سریع: تعداد هر تنوع را در خانهٔ «مالک × انبار» پیش‌فرض می‌گذارد */
+  const quick = (i: number | null, q: number) => { if (i === null) set({ alloc: q > 0 ? [{ owner: defOwner, wh: defWh, qty: q }] : [] }); else setVarA(i, q > 0 ? [{ owner: defOwner, wh: defWh, qty: q }] : []) }
+  const moveAll = () => { const mv = (A: Alloc[]) => (sumA(A) ? [{ owner: defOwner, wh: defWh, qty: sumA(A) }] : A); if (f.hasVar) set({ variants: f.variants.map((v) => ({ ...v, alloc: mv(v.alloc ?? []) })) }); else set({ alloc: mv(f.alloc) }) }
+  const copyFirst = () => { const first = f.variants.find((v) => sumA(v.alloc ?? []) > 0); if (!first) return; set({ variants: f.variants.map((v) => (sumA(v.alloc ?? []) ? v : { ...v, alloc: structuredClone(first.alloc ?? []), qty: sumA(first.alloc ?? []) })) }) }
+  const save = (print = false) => {
     const by = me(); const code = edit?.code ?? takeCode('product')
-    const it: InItem = { ...(edit ?? {}), id: edit?.id ?? `ii${Date.now().toString(36)}`, name: f.name.trim(), amazonUrl: f.amazonUrl.trim() || undefined, source: f.source || undefined, brand: f.brand || undefined, category: f.category || undefined, specs: f.specs.trim() || undefined, photos: f.photos, owner: f.owner, code, unitCost: f.unitCost || undefined, sellPrice: f.sellPrice || undefined,
-      variants: f.hasVar ? f.variants.map((v, i) => ({ ...v, suffix: v.suffix || varSuffix(i) })) : undefined, qty: total, split: f.hasVar ? undefined : f.split, by: edit?.by ?? by, at: edit?.at ?? new Date().toISOString() }
-    mutate((x) => { const bb = x.incoming.find((q) => q.id === batch.id)!; const i = bb.items.findIndex((q) => q.id === it.id); if (i >= 0) bb.items[i] = it; else bb.items.push(it) }, { action: edit ? 'ویرایش کالای محموله' : 'افزودن کالا به محموله', target: `${batch.id} · ${it.name}`, after: `${total} عدد · مالک ${it.owner}` })
-    toast(edit ? 'کالا به‌روز شد.' : `«${it.name}» با ${fa(total)} عدد و ${fa(it.variants?.length || 1)} برچسب اضافه شد.`); onClose()
+    const V = f.hasVar ? variants.filter((v) => sumA(v.alloc ?? []) > 0).map((v, i) => ({ ...v, suffix: edit ? v.suffix || varSuffix(i) : varSuffix(i), qty: sumA(v.alloc ?? []), split: undefined })) : undefined
+    const owns = [...new Set((V ? V.flatMap((v) => v.alloc ?? []) : f.alloc).map((a) => a.owner))]
+    const it: InItem = { ...(edit ?? {}), id: edit?.id ?? `ii${Date.now().toString(36)}`, name: f.name.trim(), amazonUrl: f.amazonUrl.trim() || undefined, source: f.source || undefined, brand: f.brand || undefined, category: f.category || undefined, specs: f.specs.trim() || undefined, photos: f.photos, owner: owns.length === 1 ? owns[0] : defOwner, code, unitCost: f.unitCost || undefined, sellPrice: f.sellPrice || undefined,
+      attrs: f.hasVar ? f.attrs.filter((a) => a.values.length) : undefined, variants: V, alloc: V ? undefined : f.alloc, split: undefined, qty: total, by: edit?.by ?? by, at: edit?.at ?? new Date().toISOString() }
+    mutate((x) => { const bb = x.incoming.find((q) => q.id === batch.id)!; const i = bb.items.findIndex((q) => q.id === it.id); if (i >= 0) bb.items[i] = it; else bb.items.push(it) }, { action: edit ? 'ویرایش کالای محموله' : 'افزودن کالا به محموله', target: `${batch.id} · ${it.name}`, after: `${total} عدد · مالک‌ها: ${owns.join('، ')}` })
+    toast(edit ? 'کالا به‌روز شد.' : `«${it.name}» با ${fa(total)} عدد اضافه شد.`); onClose(print ? it.id : undefined)
   }
-  return <Modal open onClose={onClose} wide title={edit ? `ویرایش «${edit.name}»` : `افزودن کالا به «${batch.title}»`} footer={<div className="flex w-full flex-wrap items-center gap-2">
-      <span className="text-12 text-t2">گام {fa(st + 1)} از {fa(STEPS.length)}</span><span className="flex-1" />
+  return <Modal open onClose={() => onClose()} wide title={edit ? `ویرایش «${edit.name}»` : `افزودن کالا به «${batch.title}»`} footer={<div className="flex w-full flex-wrap items-center gap-2">
+      <span className="text-12 text-t2">گام {fa(st + 1)} از {fa(STEPS.length)}{total ? ` · ${fa(total)} عدد` : ''}</span><span className="flex-1" />
       {st > 0 && <Button variant="ghost" onClick={() => setSt(st - 1)}>قبلی</Button>}
-      {st < STEPS.length - 1 ? <Button variant="primary" disabled={!ok[st]} onClick={() => setSt(st + 1)}>بعدی</Button> : <Button variant="primary" icon={<Check size={14} />} disabled={!ok.slice(0, 3).every(Boolean)} onClick={save}>{edit ? 'ذخیره' : 'افزودن به محموله'}</Button>}
+      {st < STEPS.length - 1 ? <Button variant="primary" disabled={!ok[st]} onClick={() => setSt(st + 1)}>بعدی</Button> : <><Button icon={<Printer size={14} />} disabled={!ok.slice(0, 3).every(Boolean)} onClick={() => save(true)}>{edit ? 'ذخیره' : 'افزودن'} و چاپ همهٔ برچسب‌ها</Button><Button variant="primary" icon={<Check size={14} />} disabled={!ok.slice(0, 3).every(Boolean)} onClick={() => save()}>{edit ? 'ذخیره' : 'افزودن به محموله'}</Button></>}
     </div>}>
     <ol className="mb-4 grid grid-cols-5 gap-1.5">{STEPS.map((t, i) => <li key={t}><button type="button" disabled={i > st && !ok.slice(0, i).every(Boolean)} onClick={() => setSt(i)} className={cx('w-full rounded-lg border px-2 py-1.5 text-right text-11 disabled:opacity-50', i < st ? 'border-success/40 bg-success-bg text-success' : i === st ? 'border-brand bg-brand-tint font-semibold text-brand' : 'border-line text-t2')}><span className="tnum">{fa(i + 1)}.</span> {t}</button></li>)}</ol>
     {st === 0 && <div className="space-y-3">
@@ -194,33 +233,37 @@ function ItemWizard({ batch, edit, onClose }: { batch: InBatch; edit?: InItem; o
         <Field label="برند (اختیاری)"><Input value={f.brand} onChange={(e) => set({ brand: e.target.value })} /></Field>
         <Field label="دسته (اختیاری)"><Select value={f.category} onChange={(v) => set({ category: v })} options={cats} placeholder="انتخاب دسته" /></Field>
       </div>
-      <Field label="مشخصات کوتاه (اختیاری)"><Textarea rows={2} value={f.specs} onChange={(e) => set({ specs: e.target.value })} placeholder="مثلاً ۸ گیگ رم، کارتن پلمب، نسخهٔ گلوبال" /></Field>
+      <Field label="مشخصات کوتاه (اختیاری)"><Textarea rows={2} value={f.specs} onChange={(e) => set({ specs: e.target.value })} placeholder="مثلاً نسخهٔ گلوبال، کارتن پلمب" /></Field>
       <div><p className="mb-1.5 text-12 font-semibold">عکس از کالا (اختیاری، تا ۶ عکس)</p><div className="flex flex-wrap gap-2">{f.photos.map((ph, i) => <span key={i} className="relative"><img src={ph} alt="" className="size-20 rounded-lg object-cover" /><button type="button" aria-label="حذف عکس" onClick={() => set({ photos: f.photos.filter((_, k) => k !== i) })} className="absolute -top-1 -left-1 grid size-5 place-items-center rounded-full bg-danger-solid text-white"><Trash2 size={11} /></button></span>)}
         {f.photos.length < 6 && <label className="grid size-20 cursor-pointer place-items-center rounded-lg border border-dashed border-line text-t2 hover:border-brand hover:text-brand"><ImagePlus size={20} /><input type="file" accept="image/*" capture="environment" multiple className="sr-only" onChange={async (e) => { const files = [...(e.target.files ?? [])].slice(0, 6 - f.photos.length); const imgs = await Promise.all(files.map((fl) => fileToImage(fl))); set({ photos: [...f.photos, ...imgs] }); e.target.value = '' }} /></label>}</div></div>
     </div>}
     {st === 1 && <div className="space-y-3">
-      <Segmented value={f.hasVar ? 'var' : 'one'} onChange={(v) => set({ hasVar: v === 'var', variants: v === 'var' && !f.variants.length ? [{ id: 'v1', label: '', qty: f.qty, suffix: 'V1', split: { [landing]: f.qty } }] : f.variants })} options={[['one', 'یک مدل'], ['var', 'چند تنوع (رنگ، حافظه، سایز)']]} />
-      {!f.hasVar ? <Field label="تعداد"><Input type="number" min={1} className="ltr w-32 text-center" value={f.qty} onChange={(e) => { const q = Math.max(0, +e.target.value); set({ qty: q, split: Object.keys(f.split).length <= 1 ? { [Object.keys(f.split)[0] ?? landing]: q } : f.split }) }} /></Field> : <>
-        <div className="space-y-2">{f.variants.map((v, i) => <div key={v.id} className="flex flex-wrap items-end gap-2 rounded-lg border border-line p-2">
-          <Field label={`تنوع ${fa(i + 1)}`}><Input className="w-56" value={v.label} onChange={(e) => setVar(i, { label: e.target.value })} placeholder="مثلاً مشکی · ۱۲۸ گیگ" /></Field>
-          <Field label="تعداد"><Input type="number" min={1} className="ltr w-24 text-center" value={v.qty} onChange={(e) => setVar(i, { qty: Math.max(0, +e.target.value) })} /></Field>
-          <span className="pb-2 font-mono text-11 text-t3" dir="ltr">…-{v.suffix}</span>
-          {f.variants.length > 1 && <button type="button" aria-label="حذف تنوع" className="mb-1 grid size-8 place-items-center rounded-md text-t3 hover:bg-danger-bg hover:text-danger" onClick={() => set({ variants: f.variants.filter((_, k) => k !== i) })}><Trash2 size={14} /></button>}
+      <Segmented value={f.hasVar ? 'var' : 'one'} onChange={(v) => set({ hasVar: v === 'var' })} options={[['one', 'یک مدل (بدون تنوع)'], ['var', 'چند تنوع (رنگ، حافظه، سایز…)']]} />
+      {f.hasVar && <>
+        <p className="text-12 text-t2">مثل فرم ساخت کالا: ویژگی‌ها و مقدارها را بگذارید؛ همهٔ ترکیب‌ها (مثلاً مشکی · ۱۲۸ گیگ) خودکار ساخته می‌شود و هر ترکیب برچسب خودش را می‌گیرد.</p>
+        <div className="space-y-2">{f.attrs.map((a, i) => <div key={i} className="rounded-xl border border-line p-3">
+          <div className="flex flex-wrap items-center gap-2"><Select className="w-36" value={a.name} onChange={(v) => setAttrs(f.attrs.map((x, k) => (k === i ? { ...x, name: v } : x)))} options={Object.keys(ATTR_PRESETS)} />
+            <span className="flex flex-1 flex-wrap items-center gap-1.5">{a.values.map((v) => <span key={v} className="inline-flex h-7 items-center gap-1 rounded-full bg-brand-tint px-2.5 text-12 text-brand">{v}<button type="button" aria-label={`حذف ${v}`} onClick={() => setAttrs(f.attrs.map((x, k) => (k === i ? { ...x, values: x.values.filter((y) => y !== v) } : x)))}><Trash2 size={11} /></button></span>)}
+              <Input className="h-8 w-40 text-12" value={valIn[i] ?? ''} onChange={(e) => setValIn({ ...valIn, [i]: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVal(i, valIn[i] ?? '') } }} placeholder="مقدار + Enter" /></span>
+            {f.attrs.length > 1 && <button type="button" aria-label="حذف ویژگی" className="grid size-8 place-items-center rounded-md text-t3 hover:bg-danger-bg hover:text-danger" onClick={() => setAttrs(f.attrs.filter((_, k) => k !== i))}><Trash2 size={14} /></button>}</div>
+          {(ATTR_PRESETS[a.name] ?? []).filter((v) => !a.values.includes(v)).length > 0 && <div className="mt-2 flex flex-wrap gap-1"><span className="text-11 text-t3">پیشنهاد:</span>{(ATTR_PRESETS[a.name] ?? []).filter((v) => !a.values.includes(v)).map((v) => <button key={v} type="button" className="rounded-full border border-line px-2 py-0.5 text-11 hover:border-brand hover:text-brand" onClick={() => addVal(i, v)}>{v}</button>)}</div>}
         </div>)}</div>
-        <div className="flex flex-wrap items-center gap-1.5"><Button size="sm" icon={<Plus size={13} />} onClick={() => addVar()}>تنوع تازه</Button><span className="text-11 text-t2">پیشنهاد سریع:</span>{['مشکی', 'سفید', 'آبی', 'نقره‌ای', '۱۲۸ گیگ', '۲۵۶ گیگ', '۵۱۲ گیگ'].map((l) => <button key={l} type="button" className="rounded-full border border-line px-2 py-0.5 text-11 hover:border-brand hover:text-brand" onClick={() => addVar(l)}>{l}</button>)}</div>
+        {f.attrs.length < 3 && <Button size="sm" icon={<Plus size={13} />} onClick={() => setAttrs([...f.attrs, { name: Object.keys(ATTR_PRESETS).find((k) => !f.attrs.some((a) => a.name === k)) ?? 'مدل', values: [] }])}>ویژگی دیگر (مثلاً حافظه)</Button>}
+        {f.variants.length > 0 && <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12">{fa(f.variants.length)} ترکیب: {f.variants.map((v) => v.label).join('، ')}</p>}
       </>}
-      <p className="text-12 text-t2">جمع: <b className="tnum text-t1">{fa(total)}</b> عدد</p>
     </div>}
     {st === 2 && <div className="space-y-3">
-      <Field label="مالک این کالا (پول آن را چه کسی داده است)"><div className="flex flex-wrap gap-2">{s.parties.filter((p) => p.active).map((p) => <button key={p.id} type="button" aria-pressed={f.owner === p.id} onClick={() => set({ owner: p.id })} className={cx('flex h-11 items-center gap-2 rounded-xl border-2 px-3 text-13 font-semibold', f.owner === p.id ? 'text-white' : 'border-line')} style={f.owner === p.id ? { background: p.color, borderColor: p.color } : undefined}>{partyLogo(p) && <span className="grid size-7 place-items-center rounded-md bg-white"><img src={partyLogo(p)} alt="" className="size-5 object-contain" /></span>}{p.name}{p.brandName && ` (${p.brandName})`}<bdi dir="ltr" className="font-mono text-11 opacity-80">{p.prefix}</bdi></button>)}</div></Field>
-      <div className="flex flex-wrap items-center gap-1.5 text-12"><span className="text-t2">همه به:</span>{whs.map((w) => <Button key={w.id} size="sm" variant="ghost" onClick={() => allTo(w.id)}>{w.name}</Button>)}</div>
-      <div className="overflow-x-auto rounded-xl border border-line"><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2"><th className="p-2 text-right font-medium">تنوع</th><th className="p-2 text-right font-medium">تعداد</th>{whs.map((w) => <th key={w.id} className="p-2 text-right font-medium">{w.name}</th>)}<th className="p-2 text-right font-medium">وضعیت</th></tr></thead><tbody>
-        {(f.hasVar ? f.variants : [null]).map((v, i) => { const q = v ? v.qty : f.qty; const sp = v ? v.split ?? {} : f.split; const sum = splitSum(sp)
-          return <tr key={v?.id ?? 'one'} className="border-t border-line"><td className="p-2">{v?.label || f.name}</td><td className="p-2 tnum">{fa(q)}</td>
-            {whs.map((w) => <td key={w.id} className="p-1.5"><Input type="number" min={0} className="ltr w-20 text-center" value={sp[w.id] ?? 0} onChange={(e) => { const n = Math.max(0, +e.target.value); if (v) setVar(i, { split: { [w.id]: n } }); else set({ split: { ...f.split, [w.id]: n } }) }} /></td>)}
-            <td className="p-2">{sum === q ? <span className="text-success">درست</span> : <span className="text-danger">{sum < q ? `${fa(q - sum)} عدد بی‌مقصد` : `${fa(sum - q)} عدد اضافه`}</span>}</td></tr> })}
-      </tbody></table></div>
-      <p className="text-11 text-t2">برچسب هر عدد مقصدش را هم نشان می‌دهد تا در {whName(s, landing)} هنگام تفکیک، با اسکن معلوم شود کدام بماند و کدام به انبار دیگر برود.</p>
+      <div className="rounded-xl bg-info-bg px-3 py-2 text-12 text-info">برای هر {f.hasVar ? 'ترکیب' : 'کالا'} بنویسید چند عدد مال کیست (سطرها) و دست چه کسی، در کدام انبار است (ستون‌ها). مثلاً «مشکی · ۱۲۸ گیگ»: ۲ عدد یاسین و ۳ عدد غنیمت، هر پنج تا در انبار تهران.</div>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2.5 text-12"><span className="text-t2">پیش‌فرض پر کردن سریع:</span>
+        <span className="flex gap-1">{owners.map((o) => <button key={o.id} type="button" aria-pressed={defOwner === o.id} onClick={() => setDefOwner(o.id)} className={cx('flex h-8 items-center gap-1 rounded-lg border px-2', defOwner === o.id ? 'text-white' : 'border-line')} style={defOwner === o.id ? { background: o.color, borderColor: o.color } : undefined}>{o.name}</button>)}</span>
+        <span className="text-t3">در</span><span className="flex gap-1">{whs.map((w) => <button key={w.id} type="button" aria-pressed={defWh === w.id} onClick={() => setDefWh(w.id)} className={cx('h-8 rounded-lg border px-2', defWh === w.id ? 'border-brand bg-brand-solid text-white' : 'border-line')}>{w.name}</button>)}</span>
+        <Button size="sm" variant="ghost" onClick={moveAll}>همه به همین</Button>{f.hasVar && <Button size="sm" variant="ghost" onClick={copyFirst}>تقسیم اولی برای بقیه</Button>}</div>
+      {(f.hasVar ? f.variants : [null]).map((v, i) => { const A = v ? v.alloc ?? [] : f.alloc
+        return <div key={v?.id ?? 'one'} className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2 text-12"><span className="text-t2">تعداد سریع{v ? ` «${v.label}»` : ''}:</span><Input type="number" min={0} className="ltr h-8 w-20 text-center" aria-label="تعداد سریع" value={sumA(A) || ''} placeholder="0" onChange={(e) => quick(v ? i : null, Math.max(0, +e.target.value || 0))} /><span className="text-11 text-t3">همه برای {pn(defOwner)} در {wn(defWh)}؛ برای تقسیم، جدول را پر کنید</span></div>
+          <AllocGrid title={v ? v.label : f.name || 'کالا'} A={A} set={(B) => (v ? setVarA(i, B) : set({ alloc: B }))} owners={owners} whs={whs} />
+          {sumA(A) > 0 && <p className="text-11 text-t2">{allocText(A, pn, wn)}</p>}
+        </div> })}
     </div>}
     {st === 3 && <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -229,17 +272,16 @@ function ItemWizard({ batch, edit, onClose }: { batch: InBatch; edit?: InItem; o
         <div className="rounded-xl bg-neutral-bg p-3 text-12"><p className="text-t2">بهای تمام‌شدهٔ هر عدد</p><p className="text-16 font-bold">{toman(L.unit)}</p><p className="text-11 text-t3">{batch.currency && batch.currency !== 'تومان' ? `${fa(f.unitCost)} × ${fa(batch.rate ?? 0)}` : 'بها'} + سهم حمل و گمرک {toman(L.share)}</p></div>
       </div>
       {f.sellPrice > 0 && L.unit > 0 && <p className={cx('rounded-lg px-3 py-2 text-12', (pctMargin(f.sellPrice, L.unit) ?? 0) < 10 ? 'bg-danger-bg text-danger' : 'bg-success-bg text-success')}>سود هر عدد {toman(f.sellPrice - L.unit)} · حاشیهٔ سود {fa(pctMargin(f.sellPrice, L.unit) ?? 0)}٪ · سود کل این قلم {toman((f.sellPrice - L.unit) * total)}</p>}
-      <p className="text-11 text-t2">این قیمت‌ها هنگام ساخت صفحهٔ کالا خودکار در فرم کالا می‌نشینند و قابل ویرایش‌اند. قیمت نهایی را تیم قیمت‌گذاری تأیید می‌کند.</p>
+      <p className="text-11 text-t2">این قیمت‌ها هنگام ساخت صفحهٔ کالا خودکار در فرم کالا می‌نشینند و قابل ویرایش‌اند.</p>
     </div>}
     {st === 4 && <div className="space-y-3">
       <div className="grid gap-2 rounded-xl border border-line p-3 text-12 sm:grid-cols-2">
-        <p><span className="text-t2">کالا:</span> <b>{f.name}</b></p><p><span className="text-t2">مالک:</span> <PartyChip s={s} id={f.owner} /></p>
-        <p><span className="text-t2">تعداد:</span> {fa(total)} عدد{f.hasVar ? ` در ${fa(f.variants.length)} تنوع` : ''}</p><p><span className="text-t2">محل خرید:</span> {f.source || '—'}</p>
-        <p><span className="text-t2">بهای تمام‌شده:</span> {toman(L.unit)}</p><p><span className="text-t2">قیمت پیشنهادی:</span> {f.sellPrice ? toman(f.sellPrice) : '—'}</p>
+        <p><span className="text-t2">کالا:</span> <b>{f.name}</b></p><p><span className="text-t2">محل خرید:</span> {f.source || '—'}</p>
+        <p><span className="text-t2">تعداد:</span> {fa(total)} عدد{f.hasVar ? ` در ${fa(variants.filter((v) => sumA(v.alloc ?? []) > 0).length)} ترکیب` : ''}</p><p><span className="text-t2">بهای تمام‌شده / قیمت:</span> {toman(L.unit)} / {f.sellPrice ? toman(f.sellPrice) : '—'}</p>
       </div>
-      <p className="text-12 font-semibold">برچسب‌هایی که ساخته می‌شود</p>
-      <div className="grid gap-2 sm:grid-cols-2">{(f.hasVar ? f.variants : [null]).map((v, i) => { const sp = v ? v.split ?? {} : f.split; return <div key={i} className="rounded-xl border border-line p-3"><div className="flex items-center justify-between gap-2"><PartyChip s={s} id={f.owner} /><span className="text-11 text-t2">{v?.label ?? 'یک مدل'} · ×{fa(v ? v.qty : f.qty)}</span></div><div className="mt-2 flex justify-center"><Barcode value={itemLabel(s, probe, v)} height={40} /></div><p className="mt-1 text-center text-11 text-t2">{Object.entries(sp).filter(([, q]) => q).map(([w, q]) => `${whName(s, w)}: ${fa(q)}`).join(' · ')}</p></div> })}</div>
-      {!edit && <p className="text-11 text-t2">کد داخلی با ثبت رزرو می‌شود و بعد از ساخت صفحهٔ کالا هم همین می‌ماند؛ برچسب‌های چاپ‌شده تا آخر معتبرند.</p>}
+      <p className="text-12 font-semibold">برچسب‌ها (هر ترکیب × هر مالک یک کد؛ پیشوند کد مالک را نشان می‌دهد)</p>
+      <div className="grid gap-2 sm:grid-cols-2">{labelLines(s, probe).map((ln, i) => <div key={i} className="rounded-xl border-2 p-3" style={{ borderColor: s.parties.find((p) => p.id === ln.owner)?.color ?? '#999' }}><div className="flex items-center justify-between gap-2"><PartyChip s={s} id={ln.owner} /><span className="text-11 text-t2">{ln.v?.label ?? 'یک مدل'} · ×{fa(ln.qty)}</span></div><div className="mt-2 flex justify-center"><Barcode value={ln.code} height={40} /></div><p className="mt-1 text-center text-11 text-t2">{Object.entries(ln.split).map(([w, q]) => `${wn(w)}: ${fa(q)}`).join(' · ')}</p></div>)}</div>
+      <p className="text-11 text-t2">با «افزودن و چاپ همهٔ برچسب‌ها» همین حالا برای هر عدد یک برچسب چاپ می‌شود، گروه‌بندی‌شده بر اساس انبار مقصد. کد داخلی با ثبت رزرو می‌شود و بعد از ساخت صفحه هم همین می‌ماند.</p>
     </div>}
   </Modal>
 }
@@ -248,7 +290,7 @@ type Row = { key: string; name: string; variant: string; split: Record<string, n
 /** ویرایش جدولی کل محموله؛ هر ردیف یک تنوع است و ردیف‌های هم‌نام یک کالا می‌شوند. از اکسل هم می‌شود چسباند */
 function BatchGrid({ batch, onClose }: { batch: InBatch; onClose: () => void }) {
   const d = useDB(); const s = d.stock; const whs = s.warehouses.filter((w) => w.active); const landing = batch.landing ?? 'tehran'
-  const toRows = (): Row[] => batch.items.flatMap((it) => (it.variants?.length ? it.variants : [null]).map((v) => ({ key: `${it.id}|${v?.id ?? ''}`, name: it.name, variant: v?.label ?? '', split: { ...(v ? v.split ?? {} : it.split ?? {}) }, owner: it.owner ?? 'gh', unitCost: it.unitCost ?? 0, sellPrice: it.sellPrice ?? 0, link: it.amazonUrl ?? '', source: it.source ?? '', itemId: it.id, variantId: v?.id })))
+  const toRows = (): Row[] => batch.items.flatMap((it) => labelLines(s, it).map((ln) => ({ key: `${it.id}|${ln.v?.id ?? ''}|${ln.owner}`, name: it.name, variant: ln.v?.label ?? '', split: { ...ln.split }, owner: ln.owner, unitCost: it.unitCost ?? 0, sellPrice: it.sellPrice ?? 0, link: it.amazonUrl ?? '', source: it.source ?? '', itemId: it.id, variantId: ln.v?.id })))
   const blank = (o = batch.buyer ?? 'gh'): Row => ({ key: `n${Math.random().toString(36).slice(2, 7)}`, name: '', variant: '', split: { [landing]: 1 }, owner: o, unitCost: 0, sellPrice: 0, link: '', source: '' })
   const [rows, setRows] = useState<Row[]>(() => { const r = toRows(); return r.length ? r : [blank(), blank(), blank()] }); const [paste, setPaste] = useState<string | null>(null)
   const set = (i: number, p: Partial<Row>) => setRows(rows.map((r, k) => (k === i ? { ...r, ...p } : r)))
@@ -258,16 +300,22 @@ function BatchGrid({ batch, onClose }: { batch: InBatch; onClose: () => void }) 
     return t.split(/\r?\n/).map((l) => l.split('\t').map((c) => c.trim())).filter((c) => c[0] && !/^(نام|name)/i.test(c[0])).map((c): Row => { const own = s.parties.find((p) => p.prefix.toUpperCase() === (c[4] ?? '').toUpperCase() || p.name === c[4])?.id ?? batch.buyer ?? 'gh'
       const sp: Record<string, number> = {}; whs.forEach((w, i) => { const q = n(c[2 + i]); if (q) sp[w.id] = q }); return { ...blank(own), name: c[0], variant: c[1] ?? '', split: Object.keys(sp).length ? sp : { [landing]: 1 }, unitCost: n(c[5]), sellPrice: n(c[6]), link: (c[7] ?? '').startsWith('http') ? c[7] : '', source: c[8] ?? '' } }) }
   const save = () => {
-    const groups = new Map<string, Row[]>(); filled.forEach((r) => { const k = `${r.name.trim()}|${r.owner}|${r.link}`; groups.set(k, [...(groups.get(k) ?? []), r]) })
-    const items: InItem[] = [...groups.values()].map((G) => { const r0 = G[0]; const old = batch.items.find((it) => it.id === r0.itemId); const hasVar = G.length > 1 || !!G[0].variant.trim()
-      const variants = hasVar ? G.map((r, i) => { const ov = old?.variants?.find((v) => v.id === r.variantId); return { id: ov?.id ?? `v${i + 1}${Math.random().toString(36).slice(2, 4)}`, label: r.variant.trim() || `تنوع ${i + 1}`, qty: qtyOf(r), suffix: ov?.suffix ?? varSuffix((old?.variants?.length ?? 0) + i), split: r.split } }) : undefined
-      return { ...(old ?? {}), id: old?.id ?? `ii${Math.random().toString(36).slice(2, 8)}`, name: r0.name.trim(), owner: r0.owner, unitCost: r0.unitCost || undefined, sellPrice: r0.sellPrice || undefined, amazonUrl: r0.link || undefined, source: r0.source || old?.source, code: old?.code ?? '', variants, qty: variants ? variants.reduce((a, v) => a + v.qty, 0) : qtyOf(r0), split: variants ? undefined : r0.split, by: old?.by ?? me(), at: old?.at ?? new Date().toISOString() } })
+    // ردیف‌های هم‌نام (با لینک یکسان) یک کالا؛ ردیف‌های هم‌تنوع یک تنوع با سهم هر مالک در هر انبار
+    const groups = new Map<string, Row[]>(); filled.forEach((r) => { const k = `${r.name.trim()}|${r.link}`; groups.set(k, [...(groups.get(k) ?? []), r]) })
+    const items: InItem[] = [...groups.values()].map((G) => { const r0 = G[0]; const old = batch.items.find((it) => G.some((r) => r.itemId === it.id))
+      const allocFrom = (R: Row[]): Alloc[] => R.flatMap((r) => Object.entries(r.split).filter(([, q]) => q > 0).map(([wh, qty]) => ({ owner: r.owner, wh, qty })))
+      const labels = [...new Set(G.map((r) => r.variant.trim()))]; const hasVar = labels.some(Boolean)
+      let n = Math.max(0, ...(old?.variants ?? []).map((v) => +v.suffix.replace(/\D/g, '') || 0))
+      const variants = hasVar ? labels.map((lb, i) => { const R = G.filter((r) => r.variant.trim() === lb); const ov = old?.variants?.find((v) => v.label === lb) ?? old?.variants?.find((v) => R.some((r) => r.variantId === v.id)); const A = allocFrom(R)
+        return { id: ov?.id ?? `v${i + 1}${Math.random().toString(36).slice(2, 4)}`, label: lb || `تنوع ${i + 1}`, qty: A.reduce((a, x) => a + x.qty, 0), suffix: ov?.suffix ?? varSuffix(n++), alloc: A, opts: ov?.opts } }) : undefined
+      const owns = [...new Set(G.map((r) => r.owner))]
+      return { ...(old ?? {}), id: old?.id ?? `ii${Math.random().toString(36).slice(2, 8)}`, name: r0.name.trim(), owner: owns.length === 1 ? owns[0] : old?.owner ?? owns[0], unitCost: r0.unitCost || undefined, sellPrice: r0.sellPrice || undefined, amazonUrl: r0.link || undefined, source: r0.source || old?.source, code: old?.code ?? '', variants, alloc: variants ? undefined : allocFrom(G), split: undefined, qty: variants ? variants.reduce((a, v) => a + v.qty, 0) : G.reduce((a, r) => a + qtyOf(r), 0), by: old?.by ?? me(), at: old?.at ?? new Date().toISOString() } })
     items.forEach((it) => { if (!it.code) it.code = takeCode('product') })
     mutate((x) => { x.incoming.find((q) => q.id === batch.id)!.items = items }, { action: 'ویرایش جدولی محموله', target: batch.id, after: `${items.length} قلم · ${items.reduce((a, it) => a + itemQty(it), 0)} عدد` })
     toast(`${fa(items.length)} کالا با ${fa(items.reduce((a, it) => a + itemQty(it), 0))} عدد ذخیره شد؛ برچسب‌ها آماده‌اند.`); onClose()
   }
   return <Modal open onClose={onClose} wide title={`ویرایش جدولی «${batch.title}»`} footer={<><Button variant="primary" disabled={!filled.length} onClick={save}>ذخیرهٔ {fa(filled.length)} ردیف</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
-    <p className="mb-2 text-12 text-t2">هر ردیف یک تنوع است؛ ردیف‌هایی که نام، مالک و لینک یکسان دارند یک کالا با چند تنوع می‌شوند. ستون انبارها تعداد هر مقصد است و جمعشان تعداد آن تنوع.</p>
+    <p className="mb-2 text-12 text-t2">هر ردیف «یک تنوع × یک مالک» است: ستون انبارها می‌گوید از سهم این مالک چند عدد کجا نگه داشته می‌شود. ردیف‌های هم‌نام یک کالا می‌شوند و ردیف‌های هم‌تنوع با مالک‌های مختلف، سهم‌های همان تنوع‌اند (مثلاً «مشکی · ۱۲۸» یک ردیف یاسین ۲، یک ردیف غنیمت ۳). دکمهٔ ✦ کنار هر ردیف، ردیف بعدی همان کالا را می‌سازد.</p>
     <div className="overflow-x-auto rounded-xl border border-line"><table className="w-full min-w-[1180px] text-12"><thead><tr className="bg-surface-2 text-t2">{['نام کالا', 'تنوع', ...whs.map((w) => w.name), 'مالک', `بها (${batch.currency ?? 'تومان'})`, 'قیمت فروش', 'لینک', 'محل خرید', ''].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
       {rows.map((r, i) => <tr key={r.key} className="border-t border-line">
         <td className="p-1"><Input className="w-52" value={r.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="نام کالا" /></td>
@@ -289,7 +337,7 @@ function BatchGrid({ batch, onClose }: { batch: InBatch; onClose: () => void }) 
 /** رسید محموله در انبار ورودی، تنوع به تنوع؛ با ثبت، موجودی به نام مالک ثبت و برای سهم انبارهای دیگر حواله ساخته می‌شود */
 function LandModal({ batch, onClose }: { batch: InBatch; onClose: (made?: string[]) => void }) {
   const d = useDB(); const s = d.stock; const at = batch.landing ?? 'tehran'
-  const lines = batch.items.flatMap((it) => (it.variants?.length ? it.variants : [null]).map((v) => ({ key: `${it.id}|${v?.id ?? ''}`, it, v, qty: v ? v.qty : it.qty, split: v ? v.split ?? {} : it.split ?? {} })))
+  const lines = batch.items.flatMap((it) => labelLines(s, it).map((ln) => ({ key: `${it.id}|${ln.v?.id ?? ''}|${ln.owner}`, it, v: ln.v, owner: ln.owner, code: ln.code, qty: ln.qty, split: ln.split })))
   const [got, setGot] = useState<Record<string, number>>(() => Object.fromEntries(lines.map((l) => [l.key, l.qty])))
   const others = lines.reduce((a, l) => a + Object.entries(l.split).filter(([w]) => w !== at).reduce((x, [, q]) => x + (q || 0), 0), 0)
   const go = () => { let made: string[] = []; const by = me()
@@ -299,24 +347,25 @@ function LandModal({ batch, onClose }: { batch: InBatch; onClose: (made?: string
   return <Modal open onClose={() => onClose()} wide title={`رسید «${batch.title}» در ${whName(s, at)}`} footer={<><Button variant="primary" icon={<PackageCheck size={14} />} onClick={go}>ثبت رسید{others ? ' و ساخت حواله' : ''}</Button><Button variant="ghost" onClick={() => onClose()}>انصراف</Button></>}>
     <p className="mb-3 text-12 text-t2">تعداد واقعی رسیده را برای هر تنوع وارد کنید. موجودی همه در {whName(s, at)} و به نام مالک همان کالا ثبت می‌شود؛ کالاهایی که سهم انبار دیگری دارند در حوالهٔ «{whName(s, at)} ← مقصد» قرار می‌گیرند تا با اسکن جمع و فرستاده شوند.</p>
     <div className="overflow-x-auto rounded-xl border border-line"><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2">{['کالا و تنوع', 'مالک', 'سفارش', 'رسیده', 'سهم انبارها'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
-      {lines.map((l) => <tr key={l.key} className="border-t border-line"><td className="p-2"><b>{l.it.name}</b>{l.v && <span className="text-t2"> · {l.v.label}</span>}<bdi dir="ltr" className="block font-mono text-11 text-t3">{itemLabel(s, l.it, l.v)}</bdi></td><td className="p-2"><PartyChip s={s} id={l.it.owner ?? 'gh'} /></td><td className="p-2 tnum">{fa(l.qty)}</td>
+      {lines.map((l) => <tr key={l.key} className="border-t border-line"><td className="p-2"><b>{l.it.name}</b>{l.v && <span className="text-t2"> · {l.v.label}</span>}<bdi dir="ltr" className="block font-mono text-11 text-t3">{l.code}</bdi></td><td className="p-2"><PartyChip s={s} id={l.owner} /></td><td className="p-2 tnum">{fa(l.qty)}</td>
         <td className="p-2"><Input type="number" min={0} className={cx('ltr w-20 text-center', got[l.key] !== l.qty && 'border-warning')} value={got[l.key] ?? 0} onChange={(e) => setGot({ ...got, [l.key]: Math.max(0, +e.target.value) })} /></td>
         <td className="p-2 text-11">{Object.entries(l.split).filter(([, q]) => q).map(([w, q]) => <span key={w} className={cx('mr-1 inline-block rounded-full px-2 py-0.5', w === at ? 'bg-neutral-bg' : 'bg-brand-tint text-brand')}>{whName(s, w)} {fa(q)}{w !== at && <Truck size={10} className="mr-0.5 inline" />}</span>)}</td></tr>)}
     </tbody></table></div>
   </Modal>
 }
 
-/** برگهٔ چاپ برچسب‌ها: هر عدد یک برچسب، گروه‌بندی بر اساس مقصد تا تفکیک راحت باشد */
-function LabelSheet({ batch, onClose }: { batch: InBatch; onClose: () => void }) {
+/** برگهٔ چاپ برچسب‌ها: هر عدد یک برچسب با رنگ و نام مالک، گروه‌بندی بر اساس انبار مقصد تا تفکیک راحت باشد */
+function LabelSheet({ batch, only, onClose }: { batch: InBatch; only?: string; onClose: () => void }) {
   const d = useDB(); const s = d.stock; const ref = useRef<HTMLDivElement>(null)
-  const groups = new Map<string, { it: InItem; v: InVariant | null }[]>()
-  batch.items.forEach((it) => (it.variants?.length ? it.variants : [null]).forEach((v) => { const sp = v ? v.split ?? {} : it.split ?? {}; Object.entries(sp).forEach(([w, q]) => { for (let i = 0; i < (q || 0); i++) groups.set(w, [...(groups.get(w) ?? []), { it, v }]) }) }))
+  const groups = new Map<string, { it: InItem; v: InVariant | null; owner: string; code: string }[]>()
+  batch.items.filter((it) => !only || it.id === only).forEach((it) => labelLines(s, it).forEach((ln) => { const sp = Object.keys(ln.split).length ? ln.split : { '': ln.qty }; Object.entries(sp).forEach(([w, q]) => { for (let i = 0; i < (q || 0); i++) groups.set(w, [...(groups.get(w) ?? []), { it, v: ln.v, owner: ln.owner, code: ln.code }]) }) }))
   const count = [...groups.values()].reduce((a, g) => a + g.length, 0)
-  return <Modal open onClose={onClose} wide title={`برچسب‌های «${batch.title}» · ${fa(count)} برچسب`} footer={<><Button variant="primary" icon={<Printer size={14} />} onClick={() => printSolo(ref.current)}>چاپ</Button><Button variant="ghost" onClick={onClose}>بستن</Button></>}>
-    <div ref={ref} className="space-y-4">{[...groups].map(([w, L]) => <section key={w}><h3 className="mb-2 text-13 font-bold">مقصد: {whName(s, w)} · {fa(L.length)} عدد</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{L.map(({ it, v }, i) => { const o = s.parties.find((p) => p.id === (it.owner ?? 'gh')); return <div key={i} className="break-inside-avoid rounded-lg border-2 p-2 text-center" style={{ borderColor: o?.color ?? '#999' }}>
-        <div className="flex items-center justify-between text-[10px]"><b style={{ color: o?.color }}>{o?.brandName ?? o?.name}</b><span>→ {whName(s, w)}</span></div>
-        <Barcode value={itemLabel(s, it, v)} height={34} module={1.6} />
+  const title = only ? batch.items.find((it) => it.id === only)?.name ?? '' : batch.title
+  return <Modal open onClose={onClose} wide title={`برچسب‌های «${title}» · ${fa(count)} برچسب`} footer={<><Button variant="primary" icon={<Printer size={14} />} onClick={() => printSolo(ref.current)}>چاپ همه</Button><Button variant="ghost" onClick={onClose}>بستن</Button></>}>
+    <div ref={ref} className="space-y-4">{[...groups].map(([w, L]) => <section key={w}><h3 className="mb-2 text-13 font-bold">مقصد: {w ? whName(s, w) : 'تعیین نشده'} · {fa(L.length)} عدد</h3>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{L.map(({ it, v, owner, code }, i) => { const o = s.parties.find((p) => p.id === owner); return <div key={i} className="break-inside-avoid rounded-lg border-2 p-2 text-center" style={{ borderColor: o?.color ?? '#999' }}>
+        <div className="flex items-center justify-between text-[10px]"><b style={{ color: o?.color }}>مالک: {o?.brandName ?? o?.name}</b><span>{w ? `→ ${whName(s, w)}` : ''}</span></div>
+        <Barcode value={code} height={34} module={1.6} />
         <p className="truncate text-[10px]">{it.name}{v ? ` · ${v.label}` : ''}</p></div> })}</div></section>)}</div>
   </Modal>
 }

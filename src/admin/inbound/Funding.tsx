@@ -7,7 +7,7 @@ import { currentUser, mutate, useDB } from '@/shared/lib/store'
 import { compactToman, fa, rel, toman } from '@/shared/lib/fa'
 import type { StockDB } from '@/shared/data/stock'
 import type { Fund, FundAdj, InBatch } from '@/shared/data/incoming'
-import { ADJ_KINDS, fundRecon, isDebt, type ReconRow } from '@/shared/data/inbound'
+import { ADJ_KINDS, fundIn, fundRecon, isDebt, type ReconRow } from '@/shared/data/inbound'
 import { PartyChip } from '../stock/common'
 
 const me = () => currentUser()?.name ?? 'پنل'
@@ -15,6 +15,7 @@ const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toStri
 const num = (t: string) => Number(t.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[^\d.]/g, '')) || 0
 const pname = (s: StockDB, id: string) => s.parties.find((p) => p.id === id)?.name ?? id
 const cur = (b: InBatch) => b.currency ?? 'تومان'
+const CURS = ['دلار', 'درهم', 'دینار', 'یورو', 'لیر', 'تومان']
 export const money = (n: number, c: string) => c === 'تومان' ? toman(n) : `${fa(Math.round(n * 100) / 100)} ${c}`
 
 /** در فرم محموله: پول از کجا آمده (جدا از خریدار و جدا از مالک کالا) */
@@ -28,12 +29,15 @@ export function FundingEditor({ b, set }: { b: InBatch; set: (b: InBatch) => voi
     {F.length === 0 && <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2">هنوز ثبت نشده. اگر خریدار با پول خودش خریده، همان را اضافه کنید.</p>}
     {F.map((f, i) => <div key={f.id} className="grid items-end gap-2 sm:grid-cols-[1.2fr_1fr_1fr_1.4fr_auto]">
       <Field label={'چه کسی'}><Select value={f.party} onChange={(v) => upd(i, { party: v })} other={false} options={s.parties.filter((p) => p.active).map((p) => [p.id, p.id === b.buyer ? `${p.name} (خود خریدار)` : p.name] as [string, string])} /></Field>
-      <Field label={`مبلغ (${c})`}><Input className="ltr text-left font-mono" inputMode="decimal" value={f.amount ? String(f.amount) : ''} placeholder="0" onChange={(e) => upd(i, { amount: num(e.target.value) })} aria-label="مبلغ" /></Field>
+      <Field label="مبلغ و ارز"><div className="flex gap-1"><Input className="ltr min-w-0 flex-1 text-left font-mono" inputMode="decimal" value={f.amount ? String(f.amount) : ''} placeholder="0" onChange={(e) => upd(i, { amount: num(e.target.value) })} aria-label="مبلغ" /><select aria-label="ارز پرداخت" value={f.cur ?? c} onChange={(e) => { const v = e.target.value; upd(i, { cur: v, rate: v === 'تومان' ? 1 : v === c ? b.rate : f.rate }) }} className="h-10 rounded-lg border border-line bg-surface px-1.5 text-12">{CURS.map((x) => <option key={x}>{x}</option>)}</select></div></Field>
       <Field label={'روش'}><Select value={f.via ?? 'نقد'} onChange={(v) => upd(i, { via: v })} options={['نقد', 'حوالهٔ صرافی اربیل', 'کارت به کارت', 'حواله بانکی', 'از طلب قبلی']} /></Field>
       <Field label={'یادداشت'}><Input value={f.note ?? ''} onChange={(e) => upd(i, { note: e.target.value })} placeholder="مثلاً برای سهم غنیمت" /></Field>
       <button type="button" aria-label="حذف پول‌دهنده" onClick={() => set({ ...b, funding: F.filter((_, j) => j !== i) })} className="mb-1 grid size-9 place-items-center rounded-lg text-t2 hover:bg-danger-bg hover:text-danger"><Trash2 size={14} /></button>
+      {(f.cur ?? c) !== c && <div className="flex flex-wrap items-center gap-2 rounded-lg bg-brand-tint/40 px-3 py-1.5 text-12 sm:col-span-5">
+        {(f.cur ?? c) !== 'تومان' && <label className="flex items-center gap-1.5">نرخ هر {f.cur} به تومان<Input className="ltr h-8 w-28 text-left font-mono" inputMode="numeric" value={f.rate ? String(f.rate) : ''} onChange={(e) => upd(i, { rate: num(e.target.value) })} aria-label={`نرخ ${f.cur}`} /></label>}
+        <span className="text-t2">برابر با <b className="text-t1">{money(fundIn(f, b), c)}</b> به ارز محموله{c !== 'تومان' ? ` (نرخ ${fa(b.rate ?? 0)})` : ''}؛ تطبیق با همین عدد انجام می‌شود.</span></div>}
     </div>)}
-    {F.length > 0 && <p className="text-12">جمع پول: <b>{money(F.reduce((a, f) => a + f.amount, 0), c)}</b>{c !== 'تومان' && b.rate ? <span className="text-t2"> · حدود {compactToman(F.reduce((a, f) => a + f.amount, 0) * b.rate)}</span> : null}</p>}
+    {F.length > 0 && <p className="text-12">جمع پول به ارز محموله: <b>{money(F.reduce((a, f) => a + fundIn(f, b), 0), c)}</b>{c !== 'تومان' && b.rate ? <span className="text-t2"> · حدود {compactToman(F.reduce((a, f) => a + fundIn(f, b), 0) * b.rate)}</span> : null}</p>}
   </div>
 }
 
@@ -97,7 +101,14 @@ export function FundOverview() {
   const rows = B.map((b) => { const R = fundRecon(b); const rate = cur(b) === 'تومان' ? 1 : b.rate || 0
     if (R.hasFunding) R.rows.forEach((r) => { const p = per.get(r.party) ?? { paid: 0, goods: 0, debt: 0, open: 0 }; p.paid += r.paid * rate; p.goods += r.goods * rate; p.debt += r.debt * rate; if (R.hasFunding && !r.ok) p.open += r.diff * rate; per.set(r.party, p) })
     return { b, R, rate } })
-  return <Card title={<span className="flex items-center gap-1.5"><HandCoins size={15} />داده‌های خرید: پول و مالکیت</span>} defaultOpen pad={false}>
+  const open = rows.filter((x) => x.R.hasFunding && !x.R.ok && !x.b.recon).length; const ready = rows.filter((x) => x.R.hasFunding && x.R.ok && !x.b.recon).length; const nofund = rows.filter((x) => !x.R.hasFunding).length
+  const totalValue = rows.reduce((a, x) => a + x.R.goods * x.rate, 0)
+  const summary = <div className="space-y-2">
+    <div className="flex flex-wrap items-center gap-1.5"><span className="rounded-full bg-neutral-bg px-2.5 py-1">{fa(rows.length)} محموله · ارزش خرید {compactToman(totalValue)}</span>
+      {open > 0 && <span className="rounded-full bg-warning-bg px-2.5 py-1 font-semibold text-warning">{fa(open)} مغایرت باز</span>}{ready > 0 && <span className="rounded-full bg-info-bg px-2.5 py-1 text-info">{fa(ready)} آمادهٔ تأیید</span>}{nofund > 0 && <span className="rounded-full bg-neutral-bg px-2.5 py-1 text-t2">{fa(nofund)} بدون پول‌دهنده</span>}</div>
+    {per.size > 0 && <div className="flex flex-wrap gap-2">{[...per].map(([id, p]) => <span key={id} className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5"><PartyChip s={s} id={id} /><span className="text-t2">پول</span><b className="tnum">{compactToman(p.paid)}</b><span className="text-t2">کالا</span><b className="tnum">{compactToman(p.goods)}</b>{Math.abs(p.open) >= 1 && <><span className="text-t2">مغایرت</span><b className="tnum text-warning">{compactToman(p.open)}</b></>}{p.debt > 0 && <b className="text-danger">بدهی {compactToman(p.debt)}</b>}</span>)}</div>}
+  </div>
+  return <Card id="inbound-fund-overview" title={<span className="flex items-center gap-1.5"><HandCoins size={15} />داده‌های خرید: پول و مالکیت</span>} defaultOpen={false} summary={summary} pad={false}>
     <div className="grid gap-2 border-b border-line p-3 sm:grid-cols-2 xl:grid-cols-4">{per.size === 0 && <p className="text-12 text-t2 sm:col-span-4">برای هیچ محموله‌ای پول‌دهنده ثبت نشده؛ از «محموله ← ویرایش» بنویسید چه کسی چقدر پول داده.</p>}{[...per].map(([id, p]) => <div key={id} className="rounded-xl border border-line p-3 text-12"><PartyChip s={s} id={id} /><div className="mt-2 grid grid-cols-2 gap-1"><span className="col-span-2 text-11 text-t3">فقط محموله‌هایی که پول‌دهنده دارند</span><span className="text-t2">پول داده</span><b className="tnum">{compactToman(p.paid)}</b><span className="text-t2">کالای مالکیتش</span><b className="tnum">{compactToman(p.goods)}</b>{p.debt > 0 && <><span className="text-danger">بدهی خریدار</span><b className="tnum text-danger">{compactToman(p.debt)}</b></>}<span className="text-t2">مغایرت باز</span><b className={cx('tnum', Math.abs(p.open) < 1 ? 'text-success' : 'text-warning')}>{Math.abs(p.open) < 1 ? 'ندارد' : compactToman(p.open)}</b></div></div>)}</div>
     <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-12"><thead><tr className="bg-surface-2 text-t2">{['محموله', 'خریدار', 'ارزش خرید', 'سهم مالک‌ها', 'پول‌دهنده‌ها', 'مانده', 'وضعیت'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
       {rows.map(({ b, R }) => { const c = cur(b); return <tr key={b.id} className="border-t border-line">

@@ -1,4 +1,4 @@
-import { NotebookPen, Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, ScanLine, HandCoins, type LucideIcon } from 'lucide-react'
+import { FileBarChart, NotebookPen, Images, Landmark, Workflow, Zap, Flame, PhoneCall, Newspaper, ListChecks, Archive, IdCard, Trash2, PanelsTopLeft, Inbox, SlidersHorizontal, MessagesSquare, Share2 as SocialIcon, LayoutTemplate, Cable, BadgePercent, Activity, BarChart3, Bot, Boxes, Building2, CircleDollarSign, FileText, Headphones, Home, Megaphone, MessageSquareText, PackageSearch, Palette, Printer, Rocket, RotateCcw, Scale, Search, ServerCog, Settings, Share2, ShoppingBag, Store, Tags, Truck, Users, UsersRound, Warehouse, ScanLine, HandCoins, type LucideIcon } from 'lucide-react'
 import type { DB } from '@/shared/data/seed'
 import { minsLeft } from '@/shared/lib/fa'
 
@@ -38,6 +38,7 @@ export const NAV: NavItem[] = [
   { id: 'sellers', label: 'شرکای مستقل (به‌زودی)', icon: Store, path: '/admin/sellers', group: 'فروش و قیمت' },
   { id: 'finance', urgent: true, label: 'مالی، درگاه‌ها و تسویه', icon: CircleDollarSign, path: '/admin/finance', group: 'مالی و حسابداری', count: (d) => d.txns.filter((t) => t.status === 'pay.unknown').length },
   { id: 'treasury', label: 'حسابداری و خزانه', icon: Landmark, path: '/admin/treasury', group: 'مالی و حسابداری', count: (d) => (d.treasury?.entries ?? []).filter((e) => e.status === 'approval').length + (d.treasury?.sms ?? []).filter((x) => !x.entry && x.dir === 'out').length },
+  { id: 'investor', label: 'گزارش سرمایه‌گذار', icon: FileBarChart, path: '/admin/investor-report', group: 'مالی و حسابداری' },
   { id: 'marketing', label: 'مارکتینگ', icon: Megaphone, path: '/admin/marketing', group: 'بازاریابی' },
   { id: 'messaging', label: 'پیامک و پیگیری خودکار', icon: MessagesSquare, path: '/admin/messaging', group: 'بازاریابی', count: (d) => (d.nudges?.blasts ?? []).filter((b) => b.status === 'زمان‌بندی‌شده').length },
   { id: 'seo', label: 'سئو', icon: Search, path: '/admin/seo', group: 'بازاریابی' },

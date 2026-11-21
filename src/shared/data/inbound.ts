@@ -2,7 +2,7 @@
 // برچسب مالک‌دار از همان لحظهٔ ثبت؛ حوالهٔ بین انبارها با چک‌لیست اسکن؛ و ابزار تشخیص «این کالا باید دست چه کسی باشد».
 import type { DB } from './seed'
 import { labelCode, scanLookup, type StockDB } from './stock'
-import type { Alloc, FundAdj, InBatch, InItem, InVariant } from './incoming'
+import type { Alloc, Fund, FundAdj, InBatch, InItem, InVariant } from './incoming'
 
 export const CURRENCIES = ['دلار', 'درهم', 'دینار', 'یورو', 'لیر', 'تومان'] as const
 export const BUY_SOURCES = ['آمازون', 'نون (Noon)', 'بازار اربیل', 'بازار سلیمانیه', 'فروشگاه رسمی', 'عمده‌فروش', 'یوسف', 'سایر'] as const
@@ -97,12 +97,15 @@ export function ownerValues(b: InBatch) {
     const o = (out[a.owner] ??= { qty: 0, cur: 0, toman: 0, extra: 0 }); o.qty += a.qty; o.cur += (it.unitCost ?? 0) * a.qty; o.toman += L.unit * a.qty; o.extra += L.share * a.qty })) })
   return out
 }
+/** مبلغ یک ردیف پول به ارز محموله: اگر ارزش فرق دارد، اول به تومان و بعد به ارز محموله تبدیل می‌شود */
+export function fundIn(f: Fund, b: InBatch) { const bc = b.currency ?? 'تومان'; const fc = f.cur ?? bc; if (fc === bc) return f.amount
+  const toman = f.amount * (fc === 'تومان' ? 1 : f.rate || 0); const br = bc === 'تومان' ? 1 : b.rate || 0; return br ? Math.round((toman / br) * 100) / 100 : 0 }
 /** تطبیق پول و کالا برای هر نفر: پولی که داده − ارزش کالایی که مالکش است − هزینه‌ها و برگشتی‌های توضیح‌داده‌شده = مانده */
 export type ReconRow = { party: string; paid: number; goods: number; explained: number; debt: number; diff: number; qty: number; toman: number; extra: number; ok: boolean }
 export function fundRecon(b: InBatch): { rows: ReconRow[]; paid: number; goods: number; diff: number; ok: boolean; hasFunding: boolean } {
   const ov = ownerValues(b); const F = b.funding ?? []; const A = b.adjusts ?? []
   const ids = [...new Set([...Object.keys(ov), ...F.map((f) => f.party), ...A.map((a) => a.party)])]
-  const rows = ids.map((party) => { const paid = F.filter((f) => f.party === party).reduce((x, f) => x + f.amount, 0); const goods = ov[party]?.cur ?? 0
+  const rows = ids.map((party) => { const paid = F.filter((f) => f.party === party).reduce((x, f) => x + fundIn(f, b), 0); const goods = ov[party]?.cur ?? 0
     const explained = A.filter((a) => a.party === party).reduce((x, a) => x + a.amount, 0); const debt = A.filter((a) => a.party === party && isDebt(a)).reduce((x, a) => x + a.amount, 0)
     const diff = Math.round((paid - goods - explained) * 100) / 100; const tol = Math.max(1, paid * 0.002)
     return { party, paid, goods, explained, debt, diff, qty: ov[party]?.qty ?? 0, toman: ov[party]?.toman ?? 0, extra: ov[party]?.extra ?? 0, ok: Math.abs(diff) <= tol } })

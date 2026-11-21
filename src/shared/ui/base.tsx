@@ -54,7 +54,7 @@ export const setCardScope = (scope: string) => { CARD_SCOPE = scope }
 const textOf = (n: ReactNode): string => n == null || typeof n === 'boolean' ? '' : typeof n === 'string' || typeof n === 'number' ? String(n) : Array.isArray(n) ? n.map(textOf).join('') : typeof n === 'object' && 'props' in (n as object) ? textOf((n as { props: { children?: ReactNode } }).props.children) : ''
 /** کارت؛ هر کارت عنوان‌دار با کلیک روی عنوان یا فلش جمع و باز می‌شود و حالتش برای هر صفحه ذخیره می‌ماند.
  *  defaultOpen={false} برای کارت‌هایی که داده‌شان در لحظه مهم نیست؛ collapsible={false} برای کارتی که خودش باز و بسته را مدیریت می‌کند */
-export function Card({ title, hint, actions, children, className, pad = true, onClick, defaultOpen = true, collapsible, id }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void; defaultOpen?: boolean; collapsible?: boolean; id?: string }) {
+export function Card({ title, hint, actions, children, className, pad = true, onClick, defaultOpen = true, collapsible, id, summary }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; summary?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void; defaultOpen?: boolean; collapsible?: boolean; id?: string }) {
   const can = (collapsible ?? !!title) && !onClick
   const name = id ?? textOf(title).trim().slice(0, 60)
   const key = can && name ? `gh-card:${CARD_SCOPE}:${name}` : ''
@@ -72,6 +72,7 @@ export function Card({ title, hint, actions, children, className, pad = true, on
           <div className="flex min-w-0 flex-wrap items-center gap-1 [&>*]:max-w-full">{show && actions}{can && <button type="button" aria-expanded={open} aria-label={open ? 'بستن' : 'باز کردن'} title={open ? 'بستن' : 'باز کردن'} onClick={() => toggle(!open)} className="grid size-7 shrink-0 place-items-center rounded-lg text-t3 hover:bg-neutral-bg hover:text-t1"><ChevronDown size={16} className={cx('transition-transform duration-200', open && 'rotate-180')} /></button>}</div>
         </header>
       )}
+      {!show && summary && <div className="cursor-pointer px-5 pb-3.5 text-12" onClick={(e) => { if (!(e.target as HTMLElement).closest('button,a,input,select,label,textarea')) toggle(true) }}>{summary}</div>}
       {show && <div className={pad ? 'p-5' : ''}>{children}</div>}
     </section>
   )

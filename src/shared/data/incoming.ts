@@ -11,8 +11,8 @@ export type InItem = { id: string; name: string; qty: number; unitCost?: number;
   owner?: string; code?: string; variants?: InVariant[]; split?: Record<string, number>; alloc?: Alloc[]; attrs?: { name: string; values: string[] }[]; sellPrice?: number; source?: string; specs?: string; photos?: string[]; brand?: string; category?: string; by?: string; at?: string
   /** موجودی رسیده به هر انبار (بعد از ثبت رسید) */
   landedAt?: Record<string, number> }
-/** پولی که هر نفر برای این خرید به خریدار داده (یا خود خریدار از جیبش گذاشته)؛ مبلغ به ارز محموله */
-export type Fund = { id: string; party: string; amount: number; at: string; via?: string; note?: string; by?: string }
+/** پولی که هر نفر برای این خرید به خریدار داده (یا خود خریدار از جیبش گذاشته)؛ هر ردیف ارز خودش را دارد (بی‌ارز = ارز محموله) و rate نرخ تومانی آن ارز است */
+export type Fund = { id: string; party: string; amount: number; cur?: string; rate?: number; at: string; via?: string; note?: string; by?: string }
 /** توضیح اختلاف پول و کالا برای یک نفر: خرج سفر، کارمزد، پول برگشتی، برداشت شخصی خریدار و…؛ مبلغ به ارز محموله */
 export type FundAdj = { id: string; party: string; amount: number; kind: string; note?: string; at: string; by?: string }
 export type InBatch = { funding?: Fund[]; adjusts?: FundAdj[]; recon?: { at: string; by: string; note?: string }; single?: boolean; buyer?: string; landing?: string; by?: string; id: string; title: string; route: string; supplier?: string; orderedAt: string; eta: string; stage: string; items: InItem[]; note?: string; receivedAt?: string; currency?: string; rate?: number; freight?: number; customs?: number; other?: number; paid?: number; trade?: { ntsw?: string; sata?: string; kotaj?: string; customsValue?: number; duties?: number; customsVat?: number; nwms?: string } }
@@ -20,7 +20,7 @@ export type InBatch = { funding?: Fund[]; adjusts?: FundAdj[]; recon?: { at: str
 export function makeIncoming(): InBatch[] {
   return [
     { id: 'IN-1405-Y1', title: 'خرید یاسین از اربیل · آذر', buyer: 'ys', landing: 'mahabad', by: 'یاسین', route: 'خرید مستقیم اربیل', supplier: 'بازار اربیل (مجیدی‌مال) و آمازون', orderedAt: day(-3), eta: day(4), stage: 'در مرز', currency: 'دلار', rate: 68900, freight: 18000000, customs: 24000000, other: 3000000, paid: 0, note: 'یاسین خودش همراه بار است؛ از مرز باشماق تا مهاباد',
-      funding: [{ id: 'f1', party: 'gh', amount: 3400, at: day(-5), via: 'حوالهٔ صرافی اربیل', note: 'بهشاد برای سهم غنیمت', by: 'بهشاد' }, { id: 'f2', party: 'ys', amount: 1500, at: day(-4), via: 'نقد', note: 'سرمایهٔ خود یاسین برای کالاهای Ve1', by: 'یاسین' }],
+      funding: [{ id: 'f1', party: 'gh', amount: 3400, at: day(-5), via: 'حوالهٔ صرافی اربیل', note: 'بهشاد برای سهم غنیمت', by: 'بهشاد' }, { id: 'f2', party: 'ys', amount: 1000, at: day(-4), via: 'نقد', note: 'سرمایهٔ خود یاسین برای کالاهای Ve1', by: 'یاسین' }, { id: 'f3', party: 'ys', amount: 34450000, cur: 'تومان', rate: 1, at: day(-4), via: 'کارت به کارت', note: 'بقیهٔ سهم یاسین به تومان', by: 'یاسین' }],
       adjusts: [{ id: 'a1', party: 'gh', amount: 200, kind: 'خرج سفر و اقامت', note: 'سهم غنیمت از هزینهٔ رفت‌وآمد و هتل اربیل', at: day(-3), by: 'یاسین' }],
       items: [
         { id: 'ii20', name: 'گوشی سامسونگ Galaxy A55 5G', qty: 7, owner: 'gh', code: 'GH-P-000401', unitCost: 365, sellPrice: 31900000, source: 'بازار اربیل', brand: 'سامسونگ', category: 'گوشی موبایل', amazonUrl: 'https://www.amazon.com/dp/B0CWL5JRN8', specs: '۸ گیگ رم، دو سیم‌کارت، کارتن پلمب', by: 'یاسین', at: day(-3),

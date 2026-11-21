@@ -5,8 +5,10 @@
 //   فروشنده (کانال): چه کسی فروخته و پول را چه کسی گرفته (سایت غنیمت، شعبهٔ شریک، سایت خود شریک)
 // اگر مالک و فروشنده یکی نباشند، طبق «قرارداد سهم» میان آن دو، سهم هر طرف خودکار حساب می‌شود.
 
-export type Party = { id: string; name: string; prefix: string; kind: 'self' | 'partner'; color: string; site?: string; phone?: string; active: boolean; city?: string; userId?: string; account?: 'internal' | 'portal'; joinedAt?: string; note?: string; offAt?: string; offBy?: string; offWhy?: string; payout?: { cycle: 'weekly' | 'biweekly' | 'monthly'; holdDays: number; minShelfDays?: number } }
-export type StockWh = { id: string; name: string; city: string; operator: string; handlingFee: number; active: boolean }
+export type Party = { pause?: PauseState; logo?: string; brandName?: string; id: string; name: string; prefix: string; kind: 'self' | 'partner'; color: string; site?: string; phone?: string; active: boolean; city?: string; userId?: string; account?: 'internal' | 'portal'; joinedAt?: string; note?: string; offAt?: string; offBy?: string; offWhy?: string; payout?: { cycle: 'weekly' | 'biweekly' | 'monthly'; holdDays: number; minShelfDays?: number } }
+/** توقف فوری: هر بخش جدا قابل توقف است و بدون پاک شدن سابقه، با یک کلیک برمی‌گردد */
+export type PauseState = { at: string; by: string; why: string; until?: string; sell: boolean; ship: boolean; sync: boolean; login: boolean }
+export type StockWh = { pause?: PauseState; id: string; name: string; city: string; operator: string; handlingFee: number; active: boolean }
 export type Channel = { id: string; name: string; seller: string; collector: string; brand: string; active: boolean }
 /** مدل قرارداد: تقسیم سود (درصد سود برای فروشنده)، قیمت توافقی ثابت (بهای هر ورود همان مبلغ مالک است و بقیه مال فروشنده) یا کمیسیون (درصد از مبلغ فروش برای فروشنده) */
 export type Agreement = { owner: string; seller: string; sellerPct: number; note?: string; model?: 'profit_share' | 'fixed_price' | 'commission' }
@@ -27,13 +29,13 @@ export type PayTerm = { match: string; label: string; tranches: { days: number; 
 /** تغییر دستی موجودی از «میز موجودی»: فروش حضوری، کنار گذاشتن از فروش، برگرداندن به فروش، اصلاح شمارش، ورود تازه، خرابی یا مفقودی */
 export type AdjustKind = 'sale' | 'hold' | 'release' | 'count' | 'intake' | 'loss'
 export type StockAdjust = { id: string; at: string; by: string; productId: string; variationId?: string; owner: string; warehouse: string; kind: AdjustKind; delta: number; note?: string; price?: number }
-export type StockDB = { adjusts?: StockAdjust[]; parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean }; pickRule: PickRule; rules: CostRules; channelMap: Record<string, string>; ext: ExtSite[]; payTerms: PayTerm[]; ownerReturns: OwnerReturn[] }
+export type StockDB = { manifests?: import('./inbound').Manifest[]; targets?: Record<string, number>; adjusts?: StockAdjust[]; parties: Party[]; warehouses: StockWh[]; channels: Channel[]; agreements: Agreement[]; lots: Lot[]; sales: StockSale[]; settlements: Settlement[]; codes: CustomCode[]; codeRule: { sep: string; withVariant: boolean }; pickRule: PickRule; rules: CostRules; channelMap: Record<string, string>; ext: ExtSite[]; payTerms: PayTerm[]; ownerReturns: OwnerReturn[] }
 
 const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
 export const makeStock = (): StockDB => ({
   parties: [
-    { id: 'gh', name: 'غنیمت', prefix: 'GH', kind: 'self', color: '#0000ff', active: true, city: 'تهران', userId: 'u1', account: 'internal' },
-    { id: 'ys', name: 'یاسین', prefix: 'YS', kind: 'partner', color: '#12733f', site: 've1', active: true, city: 'مهاباد', userId: 'u4', account: 'internal', joinedAt: ago(24 * 60), note: 'انبار مهاباد جزئی از غنیمت است؛ با حساب مدیر کل دوم کار می‌کند.', payout: { cycle: 'weekly', holdDays: 7 } },
+    { id: 'gh', name: 'غنیمت', prefix: 'GH', kind: 'self', color: '#0000ff', logo: './brand/logo-mark.png', active: true, city: 'تهران', userId: 'u1', account: 'internal' },
+    { id: 'ys', name: 'یاسین', prefix: 'YS', kind: 'partner', color: '#12733f', brandName: 'Ve1', logo: './logos/ve1.png', site: 've1', active: true, city: 'مهاباد', userId: 'u4', account: 'internal', joinedAt: ago(24 * 60), note: 'انبار مهاباد جزئی از غنیمت است؛ با حساب مدیر کل دوم کار می‌کند.', payout: { cycle: 'weekly', holdDays: 7 } },
   ],
   warehouses: [
     { id: 'tehran', name: 'انبار تهران', city: 'تهران', operator: 'gh', handlingFee: 0, active: true },
@@ -83,6 +85,7 @@ export const makeStock = (): StockDB => ({
     { match: 'کارت', label: 'کارت به کارت یا کارت‌خوان', tranches: [{ days: 0, pct: 100 }] },
   ],
   ownerReturns: [],
+  targets: { tehran: 900000000, mahabad: 260000000 },
   rules: { discount: 'shared', fee: 'shared' },
   channelMap: { 'سایت': 'gh-site', 'ترب': 'gh-site', 'دیجی‌کالا': 'gh-site', 'اینستاگرام دایرکت': 'gh-site', 'تلگرام': 'gh-site', 'واتساپ': 'gh-site', 'بله': 'gh-site', 'تلفنی': 'gh-site', 'حضوری در شعبه': 'gh-site' },
   ext: [{ partyId: 'ys', kind: 'woocommerce', url: 'https://ve1.ir', key: 'ck_7f3a••••••••••••••••••••c21d', secret: 'cs_91be••••••••••••••••••••04aa', on: true, lastSync: ago(3), pullOrders: true, pushStock: true, webhook: true,

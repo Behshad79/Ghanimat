@@ -76,6 +76,10 @@ export function ManifestView({ id, onClose }: { id: string; onClose: () => void 
   if (!m) return null
   const t = manifestTotals(m); const st = MANIFEST_STATUS[m.status]
   const mode: 'pack' | 'recv' | null = ['draft', 'packing'].includes(m.status) ? 'pack' : m.status === 'sent' ? 'recv' : null
+  const done = mode === 'recv' ? t.received : t.packed
+  const left = m.lines.filter((l) => (mode === 'recv' ? l.received : l.packed) < l.qty); const full = m.lines.filter((l) => !left.includes(l))
+  const op = (w: string) => s.warehouses.find((x) => x.id === w)?.operator
+  const th = mode === 'recv' ? { role: 'صفحهٔ تحویل‌گیرنده', title: `تحویل بار در ${whName(s, m.to)}`, party: op(m.to) } : mode === 'pack' ? { role: 'صفحهٔ ارسال‌کننده', title: `جمع‌آوری و ارسال از ${whName(s, m.from)}`, party: op(m.from) } : null
   const upd = (fn: (q: Manifest) => void, action: string) => mutate((x) => fn(x.stock.manifests!.find((q) => q.id === id)!), { action, target: id })
   const scan = (raw: string) => {
     const code = raw.toUpperCase(); const field = mode === 'pack' ? 'packed' : 'received'
@@ -100,28 +104,45 @@ export function ManifestView({ id, onClose }: { id: string; onClose: () => void 
   return <Drawer open onClose={onClose} width={780} title={<span className="flex flex-wrap items-center gap-2"><span className="font-mono">{m.id}</span><Badge tone={st.tone}>{st.label}</Badge></span>}
     footer={<div className="flex w-full flex-wrap gap-2">
       {mode === 'pack' && <Button variant="primary" icon={<Send size={14} />} disabled={!t.packed} onClick={() => setShip(true)}>ارسال ({fa(t.packed)} از {fa(t.qty)})</Button>}
-      {mode === 'recv' && <Button variant="primary" icon={<PackageCheck size={14} />} disabled={!t.received} onClick={() => void finish()}>ثبت تحویل ({fa(t.received)} از {fa(t.qty)})</Button>}
+      {mode === 'recv' && <Button variant="primary" className="recv-solid" icon={<PackageCheck size={14} />} disabled={!t.received} onClick={() => void finish()}>ثبت تحویل ({fa(t.received)} از {fa(t.qty)})</Button>}
       <Button variant="ghost" icon={<Printer size={14} />} onClick={() => printSolo(sheet.current)}>چاپ حواله و بارکدها</Button>
       {['draft', 'packing'].includes(m.status) && <Button variant="ghost" className="mr-auto" icon={<X size={14} />} onClick={async () => { if (await confirm({ title: 'حواله لغو شود؟', body: 'موجودی جابه‌جا نشده است؛ فقط حواله بسته می‌شود.', confirm: 'لغو حواله', danger: true })) { upd((q) => { q.status = 'cancelled'; q.events.push({ at: now(), by: me(), text: 'لغو حواله' }) }, 'لغو حواله'); onClose() } }}>لغو</Button>}
     </div>}>
     <div className="space-y-4">
-      <p className="flex items-center gap-2 text-14 font-semibold">{whName(s, m.from)}<ArrowLeft size={15} className="text-t3" />{whName(s, m.to)}<span className="text-12 font-normal text-t2">· {m.reason}</span></p>
+      {/* نقش روشن: تحویل‌گیرنده (سبز) یا ارسال‌کننده (آبی)؛ هر کس فقط کار خودش را می‌بیند */}
+      {th ? <div className={cx('manifest-hero overflow-hidden rounded-2xl text-white', mode === 'recv' ? 'is-recv' : 'is-pack')}>
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/15">{mode === 'recv' ? <PackageCheck size={24} /> : <Send size={22} />}</span>
+          <div className="min-w-0 flex-1"><p className="text-11 opacity-80">{th.role}</p><p className="text-16 font-extrabold">{th.title}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-12 opacity-90">{whName(s, m.from)}<ArrowLeft size={13} />{whName(s, m.to)}{m.reason ? ` · ${m.reason}` : ''}</p></div>
+          {th.party && <span className="rounded-xl bg-white px-2 py-1"><PartyChip s={s} id={th.party} /></span>}
+        </div>
+        <div className="grid grid-cols-3 border-t border-white/15 text-center">
+          <div className="p-2.5"><b className="block text-22 tnum">{fa(done)}</b><span className="text-11 opacity-80">{mode === 'recv' ? 'رسید و اسکن شد' : 'در کارتن'}</span></div>
+          <div className="border-x border-white/15 p-2.5"><b className="block text-22 tnum">{fa(t.qty - done)}</b><span className="text-11 opacity-80">مانده</span></div>
+          <div className="p-2.5"><b className={cx('block text-22 tnum', m.issues.length > 0 && 'text-[#ffc24b]')}>{fa(m.issues.length)}</b><span className="text-11 opacity-80">مغایرت</span></div>
+        </div>
+        <div className="h-1.5 bg-white/15"><div className="h-full bg-[#ffc24b] transition-all" style={{ width: `${Math.round((done / Math.max(1, t.qty)) * 100)}%` }} /></div>
+      </div> : <p className="flex items-center gap-2 text-14 font-semibold">{whName(s, m.from)}<ArrowLeft size={15} className="text-t3" />{whName(s, m.to)}<span className="text-12 font-normal text-t2">· {m.reason}</span></p>}
       {m.carrier && <p className="flex items-center gap-1.5 text-12 text-t2"><Truck size={13} />{m.carrier}{m.tracking && <> · کد <bdi dir="ltr" className="font-mono">{m.tracking}</bdi></>}{m.sentAt && ` · ارسال ${rel(m.sentAt)} توسط ${m.sentBy}`}</p>}
-      {mode && <div className="space-y-2 rounded-2xl border-2 border-brand/30 bg-brand-tint/30 p-3">
-        <p className="text-13 font-bold">{mode === 'pack' ? `جمع‌آوری در ${whName(s, m.from)}: هر کالا را که در کارتن می‌گذارید اسکن کنید` : `تحویل در ${whName(s, m.to)}: هر کالا را که از کارتن درمی‌آورید اسکن کنید`}</p>
+      {mode && <div className={cx('space-y-2 rounded-2xl border-2 p-3', mode === 'recv' ? 'border-[#0f766e]/35 bg-[#e8f6f3] dark:bg-[#0f766e]/15' : 'border-brand/30 bg-brand-tint/30')}>
+        <p className="flex items-center gap-1.5 text-13 font-bold"><ScanLine size={16} className={mode === 'recv' ? 'text-[#0f766e]' : 'text-brand'} />{mode === 'pack' ? 'هر کالا را که در کارتن می‌گذارید اسکن کنید' : 'هر کالا را که از کارتن درمی‌آورید اسکن کنید'}</p>
         <ScanInput onScan={scan} />
-        {last && <div className={cx('flex items-start gap-2 rounded-xl px-3 py-2.5', last.ok ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>{last.ok ? <Check size={18} className="mt-0.5 shrink-0" /> : <AlertTriangle size={18} className="mt-0.5 shrink-0" />}<span><b className="block text-13">{last.text}</b>{last.sub && <span className="text-12">{last.sub}</span>}</span></div>}
-        <Progress value={Math.round(((mode === 'pack' ? t.packed : t.received) / Math.max(1, t.qty)) * 100)} tone="brand" />
+        {last && <div className={cx('anim-pop flex items-start gap-2.5 rounded-xl px-3 py-3', last.ok ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>{last.ok ? <Check size={22} className="mt-0.5 shrink-0" /> : <AlertTriangle size={22} className="mt-0.5 shrink-0" />}<span><b className="block text-14">{last.text}</b>{last.sub && <span className="text-12">{last.sub}</span>}</span></div>}
       </div>}
-      <div className="overflow-x-auto rounded-xl border border-line"><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2">{['', 'کالا', 'مالک', 'کد', 'تعداد', 'اسکن جمع‌آوری', 'اسکن تحویل'].map((h, i) => <th key={i} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
-        {m.lines.map((l) => { const done = mode === 'recv' ? l.received >= l.qty : l.packed >= l.qty; return <tr key={l.key} className={cx('border-t border-line', done && 'bg-success-bg/40')}>
-          <td className="p-2">{done ? <Check size={15} className="text-success" /> : <span className="block size-3.5 rounded-sm border-2 border-line" />}</td>
-          <td className="p-2"><b>{l.title}</b>{l.vname && <span className="text-t2"> · {l.vname}</span>}</td><td className="p-2"><PartyChip s={s} id={l.owner} /></td>
-          <td className="p-2"><bdi dir="ltr" className="font-mono text-11">{l.code}</bdi></td><td className="p-2 tnum">{fa(l.qty)}</td>
-          <td className={cx('p-2 tnum', l.packed < l.qty && mode === 'pack' && 'text-warning')}>{fa(l.packed)}</td><td className={cx('p-2 tnum', l.received < l.qty && mode === 'recv' && 'text-warning')}>{fa(l.received)}</td></tr> })}
+      {/* مانده‌ها اول، کامل‌شده‌ها پایین و کم‌رنگ */}
+      {mode && left.length > 0 && <p className="text-12 font-semibold text-t2">مانده برای اسکن ({fa(left.length)} ردیف)</p>}
+      <div className="overflow-x-auto rounded-xl border border-line"><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2">{(mode === 'recv' ? ['', 'کالا', 'مالک', 'ارسال‌شده', 'رسیده'] : mode === 'pack' ? ['', 'کالا', 'مالک', 'تعداد', 'در کارتن'] : ['', 'کالا', 'مالک', 'تعداد', 'جمع‌آوری', 'تحویل']).map((h, i) => <th key={i} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
+        {[...left, ...full].map((l) => { const got = mode === 'recv' ? l.received : l.packed; const ok = mode ? got >= l.qty : true; return <tr key={l.key} className={cx('border-t border-line', mode && ok && 'bg-success-bg/30 text-t2')}>
+          <td className="w-8 p-2">{ok && mode ? <Check size={15} className="text-success" /> : mode ? <span className="block size-3.5 rounded-sm border-2 border-line" /> : null}</td>
+          <td className="p-2"><b className={cx(mode && ok && 'font-medium')}>{l.title}</b>{l.vname && <span className="text-t2"> · {l.vname}</span>}<bdi dir="ltr" className="block font-mono text-11 text-t3">{l.code}</bdi></td>
+          <td className="p-2"><PartyChip s={s} id={l.owner} /></td>
+          <td className="p-2 tnum">{fa(l.qty)}</td>
+          {mode ? <td className="p-2"><span className={cx('tnum font-semibold', ok ? 'text-success' : got ? 'text-warning' : 'text-t3')}>{fa(got)} از {fa(l.qty)}</span></td> : <><td className="p-2 tnum">{fa(l.packed)}</td><td className={cx('p-2 tnum', l.received < l.qty && 'text-warning')}>{fa(l.received)}</td></>}
+        </tr> })}
       </tbody></table></div>
-      {m.issues.length > 0 && <div><p className="mb-1 text-12 font-semibold text-danger">موارد ثبت‌شده</p><ul className="space-y-1 text-12">{m.issues.slice().reverse().map((i, k) => <li key={k} className="rounded-lg bg-danger-bg/50 px-2.5 py-1.5"><b>{({ wrong: 'کالای خارج از حواله', extra: 'عدد اضافه', unknown: 'کد ناشناخته', missing: 'ارسال‌نشده', damaged: 'آسیب‌دیده', short: 'کسری در تحویل' } as const)[i.kind]}</b> · <bdi dir="ltr" className="font-mono">{i.code}</bdi>{i.note ? ` · ${i.note}` : ''} · {i.by} · {rel(i.at)}</li>)}</ul></div>}
-      <ol className="space-y-1 border-r-2 border-line pr-3 text-12">{m.events.map((e, i) => <li key={i}><span className="text-t3">{rel(e.at)} · {e.by}:</span> {e.text}</li>)}</ol>
+      {m.issues.length > 0 && <details open={mode === 'recv'} className="rounded-xl border border-danger/30"><summary className="cursor-pointer px-3 py-2 text-12 font-semibold text-danger">مغایرت‌های ثبت‌شده ({fa(m.issues.length)})</summary><ul className="space-y-1 border-t border-danger/20 p-2 text-12">{m.issues.slice().reverse().map((i, k) => <li key={k} className="rounded-lg bg-danger-bg/50 px-2.5 py-1.5"><b>{({ wrong: 'کالای خارج از حواله', extra: 'عدد اضافه', unknown: 'کد ناشناخته', missing: 'ارسال‌نشده', damaged: 'آسیب‌دیده', short: 'کسری در تحویل' } as const)[i.kind]}</b> · <bdi dir="ltr" className="font-mono">{i.code}</bdi>{i.note ? ` · ${i.note}` : ''} · {i.by} · {rel(i.at)}</li>)}</ul></details>}
+      <details className="rounded-xl border border-line"><summary className="cursor-pointer px-3 py-2 text-12 font-semibold text-t2">سابقهٔ حواله ({fa(m.events.length)})</summary><ol className="space-y-1 border-t border-line p-3 text-12">{m.events.map((e, i) => <li key={i}><span className="text-t3">{rel(e.at)} · {e.by}:</span> {e.text}</li>)}</ol></details>
     </div>
     <div ref={sheet} className="hidden print:block"><h2>حوالهٔ {m.id}: {whName(s, m.from)} ← {whName(s, m.to)}</h2><p>{m.reason} · {new Date(m.createdAt).toLocaleString('fa-IR')} · {m.by}</p>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr><th>✓</th><th>کالا</th><th>مالک</th><th>تعداد</th><th>بارکد</th></tr></thead><tbody>{m.lines.map((l) => <tr key={l.key}><td style={{ width: 24, border: '1px solid #999' }} /><td>{l.title}{l.vname ? ` · ${l.vname}` : ''}</td><td>{s.parties.find((p) => p.id === l.owner)?.name}</td><td>{l.qty}</td><td><Barcode value={l.code} height={30} module={1.4} /></td></tr>)}</tbody></table>

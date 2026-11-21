@@ -1,6 +1,7 @@
 // پول و مالکیت محموله: چه کسی چقدر پول به خریدار داده، کالای هر نفر چقدر ارزش دارد، و اختلاف با دلیل (خرج سفر، برگشتی، برداشت شخصی و…) تطبیق می‌شود
 import { useState } from 'react'
-import { CheckCircle2, CircleAlert, HandCoins, Plus, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, CircleAlert, HandCoins, Plus, Trash2, Users } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Select } from '@/shared/ui/base'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { currentUser, mutate, useDB } from '@/shared/lib/store'
@@ -24,8 +25,8 @@ export function FundingEditor({ b, set }: { b: InBatch; set: (b: InBatch) => voi
   const upd = (i: number, patch: Partial<Fund>) => set({ ...b, funding: F.map((f, j) => (j === i ? { ...f, ...patch } : f)) })
   return <div className="mt-3 space-y-2 rounded-xl border border-line p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><p className="flex items-center gap-1.5 text-13 font-semibold"><HandCoins size={15} className="text-brand" />پول این خرید از کجا آمده</p>
-      <Button size="sm" icon={<Plus size={13} />} onClick={() => set({ ...b, funding: [...F, { id: uid('f'), party: F.some((f) => f.party === 'gh') ? (b.buyer ?? 'ys') : 'gh', amount: 0, at: new Date().toISOString(), by: me() }] })}>افزودن پول‌دهنده</Button></div>
-    <p className="text-11 leading-5 text-t2">خریدار کسی است که می‌رود و می‌خرد. پول‌دهنده‌ها اینجا ثبت می‌شوند و مالک هر کالا در قدم «مالکیت» کالا. مثلاً بهشاد ۶٬۰۰۰ دلار به یاسین می‌دهد و یاسین ۱٬۵۰۰ دلار از خودش می‌گذارد؛ بعد از ثبت کالاها، پنل جمع کالای هر نفر را با پولش مقایسه می‌کند.</p>
+      <Button size="sm" icon={<Plus size={13} />} onClick={() => set({ ...b, funding: [...F, { id: uid('f'), party: s.parties.find((p) => p.active && !F.some((f) => f.party === p.id))?.id ?? b.buyer ?? 'gh', amount: 0, at: new Date().toISOString(), by: me() }] })}>افزودن پول‌دهنده</Button></div>
+    <p className="text-11 leading-5 text-t2">نام‌ها از فهرست سراسری شرکا می‌آیند (مالکیت و تسویهٔ شرکا ← شرکا، انبارها و قرارداد سهم). خریدار کسی است که می‌رود و می‌خرد. پول‌دهنده‌ها اینجا ثبت می‌شوند و مالک هر کالا در قدم «مالکیت» کالا. مثلاً بهشاد ۶٬۰۰۰ دلار به یاسین می‌دهد و یاسین ۱٬۵۰۰ دلار از خودش می‌گذارد؛ بعد از ثبت کالاها، پنل جمع کالای هر نفر را با پولش مقایسه می‌کند.</p>
     {F.length === 0 && <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2">هنوز ثبت نشده. اگر خریدار با پول خودش خریده، همان را اضافه کنید.</p>}
     {F.map((f, i) => <div key={f.id} className="grid items-end gap-2 sm:grid-cols-[1.2fr_1fr_1fr_1.4fr_auto]">
       <Field label={'چه کسی'}><Select value={f.party} onChange={(v) => upd(i, { party: v })} other={false} options={s.parties.filter((p) => p.active).map((p) => [p.id, p.id === b.buyer ? `${p.name} (خود خریدار)` : p.name] as [string, string])} /></Field>
@@ -96,7 +97,7 @@ function AdjModal({ b, party, onClose }: { b: InBatch; party: string; onClose: (
 
 /** بالای لیست خرید: داده‌های همهٔ محموله‌ها، ارزش، سهم مالک‌ها، پول‌دهنده‌ها و مغایرت */
 export function FundOverview() {
-  const d = useDB(); const s = d.stock; const B = d.incoming.filter((b) => !b.single && b.items.length)
+  const nav = useNavigate(); const d = useDB(); const s = d.stock; const B = d.incoming.filter((b) => !b.single && b.items.length)
   const per = new Map<string, { paid: number; goods: number; debt: number; open: number }>()
   const rows = B.map((b) => { const R = fundRecon(b); const rate = cur(b) === 'تومان' ? 1 : b.rate || 0
     if (R.hasFunding) R.rows.forEach((r) => { const p = per.get(r.party) ?? { paid: 0, goods: 0, debt: 0, open: 0 }; p.paid += r.paid * rate; p.goods += r.goods * rate; p.debt += r.debt * rate; if (R.hasFunding && !r.ok) p.open += r.diff * rate; per.set(r.party, p) })
@@ -108,7 +109,7 @@ export function FundOverview() {
       {open > 0 && <span className="rounded-full bg-warning-bg px-2.5 py-1 font-semibold text-warning">{fa(open)} مغایرت باز</span>}{ready > 0 && <span className="rounded-full bg-info-bg px-2.5 py-1 text-info">{fa(ready)} آمادهٔ تأیید</span>}{nofund > 0 && <span className="rounded-full bg-neutral-bg px-2.5 py-1 text-t2">{fa(nofund)} بدون پول‌دهنده</span>}</div>
     {per.size > 0 && <div className="flex flex-wrap gap-2">{[...per].map(([id, p]) => <span key={id} className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line px-2.5 py-1.5"><PartyChip s={s} id={id} /><span className="text-t2">پول</span><b className="tnum">{compactToman(p.paid)}</b><span className="text-t2">کالا</span><b className="tnum">{compactToman(p.goods)}</b>{Math.abs(p.open) >= 1 && <><span className="text-t2">مغایرت</span><b className="tnum text-warning">{compactToman(p.open)}</b></>}{p.debt > 0 && <b className="text-danger">بدهی {compactToman(p.debt)}</b>}</span>)}</div>}
   </div>
-  return <Card id="inbound-fund-overview" title={<span className="flex items-center gap-1.5"><HandCoins size={15} />داده‌های خرید: پول و مالکیت</span>} defaultOpen={false} summary={summary} pad={false}>
+  return <Card id="inbound-fund-overview" title={<span className="flex items-center gap-1.5"><HandCoins size={15} />داده‌های خرید: پول و مالکیت</span>} defaultOpen={false} summary={summary} pad={false} actions={<Button size="sm" variant="ghost" icon={<Users size={13} />} onClick={() => nav('/admin/ownership?tab=setup')} title="افزودن، ویرایش یا غیرفعال کردن شریک‌ها؛ نام، لوگو و پیشوند در همهٔ پنل عوض می‌شود">مدیریت شرکا</Button>}>
     <div className="grid gap-2 border-b border-line p-3 sm:grid-cols-2 xl:grid-cols-4">{per.size === 0 && <p className="text-12 text-t2 sm:col-span-4">برای هیچ محموله‌ای پول‌دهنده ثبت نشده؛ از «محموله ← ویرایش» بنویسید چه کسی چقدر پول داده.</p>}{[...per].map(([id, p]) => <div key={id} className="rounded-xl border border-line p-3 text-12"><PartyChip s={s} id={id} /><div className="mt-2 grid grid-cols-2 gap-1"><span className="col-span-2 text-11 text-t3">فقط محموله‌هایی که پول‌دهنده دارند</span><span className="text-t2">پول داده</span><b className="tnum">{compactToman(p.paid)}</b><span className="text-t2">کالای مالکیتش</span><b className="tnum">{compactToman(p.goods)}</b>{p.debt > 0 && <><span className="text-danger">بدهی خریدار</span><b className="tnum text-danger">{compactToman(p.debt)}</b></>}<span className="text-t2">مغایرت باز</span><b className={cx('tnum', Math.abs(p.open) < 1 ? 'text-success' : 'text-warning')}>{Math.abs(p.open) < 1 ? 'ندارد' : compactToman(p.open)}</b></div></div>)}</div>
     <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-12"><thead><tr className="bg-surface-2 text-t2">{['محموله', 'خریدار', 'ارزش خرید', 'سهم مالک‌ها', 'پول‌دهنده‌ها', 'مانده', 'وضعیت'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
       {rows.map(({ b, R }) => { const c = cur(b); return <tr key={b.id} className="border-t border-line">

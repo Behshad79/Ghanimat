@@ -211,7 +211,7 @@ function SalesTab() {
 }
 
 function OfflineSale({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const d = useDB(); const s = d.stock; const [f, setF] = useState({ ch: 've1', pid: 'prx', vid: 'var-prx-blk', owner: 'ys', wh: 'mahabad', qty: 1, price: 2900000 })
+  const d = useDB(); const s = d.stock; const [f, setF] = useState({ ch: 've1', pid: 'prx', vid: 'var-prx-blk', owner: s.parties.find((p) => p.active && p.kind !== 'self')?.id ?? 'gh', wh: 'mahabad', qty: 1, price: 2900000 })
   const avail = ownersAt(s, f.pid, f.vid || undefined, f.wh).get(f.owner) ?? 0
   const preview: StockSale = { id: 'preview', at: new Date().toISOString(), productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh, channel: f.ch, qty: f.qty, price: f.price, cost: s.lots.find((l) => l.productId === f.pid && (l.variationId ?? '') === f.vid && l.owner === f.owner)?.cost ?? 0, by: by() }
   const save = () => { mutate((x) => { const t = takeLots(x, { productId: f.pid, variationId: f.vid || undefined, owner: f.owner, warehouse: f.wh }, f.qty); x.stock.sales.unshift({ ...preview, id: uid('S'), cost: t.cost }); syncQty(x, f.pid) }, { action: 'ثبت فروش خارج از سایت', target: `${chName(s, f.ch)} · ${pv(d, f.pid, f.vid).full} ×${f.qty}` }); toast('فروش ثبت شد، از موجودی کم شد و سهم‌ها به حساب تسویه رفت.'); onClose() }
@@ -264,7 +264,7 @@ function SettleModal({ v, onClose }: { v: { from: string; to: string; amount: nu
 
 /* ───────── کدگذاری و بارکد ───────── */
 function CodesTab() {
-  const d = useDB(); const s = d.stock; const nav = useNavigate(); const [f, setF] = useState({ code: '', pid: 'prx', vid: 'var-prx-blk', owner: 'ys', note: '' })
+  const d = useDB(); const s = d.stock; const nav = useNavigate(); const [f, setF] = useState({ code: '', pid: 'prx', vid: 'var-prx-blk', owner: s.parties.find((p) => p.active && p.kind !== 'self')?.id ?? 'gh', note: '' })
   const rows = useMemo(() => productsWithLots(d).flatMap((p) => (p.variations?.length ? p.variations.map((v) => ({ p, vid: v.id as string | undefined })) : [{ p, vid: undefined }])), [d])
   const dup = !!f.code && (s.codes.some((c) => c.code.toUpperCase() === f.code.trim().toUpperCase()))
   return <div className="space-y-4">

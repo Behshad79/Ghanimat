@@ -690,6 +690,9 @@ export const makeSeed = () => {
     const ln = (o: string, pid: string, vid: string | undefined, suf: string | undefined, qty: number, packed: number, received = 0) => ({ key: `${pid}|${vid ?? ''}|${o}`, owner: o, code: L(o, pid, suf), title: P(pid).title, vname: vid ? (suf === '1' ? 'مشکی' : 'سفید') : undefined, productId: pid, variationId: vid, qty, packed, received })
     const ago2 = (h: number) => new Date(Date.now() - h * 36e5).toISOString()
     s.stock.manifests = [
+      { id: 'HV-1405-033', from: 'mahabad', to: 'tehran', status: 'sent', createdAt: ago2(30), by: 'یاسین', reason: 'سهم تهران از خرید اربیل', carrier: 'تیپاکس', tracking: '24052210874', sentAt: ago2(20), sentBy: 'یاسین',
+        lines: [ln('gh', 'prx', 'var-prx-blk', '1', 4, 4, 2), ln('gh', 'prx', 'var-prx-wht', '2', 3, 3, 0), ln('ys', 'p8', undefined, undefined, 2, 2, 1)], issues: [],
+        events: [{ at: ago2(30), by: 'یاسین', text: 'ساخت حواله' }, { at: ago2(20), by: 'یاسین', text: 'ارسال با تیپاکس · ۹ عدد اسکن شد' }, { at: ago2(1), by: 'بهشاد', text: 'شروع تحویل با اسکن' }] },
       { id: 'HV-1405-031', from: 'mahabad', to: 'tehran', status: 'packing', createdAt: ago2(5), by: 'یاسین', reason: 'تأمین موجودی انبار تهران', carrier: 'تیپاکس',
         lines: [ln('gh', 'prx', 'var-prx-blk', '1', 5, 3), ln('gh', 'prx', 'var-prx-wht', '2', 5, 5), ln('ys', 'p8', undefined, undefined, 3, 1)],
         issues: [{ at: ago2(1), by: 'یاسین', code: L('ys', 'prx', '1'), kind: 'wrong', note: 'کالای یاسین (YS) اسکن شد؛ در این حواله نیست و کنار گذاشته شد' }],

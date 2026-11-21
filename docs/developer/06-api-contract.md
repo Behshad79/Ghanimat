@@ -276,10 +276,10 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تأیید تطبیق پول و کالای محموله | [60](../../src/admin/inbound/Funding.tsx#L60) |
-| باز کردن دوبارهٔ تطبیق محموله | [61](../../src/admin/inbound/Funding.tsx#L61) |
-| حذف دلیل اختلاف محموله | [77](../../src/admin/inbound/Funding.tsx#L77) |
-| ثبت دلیل اختلاف پول و کالا | [85](../../src/admin/inbound/Funding.tsx#L85) |
+| تأیید تطبیق پول و کالای محموله | [61](../../src/admin/inbound/Funding.tsx#L61) |
+| باز کردن دوبارهٔ تطبیق محموله | [62](../../src/admin/inbound/Funding.tsx#L62) |
+| حذف دلیل اختلاف محموله | [78](../../src/admin/inbound/Funding.tsx#L78) |
+| ثبت دلیل اختلاف پول و کالا | [86](../../src/admin/inbound/Funding.tsx#L86) |
 ### `src/admin/inbound/Inbound.tsx` — ماژول `inbound`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -379,8 +379,8 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| حذف پروندهٔ بازگشت وجه | [65](../../src/admin/orders/Refunds.tsx#L65) |
-| واریز بازگشت وجه به کیف پول | [80](../../src/admin/orders/Refunds.tsx#L80) |
+| حذف پروندهٔ بازگشت وجه | [68](../../src/admin/orders/Refunds.tsx#L68) |
+| واریز بازگشت وجه به کیف پول | [83](../../src/admin/orders/Refunds.tsx#L83) |
 ### `src/admin/orders/ReturnTools.tsx` — ماژول `orders`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -701,26 +701,26 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ورود گروهی کالای تازه (هنوز در سایت نیست) | [127](../../src/admin/stock/Ownership.tsx#L127) |
-| ورود موجودی با مالک مشخص | [132](../../src/admin/stock/Ownership.tsx#L132) |
-| انتقال موجودی بین انبارها | [189](../../src/admin/stock/Ownership.tsx#L189) |
-| ثبت فروش خارج از سایت | [224](../../src/admin/stock/Ownership.tsx#L224) |
-| ثبت پرداخت تسویه بین شرکا | [263](../../src/admin/stock/Ownership.tsx#L263) |
-| تغییر قاعدهٔ کد تنوع | [279](../../src/admin/stock/Ownership.tsx#L279) |
-| حذف بارکد اختصاصی | [286](../../src/admin/stock/Ownership.tsx#L286) |
-| ثبت بارکد اختصاصی شریک | [287](../../src/admin/stock/Ownership.tsx#L287) |
-| تغییر قرارداد سهم | [297](../../src/admin/stock/Ownership.tsx#L297) |
-| تغییر قاعدهٔ اولویت برداشت | [303](../../src/admin/stock/Ownership.tsx#L303) |
-| تغییر قاعدهٔ تخفیف در تسویه | [304](../../src/admin/stock/Ownership.tsx#L304) |
-| تغییر قاعدهٔ کارمزد در تسویه | [305](../../src/admin/stock/Ownership.tsx#L305) |
-| نگاشت کانال سفارش به کانال تسویه | [309](../../src/admin/stock/Ownership.tsx#L309) |
-| افزودن انبار تازه | [315](../../src/admin/stock/Ownership.tsx#L315) |
-| افزودن کانال فروش | [320](../../src/admin/stock/Ownership.tsx#L320) |
-| تغییر مدل قرارداد سهم | [325](../../src/admin/stock/Ownership.tsx#L325) |
-| افزودن قاعدهٔ زمان رسیدن پول | [336](../../src/admin/stock/Ownership.tsx#L336) |
-| تغییر زمان رسیدن پول روش پرداخت | [360](../../src/admin/stock/Ownership.tsx#L360) |
-| حذف قاعدهٔ زمان رسیدن پول | [365](../../src/admin/stock/Ownership.tsx#L365) |
-| برگشت کالا به مالک | [393](../../src/admin/stock/Ownership.tsx#L393) |
+| ورود گروهی کالای تازه (هنوز در سایت نیست) | [128](../../src/admin/stock/Ownership.tsx#L128) |
+| ورود موجودی با مالک مشخص | [133](../../src/admin/stock/Ownership.tsx#L133) |
+| انتقال موجودی بین انبارها | [190](../../src/admin/stock/Ownership.tsx#L190) |
+| ثبت فروش خارج از سایت | [225](../../src/admin/stock/Ownership.tsx#L225) |
+| ثبت پرداخت تسویه بین شرکا | [264](../../src/admin/stock/Ownership.tsx#L264) |
+| تغییر قاعدهٔ کد تنوع | [283](../../src/admin/stock/Ownership.tsx#L283) |
+| حذف بارکد اختصاصی | [290](../../src/admin/stock/Ownership.tsx#L290) |
+| ثبت بارکد اختصاصی شریک | [291](../../src/admin/stock/Ownership.tsx#L291) |
+| تغییر قرارداد سهم | [301](../../src/admin/stock/Ownership.tsx#L301) |
+| تغییر قاعدهٔ اولویت برداشت | [307](../../src/admin/stock/Ownership.tsx#L307) |
+| تغییر قاعدهٔ تخفیف در تسویه | [308](../../src/admin/stock/Ownership.tsx#L308) |
+| تغییر قاعدهٔ کارمزد در تسویه | [309](../../src/admin/stock/Ownership.tsx#L309) |
+| نگاشت کانال سفارش به کانال تسویه | [313](../../src/admin/stock/Ownership.tsx#L313) |
+| افزودن انبار تازه | [319](../../src/admin/stock/Ownership.tsx#L319) |
+| افزودن کانال فروش | [324](../../src/admin/stock/Ownership.tsx#L324) |
+| تغییر مدل قرارداد سهم | [329](../../src/admin/stock/Ownership.tsx#L329) |
+| افزودن قاعدهٔ زمان رسیدن پول | [340](../../src/admin/stock/Ownership.tsx#L340) |
+| تغییر زمان رسیدن پول روش پرداخت | [364](../../src/admin/stock/Ownership.tsx#L364) |
+| حذف قاعدهٔ زمان رسیدن پول | [369](../../src/admin/stock/Ownership.tsx#L369) |
+| برگشت کالا به مالک | [397](../../src/admin/stock/Ownership.tsx#L397) |
 ### `src/admin/stock/Packing.tsx` — ماژول `stock`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -730,11 +730,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| حذف شریک | [32](../../src/admin/stock/Parties.tsx#L32) |
-| فعال‌سازی دوبارهٔ شریک | [36](../../src/admin/stock/Parties.tsx#L36) |
-| ویرایش شریک | [60](../../src/admin/stock/Parties.tsx#L60) |
-| غیرفعال‌سازی شریک | [92](../../src/admin/stock/Parties.tsx#L92) |
-| پیوستن شریک تازه | [131](../../src/admin/stock/Parties.tsx#L131) |
+| حذف شریک | [34](../../src/admin/stock/Parties.tsx#L34) |
+| فعال‌سازی دوبارهٔ شریک | [38](../../src/admin/stock/Parties.tsx#L38) |
+| ویرایش شریک | [62](../../src/admin/stock/Parties.tsx#L62) |
+| غیرفعال‌سازی شریک | [94](../../src/admin/stock/Parties.tsx#L94) |
+| پیوستن شریک تازه | [133](../../src/admin/stock/Parties.tsx#L133) |
 ### `src/admin/team/Access.tsx` — ماژول `team`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -806,7 +806,7 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| بازگردانی از سطل بازیافت | [156](../../src/shared/lib/store.ts#L156) |
+| بازگردانی از سطل بازیافت | [158](../../src/shared/lib/store.ts#L158) |
 ### `src/shared/ui/base.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

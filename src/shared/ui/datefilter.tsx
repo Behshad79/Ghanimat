@@ -39,7 +39,7 @@ export const rangeActive = (r: DateRange) => r.range !== 'all' || r.days.length 
 export const rangeLabel = (r: DateRange) => [PRESETS.find((p) => p[0] === r.range)?.[1] ?? '', r.days.length ? r.days.map((d) => WD[d]).join('، ') : '', r.h1 > 0 || r.h2 < 24 ? `ساعت ${fa(r.h1)} تا ${fa(r.h2)}` : ''].filter(Boolean).join(' · ')
 
 /** نوار فیلتر زمانی: «فقط امروز» با یک کلیک، و روز هفته و ساعت در بخش بیشتر */
-export function DateFilter({ r, set, count, total, noun = 'سفارش' }: { r: DateRange; set: (p: Partial<DateRange>) => void; count?: number; total?: number; noun?: string }) {
+export function DateFilter({ r, set, count, total, noun = 'سفارش', extra }: { r: DateRange; set: (p: Partial<DateRange>) => void; count?: number; total?: number; noun?: string; extra?: React.ReactNode }) {
   const [more, setMore] = useState(r.days.length > 0 || r.h1 > 0 || r.h2 < 24)
   return (
     <div className="mb-3 rounded-2xl border border-line bg-surface p-2.5">
@@ -50,6 +50,7 @@ export function DateFilter({ r, set, count, total, noun = 'سفارش' }: { r: D
         {rangeActive(r) && <Button size="sm" variant="ghost" icon={<X size={12} />} onClick={() => set({ range: 'all', from: '', to: '', days: [], h1: 0, h2: 24 })}>پاک کردن</Button>}
         {count !== undefined && <span className="mr-auto text-12 text-t2">{rangeActive(r) ? <><b className="tnum text-t1">{fa(count)}</b> {noun} از {fa(total ?? 0)} · {rangeLabel(r)}</> : <>{fa(total ?? count)} {noun}</>}</span>}
       </div>
+      {extra && <div className="mt-2 border-t border-line pt-2">{extra}</div>}
       {r.range === 'custom' && <div className="mt-2 flex flex-wrap items-center gap-2 text-12"><label className="flex items-center gap-1.5">از <Input type="date" className="h-8 w-40" value={r.from} onChange={(e) => set({ from: e.target.value })} aria-label="از تاریخ" /></label><label className="flex items-center gap-1.5">تا <Input type="date" className="h-8 w-40" value={r.to} onChange={(e) => set({ to: e.target.value })} aria-label="تا تاریخ" /></label>{r.from && <span className="text-t2">{new Date(`${r.from}T12:00:00`).toLocaleDateString('fa-IR')}{r.to && ` تا ${new Date(`${r.to}T12:00:00`).toLocaleDateString('fa-IR')}`}</span>}</div>}
       {more && <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-2 text-12">
         <span className="flex flex-wrap items-center gap-1">روز: {WD.map((w, i) => <button key={w} type="button" aria-pressed={r.days.includes(i)} onClick={() => set({ days: r.days.includes(i) ? r.days.filter((x) => x !== i) : [...r.days, i] })} className={cx('h-7 rounded-full border px-2.5', r.days.includes(i) ? 'border-brand bg-brand-tint text-brand' : 'border-line')}>{w}</button>)}</span>

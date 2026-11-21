@@ -1,14 +1,14 @@
 import { BrandLogo, WithLogo } from '@/shared/ui/brandLogo'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, PackageCheck, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2 } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardPaste, ExternalLink, Eye, Link2, Lock, MapPin, PackageCheck, Pencil, Phone, Printer, ScanLine, Sparkles, Truck, Undo2, Warehouse } from 'lucide-react'
 import { AITag, Avatar, Badge, Button, Card, CopyId, Field, Input, Masked, Row, Segmented, Select, StatusBadge, Tabs, copyText, cx } from '@/shared/ui/base'
 import { Page, Stepper, StickyStepBar, Timeline, useScrolledPast } from '@/shared/ui/page'
 import { DataTable, type Col } from '@/shared/ui/table'
 import { confirm, Hint, Modal, toast } from '@/shared/ui/overlay'
 import { askReason, ReasonLog } from '@/shared/ui/reason'
 import { CustomerProgress, rollShipped } from '../orders/Progress'
-import { canSecret, isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
+import { canSecret, currentUser, isChief, fakeCall, getDB, mutate, snapshot } from '@/shared/lib/store'
 import { OrdersOverview } from '../orders/OrdersOverview'
 import { DateFilter, inRange, useDateRange } from '@/shared/ui/datefilter'
 import { PickupDesk, PickupReceipt } from '../orders/PickupDesk'
@@ -55,9 +55,27 @@ const TABS: [string, string, (o: Order) => boolean][] = [
 export function Orders() {
   const { d, customer, product } = useLookup(); const nav = useNavigate(); const [tab, setTab] = useTab('all'); const [sp] = useSearchParams()
   const [peek, setPeek] = useState<string | null>(null)
-  const [wh, setWh] = useState('all'); const [manual, setManual] = useState(sp.get('new') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
-  const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr))
-  const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => wh === 'all' || o.shipments.some((s) => s.warehouse === wh))
+  const uid = currentUser()?.id ?? 'u'; const mineWh = myWarehouses()
+  const [wh, setWhRaw] = useState(() => { try { return localStorage.getItem(`gh-orders-wh-${uid}`) ?? (mineWh.length && !mineWh.includes('tehran') ? mineWh[0] : 'all') } catch { return 'all' } })
+  const setWh = (v: string) => { setWhRaw(v); try { localStorage.setItem(`gh-orders-wh-${uid}`, v) } catch { /* فقط در حافظه */ } }
+  const [own, setOwnRaw] = useState(() => { try { return localStorage.getItem(`gh-orders-own-${uid}`) ?? 'all' } catch { return 'all' } })
+  const setOwn = (v: string) => { setOwnRaw(v); try { localStorage.setItem(`gh-orders-own-${uid}`, v) } catch { /* فقط در حافظه */ } }
+  const [manual, setManual] = useState(sp.get('new') === '1'); const [view, setView] = useState<'list' | 'kanban'>('list')
+  /** مالک کالاهای هر سفارش: بعد از بسته‌بندی از فروش ثبت‌شده، قبل از آن از موجودی همان انبار (مالک‌هایی که این کالا را دارند) */
+  const ownersOf = (o: Order) => { const sold = d.stock.sales.filter((x) => x.orderId === o.id).map((x) => x.owner); if (sold.length) return new Set(sold)
+    return new Set(o.shipments.flatMap((s) => s.items.flatMap((it) => d.stock.lots.filter((l) => l.productId === it.productId && l.warehouse === s.warehouse && l.qty > 0).map((l) => l.owner)))) }
+  const whOk = (o: Order) => wh === 'all' || (wh === 'both' ? o.shipments.some((s) => s.warehouse === 'tehran') && o.shipments.some((s) => s.warehouse === 'mahabad') : o.shipments.some((s) => s.warehouse === wh && s.status !== 'ship.cancelled'))
+  const ownOk = (o: Order) => own === 'all' || ownersOf(o).has(own)
+  const [dr, setDr] = useDateRange(); const dated = d.orders.filter((o) => inRange(o.createdAt, dr) && whOk(o) && ownOk(o)); const datedAll = d.orders.filter((o) => inRange(o.createdAt, dr))
+  const rows = dated.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true))
+  const whCount = (w: string) => datedAll.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).filter((o) => w === 'all' || (w === 'both' ? o.shipments.some((s) => s.warehouse === 'tehran') && o.shipments.some((s) => s.warehouse === 'mahabad') : o.shipments.some((s) => s.warehouse === w && s.status !== 'ship.cancelled'))).length
+  const scope = <div className="flex flex-wrap items-center gap-1.5">
+    <span className="ml-1 flex items-center gap-1 text-12 font-semibold text-t2"><Warehouse size={14} />انبار</span>
+    {([['all', 'همه'], ...d.stock.warehouses.map((w) => [w.id, w.name] as [string, string]), ['both', 'هر دو انبار']] as [string, string][]).map(([k, l]) => <button key={k} type="button" aria-pressed={wh === k} onClick={() => setWh(k)} className={cx('flex h-8 items-center gap-1.5 rounded-full border px-3 text-12 transition-colors', wh === k ? 'border-brand bg-brand-solid text-white' : 'border-line hover:border-brand/50')}>{l}{mineWh.includes(k) && <span className={cx('rounded-full px-1.5 text-11', wh === k ? 'bg-white/20' : 'bg-brand-tint text-brand')}>من</span>}<span className={cx('tnum text-11', wh === k ? 'text-white/80' : 'text-t3')}>{fa(whCount(k))}</span></button>)}
+    <span className="mx-1 h-5 w-px bg-line" />
+    <span className="ml-1 text-12 font-semibold text-t2">مالک کالا</span>
+    {([['all', 'همه'], ...d.stock.parties.filter((p) => p.active).map((p) => [p.id, p.brandName ? `${p.name} (${p.brandName})` : p.name] as [string, string])] as [string, string][]).map(([k, l]) => { const p = d.stock.parties.find((x) => x.id === k); return <button key={k} type="button" aria-pressed={own === k} onClick={() => setOwn(k)} className={cx('flex h-8 items-center gap-1.5 rounded-full border px-3 text-12 transition-colors', own === k ? 'border-transparent text-white' : 'border-line hover:border-brand/50')} style={own === k ? { background: p?.color ?? 'var(--brand)' } : undefined}>{p?.logo && <img src={p.logo} alt="" className="size-4 rounded-sm" />}{l}</button> })}
+  </div>
   const cols: Col<Order>[] = [
     { key: 'id', title: 'شماره', render: (o) => <span className="flex items-center gap-1"><button type="button" aria-label={`نمای سریع سفارش ${o.id}`} title="نمای سریع" onClick={(e) => { e.stopPropagation(); setPeek(o.id) }} className="grid size-7 place-items-center rounded-md text-t3 hover:bg-brand-tint hover:text-brand"><Eye size={15} /></button><CopyId v={o.id} />{o.lockedBy && <Lock size={12} className="text-warning" />}{openNotes(o) > 0 && <span title={`${openNotes(o)} درخواست مشتری انجام‌نشده`} className="rounded-full bg-warning-bg px-1.5 text-[10px] font-semibold text-warning">یادداشت</span>}{openEvents(d, o.id).length > 0 && <span title={openEvents(d, o.id).map((e) => e.title).join('، ')} className="flex items-center gap-1 rounded-full bg-danger-solid px-1.5 py-0.5 text-[10px] font-semibold text-white"><span className="size-1.5 animate-pulse rounded-full bg-white" />{openEvents(d, o.id)[0].title.split(' ').slice(0, 2).join(' ')}</span>}</span>, sort: (o) => o.id, text: (o) => o.id },
     { key: 'customer', title: 'مشتری', render: (o) => <Cell a={<CustLink v={customer(o.customerId).name} id={o.customerId} />} b={customer(o.customerId).city} />, text: (o) => customer(o.customerId).name },
@@ -83,7 +101,7 @@ export function Orders() {
     <Page title="سفارش‌ها" module="orders" primary={<Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button>} actions={<Button icon={<Printer size={14} />} onClick={() => nav('/admin/print?view=batch&range=today')}>چاپ گروهی</Button>}
       empty={{ title: 'هنوز سفارشی ثبت نشده است.', desc: 'سفارش‌های سایت و کانال‌های فروش اینجا نمایش داده می‌شوند. برای سفارش تلفنی یا حضوری، سفارش دستی ثبت کنید.', action: <Button variant="primary" onClick={() => setManual(true)}>ثبت سفارش دستی</Button> }}
       tabs={<Tabs value={tab} onChange={setTab} tabs={TABS.map(([id, label, f]) => ({ id, label, count: id === 'all' ? undefined : id === 'pickup' ? d.pickups.filter((p) => p.status === 'ready' || p.status === 'preparing').length : dated.filter(f).length }))} />}>
-      {tab !== 'pickup' && <DateFilter r={dr} set={setDr} count={rows.length} total={d.orders.filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).length} />}
+      {tab !== 'pickup' && <DateFilter r={dr} set={setDr} count={rows.length} total={d.orders.filter((o) => whOk(o) && ownOk(o)).filter(TABS.find((t) => t[0] === tab)?.[2] ?? (() => true)).length} extra={scope} />}
       {tab === 'all' && <OrdersOverview />}
       {tab === 'pickup' && <PickupDesk />}
       {tab !== 'pickup' && <div className="mb-3 flex justify-end"><Segmented size="sm" value={view} onChange={setView} options={[['list', 'فهرست'], ['kanban', 'کانبان وضعیت']]} /></div>}
@@ -91,7 +109,7 @@ export function Orders() {
       <OrderPeek id={peek} onClose={() => setPeek(null)} />
       {tab !== 'pickup' && view === 'list' && <DataTable name="سفارش‌ها" rows={rows} cols={cols} rowKey={(o) => o.id} onRow={(o) => nav(`/admin/orders/${o.id}`)}
         search={(o) => `${o.id} ${customer(o.customerId).name} ${customer(o.customerId).mobile} ${o.pay}`}
-        filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ['tehran', 'انبار تهران'], ['mahabad', 'انبار مهاباد']]} className="w-36" />}
+        filters={<Select value={wh} onChange={setWh} options={[['all', 'همهٔ انبارها'], ...d.stock.warehouses.map((w) => [w.id, w.name] as [string, string]), ['both', 'هر دو انبار']]} className="w-36" />}
         empty={{ title: 'سفارشی در این نما نیست.', desc: 'نمای دیگری را انتخاب کنید یا فیلتر انبار را بردارید.' }}
         bulk={(ids, clear) => <>
           <span className="w-44"><Select label="چاپ گروهی" value="" placeholder={`چاپ گروهی ${fa(ids.length)} سفارش…`} other={false} onChange={(v) => { nav(`/admin/print?view=batch&orders=${ids.join(',')}&docs=${v}`); clear() }} options={[['invoice', 'چاپ فاکتورها'], ['post', 'چاپ برچسب و رسید پستی'], ['courier', 'چاپ برچسب پیک'], ['pickup', 'چاپ رسید تحویل حضوری'], ['pick', 'لیست جمع‌آوری تجمیعی انبار'], ['invoice,post,courier', 'فاکتور و برچسب ارسال با هم'], ['manifest', 'مانیفست تحویل به پست']]} /></span>

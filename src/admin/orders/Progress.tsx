@@ -51,18 +51,25 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
   }
   return (
     <div className="rounded-xl border border-line p-3">
-      <p className="mb-2 text-12 font-semibold text-t2">آنچه مشتری در پنل می‌بیند</p>
-      <ol className="flex items-center">{(pickup ? PICKUP_STEPS : STEPS).map((l, i) => <li key={l} className="flex flex-1 items-center last:flex-none"><span className="flex flex-col items-center gap-1"><span className={cx('grid size-7 place-items-center rounded-full text-11 font-bold', i <= step ? 'bg-brand-solid text-white' : 'bg-neutral-bg text-t3')}>{i < step ? <Check size={14} /> : fa(i + 1)}</span><span className={cx('text-11 whitespace-nowrap', i === step ? 'font-bold text-t1' : 'text-t2')}>{l}</span></span>{i < STEPS.length - 1 && <span className={cx('mx-1 mb-5 h-1 flex-1 rounded-full', i < step ? 'bg-brand-solid' : 'bg-neutral-bg')} />}</li>)}</ol>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-12">
-        {pickup ? <span>{pu ? <>مراجعه به <b>{pu.branch}</b> · <b>{pu.window}</b></> : 'شعبه و زمان مراجعه پس از آماده‌شدن پیامک می‌شود.'}</span> : <span>زمان ارسال: <b>{slot ?? `${jday(s.sla)} · تا ${new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`}</b></span>}
-        {!pickup && !post && s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noreferrer" className="rounded-full bg-brand-tint px-2.5 py-1 font-medium text-brand">رصد زندهٔ پیک (مشتری هم می‌بیند)</a>}
-        {pickup || post ? null : s.courier ? <span className="flex items-center gap-2"><Truck size={13} />{s.courier.company ?? 'پیک'} · {s.courier.name} · <span className="ltr">{fa(s.courier.phone)}</span> <Plate v={s.courier.plate} /></span> : <span className="text-t3">مأمور ارسال هنوز ثبت نشده</span>}
-        {post && s.tracking && <span className="flex items-center gap-2"><Truck size={13} />{s.trackingCarrier ?? s.method} · کد رهگیری <b className="ltr font-mono">{s.tracking}</b>{s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noreferrer" className="text-brand underline">لینک رهگیری</a>}</span>}
-        <span className="mr-auto flex gap-1.5">
-          {post && <TapinButton o={o} s={s} />}
-          {post ? <Button size="sm" onClick={() => setTrk(true)}>{s.tracking ? 'ویرایش کد رهگیری' : 'ثبت کد و لینک رهگیری پستی'}</Button> : !pickup && <Button size="sm" onClick={() => setEdit(true)}>{s.courier ? 'ویرایش مأمور ارسال' : 'ثبت مأمور ارسال و پلاک'}</Button>}
-          {s.status !== 'ship.delivered' && s.status !== 'ship.cancelled' && <Button size="sm" variant="ghost" onClick={() => setChg(true)}>تغییر روش ارسال</Button>}
-        </span>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-12 font-semibold text-t2">آنچه مشتری در پنل می‌بیند</p>
+        <span className="text-12">{pickup ? (pu ? <>مراجعه به <b>{pu.branch}</b> · <b>{pu.window}</b></> : <span className="text-t2">شعبه و زمان مراجعه پس از آماده‌شدن پیامک می‌شود.</span>) : <>زمان ارسال: <b>{slot ?? `${jday(s.sla)} · تا ${new Date(s.sla).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`}</b></>}</span>
+      </div>
+      {/* گام‌ها در ستون‌های هم‌عرض: دایره‌ها و خط‌های رابط همیشه هم‌تراز می‌مانند و برچسب‌ها در عرض کم دو خطی می‌شوند */}
+      <ol className="grid" style={{ gridTemplateColumns: `repeat(${(pickup ? PICKUP_STEPS : STEPS).length}, minmax(0, 1fr))` }}>{(pickup ? PICKUP_STEPS : STEPS).map((l, i, A) => <li key={l} className="relative flex flex-col items-center gap-1.5 px-1 text-center">
+        {i > 0 && <span aria-hidden className={cx('absolute top-3.5 left-1/2 h-1 w-full -translate-y-1/2 rounded-full', i <= step ? 'bg-brand-solid' : 'bg-neutral-bg')} />}
+        <span className={cx('relative z-[1] grid size-7 place-items-center rounded-full text-11 font-bold ring-4 ring-surface', i <= step ? 'bg-brand-solid text-white' : 'bg-neutral-bg text-t3', i === step && 'ring-brand-tint')}>{i < step ? <Check size={14} /> : fa(i + 1)}</span>
+        <span className={cx('text-11 leading-4', i === step ? 'font-bold text-t1' : i < step ? 'text-t2' : 'text-t3')}>{l}</span>
+      </li>)}</ol>
+      {(!pickup) && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-neutral-bg/60 px-3 py-2 text-12">
+        {!post && (s.courier ? <span className="flex flex-wrap items-center gap-2"><Truck size={13} />{s.courier.company ?? 'پیک'} · {s.courier.name} · <span className="ltr">{fa(s.courier.phone)}</span> <Plate v={s.courier.plate} /></span> : <span className="text-t3">مأمور ارسال هنوز ثبت نشده</span>)}
+        {!post && s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noreferrer" className="rounded-full bg-brand-tint px-2.5 py-1 font-medium text-brand">رصد زندهٔ پیک (مشتری هم می‌بیند)</a>}
+        {post && (s.tracking ? <span className="flex flex-wrap items-center gap-2"><Truck size={13} />{s.trackingCarrier ?? s.method} · کد رهگیری <b className="ltr font-mono">{s.tracking}</b>{s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noreferrer" className="text-brand underline">لینک رهگیری</a>}</span> : <span className="text-t3">کد رهگیری پستی هنوز ثبت نشده</span>)}
+      </div>}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {post && <TapinButton o={o} s={s} />}
+        {post ? <Button size="sm" onClick={() => setTrk(true)}>{s.tracking ? 'ویرایش کد رهگیری' : 'ثبت کد و لینک رهگیری پستی'}</Button> : !pickup && <Button size="sm" onClick={() => setEdit(true)}>{s.courier ? 'ویرایش مأمور ارسال' : 'ثبت مأمور ارسال و پلاک'}</Button>}
+        {s.status !== 'ship.delivered' && s.status !== 'ship.cancelled' && <Button size="sm" variant="ghost" className="mr-auto" onClick={() => setChg(true)}>تغییر روش ارسال</Button>}
       </div>
       <PostTracking open={trk} onClose={() => setTrk(false)} o={o} s={s} />
       <ChangeMethod open={chg} onClose={() => setChg(false)} o={o} s={s} />

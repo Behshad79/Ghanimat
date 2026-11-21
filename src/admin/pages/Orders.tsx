@@ -36,6 +36,7 @@ import { OrderPeek } from '../orders/OrderPeek'
 import { OrderReturns, ReturnShipButton } from '../orders/OrderReturns'
 import { DeliveredCelebration } from '../orders/Delivered'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
+import { QuickPrint } from '../print/QuickPrint'
 import { OrderLedger } from '../stock/OrderLedger'
 import { guardForeign, myWarehouses } from '../stock/foreign'
 import { partyLogo } from '../stock/common'
@@ -186,6 +187,7 @@ function SmartPaste({ orderId, shipId, carrierName }: { orderId: string; shipId:
 export function OrderDetail() {
   const { id } = useParams(); const { d, customer, product, unit, rule } = useLookup(); const nav = useNavigate()
   const [packing, setPacking] = useState<string | null>(null)
+  const [qprint, setQprint] = useState<string | null>(null)
   const [refund, setRefund] = useState(false); const [amount, setAmount] = useState(''); const [dest, setDest] = useState('کیف پول')
   const [cancelSh, setCancelSh] = useState<{ sid: string; total: number } | null>(null); const [restock, setRestock] = useState<RestockMode>('site'); const [rdest, setRdest] = useState('کیف پول'); const [racct, setRacct] = useState('')
   const [editOpen, setEditOpen] = useState(false); const [addrOpen, setAddrOpen] = useState(false); const [msg, setMsg] = useState<string | null>(null)
@@ -303,16 +305,16 @@ export function OrderDetail() {
                     {['ship.pending', 'ship.picking'].includes(s.status) && packing !== s.id && <Button variant={s.status === 'ship.picking' ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => void openPack(s.id)}>بسته‌بندی با اسکن</Button>}
                     {s.status === 'ship.picking' && <Button onClick={() => advance(s.id, 'ship.packed', 'تأیید بسته‌بندی بدون اسکن')} title="مالک هر قلم طبق قاعدهٔ اولویت برداشت تعیین و ثبت می‌شود">تأیید بدون اسکن</Button>}
                     {['ship.handed', 'ship.in_transit'].includes(s.status) && <DeliverConfirm o={o} sid={s.id} />}
-                    <Button icon={<Printer size={14} />} onClick={() => nav(`/admin/print?doc=${post ? "post" : "courier"}&ship=${s.id}`)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button>
+                    <Button icon={<Printer size={14} />} onClick={() => setQprint(s.id)}>چاپ برچسب {post ? 'پستی' : 'پیک'}</Button><QuickPrint open={qprint === s.id} onClose={() => setQprint(null)} o={o} s={s} doc={post ? 'post' : 'courier'} />
                     <Button variant="ghost" icon={<MapPin size={14} />} disabled={['ship.handed', 'ship.in_transit'].includes(s.status)} title={['ship.handed', 'ship.in_transit'].includes(s.status) ? 'پس از تحویل به پیک، نشانی قابل تغییر نیست.' : ''} onClick={() => setAddrOpen(true)}>ویرایش نشانی</Button>
                     <span className="mr-auto flex flex-wrap items-center gap-2"><RollbackShip o={o} sid={s.id} /><Button variant="danger" size="sm" onClick={() => cancelShip(s.id, total)}>لغو مرسوله</Button></span>
                   </div>
                 </div>
               )}
               {s.status === 'ship.delivered' && <div className="flex flex-wrap items-center justify-between gap-2">{(s as any).deliveredAt ? <p className="flex items-center gap-1.5 rounded-lg bg-success-bg px-3 py-1.5 text-12 text-success">تحویل مشتری شد · {new Date((s as any).deliveredAt).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}{(s as any).deliveredTo ? ` · ${(s as any).deliveredTo.name} (${(s as any).deliveredTo.relation})` : ''}{(s as any).deliveredVia ? ` · ${(s as any).deliveredVia}` : ''}</p> : <span />}<span className="flex flex-wrap items-center gap-2"><ReturnShipButton o={o} sid={s.id} /><RollbackShip o={o} sid={s.id} /></span></div>}
-              <div className="grid gap-3 lg:grid-cols-2">
-                <div className="min-w-0"><CustomerProgress o={o} s={s} /></div>
-                <div className="min-w-0 space-y-3">
+              <div className="space-y-3">
+                <CustomerProgress o={o} s={s} />
+                <div className="grid gap-3 lg:grid-cols-2 [&>*]:min-w-0">
               {s.courier && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-neutral-bg px-3 py-2 text-12"><b>پیک: {s.courier.name}</b><span>پلاک {s.courier.plate}</span><span>{s.courier.vehicle}</span>{s.status !== 'ship.delivered' && <span>حدود {fa(s.courier.eta)} دقیقهٔ دیگر می‌رسد</span>}<span className="ltr font-mono">{s.courier.code}</span><Button size="sm" variant="ghost" icon={<Phone size={12} />} onClick={() => callTo(s.courier!.phone, `پیک ${s.courier!.name}`)}>تماس</Button></div>}
               {s.tracking && <p className="text-12">کد رهگیری: <CopyId v={s.tracking} /></p>}
               <PackRecord s={s} />

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, Lock, Minus, PackagePlus, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Lock, Minus, PackagePlus, Pencil, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { Badge, Button, Card, cx, Field, Input, Segmented, Select } from '@/shared/ui/base'
 import { Modal, toast } from '@/shared/ui/overlay'
 import { MoneyInput } from '@/shared/ui/money'
@@ -8,7 +8,7 @@ import { can, canSecret, currentUser, mutate, myParty, notify, useDB } from '@/s
 import { fa, rel, toman } from '@/shared/lib/fa'
 import type { DB } from '@/shared/data/seed'
 import type { AdjustKind } from '@/shared/data/stock'
-import { adjustStock, expired, reserved } from '@/shared/data/ledger'
+import { adjustStock, expired, OPEN_SHIP, reserved } from '@/shared/data/ledger'
 import { PartyChip, partyName, pv, whName } from './common'
 
 const KIND: [AdjustKind, string, string][] = [
@@ -47,9 +47,24 @@ export function StockDesk({ onIntake }: { onIntake?: () => void }) {
       const live = s.lots.filter((q) => q.productId === l.productId && (q.variationId ?? '') === (l.variationId ?? '') && q.warehouse === l.warehouse && q.qty > 0 && !q.hold && !expired(q)).reduce((a, q) => a + q.qty, 0)
       const res = reserved(d, l.productId, l.variationId, l.warehouse); if (res > live) L.push({ pid: l.productId, vid: l.variationId, wh: l.warehouse, live, res }) })
     return L })()
-  return <>{over.length > 0 && <div role="alert" className="mb-3 rounded-xl border border-danger/30 bg-danger-bg px-4 py-3 text-12 text-danger"><b className="block text-13">رزرو سفارش‌های باز از موجودی بیشتر است</b>
-    <ul className="mt-1 space-y-0.5">{over.map((x) => <li key={`${x.pid}${x.vid}${x.wh}`}>{pv(d, x.pid, x.vid).full} · {whName(s, x.wh)}: {fa(x.res)} عدد رزرو، {fa(x.live)} عدد موجود</li>)}</ul>
-    <p className="mt-1 text-11">موجودی را اصلاح کنید، از انبار دیگر حواله بزنید یا سفارش را به «تصمیم مشتری» بفرستید. <button type="button" className="font-semibold underline" onClick={() => nav('/admin/orders')}>سفارش‌ها</button></p></div>}
+  /** سفارش‌های باز این کالا در این انبار (همان‌هایی که موجودی را رزرو کرده‌اند) */
+  const waiting = (pid: string, vid: string | undefined, w: string) => d.orders.filter((o) => o.shipments.some((sh) => sh.warehouse === w && OPEN_SHIP.includes(sh.status) && sh.items.some((it) => !it.cancelled && it.productId === pid && (vid === undefined || (it.variationId ?? '') === (vid ?? '')))))
+  const elsewhere = (pid: string, vid: string | undefined, w: string) => s.warehouses.filter((x) => x.id !== w && x.active).map((x) => ({ w: x, n: s.lots.filter((q) => q.productId === pid && (q.variationId ?? '') === (vid ?? '') && q.warehouse === x.id && q.qty > 0 && !q.hold && !expired(q)).reduce((a, q) => a + q.qty, 0) })).filter((x) => x.n > 0)
+  return <>{over.length > 0 && <div role="alert" className="mb-3 overflow-hidden rounded-2xl border border-warning/40 bg-surface">
+    <div className="flex flex-wrap items-center gap-2 bg-warning-bg px-4 py-2.5 text-warning"><AlertTriangle size={16} /><b className="text-13">کالا برای سفارش‌های ثبت‌شده کم است</b><span className="text-12">سفارش‌هایی که هنوز ارسال نشده‌اند، از این کالاها بیشتر از موجودی همان انبار خواسته‌اند. تا کمبود جبران نشود، این سفارش‌ها قابل بسته‌بندی کامل نیستند.</span></div>
+    <ul className="divide-y divide-line">{over.map((x) => { const O = waiting(x.pid, x.vid, x.wh); const E = elsewhere(x.pid, x.vid, x.wh); const lack = x.res - x.live
+      return <li key={`${x.pid}${x.vid}${x.wh}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-12">
+        <span className="min-w-48 flex-1"><b className="block text-13">{pv(d, x.pid, x.vid).full}</b><span className="text-t2">{whName(s, x.wh)}: سفارش‌ها {fa(x.res)} عدد خواسته‌اند، {fa(x.live)} عدد در انبار است</span></span>
+        <span className="rounded-full bg-danger-bg px-2.5 py-1 font-semibold text-danger">{fa(lack)} عدد کم</span>
+        <span className="flex flex-wrap gap-1">{O.slice(0, 4).map((o) => <button key={o.id} type="button" onClick={() => nav(`/admin/orders/${o.id}`)} className="rounded-md bg-neutral-bg px-2 py-0.5 font-mono text-11 hover:text-brand"><bdi dir="ltr">{o.id}</bdi></button>)}{O.length > 4 && <span className="text-t3">+{fa(O.length - 4)}</span>}</span>
+        <span className="flex flex-wrap gap-1.5">
+          {E.length > 0 && <Button size="sm" variant="primary" onClick={() => nav('/admin/inbound?tab=manifests')} title={E.map((e) => `${e.w.name}: ${e.n} عدد`).join('، ')}>حواله از {E[0].w.name} ({fa(E[0].n)} عدد)</Button>}
+          <Button size="sm" onClick={() => setCell({ pid: x.pid, vid: x.vid, owner: s.lots.find((l) => l.productId === x.pid && l.warehouse === x.wh)?.owner ?? 'gh', wh: x.wh })}>اصلاح موجودی</Button>
+          {O[0] && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/orders/${O[0].id}`)}>{O.length > 1 ? 'دیدن سفارش‌ها' : 'دیدن سفارش'}</Button>}
+        </span>
+      </li> })}</ul>
+    <p className="border-t border-line px-4 py-2 text-11 text-t3">سه راه: از انبار دیگر حواله بزنید، اگر شمارش اشتباه بوده موجودی را اصلاح کنید، یا در صفحهٔ سفارش آن را به «تصمیم مشتری» (صبر، جایگزین یا لغو) بفرستید.</p>
+  </div>}
   <Card pad={false} title={<span className="flex items-center gap-1.5"><SlidersHorizontal size={15} />میز موجودی: تغییر آنی موجودی هر مالک در هر انبار</span>}
     hint="روی هر عدد بزنید: فروش حضوری، کنار گذاشتن از فروش، برگرداندن، اصلاح شمارش، ورود تازه یا خرابی. موجودی سایت همان لحظه به‌روز می‌شود."
     actions={<div className="flex flex-wrap gap-2"><Button size="sm" icon={<PackagePlus size={13} />} onClick={() => onIntake ? onIntake() : nav('/admin/ownership?tab=stock&intake=1')}>افزودن کالا به موجودی</Button><Button size="sm" variant="ghost" onClick={() => nav('/admin/catalog/new')}>کالای تازه در کاتالوگ</Button></div>}>

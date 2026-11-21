@@ -22,13 +22,16 @@ export function WelcomeHero({ items }: { items: WaitItem[] }) {
   const actAll = d.orders.filter((o) => ['order.paid', 'order.needs_decision', 'order.suspicious'].includes(o.status) || d.orderEvents.some((e) => e.status === 'open' && e.orderId === o.id))
   const packAll = d.orders.flatMap((o) => o.shipments.filter((sh) => sh.status === 'ship.picking').map((sh) => ({ o, sh })))
   const act = actAll.filter((o) => inWin(o.createdAt)); const pack = packAll.filter((x) => inWin(x.o.createdAt))
+  /** سهم هر انبار: سفارشی که مرسولهٔ هر دو انبار را دارد جدا شمرده می‌شود */
+  const whSplit = (L: typeof actAll) => { const has = (o: (typeof actAll)[number], w: string) => o.shipments.some((sh) => sh.warehouse === w && sh.status !== 'ship.cancelled'); const both = L.filter((o) => has(o, 'tehran') && has(o, 'mahabad')).length
+    return `انبار تهران ${fa(L.filter((o) => has(o, 'tehran') && !has(o, 'mahabad')).length)} · انبار مهاباد ${fa(L.filter((o) => has(o, 'mahabad') && !has(o, 'tehran')).length)}${both ? ` · هر دو انبار ${fa(both)}` : ''}` }
   const oldest = (L: string[]) => L.length ? L.reduce((a, b) => (a < b ? a : b)) : null
   const soon = (iso?: string) => !!iso && +new Date(iso) - Date.now() < 2 * 36e5
   const focus = [
     { label: FOCUS[0], icon: ShoppingBag, n: act.length, all: actAll.length, to: `/admin/orders?tab=action&fl=${encodeURIComponent(FOCUS[0])}`, old: oldest(act.map((o) => o.createdAt)),
-      chips: [[`${fa(act.filter((o) => o.status === 'order.suspicious').length)} مشکوک`, act.some((o) => o.status === 'order.suspicious')], [`${fa(act.filter((o) => o.status === 'order.needs_decision').length)} نیازمند تصمیم`, act.some((o) => o.status === 'order.needs_decision')], [`${fa(act.filter((o) => o.shipments.some((sh) => /سریع|پیک/.test(sh.method))).length)} ارسال سریع`, false]] as [string, boolean][] },
+      chips: [[`${fa(act.filter((o) => o.status === 'order.suspicious').length)} مشکوک`, act.some((o) => o.status === 'order.suspicious')], [`${fa(act.filter((o) => o.status === 'order.needs_decision').length)} نیازمند تصمیم`, act.some((o) => o.status === 'order.needs_decision')], [`${fa(act.filter((o) => o.shipments.some((sh) => /سریع|پیک/.test(sh.method))).length)} ارسال سریع`, false], [whSplit(act), false]] as [string, boolean][] },
     { label: FOCUS[1], icon: Package, n: pack.length, all: packAll.length, to: '/admin/packing', old: oldest(pack.map((x) => x.o.createdAt)),
-      chips: [[`${fa(pack.filter((x) => soon(x.sh.sla)).length)} نزدیک پایان مهلت`, pack.some((x) => soon(x.sh.sla))], [`تهران ${fa(pack.filter((x) => x.sh.warehouse === 'tehran').length)} · مهاباد ${fa(pack.filter((x) => x.sh.warehouse === 'mahabad').length)}`, false]] as [string, boolean][] },
+      chips: [[`${fa(pack.filter((x) => soon(x.sh.sla)).length)} نزدیک پایان مهلت`, pack.some((x) => soon(x.sh.sla))], [`انبار تهران ${fa(pack.filter((x) => x.sh.warehouse === 'tehran').length)} · انبار مهاباد ${fa(pack.filter((x) => x.sh.warehouse === 'mahabad').length)}`, false]] as [string, boolean][] },
   ]
   const rest = items.filter((x) => !FOCUS.includes(x.label))
   const open = rest.filter((x) => x.count > 0).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)); const clear = rest.filter((x) => x.count === 0)

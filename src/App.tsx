@@ -26,7 +26,7 @@ import { CustomerRequests } from './admin/cx/Requests'
 import { Social } from './admin/social/Social'
 import { Conversations } from './admin/cx/Conversations'
 import { CxSettingsPage } from './admin/cx/CxSettings'
-import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo, Supply } from './admin/pages/Insights'
+import { AiCenter, Analytics, Branches, Content, Growth, Marketing, Sellers, Seo } from './admin/pages/Insights'
 import { Design, Infra, Rules, Settings, Team } from './admin/pages/Org'
 import { Simple } from './admin/simple/Simple'
 import { ReturnCase, WarrantyCase } from './admin/returns/Case'
@@ -48,7 +48,7 @@ import { currentUser, ROLES, useSession } from './shared/lib/store'
 import { MediaPage } from './admin/media/Media'
 import { TradePage } from './admin/trade/Trade'
 import { Ownership } from './admin/stock/Ownership'
-import { Inbound } from './admin/inbound/Inbound'
+import { Inbound, SupplyRedirect } from './admin/inbound/Inbound'
 import { Packing } from './admin/stock/Packing'
 
 export function App() {
@@ -77,7 +77,7 @@ export function App() {
               <Route path="trash" element={<Trash />} />
               <Route path="catalog/unit/:id" element={<UnitDetail />} />
               <Route path="catalog/:id" element={<ProductDetail />} />
-              <Route path="supply" element={<Supply />} />
+              <Route path="supply" element={<SupplyRedirect />} />
               <Route path="insight/:key" element={<Insight />} />
               <Route path="merch" element={<Merch />} />
               <Route path="network" element={<Network />} />

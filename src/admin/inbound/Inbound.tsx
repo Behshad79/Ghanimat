@@ -1,5 +1,5 @@
 // ورود بار و حواله: محموله‌های خرید، صف ساخت صفحه، حواله‌های بین انبار، ایستگاه اسکن و تفکیک، توقف و انتقال، کارنامه
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Pencil, Send, Sparkles } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, Progress, Tabs } from '@/shared/ui/base'
 import { Page } from '@/shared/ui/page'
@@ -16,13 +16,16 @@ import { ScanCheck } from './ScanCheck'
 import { ControlTab } from './Control'
 import { ReportTab } from './Report'
 import { ensureProduct } from './ops'
+import { BuyTab, SuppliersTab } from './SupplyBits'
 
 export function Inbound() {
   const d = useDB(); const [tab, setTab] = useTab('batches'); const [sp] = useSearchParams()
   const M = d.stock.manifests ?? []
   const queue = d.incoming.flatMap((b) => b.items.map((it) => ({ b, it }))).filter(({ it }) => { const p = it.productId ? d.products.find((x) => x.id === it.productId) : undefined; return !p || p.status !== 'product.published' })
-  return <Page title="ورود بار و حواله" module="inbound" sub="از خرید در عراق یا هر تأمین‌کننده تا انتشار در سایت: ثبت کالا با برچسب مالک‌دار، تقسیم بین انبارها، حوالهٔ اسکنی، تفکیک با اسکن و کارنامهٔ هر انبار"
-    tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'batches', label: 'محموله‌های خرید', count: d.incoming.filter((b) => !b.receivedAt).length || undefined }, { id: 'queue', label: 'صف ساخت صفحه', count: queue.length || undefined }, { id: 'manifests', label: 'حواله‌ها', count: M.filter((m) => !['received', 'cancelled'].includes(m.status)).length || undefined }, { id: 'scan', label: 'اسکن و تفکیک' }, { id: 'control', label: 'توقف و انتقال', count: d.stock.parties.filter((p) => p.pause).length || undefined }, { id: 'report', label: 'کارنامهٔ انبار و شریک' }]} />}>
+  return <Page title="تأمین و ورود بار" module="inbound" sub="یک مسیر از «چه بخریم» تا «منتشر شد»: لیست خرید، محموله با برچسب مالک‌دار، صف ساخت صفحه، حوالهٔ اسکنی بین انبارها، تفکیک با اسکن و کارنامهٔ هر انبار"
+    tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'buy', label: 'لیست خرید', count: d.buyList.filter((b) => b.status === 'در لیست').length || undefined }, { id: 'batches', label: 'محموله‌های خرید', count: d.incoming.filter((b) => !b.receivedAt).length || undefined }, { id: 'queue', label: 'صف ساخت صفحه', count: queue.length || undefined }, { id: 'manifests', label: 'حواله‌ها', count: M.filter((m) => !['received', 'cancelled'].includes(m.status)).length || undefined }, { id: 'scan', label: 'اسکن و تفکیک' }, { id: 'control', label: 'توقف و انتقال', count: d.stock.parties.filter((p) => p.pause).length || undefined }, { id: 'report', label: 'کارنامهٔ انبار و شریک' }, { id: 'suppliers', label: 'تأمین‌کننده و ارز' }]} />}>
+    {tab === 'buy' && <BuyTab />}
+    {tab === 'suppliers' && <SuppliersTab />}
     {tab === 'batches' && <BatchesTab onManifests={() => setTab('manifests')} />}
     {tab === 'queue' && <BuildQueue />}
     {tab === 'manifests' && <ManifestsTab focus={sp.get('m') ?? undefined} />}
@@ -55,4 +58,11 @@ function BuildQueue() {
         </tr> })}
     </tbody></table></div>
   </Card>
+}
+
+/** نشانی قدیمی «تأمین و خرید» به همین صفحه می‌آید و تب معادل باز می‌شود */
+export function SupplyRedirect() {
+  const [sp] = useSearchParams(); const t = sp.get('tab') ?? 'buy'
+  const map: Record<string, string> = { buy: 'buy', opps: 'buy', ledger: 'batches', po: 'batches', inbound: 'batches', suppliers: 'suppliers', fx: 'suppliers' }
+  return <Navigate to={`/admin/inbound?tab=${map[t] ?? 'buy'}`} replace />
 }

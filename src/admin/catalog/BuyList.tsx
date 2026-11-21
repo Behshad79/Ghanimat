@@ -55,7 +55,7 @@ export function BuyList() {
                 <td className="p-2"><Input aria-label={`یادداشت ${b.name}`} className="h-8 min-w-40 text-12" value={b.note ?? ''} placeholder="مثلاً رنگ، مدل، حداکثر قیمت" onChange={(e) => setB(b.id, { note: e.target.value })} /></td>
                 <td className="p-2"><button type="button" aria-label={`حذف ${b.name}`} className="text-t3 hover:text-danger" onClick={() => mutate((x) => { x.buyList = x.buyList.filter((y) => y.id !== b.id) }, { action: 'حذف از لیست خرید', target: b.name })}><Trash2 size={14} /></button></td>
               </tr>)}</tbody></table></div>}
-          {ordered.length > 0 && <p className="mt-2 text-11 text-t2">{fa(ordered.length)} قلم قبلاً سفارش داده شده و در «سفارش‌ها و محموله‌ها» است.</p>}
+          {ordered.length > 0 && <p className="mt-2 text-11 text-t2">{fa(ordered.length)} قلم قبلاً سفارش داده شده و در «تأمین و ورود بار ← محموله‌ها» است.</p>}
         </Card>
         <Card title="گزارش پیشنهاد خرید" actions={<Segmented size="sm" value={days} onChange={setDays} options={[['30', '۳۰ روز'], ['90', '۹۰ روز']]} />}>
           <Segmented size="sm" value={rep} onChange={setRep} options={[['best', 'پرفروش'], ['fast', 'سریع‌فروش'], ['profit', 'پرسود'], ['out', 'تمام‌شده']]} />
@@ -97,7 +97,7 @@ export function NewPO({ items = [], onClose }: { items?: BuyItem[]; onClose: () 
   const create = () => { const id = `IN-${Date.now().toString(36).slice(-5).toUpperCase()}`; const rate = getDB().storeCfg.fx.rates[cur as 'دلار'] ?? 1
     mutate((x) => { x.incoming.unshift({ id, title: title.trim() || 'سفارش خرید', route, supplier: sup, orderedAt: new Date().toISOString(), eta: new Date(eta).toISOString(), stage: 'خرید شد', currency: cur, rate: cur === 'تومان' ? 1 : rate, freight: 0, customs: 0, other: 0, paid: 0, items: items.map((b, i) => ({ id: `ii${Date.now().toString(36)}${i}`, name: b.name, qty: b.qty, unitCost: b.targetCost, productId: b.productId, note: b.note })) })
       x.buyList.forEach((b) => { if (items.some((y) => y.id === b.id)) { b.status = 'سفارش داده شد'; b.batchId = id } }) }, { action: 'ثبت سفارش خرید', target: `${id} · ${items.length} قلم` })
-    toast(`سفارش خرید ${id} ثبت شد؛ اقلام، هزینه‌ها و مسیر را در «سفارش‌ها و محموله‌ها» کامل کنید.`); onClose(); nav('/admin/supply?tab=ledger') }
+    toast(`سفارش خرید ${id} ثبت شد؛ اقلام، هزینه‌ها و مسیر را در «تأمین و ورود بار ← محموله‌ها» کامل کنید.`); onClose(); nav('/admin/inbound?tab=batches') }
   return <Modal open onClose={onClose} title="سفارش خرید تازه" footer={<><Button variant="primary" onClick={create}>ثبت سفارش خرید</Button><Button variant="ghost" onClick={onClose}>انصراف</Button></>}>
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="عنوان"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>

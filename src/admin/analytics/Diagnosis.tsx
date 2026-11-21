@@ -19,7 +19,7 @@ const STEPS: { label: string; value: number; note: string; reasons: Reason[] }[]
   { label: 'افزودن به سبد', value: 3850, note: '۱۸٪ از صفحهٔ کالا', reasons: [
     { why: 'قیمت بالاتر از ترب', share: 34, evidence: 'در ۷ کالا رقیب ارزان‌تر؛ نرخ افزودن این کالاها ۹٪ در برابر ۲۱٪', fix: 'هم‌قیمت شدن یا نمایش مزیت گارانتی کنار قیمت', to: '/admin/channels?tab=rank', impact: 9 },
     { why: 'اعتماد به استوک و جعبه‌باز', share: 29, evidence: 'خروج پس از دیدن «گرید B»؛ کلیک کم روی جزئیات ظاهری', fix: 'عکس واقعی هر ایراد و ویدیوی بررسی کوتاه', to: '/admin/readiness?tab=video', impact: 7 },
-    { why: 'ناموجودی یا رنگ دلخواه نبود', share: 22, evidence: '۴۱۰ کلیک «خبرم کن» در ماه', fix: 'تأمین تنوع پرتقاضا (سفید سونی)', to: '/admin/supply', impact: 5 },
+    { why: 'ناموجودی یا رنگ دلخواه نبود', share: 22, evidence: '۴۱۰ کلیک «خبرم کن» در ماه', fix: 'تأمین تنوع پرتقاضا (سفید سونی)', to: '/admin/inbound?tab=buy', impact: 5 },
   ] },
   { label: 'شروع پرداخت', value: 2380, note: '۶۲٪ از سبد', reasons: [
     { why: 'هزینهٔ ارسال در مرحلهٔ آخر دیده شد', share: 41, evidence: '۵۸٪ رهاشده‌ها در صفحهٔ «زمان ارسال» خارج شدند', fix: 'نمایش هزینه و زمان ارسال روی صفحهٔ کالا', to: '/admin/shipping', impact: 6 },

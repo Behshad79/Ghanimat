@@ -1,8 +1,8 @@
 // محموله‌های خرید: ثبت گام‌به‌گام یا جدولی کالاهای خریداری‌شده با لینک، تنوع، مالک، تقسیم انبار، بها و قیمت پیشنهادی؛ برچسب خودکار و رسید در انبار ورودی
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Check, ExternalLink, FileSpreadsheet, ImagePlus, PackageCheck, Pencil, Plus, Printer, Sparkles, Table2, Trash2, Truck, Wand2 } from 'lucide-react'
-import { Badge, Button, Card, cx, EmptyState, Field, Input, Segmented, Select, Textarea } from '@/shared/ui/base'
+import { Camera, Check, ChevronDown, ExternalLink, FileSpreadsheet, ImagePlus, PackageCheck, Pencil, Plus, Printer, RefreshCw, Sparkles, Table2, Trash2, Truck, Wand2, Zap } from 'lucide-react'
+import { Badge, Button, Card, cx, EmptyState, Field, Input, Progress, Segmented, Select, Textarea } from '@/shared/ui/base'
 import { KPI } from '@/shared/ui/page'
 import { confirm, Modal, toast } from '@/shared/ui/overlay'
 import { MoneyInput } from '@/shared/ui/money'
@@ -10,7 +10,10 @@ import { Barcode } from '@/shared/ui/codes'
 import { printSolo } from '@/shared/lib/printSolo'
 import { fileToImage } from '@/shared/lib/image'
 import { currentUser, getDB, myParty, mutate, notify, takeCode, useDB } from '@/shared/lib/store'
-import { fa, rel, toman } from '@/shared/lib/fa'
+import { compactToman, fa, pct, rel, toman } from '@/shared/lib/fa'
+import { fetchRate, type FxCur } from '@/shared/lib/fx'
+import type { DB } from '@/shared/data/seed'
+import { itemSales } from '../catalog/BatchLedger'
 import { IN_ROUTES, IN_STAGES, type InBatch, type InItem, type InVariant } from '@/shared/data/incoming'
 import { BUY_SOURCES, CURRENCIES, itemLabel, itemQty, itemSplit, landed, varSuffix } from '@/shared/data/inbound'
 import { PartyChip, partyLogo, whName } from '../stock/common'
@@ -30,7 +33,10 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
   const [form, setForm] = useState<InBatch | null>(null); const [wiz, setWiz] = useState<{ b: string; it?: InItem } | null>(null); const [grid, setGrid] = useState<string | null>(null)
   const [land, setLand] = useState<string | null>(null); const [labels, setLabels] = useState<string | null>(null); const [view, setView] = useState<'open' | 'done'>('open')
   const open = d.incoming.filter((b) => !b.receivedAt); const done = d.incoming.filter((b) => b.receivedAt)
-  const list = view === 'open' ? open : done
+  const [q, setQ] = useState(''); const [shut, setShut] = useState<Record<string, boolean>>({})
+  const norm = (t: string) => t.toLowerCase().replace(/\s+/g, ' ').trim()
+  const list = (view === 'open' ? open : done).filter((b) => !q.trim() || norm(`${b.id} ${b.title} ${b.supplier ?? ''} ${b.items.map((it) => `${it.name} ${it.code ?? ''} ${it.source ?? ''}`).join(' ')}`).includes(norm(q)))
+  const isOpen = (id: string, i: number) => shut[id] === undefined ? i === 0 || !!q.trim() : !shut[id]
   const units = open.flatMap((b) => b.items).reduce((a, it) => a + itemQty(it), 0)
   const value = open.reduce((a, b) => a + b.items.reduce((x, it) => x + landed(b, it).unit * itemQty(it), 0), 0)
   const byOwner = (o: string) => open.flatMap((b) => b.items).filter((it) => (it.owner ?? 'gh') === o).reduce((a, it) => a + itemQty(it), 0)
@@ -40,26 +46,24 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
     if (!pid) mutate((x) => { const bb = x.incoming.find((q) => q.id === b.id)!; const ii = bb.items.find((q) => q.id === it.id)!; pid = ensureProduct(x, bb, ii).id }, { action: 'ساخت صفحهٔ کالا از محموله', target: `${b.id} · ${it.name}` })
     nav(`/admin/catalog/${pid}/edit?step=0&from=batch`) }
   return <div className="space-y-4">
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <KPI label="محمولهٔ باز" value={fa(open.length)} note={`${fa(open.flatMap((b) => b.items).length)} قلم · ${fa(units)} عدد`} />
-      <KPI label="ارزش تمام‌شدهٔ در راه" value={toman(value)} note="بهای ارزی × نرخ + سهم حمل و گمرک" />
-      <KPI label="عدد در راه به نام هر مالک" value={`غنیمت ${fa(byOwner('gh'))}`} note={`یاسین (Ve1): ${fa(byOwner('ys'))} عدد`} />
-      <KPI label="صفحهٔ نساخته" value={fa(open.flatMap((b) => b.items).filter((it) => !it.productId).length)} note="در «صف ساخت صفحه» منتظر است" />
-    </div>
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-info-bg px-4 py-3 text-12 text-info">
-      <span>روند: محموله را ثبت کنید ← کالاها را گام‌به‌گام یا جدولی با لینک، تنوع، مالک و سهم هر انبار وارد کنید ← برچسب‌ها همان لحظه ساخته و چاپ می‌شوند ← با رسید در انبار ورودی، موجودی به نام مالک ثبت و حوالهٔ انبارهای دیگر ساخته می‌شود.</span>
-      <span className="flex gap-2"><Segmented size="sm" value={view} onChange={setView} options={[['open', `باز (${fa(open.length)})`], ['done', `رسیده (${fa(done.length)})`]]} /><Button variant="primary" icon={<Plus size={14} />} onClick={newBatch}>محمولهٔ تازه</Button></span>
+    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-2.5">
+      <Input className="h-9 w-64 text-12" value={q} onChange={(e) => setQ(e.target.value)} placeholder="جست‌وجوی کالا، کد یا تأمین‌کننده" aria-label="جست‌وجو در محموله‌ها" />
+      <Segmented size="sm" value={view} onChange={setView} options={[['open', `باز (${fa(open.length)})`], ['done', `رسیده (${fa(done.length)})`]]} />
+      <span className="flex flex-wrap gap-1.5 text-11 text-t2"><span className="rounded-full bg-neutral-bg px-2 py-1">{fa(open.flatMap((b) => b.items).length)} قلم · {fa(units)} عدد در راه</span><span className="rounded-full bg-neutral-bg px-2 py-1">ارزش {compactToman(value)}</span><span className="rounded-full bg-neutral-bg px-2 py-1">غنیمت {fa(byOwner('gh'))} · Ve1 {fa(byOwner('ys'))}</span>{open.flatMap((b) => b.items).some((it) => !it.productId) && <span className="rounded-full bg-warning-bg px-2 py-1 text-warning">{fa(open.flatMap((b) => b.items).filter((it) => !it.productId).length)} صفحه نساخته</span>}</span>
+      <Button variant="primary" className="mr-auto" icon={<Plus size={14} />} onClick={newBatch}>محمولهٔ تازه</Button>
     </div>
     {list.length === 0 && <Card><EmptyState title={view === 'open' ? 'محمولهٔ بازی نیست.' : 'هنوز محموله‌ای رسید نشده است.'} desc="خرید عراق، دبی، آمازون یا تأمین‌کنندهٔ داخلی را از همان روز خرید ثبت کنید." action={<Button variant="primary" onClick={newBatch}>محمولهٔ تازه</Button>} /></Card>}
-    {list.map((b) => { const si = IN_STAGES.indexOf(b.stage as (typeof IN_STAGES)[number]); const dl = Math.ceil((+new Date(b.eta) - Date.now()) / 864e5)
+    {list.map((b, bi) => { const expanded = isOpen(b.id, bi); const fin = batchFin(d, b); const si = IN_STAGES.indexOf(b.stage as (typeof IN_STAGES)[number]); const dl = Math.ceil((+new Date(b.eta) - Date.now()) / 864e5)
       const tot = b.items.reduce((a, it) => a + itemQty(it), 0); const split: Record<string, number> = {}; b.items.forEach((it) => Object.entries(itemSplit(it)).forEach(([w, q]) => { split[w] = (split[w] ?? 0) + q }))
-      return <Card key={b.id} pad={false} title={<span className="flex flex-wrap items-center gap-2">{b.title || 'محمولهٔ بدون عنوان'}<Badge dot={false}>{b.id}</Badge>{b.buyer && <PartyChip s={s} id={b.buyer} />}{!b.receivedAt && <Badge tone={dl < 0 ? 'danger' : dl <= 2 ? 'warning' : 'info'}>{dl < 0 ? `${fa(-dl)} روز تأخیر` : dl === 0 ? 'امروز می‌رسد' : `${fa(dl)} روز تا رسیدن`}</Badge>}{b.receivedAt && <Badge tone="success">رسید {rel(b.receivedAt)}</Badge>}</span>}
+      return <Card key={b.id} pad={false} title={<span className="flex flex-wrap items-center gap-2"><button type="button" aria-expanded={expanded} aria-label={expanded ? 'بستن محموله' : 'باز کردن محموله'} onClick={() => setShut({ ...shut, [b.id]: expanded })} className="grid size-7 place-items-center rounded-lg hover:bg-neutral-bg"><ChevronDown size={16} className={cx('transition-transform', expanded && 'rotate-180')} /></button><button type="button" className="text-right hover:text-brand" onClick={() => setShut({ ...shut, [b.id]: expanded })}>{b.title || 'محمولهٔ بدون عنوان'}</button><Badge dot={false}>{b.id}</Badge>{b.buyer && <PartyChip s={s} id={b.buyer} />}{!b.receivedAt && <Badge tone={dl < 0 ? 'danger' : dl <= 2 ? 'warning' : 'info'}>{dl < 0 ? `${fa(-dl)} روز تأخیر` : dl === 0 ? 'امروز می‌رسد' : `${fa(dl)} روز تا رسیدن`}</Badge>}{b.receivedAt && <Badge tone="success">رسید {rel(b.receivedAt)}</Badge>}</span>}
         actions={<span className="flex flex-wrap gap-1.5">
           {!b.receivedAt && <><Button size="sm" icon={<Plus size={13} />} onClick={() => setWiz({ b: b.id })}>افزودن کالا (گام‌به‌گام)</Button><Button size="sm" icon={<Table2 size={13} />} onClick={() => setGrid(b.id)}>ویرایش جدولی</Button></>}
           <Button size="sm" variant="ghost" icon={<Printer size={13} />} disabled={!b.items.length} onClick={() => setLabels(b.id)}>برچسب‌ها</Button>
           <Button size="sm" variant="ghost" icon={<Pencil size={13} />} onClick={() => setForm(structuredClone(b))}>محموله</Button>
           {!b.receivedAt && <Button size="sm" variant="primary" icon={<PackageCheck size={13} />} disabled={!b.items.length} onClick={() => setLand(b.id)}>رسید در {whName(s, b.landing ?? 'tehran')}</Button>}
         </span>}>
+        {!expanded && <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-12 text-t2"><span>{fa(b.items.length)} قلم · {fa(tot)} عدد</span>{Object.entries(split).map(([w, q2]) => <span key={w}>{whName(s, w)}: {fa(q2)}</span>)}<span>سرمایه {compactToman(fin.capital)}</span>{b.receivedAt && <span className={fin.profit < 0 ? 'text-danger' : 'text-success'}>سود {compactToman(fin.profit)}</span>}</div>}
+        {expanded && <>
         <div className="space-y-2 border-b border-line p-4 text-12">
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-t2"><span>مسیر: {b.route}</span>{b.supplier && <span>خرید از: {b.supplier}</span>}<span>انبار ورودی: <b className="text-t1">{whName(s, b.landing ?? 'tehran')}</b></span><span>ارز: {b.currency ?? 'تومان'}{b.currency && b.currency !== 'تومان' ? ` · نرخ ${fa(b.rate ?? 0)}` : ''}</span><span>ثبت: {b.by ?? '—'} · {rel(b.orderedAt)}</span></div>
           <div className="flex flex-wrap items-center gap-2"><b>{fa(b.items.length)} قلم · {fa(tot)} عدد</b>{Object.entries(split).map(([w, q]) => <span key={w} className="rounded-full bg-neutral-bg px-2 py-0.5">{whName(s, w)}: {fa(q)}</span>)}{tot !== Object.values(split).reduce((a, q) => a + q, 0) && <Badge tone="warning">{fa(tot - Object.values(split).reduce((a, q) => a + q, 0))} عدد بدون انبار مقصد</Badge>}</div>
@@ -75,10 +79,13 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
                 <td className="p-2">{Object.keys(sp).length ? Object.entries(sp).map(([w, q]) => <span key={w} className="block">{whName(s, w)}: <b className="tnum">{fa(q)}</b></span>) : <span className="text-warning">تعیین نشده</span>}{it.landedAt && <span className="mt-0.5 block text-11 text-success">رسید: {Object.entries(it.landedAt).map(([w, q]) => `${whName(s, w)} ${fa(q)}`).join('، ')}</span>}</td>
                 <td className="p-2"><span className="block">{b.currency && b.currency !== 'تومان' ? `${fa(it.unitCost ?? 0)} ${b.currency} ← ` : ''}<b>{toman(L.unit)}</b></span><span className="block text-t2">فروش: {it.sellPrice ? toman(it.sellPrice) : '—'}{mg !== null && <span className={cx('mr-1', mg < 10 ? 'text-danger' : 'text-success')}>({fa(mg)}٪)</span>}</span></td>
                 <td className="p-2">{(it.variants?.length ? it.variants : [null]).map((v, i) => <bdi key={i} dir="ltr" className="block font-mono text-11">{itemLabel(s, it, v)}</bdi>)}</td>
-                <td className="p-2">{p ? <span className="flex flex-col items-start gap-1"><Badge tone={p.status === 'product.published' ? 'success' : p.health >= 70 ? 'info' : 'warning'} dot={false}>{p.status === 'product.published' ? 'منتشر شده' : `آمادگی ${fa(p.health)}٪`}</Badge><Button size="sm" variant="ghost" icon={<Pencil size={12} />} onClick={() => nav(`/admin/catalog/${p.id}/edit?step=0&from=batch`)}>ادامه</Button></span> : <Button size="sm" icon={<Sparkles size={12} />} onClick={() => build(b, it)}>ساخت صفحه</Button>}</td>
+                <td className="p-2">{p ? <span className="flex flex-col items-start gap-1"><Badge tone={p.status === 'product.published' ? 'success' : p.health >= 70 ? 'info' : 'warning'} dot={false}>{p.status === 'product.published' ? 'منتشر شده' : `آمادگی ${fa(p.health)}٪`}</Badge><Button size="sm" variant="ghost" icon={<Pencil size={12} />} onClick={() => nav(`/admin/catalog/${p.id}/edit?step=0&from=batch`)}>ادامه</Button><span className="flex gap-2 text-11"><button type="button" className="text-t2 hover:text-brand" title="سناریوی اینستاگرام پیش از رسیدن" onClick={() => { mutate((x) => { x.contentQueue.unshift({ id: `cq${Date.now().toString(36)}`, productId: p.id, channel: 'اینستاگرام', kind: 'ریلز', status: 'ایده', due: new Date(Math.max(Date.now() + 864e5, +new Date(b.eta) - 864e5)).toISOString(), owner: me(), note: `معرفی ${p.title} پیش از رسیدن` } as never) }, { action: 'سناریوی معرفی کالای در راه', target: p.title }); toast('سناریوی اینستاگرام به صف محتوا رفت.') }}>+ سناریو</button><button type="button" className="text-t2 hover:text-brand" onClick={() => { mutate((x) => { (x as unknown as { comingSoon?: unknown }); const q = x.products.find((y) => y.id === p.id); if (q) q.comingSoon = q.comingSoon ? undefined : b.eta }, { action: 'به‌زودی کالای در راه', target: p.title }); toast(p.comingSoon ? 'از «به‌زودی» برداشته شد.' : 'در «به‌زودی» با تاریخ رسیدن نمایش داده می‌شود.') }}>{p.comingSoon ? '− به‌زودی' : '+ به‌زودی'}</button></span></span> : <Button size="sm" icon={<Sparkles size={12} />} onClick={() => build(b, it)}>ساخت صفحه</Button>}</td>
                 <td className="p-2">{!b.receivedAt && <span className="flex gap-1"><button type="button" aria-label={`ویرایش ${it.name}`} className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-brand-tint hover:text-brand" onClick={() => setWiz({ b: b.id, it })}><Pencil size={13} /></button><button type="button" aria-label={`حذف ${it.name}`} className="grid size-7 place-items-center rounded-lg text-t2 hover:bg-danger-bg hover:text-danger" onClick={async () => { if (await confirm({ title: `«${it.name}» از محموله حذف شود؟`, body: 'برچسب‌هایی که برای این قلم چاپ شده دیگر شناخته نمی‌شوند.', confirm: 'حذف', danger: true })) mutate((x) => { const bb = x.incoming.find((q) => q.id === b.id)!; bb.items = bb.items.filter((q) => q.id !== it.id) }, { action: 'حذف قلم از محموله', target: `${b.id} · ${it.name}` }) }}><Trash2 size={13} /></button></span>}</td>
               </tr> })}
           </tbody></table></div>}
+        {!b.receivedAt && <QuickAdd batch={b} />}
+        <FinStrip b={b} fin={fin} />
+        </>}
       </Card> })}
     {form && <BatchForm b={form} onClose={() => setForm(null)} />}
     {wiz && <ItemWizard batch={d.incoming.find((b) => b.id === wiz.b)!} edit={wiz.it} onClose={() => setWiz(null)} />}
@@ -86,6 +93,38 @@ export function BatchesTab({ onManifests }: { onManifests: () => void }) {
     {land && <LandModal batch={d.incoming.find((b) => b.id === land)!} onClose={(made) => { setLand(null); if (made?.length) onManifests() }} />}
     {labels && <LabelSheet batch={d.incoming.find((b) => b.id === labels)!} onClose={() => setLabels(null)} />}
   </div>
+}
+
+/** مالی هر محموله: سرمایه، پرداخت‌شده و مانده، فروش و سود از زمان رسیدن، و بازگشت سرمایه */
+function batchFin(d: DB, b: InBatch) {
+  const capital = b.items.reduce((a, it) => a + landed(b, it).unit * itemQty(it), 0)
+  const S = b.items.map((it) => ({ it, ...itemSales(d, b, it), unit: landed(b, it).unit }))
+  const revenue = S.reduce((a, x) => a + x.revenue, 0); const cogs = S.reduce((a, x) => a + x.sold * x.unit, 0)
+  return { capital, revenue, profit: revenue - cogs, paid: b.paid ?? 0, sold: S.reduce((a, x) => a + x.sold, 0) }
+}
+function FinStrip({ b, fin }: { b: InBatch; fin: ReturnType<typeof batchFin> }) {
+  const left = Math.max(0, fin.capital - fin.paid)
+  return <div className="grid gap-3 border-t border-line bg-surface-2 p-3 text-12 sm:grid-cols-2 lg:grid-cols-5">
+    <p>سرمایهٔ کل<b className="block tnum text-14">{toman(fin.capital)}</b></p>
+    <label className="block">پرداخت‌شده به تأمین‌کننده<Input aria-label="پرداخت‌شده" className="ltr mt-0.5 h-8 text-left text-12" value={fin.paid ? fin.paid.toLocaleString('en-US') : ''} placeholder="0" onChange={(e) => mutate((x) => { x.incoming.find((y) => y.id === b.id)!.paid = Number(e.target.value.replace(/\D/g, '')) || 0 }, { action: 'ثبت پرداخت محموله', target: b.id })} /><span className={left ? 'text-warning' : 'text-success'}>{left ? `مانده ${toman(left)}` : 'تسویه شده'}</span></label>
+    <p>فروش از این محموله<b className="block tnum text-14">{b.receivedAt ? toman(fin.revenue) : '—'}</b><span className="text-t2">{b.receivedAt ? `${fa(fin.sold)} عدد` : 'بعد از رسید حساب می‌شود'}</span></p>
+    <p>سود ناخالص<b className={cx('block tnum text-14', fin.profit < 0 ? 'text-danger' : fin.profit > 0 ? 'text-success' : '')}>{b.receivedAt ? toman(fin.profit) : '—'}</b><span className="text-t2">{fin.revenue ? `حاشیه ${pct((fin.profit / fin.revenue) * 100, 1)}` : ''}</span></p>
+    <div><span>بازگشت سرمایه</span><Progress value={fin.capital ? Math.min(100, (fin.revenue / fin.capital) * 100) : 0} tone={fin.revenue >= fin.capital && fin.capital ? 'success' : 'brand'} /><span className="text-11 text-t2">{fin.capital ? pct((fin.revenue / fin.capital) * 100) : '—'}</span></div>
+  </div>
+}
+/** افزودن سریع: لینک یا نام + تعداد + Enter؛ مالک و انبار مقصد پیش‌فرض محموله است و بعداً قابل اصلاح */
+function QuickAdd({ batch }: { batch: InBatch }) {
+  const d = useDB(); const s = d.stock; const [t, setT] = useState(''); const [n, setN] = useState('1'); const [owner, setOwner] = useState(batch.buyer ?? 'gh')
+  const landing = batch.landing ?? 'tehran'
+  const add = () => { const raw = t.trim(); if (!raw) return; const url = /^https?:\/\//i.test(raw) ? raw : ''; const name = url ? nameFromUrl(url) || 'کالای تازه (نام را اصلاح کنید)' : raw; const qty = Math.max(1, Number(n.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))) || 1)
+    const it: InItem = { id: `ii${Date.now().toString(36)}`, name, qty, amazonUrl: url || undefined, source: url ? sourceFromUrl(url) || undefined : undefined, owner, code: takeCode('product'), split: { [landing]: qty }, by: me(), at: new Date().toISOString() }
+    mutate((x) => { x.incoming.find((y) => y.id === batch.id)!.items.push(it) }, { action: 'افزودن سریع کالا به محموله', target: `${batch.id} · ${name}` }); setT(''); setN('1'); toast(`«${name}» با ${fa(qty)} عدد اضافه شد؛ تنوع، بها و تقسیم انبار را با ✎ کامل کنید.`) }
+  return <form onSubmit={(e) => { e.preventDefault(); add() }} className="flex flex-wrap items-center gap-2 border-t border-dashed border-line px-4 py-2.5">
+    <Zap size={14} className="text-brand" /><Input className="h-9 min-w-60 flex-1 text-12" value={t} onChange={(e) => setT(e.target.value)} placeholder="افزودن سریع: لینک کالا یا نام را بنویسید و Enter بزنید" aria-label="افزودن سریع" />
+    <Input className="ltr h-9 w-16 text-center" value={n} onChange={(e) => setN(e.target.value)} aria-label="تعداد" />
+    <span className="flex gap-1">{s.parties.filter((p) => p.active).map((p) => <button key={p.id} type="button" aria-pressed={owner === p.id} title={`مالک: ${p.name}`} onClick={() => setOwner(p.id)} className={cx('flex h-9 items-center gap-1 rounded-lg border px-2 text-11 font-semibold', owner === p.id ? 'text-white' : 'border-line')} style={owner === p.id ? { background: p.color, borderColor: p.color } : undefined}><bdi dir="ltr" className="font-mono">{p.prefix}</bdi></button>)}</span>
+    <Button type="submit" size="sm" variant="primary" disabled={!t.trim()}>افزودن</Button>
+  </form>
 }
 
 function BatchForm({ b, onClose }: { b: InBatch; onClose: () => void }) {
@@ -99,13 +138,17 @@ function BatchForm({ b, onClose }: { b: InBatch; onClose: () => void }) {
       <Field label="مسیر"><Select value={f.route} onChange={(v) => setF({ ...f, route: v })} options={IN_ROUTES} /></Field>
       <Field label="انبار ورودی (اول کجا می‌رسد)"><Select value={f.landing ?? 'tehran'} onChange={(v) => setF({ ...f, landing: v })} options={d.stock.warehouses.filter((w) => w.active).map((w) => [w.id, w.name] as [string, string])} other={false} /></Field>
       <Field label="ارز خرید"><Select value={f.currency ?? 'تومان'} onChange={(v) => setF({ ...f, currency: v, rate: defaultRate(v) })} options={[...CURRENCIES]} other={false} /></Field>
-      <Field label="نرخ هر واحد ارز (تومان)" help={f.currency === 'دلار' ? 'پیش‌فرض: نرخ مرجع تنظیمات + ۱۲٪' : undefined}><MoneyInput value={f.rate ?? 1} onChange={(n) => setF({ ...f, rate: n })} aria-label="نرخ ارز" /></Field>
+      <Field label="نرخ هر واحد ارز (تومان)" help={f.currency === 'دلار' ? 'پیش‌فرض: نرخ مرجع تنظیمات + ۱۲٪' : undefined} hint={f.currency && f.currency !== 'تومان' && ['دلار', 'درهم', 'دینار'].includes(f.currency) ? <button type="button" className="flex items-center gap-1 text-11 text-brand" onClick={async () => { const r = await fetchRate(f.currency as FxCur); setF({ ...f, rate: r.rate }); toast(`نرخ ${f.currency} ${toman(r.rate)} گذاشته شد.`) }}><RefreshCw size={11} />نرخ امروز</button> : undefined}><MoneyInput value={f.rate ?? 1} onChange={(n) => setF({ ...f, rate: n })} aria-label="نرخ ارز" /></Field>
       <Field label="رسیدن حدودی"><Input type="date" value={f.eta.slice(0, 10)} onChange={(e) => e.target.value && setF({ ...f, eta: new Date(e.target.value).toISOString() })} /></Field>
       <Field label="کرایهٔ حمل (تومان)"><MoneyInput value={f.freight ?? 0} onChange={(n) => setF({ ...f, freight: n })} aria-label="کرایه" /></Field>
       <Field label="گمرک و ترخیص (تومان)"><MoneyInput value={f.customs ?? 0} onChange={(n) => setF({ ...f, customs: n })} aria-label="گمرک" /></Field>
       <Field label="سایر هزینه‌ها (تومان)"><MoneyInput value={f.other ?? 0} onChange={(n) => setF({ ...f, other: n })} aria-label="سایر" /></Field>
       <div className="sm:col-span-3"><Field label="یادداشت"><Input value={f.note ?? ''} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field></div>
     </div>
+    {d.storeCfg.trade?.on && (d.storeCfg.trade.modules.imports || d.storeCfg.trade.modules.warehouse) && <div className="mt-3 grid gap-3 rounded-xl border border-brand/30 bg-brand-tint/20 p-3 sm:grid-cols-3"><p className="text-12 font-semibold sm:col-span-3">واردات رسمی (امور بازرگانی)</p>
+      {d.storeCfg.trade.modules.imports && ([['ntsw', 'شمارهٔ ثبت سفارش (NTSW)', false], ['sata', 'کد رهگیری تأمین ارز', false], ['kotaj', 'شمارهٔ کوتاژ اظهارنامه', false], ['customsValue', 'ارزش گمرکی (تومان)', true], ['duties', 'حقوق ورودی (تومان)', true], ['customsVat', 'ارزش افزودهٔ گمرکی (تومان)', true]] as const).map(([k, l, num]) => <Field key={k} label={l}><Input className="ltr text-left" value={String((f.trade as Record<string, string | number> | undefined)?.[k] ?? '')} onChange={(e) => setF({ ...f, trade: { ...(f.trade ?? {}), [k]: num ? Number(e.target.value.replace(/\D/g, '')) || 0 : e.target.value } })} /></Field>)}
+      {d.storeCfg.trade.modules.warehouse && <Field label="شناسهٔ رسید سامانهٔ جامع انبارها"><Input className="ltr text-left" value={f.trade?.nwms ?? ''} onChange={(e) => setF({ ...f, trade: { ...(f.trade ?? {}), nwms: e.target.value } })} /></Field>}
+    </div>}
     <p className="mt-3 rounded-lg bg-neutral-bg px-3 py-2 text-11 text-t2">هزینهٔ حمل، گمرک و سایر به نسبت ارزش روی بهای هر کالا پخش می‌شود و بهای تمام‌شدهٔ لات‌ها با همین عدد ثبت می‌شود.</p>
   </Modal>
 }

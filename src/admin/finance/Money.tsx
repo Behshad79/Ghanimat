@@ -86,7 +86,7 @@ export function PaySales() {
 export function OrderProfitCard({ o }: { o: Order }) {
   const d = useDB(); const p = orderProfit(d, o)
   return (
-    <Card title={<>سود این سفارش<Hint k="margin" /></>} actions={<Badge tone={p.unknownCost ? 'warning' : p.profit >= 0 ? 'success' : 'danger'}>{p.unknownCost ? 'قیمت خرید ناقص' : pct(p.margin, 1)}</Badge>}>
+    <Card defaultOpen={false} title={<>سود این سفارش<Hint k="margin" /></>} actions={<Badge tone={p.unknownCost ? 'warning' : p.profit >= 0 ? 'success' : 'danger'}>{p.unknownCost ? 'قیمت خرید ناقص' : pct(p.margin, 1)}</Badge>}>
       <Waterfall steps={[{ label: 'فروش', value: p.revenue / 1e6 }, { label: 'خرید', value: -p.cogs / 1e6 }, { label: 'کارمزد', value: -p.fee / 1e6 }, { label: 'ارسال', value: (p.shipIncome - p.shipCost) / 1e6 }, { label: 'بسته‌بندی', value: -p.packaging / 1e6 }, { label: 'تخفیف', value: -p.discount / 1e6 }, { label: 'سود', value: p.profit / 1e6 }]} />
       <dl className="mt-3 space-y-1 text-12">{[['فروش کالا', p.revenue], ['قیمت تمام‌شدهٔ کالا', -p.cogs], [`کارمزد ${p.prov?.name ?? 'پرداخت'}`, -p.fee], ['هزینهٔ ارسال دریافتی', p.shipIncome], ['هزینهٔ ارسال پرداختی', -p.shipCost], ['بسته‌بندی', -p.packaging], ['تخفیف', -p.discount]].map(([k, v]) => <div key={k as string} className="flex justify-between"><dt className="text-t2">{k}</dt><dd className={cx('tnum', (v as number) < 0 && 'text-danger')}>{toman(v as number)}</dd></div>)}<div className="flex justify-between border-t border-line pt-1.5 text-13 font-bold"><dt>سود خالص</dt><dd className={cx('tnum', p.profit < 0 ? 'text-danger' : 'text-success')}>{toman(p.profit)}</dd></div></dl>
       {p.unknownCost && <p className="mt-2 text-11 text-warning">قیمت خرید برخی اقلام ثبت نشده؛ سود این سفارش کامل نیست.</p>}

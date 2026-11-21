@@ -60,7 +60,7 @@ function StockTab() {
     <div className="space-y-4">
       <StockDesk onIntake={() => setIntake(true)} />
       <ExpiryAlerts onReturn={(pre) => setRet(pre)} />
-      <Card title="ورودها و لات‌های موجودی" pad={false}>
+      <Card title="ورودها و لات‌های موجودی" pad={false} defaultOpen={false}>
         <DataTable name="لات‌های موجودی" empty={{ title: 'لاتی ثبت نشده است' }} rows={[...s.lots].sort((a, b) => +new Date(b.at) - +new Date(a.at))} rowKey={(l) => l.id} search={(l) => `${l.id} ${pv(d, l.productId, l.variationId).full} ${partyName(s, l.owner)} ${l.ref ?? ''}`}
           cols={[{ key: 'id', title: 'شناسه', render: (l) => <span className="font-mono text-12">{l.id}</span> }, { key: 'p', title: 'کالا', render: (l) => pv(d, l.productId, l.variationId).full }, { key: 'o', title: 'مالک', render: (l) => <PartyChip s={s} id={l.owner} /> }, { key: 'w', title: 'انبار', render: (l) => whName(s, l.warehouse) }, { key: 'q', title: 'مانده', render: (l) => fa(l.qty), sort: (l) => l.qty }, { key: 'c', title: 'بهای تمام‌شدهٔ هر عدد (تومان)', render: (l) => (canSecret() || l.owner === myParty() ? toman(l.cost) : <span className="text-t3">محرمانه</span>), sort: (l) => l.cost }, { key: 'code', title: 'کد برچسب', render: (l) => <bdi dir="ltr" className="font-mono text-12">{codeFor(d, l.owner, l.productId, l.variationId)}</bdi> }, { key: 'ex', title: 'انقضا و سری', render: (l) => l.expiry ? <span className="text-12">{expBadge(l.expiry)}{l.batch && <bdi dir="ltr" className="mr-1 font-mono text-t2">{l.batch}</bdi>}</span> : <span className="text-t3">—</span>, sort: (l) => (l.expiry ? +new Date(l.expiry) : Infinity) }, { key: 'r', title: 'منشأ', render: (l) => <span className="text-12 text-t2">{l.ref ?? '—'} · {rel(l.at)}</span> }]} />
       </Card>

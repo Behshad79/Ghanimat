@@ -47,16 +47,32 @@ export function Badge({ tone = 'neutral', children, dot = true }: { tone?: Tone;
 }
 export const StatusBadge = ({ s }: { s: string }) => { const x = st(s); return <Badge tone={x.tone}>{x.label}</Badge> }
 
-export function Card({ title, hint, actions, children, className, pad = true, onClick }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void }) {
+/** دامنهٔ ذخیرهٔ باز و بسته بودن کارت‌ها (مسیر صفحه و تب)؛ Page آن را تنظیم می‌کند */
+let CARD_SCOPE = ''
+export const setCardScope = (scope: string) => { CARD_SCOPE = scope }
+/** متن ساده از عنوان کارت، برای کلید ذخیره */
+const textOf = (n: ReactNode): string => n == null || typeof n === 'boolean' ? '' : typeof n === 'string' || typeof n === 'number' ? String(n) : Array.isArray(n) ? n.map(textOf).join('') : typeof n === 'object' && 'props' in (n as object) ? textOf((n as { props: { children?: ReactNode } }).props.children) : ''
+/** کارت؛ هر کارت عنوان‌دار با کلیک روی عنوان یا فلش جمع و باز می‌شود و حالتش برای هر صفحه ذخیره می‌ماند.
+ *  defaultOpen={false} برای کارت‌هایی که داده‌شان در لحظه مهم نیست؛ collapsible={false} برای کارتی که خودش باز و بسته را مدیریت می‌کند */
+export function Card({ title, hint, actions, children, className, pad = true, onClick, defaultOpen = true, collapsible, id }: { title?: ReactNode; hint?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; pad?: boolean; onClick?: () => void; defaultOpen?: boolean; collapsible?: boolean; id?: string }) {
+  const can = (collapsible ?? !!title) && !onClick
+  const name = id ?? textOf(title).trim().slice(0, 60)
+  const key = can && name ? `gh-card:${CARD_SCOPE}:${name}` : ''
+  const read = () => { if (!key) return defaultOpen; try { const v = localStorage.getItem(key); return v === null ? defaultOpen : v === '1' } catch { return defaultOpen } }
+  const [open, setOpen] = useState(read)
+  useEffect(() => { setOpen(read()) }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const toggle = (v: boolean) => { setOpen(v); if (key) try { localStorage.setItem(key, v ? '1' : '0') } catch { /* فقط در حافظه */ } }
+  useEffect(() => { if (!can) return; const f = (e: Event) => toggle((e as CustomEvent<boolean>).detail); window.addEventListener('gh-cards-all', f); return () => window.removeEventListener('gh-cards-all', f) }, [can, key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const show = !can || open
   return (
     <section onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined} className={cx('rounded-2xl border border-line bg-surface', onClick && 'lift cursor-pointer hover:border-brand/40', className)}>
       {(title || actions) && (
-        <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-2.5">
-          <h3 className="flex min-w-0 items-center gap-1.5 text-14 font-semibold">{title}{hint}</h3>
-          <div className="flex min-w-0 flex-wrap items-center gap-1 [&>*]:max-w-full">{actions}</div>
+        <header className={cx('flex min-h-12 flex-wrap items-center justify-between gap-2 px-5 py-2.5', show && 'border-b border-line')}>
+          <h3 onClick={can ? (e) => { if (!(e.target as HTMLElement).closest('button,a,input,select,label,textarea')) toggle(!open) } : undefined} className={cx('flex min-w-0 items-center gap-1.5 text-14 font-semibold', can && 'cursor-pointer select-none')}>{title}{hint}</h3>
+          <div className="flex min-w-0 flex-wrap items-center gap-1 [&>*]:max-w-full">{show && actions}{can && <button type="button" aria-expanded={open} aria-label={open ? 'بستن' : 'باز کردن'} title={open ? 'بستن' : 'باز کردن'} onClick={() => toggle(!open)} className="grid size-7 shrink-0 place-items-center rounded-lg text-t3 hover:bg-neutral-bg hover:text-t1"><ChevronDown size={16} className={cx('transition-transform duration-200', open && 'rotate-180')} /></button>}</div>
         </header>
       )}
-      <div className={pad ? 'p-5' : ''}>{children}</div>
+      {show && <div className={pad ? 'p-5' : ''}>{children}</div>}
     </section>
   )
 }

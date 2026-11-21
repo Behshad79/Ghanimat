@@ -54,7 +54,7 @@ export function ReportTab() {
           <div className="flex gap-2"><Button size="sm" variant="ghost" onClick={() => nav(`/admin/orders?wh=${w.id}`)}>سفارش‌های این انبار</Button><Button size="sm" variant="ghost" onClick={() => nav('/admin/ownership?tab=performance')}>فروش به تفکیک مالک و کانال</Button></div>
         </div>
       </Card> })}</div>
-    <Card title={<span className="flex items-center gap-1.5"><Award size={15} />افراد</span>} pad={false}><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2">{['نفر', 'فروش ثبت‌شده', 'مبلغ', 'جمع‌آوری حواله', 'خطای اسکن و ارسال'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
+    <Card defaultOpen={false} title={<span className="flex items-center gap-1.5"><Award size={15} />افراد</span>} pad={false}><table className="w-full text-12"><thead><tr className="bg-surface-2 text-t2">{['نفر', 'فروش ثبت‌شده', 'مبلغ', 'جمع‌آوری حواله', 'خطای اسکن و ارسال'].map((h) => <th key={h} className="p-2 text-right font-medium">{h}</th>)}</tr></thead><tbody>
       {[...people].sort((a, b) => b[1].rev - a[1].rev).map(([n, p]) => <tr key={n} className="border-t border-line"><td className="p-2 font-medium">{n}</td><td className="p-2 tnum">{fa(p.sales)} عدد</td><td className="p-2">{toman(p.rev)}</td><td className="p-2 tnum">{fa(p.packed)} عدد</td><td className={cx('p-2 tnum', p.errs > 2 && 'text-danger')}>{fa(p.errs)}</td></tr>)}
       {people.size === 0 && <tr><td colSpan={5} className="p-4 text-center text-t2">در این دوره فعالیتی ثبت نشده است.</td></tr>}
     </tbody></table></Card>

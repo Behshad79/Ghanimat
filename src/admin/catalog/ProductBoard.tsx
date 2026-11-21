@@ -2,7 +2,7 @@ import type { DB } from '@/shared/data/seed'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Heart, LayoutGrid, List, MoreHorizontal, Pencil, RotateCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2 } from 'lucide-react'
-import { Badge, Button, Card, cx, EmptyState, Input, Select, StatusBadge, Toggle } from '@/shared/ui/base'
+import { Badge, Button, Card, cx, EmptyState, Input, Segmented, Select, StatusBadge, Toggle } from '@/shared/ui/base'
 import { Area, SegGauge } from '@/shared/ui/charts'
 import { RowMenu, type MenuItem } from '@/shared/ui/menu'
 import { askCopilot, Drawer } from '@/shared/ui/overlay'
@@ -19,8 +19,9 @@ const EMPTY: F = { q: '', cats: [], brands: [], conds: [], min: '', max: '', st:
 
 /** سربرگ تحلیلی کاتالوگ: درآمد محصولات، کالای برتر، سهم دسته‌ها و تحلیل AI */
 export function CatalogInsights() {
-  const { d } = useLookup(); const nav = useNavigate()
-  const sold = useMemo(() => { const m: Record<string, number> = {}; d.orders.filter((o) => !['order.cancelled'].includes(o.status)).forEach((o) => o.shipments.forEach((s) => s.items.forEach((i) => { m[i.productId] = (m[i.productId] ?? 0) + i.price * i.qty }))); return m }, [d.orders])
+  const { d } = useLookup(); const nav = useNavigate(); const [days, setDays] = useState<'7' | '30' | '90' | 'all'>('30')
+  const since = days === 'all' ? 0 : Date.now() - +days * 864e5
+  const sold = useMemo(() => { const m: Record<string, number> = {}; d.orders.filter((o) => !['order.cancelled'].includes(o.status) && +new Date(o.createdAt) >= since).forEach((o) => o.shipments.forEach((s) => s.items.forEach((i) => { m[i.productId] = (m[i.productId] ?? 0) + i.price * i.qty }))); return m }, [d.orders, since])
   const total = Object.values(sold).reduce((a, b) => a + b, 0)
   const ranked = d.products.map((p) => ({ p, v: sold[p.id] ?? 0 })).sort((a, b) => b.v - a.v)
   const cats = Object.entries(d.products.reduce<Record<string, number>>((m, p) => { m[p.category] = (m[p.category] ?? 0) + (sold[p.id] ?? 0) + p.views * 1000; return m }, {})).sort((a, b) => b[1] - a[1])
@@ -28,19 +29,23 @@ export function CatalogInsights() {
   const trend = [42, 48, 45, 53, 51, 58, 62, 60, 67, 71, 69, 78].map((v) => v * (total / 780 || 1e6))
   const months = ['آذر', 'دی', 'بهمن', 'اسفند', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان']
   const lead = ranked[0]; const shareMax = Math.max(1, ...ranked.slice(0, 4).map((r) => r.v))
+  const per = <Segmented size="sm" value={days} onChange={setDays} options={[['7', '۷ روز'], ['30', '۳۰ روز'], ['90', '۹۰ روز'], ['all', 'همه']]} />
   return (
+    <div className="space-y-2">
+    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-12 text-t2">تحلیل فروش کالاها (باکس‌ها با کلیک روی عنوان باز می‌شوند)</span>{per}</div>
     <div className="stagger grid gap-3 lg:grid-cols-3">
-      <Card title="درآمد محصولات" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/finance?tab=profit')}>سود من</Button>}>
+      <Card defaultOpen={false} title="درآمد محصولات" actions={<Button size="sm" variant="ghost" onClick={() => nav('/admin/finance?tab=profit')}>سود من</Button>}>
         <div className="flex items-baseline gap-2"><p className="tnum text-22 font-bold">{compactToman(total)}</p><span className="inline-flex items-center gap-0.5 rounded-full bg-success-bg px-2 py-0.5 text-11 text-success"><ArrowUpRight size={12} />{pct(8.4)}</span></div>
         <div className="mt-2"><Area data={trend} labels={months} h={110} fmt={compactToman} /></div>
       </Card>
-      <Card title="کالای برتر" actions={lead && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/catalog/${lead.p.id}`)}>جزئیات</Button>}>
+      <Card defaultOpen={false} title="کالای برتر" actions={lead && <Button size="sm" variant="ghost" onClick={() => nav(`/admin/catalog/${lead.p.id}`)}>جزئیات</Button>}>
         {lead && <div className="flex items-center gap-3"><ProductImg pid={lead.p.id} size={56} rounded="rounded-xl" /><div className="min-w-0"><p className="truncate text-13 font-bold">{lead.p.title}</p><p className="tnum text-12 text-t2">{compactToman(lead.v)} فروش · {fa(lead.p.views)} بازدید</p></div></div>}
         <div className="mt-4 space-y-2.5">{ranked.slice(0, 4).map((r, i) => <button key={r.p.id} onClick={() => nav(`/admin/catalog/${r.p.id}`)} className="block w-full text-right"><div className="mb-1 flex items-center justify-between text-11"><span className="truncate">{r.p.en}</span><span className="tnum text-t2">{compactToman(r.v)}</span></div><div className="h-2 overflow-hidden rounded-full bg-neutral-bg"><div className="bar-grow-x h-full rounded-full" style={{ width: `${Math.max(3, (r.v / shareMax) * 100)}%`, background: i === 0 ? 'var(--brand-solid)' : 'var(--brand-tint-strong, #c7ccff)', animationDelay: `${i * 60}ms` }} /></div></button>)}</div>
       </Card>
-      <Card title="سهم دسته‌ها" actions={<Button size="sm" variant="ghost" icon={<Sparkles size={13} />} onClick={() => askCopilot('کدام دسته‌ها رشد کرده‌اند و کدام کالاها نیاز به تأمین دارند؟')}>تحلیل AI</Button>}>
+      <Card defaultOpen={false} title="سهم دسته‌ها" actions={<Button size="sm" variant="ghost" icon={<Sparkles size={13} />} onClick={() => askCopilot('کدام دسته‌ها رشد کرده‌اند و کدام کالاها نیاز به تأمین دارند؟')}>تحلیل AI</Button>}>
         <SegGauge sub="دسته‌ها" center={fa(cats.length)} data={[...top4.map(([l, v], i) => ({ label: l, value: v, color: COLORS[i] })), ...(rest ? [{ label: 'سایر', value: rest, color: '#9aa0b8' }] : [])]} />
       </Card>
+    </div>
     </div>
   )
 }

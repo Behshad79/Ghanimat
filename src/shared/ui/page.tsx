@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, Sparkles, WifiOff } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, Check, ChevronLeft, ChevronRight, ChevronsDownUp, ChevronsUpDown, Sparkles, WifiOff } from 'lucide-react'
 import { CountUp } from './motion'
-import { Button, Card, cx, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
+import { Button, Card, cx, setCardScope, EmptyState, ErrorState, NoAccess, SkeletonPage } from './base'
 import { askCopilot, Hint } from './overlay'
 import { Spark } from './charts'
 import { isZero, kpiAnim, kpiIcon, kpiTone, TONE_CLS, type KpiTone } from './kpiMeta'
@@ -19,6 +19,8 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
   const nav = useNavigate(); const loc = useLocation()
   const denied = (module && !can(module, s)) || s.viewState === 'noaccess'
   const qs = new URLSearchParams(loc.search); const fromCard = qs.get('fl'); const hasSt = qs.has('st')
+  setCardScope(`${loc.pathname}?${qs.get('tab') ?? ''}`)
+  const [allOpen, setAllOpen] = useState(true)
   const head = useRef<HTMLElement>(null); const [stuck, setStuck] = useState(false)
   useEffect(() => { const main = head.current?.closest('main'); if (!main) return; const f = () => setStuck(main.scrollTop > 24); f(); main.addEventListener('scroll', f, { passive: true }); return () => main.removeEventListener('scroll', f) }, [])
   return (
@@ -29,7 +31,7 @@ export function Page({ title, sub, badge, actions, primary, children, module, em
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-20 font-bold">{title}</h1>{badge}</div>
           {sub && <p className="mt-0.5 text-13 text-t2">{sub}</p>}
         </div>
-        {!denied && <div className="no-print flex flex-wrap items-center gap-2">{actions}{primary}</div>}
+        {!denied && <div className="no-print flex flex-wrap items-center gap-2">{actions}{primary}<button type="button" onClick={() => { const v = !allOpen; setAllOpen(v); window.dispatchEvent(new CustomEvent('gh-cards-all', { detail: v })) }} title={allOpen ? 'بستن همهٔ باکس‌ها' : 'باز کردن همهٔ باکس‌ها'} aria-label={allOpen ? 'بستن همهٔ باکس‌ها' : 'باز کردن همهٔ باکس‌ها'} className="grid size-9 place-items-center rounded-lg border border-line bg-surface text-t2 hover:border-brand/50 hover:text-brand">{allOpen ? <ChevronsDownUp size={16} /> : <ChevronsUpDown size={16} />}</button></div>}
       </header>
       {s.viewState === 'offline' && (
         <div role="status" className="mb-3 flex items-center gap-2 rounded-md bg-warning-bg px-3 py-2 text-12 text-warning"><WifiOff size={14} />اتصال اینترنت قطع است. تغییرها روی همین دستگاه نگه داشته می‌شود و با برگشت اتصال ارسال می‌شود.</div>

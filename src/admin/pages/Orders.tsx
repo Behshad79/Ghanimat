@@ -324,7 +324,7 @@ export function OrderDetail() {
             </section>) })}
           <OrderReturns o={o} />
           <OrderNotes o={o} />
-          <Card title="تاریخچه و یادداشت‌ها">
+          <Card title="تاریخچه و یادداشت‌ها" defaultOpen={false}>
             <ChangeHistory o={o} />
             <Timeline items={[
               ...d.audit.filter((a) => a.target.startsWith(o.id)).map((a) => ({ at: a.at, who: a.who, text: <>{a.action}{a.after !== '-' && <>: <b>{a.after}</b></>}</>, tone: a.ai ? 'ai' as const : 'ok' as const })),

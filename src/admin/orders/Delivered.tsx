@@ -7,11 +7,13 @@ const COLORS = ['#12733f', '#0000ff', '#ffc24b', '#22c55e', '#f97316']
 /** جشن کوتاه تحویل: وقتی مرسوله‌ای همین حالا «تحویل شد»، چند ثانیه نمایش داده می‌شود و با کلیک بسته می‌شود */
 export function DeliveredCelebration({ o }: { o: Order }) {
   const count = o.shipments.filter((s) => s.status === 'ship.delivered').length
-  const prev = useRef(count); const [show, setShow] = useState<null | { all: boolean; n: number }>(null)
+  // فقط وقتی همین سفارش تحویل تازه گرفت؛ رفتن از یک سفارش به سفارش دیگر جشن را روشن نمی‌کند
+  const prev = useRef({ id: o.id, count }); const [show, setShow] = useState<null | { all: boolean; n: number }>(null)
   useEffect(() => {
-    if (count > prev.current) { const all = o.status === 'order.delivered'; setShow({ all, n: count }); const t = setTimeout(() => setShow(null), 2600); prev.current = count; return () => clearTimeout(t) }
-    prev.current = count
-  }, [count, o.status])
+    if (prev.current.id !== o.id) { prev.current = { id: o.id, count }; setShow(null); return }
+    if (count > prev.current.count) { const all = o.status === 'order.delivered'; setShow({ all, n: count }); const t = setTimeout(() => setShow(null), 2600); prev.current = { id: o.id, count }; return () => clearTimeout(t) }
+    prev.current = { id: o.id, count }
+  }, [o.id, count, o.status])
   if (!show) return null
   const bits = Array.from({ length: 18 }, (_, i) => { const a = (i / 18) * Math.PI * 2; const r = 90 + (i % 3) * 26; return { dx: `${Math.cos(a) * r}px`, dy: `${Math.sin(a) * r}px`, rot: `${(i * 47) % 360}deg`, c: COLORS[i % COLORS.length], d: `${(i % 4) * 40}ms` } })
   return <div role="status" aria-live="polite" onClick={() => setShow(null)} className="fixed inset-0 z-[60] grid place-items-center bg-[#10123d]/25 backdrop-blur-[2px]" style={{ animation: 'fadeIn .2s ease-out both' }}>

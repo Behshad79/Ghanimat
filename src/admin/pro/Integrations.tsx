@@ -13,6 +13,7 @@ import { useTab, CustLink } from '../pages/_shared'
 
 import { EVENTS } from '@/shared/data/hub'
 import { FeedsApi } from '../settings/FeedsApi'
+import { TapinSettings } from '../orders/Tapin'
 
 /** مرکز اتصالات: هر سرویس با کلید از پنل، وب‌هوک برای هر رویداد، و ثبت رویداد سمت سرور با منبع اول و آخر */
 export function Integrations() {
@@ -22,9 +23,10 @@ export function Integrations() {
   const families = [...new Set(H.adapters.map((a) => a.family))]
   return (
     <Page title="مرکز اتصالات و API" module="infra" sub="هر درگاه، پنل پیامک، پوش، آنالیتیکس، حسابداری، حمل و هوش مصنوعی از همین‌جا وصل می‌شود؛ بدون کدنویسی و بدون وابستگی به یک سرویس."
-      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'adapters', label: 'اتصال‌ها', count: H.adapters.filter((a) => a.status === 'وصل نشده').length }, { id: 'hooks', label: 'وب‌هوک‌ها' }, { id: 'events', label: 'رویدادهای سمت سرور' }, { id: 'api', label: 'فیدها، کلید و مستندات API' }]} />}>
+      tabs={<Tabs value={tab} onChange={setTab} tabs={[{ id: 'adapters', label: 'اتصال‌ها', count: H.adapters.filter((a) => a.status === 'وصل نشده').length }, { id: 'tapin', label: 'تاپین (پست)' }, { id: 'hooks', label: 'وب‌هوک‌ها' }, { id: 'events', label: 'رویدادهای سمت سرور' }, { id: 'api', label: 'فیدها، کلید و مستندات API' }]} />}>
       {tab === 'api' && <FeedsApi />}
-      {tab === 'adapters' && <div className="space-y-4">{families.map((f) => <Card key={f} title={f}><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{H.adapters.filter((a) => a.family === f).map((a) => <button key={a.id} onClick={() => { setEdit(a.id); setKey('') }} className="lift flex items-center gap-3 rounded-xl border border-line p-3 text-right">{logoOf(a.name) ? <span className="relative shrink-0"><BrandLogo name={a.name} size={36} /><span className={cx('absolute -bottom-0.5 -left-0.5 size-3 rounded-full border-2 border-surface', a.status === 'متصل' ? 'bg-success' : 'bg-t3')} /></span> : <span className={cx('grid size-9 place-items-center rounded-full', a.status === 'متصل' ? 'bg-success-bg text-success' : 'bg-neutral-bg text-t3')}><Plug size={16} /></span>}<span className="min-w-0 flex-1"><b className="block text-13">{a.name}</b><span className="ltr block truncate text-11 text-t2">{a.key || 'بدون کلید'}</span></span><Badge tone={a.status === 'متصل' ? 'success' : a.status === 'وصل نشده' ? 'neutral' : 'warning'}>{a.status}</Badge></button>)}</div></Card>)}</div>}
+      {tab === 'tapin' && <Card title="تاپین: ثبت مرسولهٔ پست و بارکد آنی"><TapinSettings /></Card>}
+      {tab === 'adapters' && <div className="space-y-4">{families.map((f) => <Card key={f} title={f}><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{H.adapters.filter((a) => a.family === f).map((a) => <button key={a.id} onClick={() => { if (a.id === 'ad-tapin') { setTab('tapin'); return } setEdit(a.id); setKey('') }} className="lift flex items-center gap-3 rounded-xl border border-line p-3 text-right">{logoOf(a.name) ? <span className="relative shrink-0"><BrandLogo name={a.name} size={36} /><span className={cx('absolute -bottom-0.5 -left-0.5 size-3 rounded-full border-2 border-surface', a.status === 'متصل' ? 'bg-success' : 'bg-t3')} /></span> : <span className={cx('grid size-9 place-items-center rounded-full', a.status === 'متصل' ? 'bg-success-bg text-success' : 'bg-neutral-bg text-t3')}><Plug size={16} /></span>}<span className="min-w-0 flex-1"><b className="block text-13">{a.name}</b><span className="ltr block truncate text-11 text-t2">{a.key || 'بدون کلید'}</span></span><Badge tone={a.status === 'متصل' ? 'success' : a.status === 'وصل نشده' ? 'neutral' : 'warning'}>{a.status}</Badge></button>)}</div></Card>)}</div>}
       {tab === 'hooks' && <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <DataTable name="وب‌هوک‌ها" rows={H.hooks} rowKey={(h) => h.id} empty={{ title: 'وب‌هوکی تعریف نشده است.' }}

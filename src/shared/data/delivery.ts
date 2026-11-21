@@ -1,6 +1,11 @@
 // قانون‌های زمان ارسال، ظرفیت بازه‌ها، دریافت حضوری و متن پیامک‌ها
 export const DAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه']
+/** اتصال تاپین (ثبت مرسولهٔ پست و دریافت بارکد ۲۴ رقمی). مسیرها مطابق API نسخهٔ ۲ تاپین؛ کلید فقط سمت سرور نگه‌داری می‌شود */
+export type TapinCfg = { on: boolean; token: string; shopId: string; orderType: 0 | 1; payType: 0 | 1 | 2 | 3; contentType: 1 | 2 | 3 | 4; registerType: 0 | 1 | 2; insurance: boolean; autoOnPack: boolean; defaultWeight: number; boxWeight: number; sender: { name: string; mobile: string; postal: string; province: string; city: string; address: string }; balance: number; lastSync?: string; log: { at: string; orderId: string; shipId: string; barcode?: string; price?: number; ok: boolean; msg: string; by: string }[] }
+export const makeTapin = (): TapinCfg => ({ on: true, token: 'jwt ••••••••4f2a', shopId: 'fc45949a-••••-••••-••••-ab5180f7d1c2', orderType: 1, payType: 1, contentType: 1, registerType: 2, insurance: true, autoOnPack: false, defaultWeight: 600, boxWeight: 150,
+  sender: { name: 'فروشگاه غنیمت', mobile: '09120000000', postal: '1966700000', province: 'تهران', city: 'تهران', address: 'تهران، سعادت‌آباد، انبار غنیمت' }, balance: 1850000, lastSync: new Date(Date.now() - 36e5).toISOString(), log: [] })
 export const makeDelivery = () => ({
+  tapin: makeTapin(),
   openHour: 9, fastCutoff: 19, nightAfter: 22, fastHours: 2, closedDays: ['جمعه'],
   slots: [
     { id: 'sl1', from: 8, to: 10, cap: 14 }, { id: 'sl2', from: 10, to: 12, cap: 16 }, { id: 'sl3', from: 12, to: 14, cap: 16 },

@@ -16,6 +16,7 @@ export const makeHub = () => ({
     { id: 'ad-sepidar', family: 'حسابداری', name: 'سپیدار', key: '', status: 'وصل نشده', env: '—' },
     { id: 'ad-holoo', family: 'حسابداری', name: 'هلو', key: '', status: 'وصل نشده', env: '—' },
     { id: 'ad-post', family: 'حمل', name: 'پست پیشتاز (API)', key: 'post_••••1', status: 'متصل', env: 'عملیاتی' },
+    { id: 'ad-tapin', family: 'حمل', name: 'تاپین (پست با بارکد آنی)', key: 'jwt ••••4f2a', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-tipax', family: 'حمل', name: 'تیپاکس', key: 'tpx_••••3', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-snappbox', family: 'حمل', name: 'اسنپ‌باکس', key: 'sb_••••8', status: 'متصل', env: 'عملیاتی' },
     { id: 'ad-alopeyk', family: 'حمل', name: 'الوپیک', key: '', status: 'وصل نشده', env: '—' },

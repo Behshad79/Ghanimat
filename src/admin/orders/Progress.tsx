@@ -6,6 +6,7 @@ import { fakeCall, mutate, sendSms, useDB } from '@/shared/lib/store'
 import type { Order, Shipment } from '@/shared/data/seed'
 import { fa, jday } from '@/shared/lib/fa'
 import { shipBlocked } from './PayHold'
+import { TapinButton } from './Tapin'
 
 export const STEPS = ['ثبت سفارش', 'آماده‌سازی', 'در حال ارسال', 'تحویل شده'] as const
 /** مرحلهٔ نوار پیشرفت پنل مشتری، خودکار از وضعیت مرسوله */
@@ -58,6 +59,7 @@ export function CustomerProgress({ o, s }: { o: Order; s: Shipment }) {
         {pickup || post ? null : s.courier ? <span className="flex items-center gap-2"><Truck size={13} />{s.courier.company ?? 'پیک'} · {s.courier.name} · <span className="ltr">{fa(s.courier.phone)}</span> <Plate v={s.courier.plate} /></span> : <span className="text-t3">مأمور ارسال هنوز ثبت نشده</span>}
         {post && s.tracking && <span className="flex items-center gap-2"><Truck size={13} />{s.trackingCarrier ?? s.method} · کد رهگیری <b className="ltr font-mono">{s.tracking}</b>{s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noreferrer" className="text-brand underline">لینک رهگیری</a>}</span>}
         <span className="mr-auto flex gap-1.5">
+          {post && <TapinButton o={o} s={s} />}
           {post ? <Button size="sm" onClick={() => setTrk(true)}>{s.tracking ? 'ویرایش کد رهگیری' : 'ثبت کد و لینک رهگیری پستی'}</Button> : !pickup && <Button size="sm" onClick={() => setEdit(true)}>{s.courier ? 'ویرایش مأمور ارسال' : 'ثبت مأمور ارسال و پلاک'}</Button>}
           {s.status !== 'ship.delivered' && s.status !== 'ship.cancelled' && <Button size="sm" variant="ghost" onClick={() => setChg(true)}>تغییر روش ارسال</Button>}
         </span>

@@ -22,6 +22,7 @@ import { PayHoldCard, shipBlocked, holdOf } from '../orders/PayHold'
 import { ChangeHistory, RollbackShip } from '../orders/History'
 import { PackRecord, PackSession } from '../stock/Packing'
 import { PaymentInfo } from '../orders/PaymentInfo'
+import { Installments } from '../orders/Installments'
 import { CancelSummary } from '../orders/OrderEvents'
 import { OrderProfitCard } from '../finance/Money'
 import { AddressEdit, callTo, ManualOrder, MessageModal, OrderEdit } from '../orders/OrderTools'
@@ -349,6 +350,7 @@ export function OrderDetail() {
             <Row k={`کارمزد ${o.pay}`}><Money v={o.fee} /></Row>{canSecret() && <Row k={<>حاشیهٔ سود سفارش<Hint k="margin" /></>}>{pct(o.margin, 1)}</Row>}
             {(o.refunded || o.refundPending) ? <><Row k="بازگشت داده‌شده"><span className="text-success">{toman(o.refunded ?? 0)}</span></Row>{o.refundPending ? <Row k="بازگشت در جریان"><span className="text-warning">{toman(o.refundPending)}</span></Row> : null}<Row k={<b className="text-t1">خالص دریافتی</b>}><b>{toman(o.total - (o.refunded ?? 0))}</b></Row></> : null}
             <PaymentInfo orderId={o.id} />
+            <Installments o={o} />
             <Button size="sm" className="mt-2" icon={<Printer size={12} />} onClick={() => nav(`/admin/print?orders=${o.id}&doc=invoice`)}>فاکتور {c.segment === 'حقوقی' ? 'رسمی' : 'فروش'}</Button>
           </Card>
           <OrderLedger o={o} />

@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (398 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (399 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -255,15 +255,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ساخت صفحهٔ کالا از محموله | [51](../../src/admin/inbound/Batches.tsx#L51) |
-| سناریوی معرفی کالای در راه | [88](../../src/admin/inbound/Batches.tsx#L88) |
-| به‌زودی کالای در راه | [88](../../src/admin/inbound/Batches.tsx#L88) |
-| حذف قلم از محموله | [89](../../src/admin/inbound/Batches.tsx#L89) |
-| ثبت پرداخت محموله | [116](../../src/admin/inbound/Batches.tsx#L116) |
-| افزودن سریع کالا به محموله | [128](../../src/admin/inbound/Batches.tsx#L128) |
-| ثبت تک‌کالا و موجودی | [231](../../src/admin/inbound/Batches.tsx#L231) |
-| ویرایش جدولی محموله | [336](../../src/admin/inbound/Batches.tsx#L336) |
-| رسید محموله در انبار ورودی | [366](../../src/admin/inbound/Batches.tsx#L366) |
+| ساخت صفحهٔ کالا از محموله | [53](../../src/admin/inbound/Batches.tsx#L53) |
+| سناریوی معرفی کالای در راه | [93](../../src/admin/inbound/Batches.tsx#L93) |
+| به‌زودی کالای در راه | [93](../../src/admin/inbound/Batches.tsx#L93) |
+| حذف قلم از محموله | [94](../../src/admin/inbound/Batches.tsx#L94) |
+| ثبت پرداخت محموله | [122](../../src/admin/inbound/Batches.tsx#L122) |
+| افزودن سریع کالا به محموله | [134](../../src/admin/inbound/Batches.tsx#L134) |
+| ثبت تک‌کالا و موجودی | [237](../../src/admin/inbound/Batches.tsx#L237) |
+| ویرایش جدولی محموله | [342](../../src/admin/inbound/Batches.tsx#L342) |
+| رسید محموله در انبار ورودی | [372](../../src/admin/inbound/Batches.tsx#L372) |
 ### `src/admin/inbound/Control.tsx` — ماژول `inbound`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -290,8 +290,8 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ساخت حوالهٔ انتقال | [57](../../src/admin/inbound/Manifests.tsx#L57) |
-| تحویل حواله در مقصد | [101](../../src/admin/inbound/Manifests.tsx#L101) |
+| ساخت حوالهٔ انتقال | [104](../../src/admin/inbound/Manifests.tsx#L104) |
+| تحویل حواله در مقصد | [148](../../src/admin/inbound/Manifests.tsx#L148) |
 ### `src/admin/inbound/Report.tsx` — ماژول `inbound`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -301,8 +301,8 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ساخت صفحهٔ کالا از اسکن | [44](../../src/admin/inbound/ScanCheck.tsx#L44) |
-| انتشار کالا از ایستگاه اسکن | [45](../../src/admin/inbound/ScanCheck.tsx#L45) |
+| ساخت صفحهٔ کالا از اسکن | [46](../../src/admin/inbound/ScanCheck.tsx#L46) |
+| انتشار کالا از ایستگاه اسکن | [47](../../src/admin/inbound/ScanCheck.tsx#L47) |
 ### `src/admin/inbound/SupplyBits.tsx` — ماژول `inbound`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -440,15 +440,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تخصیص سفارش به انباردار | [117](../../src/admin/pages/Orders.tsx#L117) |
-| الحاق کد رهگیری | [137](../../src/admin/pages/Orders.tsx#L137) |
-| ثبت پیک با لینک | [158](../../src/admin/pages/Orders.tsx#L158) |
-| لغو مرسوله | [206](../../src/admin/pages/Orders.tsx#L206) |
-| درخواست بازگشت وجه | [214](../../src/admin/pages/Orders.tsx#L214) |
-| بازگشت وجه | [215](../../src/admin/pages/Orders.tsx#L215) |
-| تأیید سفارش مشکوک | [276](../../src/admin/pages/Orders.tsx#L276) |
-| یادداشت داخلی | [336](../../src/admin/pages/Orders.tsx#L336) |
-| ساخت تیکت | [346](../../src/admin/pages/Orders.tsx#L346) |
+| تخصیص سفارش به انباردار | [118](../../src/admin/pages/Orders.tsx#L118) |
+| الحاق کد رهگیری | [139](../../src/admin/pages/Orders.tsx#L139) |
+| ثبت پیک با لینک | [160](../../src/admin/pages/Orders.tsx#L160) |
+| لغو مرسوله | [208](../../src/admin/pages/Orders.tsx#L208) |
+| درخواست بازگشت وجه | [216](../../src/admin/pages/Orders.tsx#L216) |
+| بازگشت وجه | [217](../../src/admin/pages/Orders.tsx#L217) |
+| تأیید سفارش مشکوک | [278](../../src/admin/pages/Orders.tsx#L278) |
+| یادداشت داخلی | [338](../../src/admin/pages/Orders.tsx#L338) |
+| ساخت تیکت | [348](../../src/admin/pages/Orders.tsx#L348) |
 ### `src/admin/pages/Org.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -681,10 +681,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ثبت سفارش سایت شریک در دفتر | [95](../../src/admin/stock/ExtSites.tsx#L95) |
-| برگشت سفارش سایت شریک (لغو یا مرجوعی) | [98](../../src/admin/stock/ExtSites.tsx#L98) |
-| همگام‌سازی سایت شریک | [103](../../src/admin/stock/ExtSites.tsx#L103) |
-| ثبت فروش حضوری با اسکن | [155](../../src/admin/stock/ExtSites.tsx#L155) |
+| اتصال سایت شریک | [117](../../src/admin/stock/ExtSites.tsx#L117) |
+| ثبت سفارش سایت شریک در دفتر | [142](../../src/admin/stock/ExtSites.tsx#L142) |
+| برگشت سفارش سایت شریک (لغو یا مرجوعی) | [145](../../src/admin/stock/ExtSites.tsx#L145) |
+| همگام‌سازی سایت شریک | [150](../../src/admin/stock/ExtSites.tsx#L150) |
+| ثبت فروش حضوری با اسکن | [202](../../src/admin/stock/ExtSites.tsx#L202) |
 ### `src/admin/stock/Inspect.tsx` — ماژول `stock`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -700,26 +701,26 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| ورود گروهی کالای تازه (هنوز در سایت نیست) | [120](../../src/admin/stock/Ownership.tsx#L120) |
-| ورود موجودی با مالک مشخص | [125](../../src/admin/stock/Ownership.tsx#L125) |
-| انتقال موجودی بین انبارها | [182](../../src/admin/stock/Ownership.tsx#L182) |
-| ثبت فروش خارج از سایت | [217](../../src/admin/stock/Ownership.tsx#L217) |
-| ثبت پرداخت تسویه بین شرکا | [256](../../src/admin/stock/Ownership.tsx#L256) |
-| تغییر قاعدهٔ کد تنوع | [272](../../src/admin/stock/Ownership.tsx#L272) |
-| حذف بارکد اختصاصی | [279](../../src/admin/stock/Ownership.tsx#L279) |
-| ثبت بارکد اختصاصی شریک | [280](../../src/admin/stock/Ownership.tsx#L280) |
-| تغییر قرارداد سهم | [290](../../src/admin/stock/Ownership.tsx#L290) |
-| تغییر قاعدهٔ اولویت برداشت | [296](../../src/admin/stock/Ownership.tsx#L296) |
-| تغییر قاعدهٔ تخفیف در تسویه | [297](../../src/admin/stock/Ownership.tsx#L297) |
-| تغییر قاعدهٔ کارمزد در تسویه | [298](../../src/admin/stock/Ownership.tsx#L298) |
-| نگاشت کانال سفارش به کانال تسویه | [302](../../src/admin/stock/Ownership.tsx#L302) |
-| افزودن انبار تازه | [308](../../src/admin/stock/Ownership.tsx#L308) |
-| افزودن کانال فروش | [313](../../src/admin/stock/Ownership.tsx#L313) |
-| تغییر مدل قرارداد سهم | [318](../../src/admin/stock/Ownership.tsx#L318) |
-| افزودن قاعدهٔ زمان رسیدن پول | [329](../../src/admin/stock/Ownership.tsx#L329) |
-| تغییر زمان رسیدن پول روش پرداخت | [353](../../src/admin/stock/Ownership.tsx#L353) |
-| حذف قاعدهٔ زمان رسیدن پول | [358](../../src/admin/stock/Ownership.tsx#L358) |
-| برگشت کالا به مالک | [386](../../src/admin/stock/Ownership.tsx#L386) |
+| ورود گروهی کالای تازه (هنوز در سایت نیست) | [127](../../src/admin/stock/Ownership.tsx#L127) |
+| ورود موجودی با مالک مشخص | [132](../../src/admin/stock/Ownership.tsx#L132) |
+| انتقال موجودی بین انبارها | [189](../../src/admin/stock/Ownership.tsx#L189) |
+| ثبت فروش خارج از سایت | [224](../../src/admin/stock/Ownership.tsx#L224) |
+| ثبت پرداخت تسویه بین شرکا | [263](../../src/admin/stock/Ownership.tsx#L263) |
+| تغییر قاعدهٔ کد تنوع | [279](../../src/admin/stock/Ownership.tsx#L279) |
+| حذف بارکد اختصاصی | [286](../../src/admin/stock/Ownership.tsx#L286) |
+| ثبت بارکد اختصاصی شریک | [287](../../src/admin/stock/Ownership.tsx#L287) |
+| تغییر قرارداد سهم | [297](../../src/admin/stock/Ownership.tsx#L297) |
+| تغییر قاعدهٔ اولویت برداشت | [303](../../src/admin/stock/Ownership.tsx#L303) |
+| تغییر قاعدهٔ تخفیف در تسویه | [304](../../src/admin/stock/Ownership.tsx#L304) |
+| تغییر قاعدهٔ کارمزد در تسویه | [305](../../src/admin/stock/Ownership.tsx#L305) |
+| نگاشت کانال سفارش به کانال تسویه | [309](../../src/admin/stock/Ownership.tsx#L309) |
+| افزودن انبار تازه | [315](../../src/admin/stock/Ownership.tsx#L315) |
+| افزودن کانال فروش | [320](../../src/admin/stock/Ownership.tsx#L320) |
+| تغییر مدل قرارداد سهم | [325](../../src/admin/stock/Ownership.tsx#L325) |
+| افزودن قاعدهٔ زمان رسیدن پول | [336](../../src/admin/stock/Ownership.tsx#L336) |
+| تغییر زمان رسیدن پول روش پرداخت | [360](../../src/admin/stock/Ownership.tsx#L360) |
+| حذف قاعدهٔ زمان رسیدن پول | [365](../../src/admin/stock/Ownership.tsx#L365) |
+| برگشت کالا به مالک | [393](../../src/admin/stock/Ownership.tsx#L393) |
 ### `src/admin/stock/Packing.tsx` — ماژول `stock`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -733,7 +734,7 @@
 | فعال‌سازی دوبارهٔ شریک | [36](../../src/admin/stock/Parties.tsx#L36) |
 | ویرایش شریک | [60](../../src/admin/stock/Parties.tsx#L60) |
 | غیرفعال‌سازی شریک | [92](../../src/admin/stock/Parties.tsx#L92) |
-| پیوستن شریک تازه | [130](../../src/admin/stock/Parties.tsx#L130) |
+| پیوستن شریک تازه | [131](../../src/admin/stock/Parties.tsx#L131) |
 ### `src/admin/team/Access.tsx` — ماژول `team`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

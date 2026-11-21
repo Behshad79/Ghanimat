@@ -22,7 +22,7 @@
 | کالا و کاتالوگ | کتابخانهٔ رسانه | `/admin/media` | `media` |
 | انبار و تأمین | تأمین و ورود بار | `/admin/inbound` | `inbound` |
 | انبار و تأمین | انبار و موجودی | `/admin/warehouse` | `warehouse` |
-| انبار و تأمین | مالکیت و تسویهٔ شرکا | `/admin/ownership` | `ownership` |
+| انبار و تأمین | شرکا و تسویه | `/admin/ownership` | `ownership` |
 | انبار و تأمین | امور بازرگانی | `/admin/trade` | `trade` |
 | فروش و قیمت | قیمت‌گذاری و تخفیف‌ها | `/admin/pricing` | `pricing` |
 | فروش و قیمت | موتور پروموشن و کمپین | `/admin/promotions` | `promotions` |
@@ -80,11 +80,11 @@
 | `/admin/network` | شعب و ارسال سریع | سفارش و ارسال | `Network` · `src/admin/partner/Network.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-network.jpg) |
 | `/admin/planner` | یادداشت و برنامه‌ریزی | امروز | `Planner` · `src/admin/planner/Planner.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس پشتیبانی، کارشناس مالی، مارکتینگ، سئو و رشد، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-planner.jpg) |
 | `/admin/treasury` | حسابداری و خزانه | مالی و حسابداری | `Treasury` · `src/admin/finance/Treasury.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، کارشناس مالی | ![](../screens/admin-treasury.jpg) |
-| `/admin/investor-report` | گزارش سرمایه‌گذار | مالی و حسابداری | `InvestorReport` · `src/admin/finance/InvestorReport.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی) |  |
+| `/admin/investor-report` | گزارش سرمایه‌گذار | مالی و حسابداری | `InvestorReport` · `src/admin/finance/InvestorReport.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی) | ![](../screens/admin-investor-report.jpg) |
 | `/admin/*` | — | — | `NotFound` · `src/admin/shell/NotFound.tsx` | همهٔ نقش‌های دارای پنل کامل |  |
 | `/admin/warehouse` | انبار و موجودی | انبار و تأمین | `Warehouse` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-warehouse.jpg) |
-| `/admin/ownership` | مالکیت و تسویهٔ شرکا | انبار و تأمین | `Ownership` · `src/admin/stock/Ownership.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس مالی، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-ownership.jpg) |
-| `/admin/inbound` | تأمین و ورود بار | انبار و تأمین | `Inbound` · `src/admin/inbound/Inbound.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی) |  |
+| `/admin/ownership` | شرکا و تسویه | انبار و تأمین | `Ownership` · `src/admin/stock/Ownership.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، کارشناس مالی، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-ownership.jpg) |
+| `/admin/inbound` | تأمین و ورود بار | انبار و تأمین | `Inbound` · `src/admin/inbound/Inbound.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی) | ![](../screens/admin-inbound.jpg) |
 | `/admin/packing` | — | — | `Packing` · `src/admin/stock/Packing.tsx` | همهٔ نقش‌های دارای پنل کامل | ![](../screens/admin-packing.jpg) |
 | `/admin/shipping` | ارسال، پیک و پست | سفارش و ارسال | `Shipping` · `src/admin/pages/Ops.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده) | ![](../screens/admin-shipping.jpg) |
 | `/admin/print` | چاپ برچسب و فاکتور | سفارش و ارسال | `PrintCenter` · `src/admin/print/PrintCenter.tsx` | مدیر کل، مدیر کل دوم (شریک انبار)، دستیار مدیر کل (همکار اجرایی)، مدیر عملیات، مدیر شعبهٔ شریک (دسترسی گسترده)، کارشناس کنترل کیفیت و انبار | ![](../screens/admin-print.jpg) |

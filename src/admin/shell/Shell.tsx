@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowUp, Zap, Bell, ChevronDown, CheckCheck, ChevronsRight, ExternalLink, Eye, FlaskConical, ListChecks, LogOut, Maximize, Menu, Moon, MoreHorizontal, Pin, Plus, Search, ShoppingBag, Sparkles, Sun, Home as HomeIcon } from 'lucide-react'
-import { NAV } from './nav'
+import { GROUP_HINT, NAV } from './nav'
 import { useReminders } from '../planner/Planner'
+import { Messenger } from './Messenger'
 import { waitItems } from '../home/tasks'
 import { Copilot } from './Copilot'
 import { LiveAlert } from '../shared/LiveAlert'
@@ -78,8 +79,8 @@ function Sidebar({ mobile, onNav }: { mobile?: boolean; onNav?: () => void }) {
           <div className={cx(!mini && 'border-t border-line pt-2')}>
             {groups.map((g) => { const gi = items.filter((i) => i.group === g || i.also === g); const isOpen = mini || open === g; const urgent = gi.filter((n) => n.urgent).reduce((a, n) => a + (n.count?.(d) ?? 0), 0); const here = activeG === g; return (
               <div key={g} className="mb-0.5">
-                {!mini ? <button onClick={() => setOpen(open === g ? null : g)} aria-expanded={isOpen} className={cx('flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-12 font-semibold hover:bg-neutral-bg', here ? 'text-brand' : 'text-t1')}>
-                  <span className="flex-1 text-right">{g}</span>
+                {!mini ? <button onClick={() => setOpen(open === g ? null : g)} aria-expanded={isOpen} className={cx('flex min-h-8 w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-12 font-semibold hover:bg-neutral-bg', here ? 'text-brand' : 'text-t1')}>
+                  <span className="min-w-0 flex-1 text-right" title={GROUP_HINT[g]}><span className="block">{g}</span>{isOpen && GROUP_HINT[g] && <span className="block truncate text-[10px] font-normal text-t3">{GROUP_HINT[g]}</span>}</span>
                   {!isOpen && urgent > 0 && <span className="tnum rounded-full bg-danger-bg px-1.5 text-[10px] font-semibold text-danger">{fa(urgent)}</span>}
                   <ChevronDown size={13} className={cx('text-t3 transition-transform', !isOpen && 'rotate-90')} />
                 </button> : <div className="mx-3 my-1.5 border-t border-line" />}
@@ -234,6 +235,7 @@ export function Shell() {
         </div>
       </div>
       <LiveAlert />
+      <Messenger />
       <SitePreview open={site} onClose={() => setSite(false)} />
       <CommandPalette open={cmd} onClose={() => setCmd(false)} />
       <Copilot open={ai} onClose={() => setAI(false)} />

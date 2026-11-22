@@ -46,7 +46,7 @@ export type Delivery = { tone: 'fast' | 'post' | 'none' | 'pre'; title: string; 
 export function deliveryFor(v: Pick<Variation, 'qty' | 'backorder'>, fastEligible: boolean, fastTehran = true, fastMahabad = true): Delivery {
   const t = v.qty.tehran, m = v.qty.mahabad; const from = [t > 0 && 'تهران', m > 0 && 'مهاباد'].filter(Boolean) as string[]
   if (!t && !m) return v.backorder ? { tone: 'pre', title: 'پیش‌فروش', lines: ['ارسال پس از رسیدن محمولهٔ بعدی', 'زمان تقریبی رسیدن در صفحه نمایش داده می‌شود'], from } : { tone: 'none', title: 'ناموجود', lines: ['دکمهٔ «موجود شد، خبرم کن» به‌جای «افزودن به سبد»', 'کالاهای مشابه نمایش داده می‌شود'], from }
-  if (t > 0 && fastEligible && fastTehran) return { tone: 'fast', title: 'ارسال سریع ۲ ساعته در تهران و کرج', lines: ['تحویل ۲ ساعته در تهران و کرج · پیک', 'تحویل حضوری در شعبه', 'ارسال پستی به سایر شهرها'], from }
+  if (t > 0 && fastEligible && fastTehran) return { tone: 'fast', title: 'تحویل حدود ۳ ساعته در تهران و کرج', lines: ['تحویل حدود ۳ ساعته در تهران و کرج · پیک', 'تحویل حضوری در شعبه', 'ارسال پستی به سایر شهرها'], from }
   if (t > 0) return { tone: 'post', title: 'ارسال از انبار تهران', lines: ['ارسال پیشتاز به همهٔ شهرها', 'تحویل حضوری در شعبه'], from }
   return { tone: 'post', title: 'فقط ارسال پیشتاز از انبار مهاباد', lines: ['ارسال سریع تهران برای این تنوع در دسترس نیست', `ارسال پیشتاز به همهٔ شهرها · ۲ تا ۴ روز کاری${fastMahabad ? '؛ در مهاباد تحویل سریع شهری' : ''}`], from }
 }

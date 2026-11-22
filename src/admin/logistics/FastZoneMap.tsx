@@ -74,7 +74,7 @@ export function FastZoneMap({ f, zid, setZid, set, priceOf }: { f: Fast; zid: st
           {pin ? <>
             <p className="ltr text-right text-11 text-t3 tnum">{pin[0]}, {pin[1]}</p>
             {hit ? <div className="mt-2 rounded-lg p-2" style={{ background: `${hit.color ?? '#0000ff'}14` }}><p>محدوده: <b style={{ color: hit.color }}>{hit.name}</b></p><p>قیمت همین الان: <b className="tnum">{fa(priceOf(hit).toLocaleString('en-US'))} تومان</b></p></div>
-              : <p className="mt-2 rounded-lg bg-danger-bg p-2 text-danger">خارج از همهٔ محدوده‌ها؛ گزینهٔ پیک ۲ ساعته به مشتری نشان داده نمی‌شود و ارسال عادی پیشنهاد می‌شود.</p>}
+              : <p className="mt-2 rounded-lg bg-danger-bg p-2 text-danger">خارج از همهٔ محدوده‌ها؛ گزینهٔ پیک ۳ ساعته به مشتری نشان داده نمی‌شود و ارسال عادی پیشنهاد می‌شود.</p>}
             <p className="mt-1.5 flex items-center gap-1 text-t2"><Warehouse size={12} />فاصله از انبار: <b className="tnum">{fa(distKm(o, pin).toFixed(1))} کیلومتر</b></p>
           </> : <p className="text-t2">روی نقشه بزنید.</p>}
         </div>

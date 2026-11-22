@@ -10,7 +10,7 @@ const SITE = 'ghanimat.ir'
 /** پیش‌نمایش زندهٔ نتیجهٔ گوگل (موبایل و دسکتاپ) و کارت اشتراک‌گذاری (Open Graph) */
 export function SerpPreview() {
   const d = useDB(); const [pid, setPid] = useState(d.products[0].id); const p = d.products.find((x) => x.id === pid)!
-  const [title, setTitle] = useState(`خرید ${p.title} | غنیمت`); const [desc, setDesc] = useState(`${p.title} اصل با گارانتی غنیمت، کنترل کیفیت دو مرحله‌ای و تحویل ۲ ساعته در تهران.`); const [slug, setSlug] = useState(p.en.toLowerCase().replace(/\s+/g, '-'))
+  const [title, setTitle] = useState(`خرید ${p.title} | غنیمت`); const [desc, setDesc] = useState(`${p.title} اورجینال، ارزان‌تر از بازار، با ضمانت اصالت و تحویل حدود ۳ ساعته در تهران و کرج.`); const [slug, setSlug] = useState(p.en.toLowerCase().replace(/\s+/g, '-'))
   const [dev, setDev] = useState<'m' | 'd'>('d')
   const tLen = title.length; const dLen = desc.length
   return (

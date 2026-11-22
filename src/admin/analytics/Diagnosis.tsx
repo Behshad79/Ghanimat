@@ -23,7 +23,7 @@ const STEPS: { label: string; value: number; note: string; reasons: Reason[] }[]
   ] },
   { label: 'شروع پرداخت', value: 2380, note: '۶۲٪ از سبد', reasons: [
     { why: 'هزینهٔ ارسال در مرحلهٔ آخر دیده شد', share: 41, evidence: '۵۸٪ رهاشده‌ها در صفحهٔ «زمان ارسال» خارج شدند', fix: 'نمایش هزینه و زمان ارسال روی صفحهٔ کالا', to: '/admin/shipping', impact: 6 },
-    { why: 'ظرفیت تحویل سریع پر بود', share: 24, evidence: '«ظرفیت تحویل ۲ ساعتهٔ امروز تمام شده» ۳۱۲ بار دیده شد', fix: 'افزایش ظرفیت عصر یا جایگزین با پیک دوم', to: '/admin/shipping?tab=fast', impact: 4 },
+    { why: 'ظرفیت تحویل سریع پر بود', share: 24, evidence: '«ظرفیت تحویل ۳ ساعتهٔ امروز تمام شده» ۳۱۲ بار دیده شد', fix: 'افزایش ظرفیت عصر یا جایگزین با پیک دوم', to: '/admin/shipping?tab=fast', impact: 4 },
     { why: 'ثبت‌نام و کد یک‌بارمصرف', share: 19, evidence: 'میانهٔ زمان رسیدن پیامک ۴ ثانیه؛ ۷٪ کد را وارد نکردند', fix: 'ورود با یک کلیک برای مشتری برگشتی', to: '/admin/experience', impact: 2 },
   ] },
   { label: 'خرید موفق', value: 1460, note: '۶۱٪ از پرداخت', reasons: [
@@ -34,7 +34,7 @@ const STEPS: { label: string; value: number; note: string; reasons: Reason[] }[]
 const WHY_BUY: { why: string; share: number; icon: typeof ShieldCheck; evidence: string }[] = [
   { why: 'گارانتی اختصاصی و QC دو مرحله‌ای', share: 34, icon: ShieldCheck, evidence: 'در نظرسنجی پس از خرید و ۲۱٪ کلیک روی «شرایط گارانتی»' },
   { why: 'قیمت کمتر از نو برای استوک', share: 27, icon: CircleDollarSign, evidence: 'میانگین ۱۸٪ ارزان‌تر از نو؛ بالاترین تبدیل در ساعت‌های عصر' },
-  { why: 'تحویل ۲ ساعتهٔ تهران', share: 19, icon: Truck, evidence: '۵۶٪ سفارش‌های تهران تحویل سریع را انتخاب کردند' },
+  { why: 'تحویل ۳ ساعتهٔ تهران و کرج', share: 19, icon: Truck, evidence: '۵۶٪ سفارش‌های تهران تحویل سریع را انتخاب کردند' },
   { why: 'پرداخت اقساطی', share: 12, icon: ShoppingCart, evidence: 'میانگین سبد اقساطی ۲٫۳ برابر نقدی' },
   { why: 'دیدگاه و عکس واقعی خریداران', share: 8, icon: ThumbsUp, evidence: 'کالاهای دارای عکس خریدار ۳۷٪ تبدیل بیشتر' },
 ]

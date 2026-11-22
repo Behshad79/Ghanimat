@@ -23,7 +23,7 @@ export const makeJourney = () => {
     events,
     carts: [
       { customerId: 'c1', step: 'پرداخت', error: 'پایان زمان پرداخت در درگاه', updatedAt: ago(14), items: [{ productId: 'p2', qty: 1, price: 15000000 }, { productId: 'p9', qty: 2, price: 1500000 }], address: 'تهران، ونک، ملاصدرا، پلاک ۴۵', slot: 'فردا ۸ تا ۱۰', method: 'تحویل سریع (اسنپ‌باکس)' },
-      { customerId: 'c3', step: 'آدرس و زمان ارسال', error: 'ظرفیت تحویل ۲ ساعتهٔ امروز تمام شده است', updatedAt: ago(42), items: [{ productId: 'p5', qty: 1, price: 21900000 }], address: 'کرج، گوهردشت', slot: '', method: '' },
+      { customerId: 'c3', step: 'آدرس و زمان ارسال', error: 'ظرفیت تحویل ۳ ساعتهٔ امروز تمام شده است', updatedAt: ago(42), items: [{ productId: 'p5', qty: 1, price: 21900000 }], address: 'کرج، گوهردشت', slot: '', method: '' },
       { customerId: 'c5', step: 'سبد خرید', error: '', updatedAt: ago(60 * 5), items: [{ productId: 'p4', qty: 1, price: 38900000 }], address: '', slot: '', method: '' },
     ],
     failedPayments: [

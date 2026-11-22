@@ -10,7 +10,7 @@ export const makeSite = () => ({
     on: true, interval: 4, tone: 'brand' as 'brand' | 'ink' | 'yellow',
     items: [
       { id: 'an1', text: 'خرید کالای اصل، با ضمانتی که می‌توانید به آن اعتماد کنید', to: '/trust', on: true },
-      { id: 'an2', text: 'تحویل ۲ ساعته در تهران', to: '/help/shipping', on: true },
+      { id: 'an2', text: 'تحویل حدود ۳ ساعته در تهران و کرج', to: '/help/shipping', on: true },
       { id: 'an3', text: '۷ روز ضمانت بازگشت کالا', to: '/help/return-policy', on: true },
       { id: 'an4', text: 'ارسال رایگان خریدهای بالای {آستانه_ارسال_رایگان}', to: '/help/shipping', on: true },
     ],

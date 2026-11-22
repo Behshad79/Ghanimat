@@ -6,7 +6,7 @@
 
 1. **REST با JSON**، پیشوند `/api/v1`، احراز هویت با توکن حامل (JWT کوتاه‌عمر + refresh) پس از ورود با کد یکبارمصرف پیامکی.
 2. **هر مجموعه در `04-data-model.md` یک منبع (resource) است**: `GET /api/v1/{collection}` با صفحه‌بندی (`page`، `size`)، مرتب‌سازی (`sort`)، جست‌وجو (`q`) و فیلتر وضعیت (`status` با کدهای `05-statuses-and-rules.md`)؛ `GET/PATCH/DELETE /api/v1/{collection}/{id}` و `POST /api/v1/{collection}`.
-3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (399 فراخوانی در کد، هر کدام با خط دقیق).
+3. **هر عملیات دامنه یک endpoint فعل‌دار است** نه یک PATCH خام؛ مثلاً `POST /api/v1/orders/{id}/cancel` با بدنهٔ `{ reasonCode, reasonText }`. فهرست کامل عملیات‌ها پایین همین سند است (402 فراخوانی در کد، هر کدام با خط دقیق).
 4. **دسترسی سمت سرور** با همان شناسه‌های ماژول `03-screens-and-routes.md` و جدول مجوز عملیات (`perms`: `allow` / `approve` / `deny`). عملیات نیازمند تأیید یک ردیف در `approvals` می‌سازد.
 5. **لاگ ممیزی** برای همهٔ عملیات نوشتنی: کاربر، عملیات، هدف، مقدار قبل و بعد، زمان، IP. ساختار ردیف همان `audit` در دادهٔ نمونه.
 6. **حذف نرم**: حذف به `trash` می‌رود و قابل بازگردانی است.
@@ -199,12 +199,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت کارشناس تلفن | [51](../../src/admin/cx/Calls.tsx#L51) |
-| ویرایش منوی صوتی | [53](../../src/admin/cx/Calls.tsx#L53) |
-| ویرایش صف منوی صوتی | [53](../../src/admin/cx/Calls.tsx#L53) |
-| ویرایش پیغام خارج از ساعت | [55](../../src/admin/cx/Calls.tsx#L55) |
-| اتصال تلفن ابری | [61](../../src/admin/cx/Calls.tsx#L61) |
-| ساخت تیکت از تماس | [64](../../src/admin/cx/Calls.tsx#L64) |
+| تغییر وضعیت کارشناس تلفن | [59](../../src/admin/cx/Calls.tsx#L59) |
+| ویرایش منوی صوتی | [61](../../src/admin/cx/Calls.tsx#L61) |
+| ویرایش صف منوی صوتی | [61](../../src/admin/cx/Calls.tsx#L61) |
+| ویرایش پیغام خارج از ساعت | [63](../../src/admin/cx/Calls.tsx#L63) |
+| ویرایش شمارهٔ تلفن ابری | [69](../../src/admin/cx/Calls.tsx#L69) |
+| ثبت کلید API نواتل | [70](../../src/admin/cx/Calls.tsx#L70) |
+| تنظیم اتصال نواتل | [83](../../src/admin/cx/Calls.tsx#L83) |
+| اتصال تلفن ابری نواتل | [85](../../src/admin/cx/Calls.tsx#L85) |
+| ساخت تیکت از تماس | [112](../../src/admin/cx/Calls.tsx#L112) |
 ### `src/admin/cx/CxSettings.tsx` — ماژول `cx`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

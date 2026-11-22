@@ -5,10 +5,13 @@ export type Agent = { name: string; ext: string; state: 'آزاد' | 'در تم�
 
 export function makeCalls() {
   return {
-    provider: { connected: false, name: '', did: '021-91000000', recordAll: true, announce: true },
+    provider: { connected: false, name: 'نواتل', plan: 'پنل فراگیر', did: '021-82806074', recordAll: true, announce: true },
+    /** امکانات نواتل که به پنل وصل می‌شود؛ هر کدام جداگانه روشن و خاموش می‌شود */
+    navatel: { crm: true, popup: true, clickToCall: true, missedTask: true, missedSms: true, orderIvr: true, smsLine: false, webchat: false, automation: true, slaTarget: 20, storage: { totalMB: 1000, usedMB: 290 }, webhook: 'https://api.ghanimat.com/hooks/navatel', apiKey: '' },
     ivr: [
-      { key: '1', label: 'پیگیری سفارش', queue: 'پشتیبانی سفارش' },
+      { key: '1', label: 'پیگیری سفارش (وارد کردن شمارهٔ سفارش و شنیدن وضعیت)', queue: 'پشتیبانی سفارش' },
       { key: '2', label: 'مشاوره و خرید', queue: 'فروش' },
+      { key: '4', label: 'شعبهٔ مهاباد', queue: 'مهاباد' },
       { key: '3', label: 'مرجوعی و گارانتی', queue: 'پشتیبانی سفارش' },
       { key: '0', label: 'صحبت با اپراتور', queue: 'عمومی' },
     ],

@@ -194,7 +194,7 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر دستی امتیاز باشگاه | [126](../../src/admin/customer/Customer360.tsx#L126) |
+| تغییر دستی امتیاز باشگاه | [128](../../src/admin/customer/Customer360.tsx#L128) |
 ### `src/admin/cx/Calls.tsx` — ماژول `cx`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -428,17 +428,15 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| اصلاح موجودی طبق سایت شریک | [88](../../src/admin/pages/Ops.tsx#L88) |
-| بازنشستگی ارائه‌دهنده | [152](../../src/admin/pages/Ops.tsx#L152) |
-| تست اتصال | [161](../../src/admin/pages/Ops.tsx#L161) |
-| تغییر پیش‌فرض | [162](../../src/admin/pages/Ops.tsx#L162) |
-| فعال‌سازی ارائه‌دهنده | [163](../../src/admin/pages/Ops.tsx#L163) |
-| افزودن ارائه‌دهنده | [168](../../src/admin/pages/Ops.tsx#L168) |
-| توقف موقت ارائه‌دهنده | [172](../../src/admin/pages/Ops.tsx#L172) |
-| نامعتبر کردن گارانتی | [237](../../src/admin/pages/Ops.tsx#L237) |
-| معتبر کردن دوبارهٔ گارانتی | [238](../../src/admin/pages/Ops.tsx#L238) |
-| الحاق کد رهگیری با اسکن | [287](../../src/admin/pages/Ops.tsx#L287) |
-| ثبت کد رهگیری از فایل باجه | [316](../../src/admin/pages/Ops.tsx#L316) |
+| اصلاح موجودی طبق سایت شریک | [89](../../src/admin/pages/Ops.tsx#L89) |
+| بازنشستگی ارائه‌دهنده | [153](../../src/admin/pages/Ops.tsx#L153) |
+| تست اتصال | [162](../../src/admin/pages/Ops.tsx#L162) |
+| تغییر پیش‌فرض | [163](../../src/admin/pages/Ops.tsx#L163) |
+| فعال‌سازی ارائه‌دهنده | [164](../../src/admin/pages/Ops.tsx#L164) |
+| افزودن ارائه‌دهنده | [169](../../src/admin/pages/Ops.tsx#L169) |
+| توقف موقت ارائه‌دهنده | [173](../../src/admin/pages/Ops.tsx#L173) |
+| الحاق کد رهگیری با اسکن | [284](../../src/admin/pages/Ops.tsx#L284) |
+| ثبت کد رهگیری از فایل باجه | [313](../../src/admin/pages/Ops.tsx#L313) |
 ### `src/admin/pages/Orders.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -450,8 +448,8 @@
 | درخواست بازگشت وجه | [216](../../src/admin/pages/Orders.tsx#L216) |
 | بازگشت وجه | [217](../../src/admin/pages/Orders.tsx#L217) |
 | تأیید سفارش مشکوک | [278](../../src/admin/pages/Orders.tsx#L278) |
-| یادداشت داخلی | [338](../../src/admin/pages/Orders.tsx#L338) |
-| ساخت تیکت | [348](../../src/admin/pages/Orders.tsx#L348) |
+| یادداشت داخلی | [339](../../src/admin/pages/Orders.tsx#L339) |
+| ساخت تیکت | [349](../../src/admin/pages/Orders.tsx#L349) |
 ### `src/admin/pages/Org.tsx` — ماژول `(چند ماژول)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -615,12 +613,18 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| نتیجهٔ بازرسی مرجوعی | [203](../../src/admin/returns/Case.tsx#L203) |
-| تأیید بازگشت وجه | [239](../../src/admin/returns/Case.tsx#L239) |
-| ارسال مجدد کالای ردشدهٔ مرجوعی | [265](../../src/admin/returns/Case.tsx#L265) |
-| تعویض واحد گارانتی | [404](../../src/admin/returns/Case.tsx#L404) |
-| دریافت واحد مرجوعی | [433](../../src/admin/returns/Case.tsx#L433) |
-| بازگشت وجه | [461](../../src/admin/returns/Case.tsx#L461) |
+| نتیجهٔ بازرسی مرجوعی | [204](../../src/admin/returns/Case.tsx#L204) |
+| تأیید بازگشت وجه | [240](../../src/admin/returns/Case.tsx#L240) |
+| ارسال مجدد کالای ردشدهٔ مرجوعی | [266](../../src/admin/returns/Case.tsx#L266) |
+| تعویض واحد گارانتی | [405](../../src/admin/returns/Case.tsx#L405) |
+| دریافت واحد مرجوعی | [434](../../src/admin/returns/Case.tsx#L434) |
+| بازگشت وجه | [462](../../src/admin/returns/Case.tsx#L462) |
+### `src/admin/returns/Warranty.tsx` — ماژول `returns`
+
+| عملیات (ثبت در لاگ ممیزی) | خط |
+|---|---|
+| صدور دستی گارانتی | [68](../../src/admin/returns/Warranty.tsx#L68) |
+| چاپ سند | [234](../../src/admin/returns/Warranty.tsx#L234) |
 ### `src/admin/settings/FeedsApi.tsx` — ماژول `settings`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -795,11 +799,11 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| تغییر وضعیت مرسوله | [310](../../src/shared/data/seed.ts#L310) |
-| پیش‌نویس پاسخ تیکت | [311](../../src/shared/data/seed.ts#L311) |
-| درخواست بازگشت وجه | [312](../../src/shared/data/seed.ts#L312) |
-| مشاهدهٔ دادهٔ حساس | [313](../../src/shared/data/seed.ts#L313) |
-| تغییر موجودی | [314](../../src/shared/data/seed.ts#L314) |
+| تغییر وضعیت مرسوله | [322](../../src/shared/data/seed.ts#L322) |
+| پیش‌نویس پاسخ تیکت | [323](../../src/shared/data/seed.ts#L323) |
+| درخواست بازگشت وجه | [324](../../src/shared/data/seed.ts#L324) |
+| مشاهدهٔ دادهٔ حساس | [325](../../src/shared/data/seed.ts#L325) |
+| تغییر موجودی | [326](../../src/shared/data/seed.ts#L326) |
 ### `src/shared/lib/fx.ts` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
@@ -809,7 +813,7 @@
 
 | عملیات (ثبت در لاگ ممیزی) | خط |
 |---|---|
-| بازگردانی از سطل بازیافت | [158](../../src/shared/lib/store.ts#L158) |
+| بازگردانی از سطل بازیافت | [160](../../src/shared/lib/store.ts#L160) |
 ### `src/shared/ui/base.tsx` — ماژول `(مشترک)`
 
 | عملیات (ثبت در لاگ ممیزی) | خط |

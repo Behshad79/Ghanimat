@@ -21,7 +21,7 @@ import { WarehouseMap } from '../warehouse/WarehouseMap'
 import { PickupRules, SlotsEngine, SmsLog } from '../logistics/Slots'
 import { FastCourier } from '../logistics/FastCourier'
 import { ManualReturn } from '../orders/ReturnTools'
-import { cardCustomer, cardMobile, cardProduct, cardSerial, serialText, cardStatusText, Inquiry, ManualWarranty } from '../returns/Warranty'
+import { cardCustomer, cardItemKey, cardMobile, cardProduct, cardSerial, serialText, cardStatusText, Countdown, Inquiry, ManualWarranty, statusTone, WarrantyDetail, WarrantyPrint } from '../returns/Warranty'
 import { cardState, COVERED, EXCLUDED, inQueue, METHODS, QUEUES, retStage, warStage, type Stage } from '../returns/flow'
 import { SplitRules } from '../orders/Split'
 import { ZoneMap } from '../logistics/ZoneMap'
@@ -202,7 +202,7 @@ export function Returns() {
       {tab === 'warranty' && <DataTable name="درخواست‌های گارانتی" rows={ws.filter((x) => inQueue(q, x.s))} rowKey={(x) => x.w.id} search={(x) => `${x.w.code} ${x.w.id} ${d.units.find((u) => u.id === x.w.unitId)?.serial ?? ''}`} empty={{ title: q === 'all' ? 'درخواست گارانتی‌ای نیست.' : 'در این صف پرونده‌ای نیست.', desc: 'مشتری از «گارانتی‌های من» در پنل کاربری درخواست مرجوعی گارانتی ثبت می‌کند.' }}
         cols={[{ key: 'id', title: 'درخواست', render: (x) => <CopyId v={x.w.id} /> }, { key: 'c', title: 'مشتری', render: (x) => <Cell a={<CustLink v={customer(x.w.customerId).name} id={x.w.customerId} />} b={x.w.code} /> }, { key: 'k', title: 'دلیل مشکل', hideMobile: true, render: (x) => x.w.reasonKind ?? '—' }, { key: 't', title: 'گارانتی', hideMobile: true, render: (x) => `${x.w.type} · ${fa(x.w.months)} ماه` }, { key: 's', title: 'وضعیت', render: (x) => <StatusBadge s={x.w.status} />, sort: (x) => x.s.step }, nextCol, { key: 'd', title: 'مهلت', render: (x) => <SlaChip at={x.w.deadline} done={x.s.who === '—'} /> }]}
         onRow={(x) => nav(`/admin/returns/w/${x.w.id}`)} />}
-      {tab === 'wcards' && <WarrantyCards onRequest={() => setManual('warranty')} />}
+      {tab === 'wcards' && <WarrantyCards />}
       {tab === 'flow' && <FlowGuide />}
       {tab === 'stats' && <div className="grid gap-4 md:grid-cols-2"><Card title="دلایل مرجوعی"><Bars data={[{ label: 'مغایرت با صفحهٔ کالا', value: 40 }, { label: 'انصراف از خرید', value: 33 }, { label: 'ایراد کارکردی', value: 19 }, { label: 'سایر', value: 8 }]} fmt={pct} color="var(--purple)" /><div className="mt-3"><AITag confidence="متوسط" /></div><p className="mt-1 text-12 text-t2">۴۰٪ مرجوعی‌های هدفون به‌خاطر مغایرت رنگ در عکس است. پیشنهاد: بازبینی نور عکاسی این دسته.</p></Card>
         <Card title="نرخ خرابی در گارانتی به تفکیک تأمین"><Bars data={[{ label: 'انبارگردانی آمازون', value: 2.1 }, { label: 'خرید مستقیم اقلیم کردستان', value: 3.4 }, { label: 'شریک انبار مهاباد', value: 4.0 }]} fmt={(n) => pct(n, 1)} color="var(--warning)" /></Card></div>}
@@ -212,43 +212,29 @@ export function Returns() {
 }
 
 /** گارانتی‌های صادرشده: همان «گارانتی‌های من» و «استعلام گارانتی» پنل مشتری، از دید مدیریت.
- *  کارت‌ها برای هر واحد فروخته‌شده خودکار ساخته می‌شوند؛ صدور دستی برای کالای داخل یا خارج از سایت با عکس اجباری. */
-function WarrantyCards({ onRequest }: { onRequest: () => void }) {
-  const { d } = useLookup(); const nav = useNavigate()
-  const [sp] = useSearchParams(); const [st, setSt] = useState<'all' | 'active' | 'awaiting' | 'expired' | 'invalid' | 'manual'>('all'); const [open, setOpen] = useState<string | null>(sp.get('q')); const [issue, setIssue] = useState(false)
+ *  کارت‌ها برای هر واحد خریده‌شده خودکار ساخته و با مرجوعی یا لغو بایگانی می‌شوند؛ صدور دستی برای کالای داخل یا خارج از سایت با عکس اجباری. */
+function WarrantyCards() {
+  const { d } = useLookup()
+  const [sp] = useSearchParams(); const [st, setSt] = useState<'all' | 'active' | 'ending' | 'expired' | 'archived' | 'invalid' | 'manual'>('all'); const [open, setOpen] = useState<string | null>(sp.get('q')); const [issue, setIssue] = useState(false)
+  const [sub, setSub] = useState<null | { kind: 'warranty' | 'return' | 'print'; code: string }>(null)
   const rows = d.wcards.map((c) => ({ c, s: cardState(c), t: cardStatusText(c) }))
-  const sel = rows.find((r) => r.c.code === open)
-  const reqs = sel ? d.warranties.filter((w) => w.code === sel.c.code) : []
-  const F: [typeof st, string, (r: (typeof rows)[number]) => boolean][] = [['all', 'همه', () => true], ['active', 'فعال', (r) => r.t === 'فعال'], ['awaiting', 'در انتظار تحویل', (r) => r.t === 'در انتظار تحویل'], ['expired', 'منقضی‌شده', (r) => r.t === 'منقضی‌شده'], ['invalid', 'نامعتبر', (r) => r.t === 'نامعتبر'], ['manual', 'صدور دستی', (r) => r.c.source === 'manual']]
-  const tone = (t: string) => (t === 'فعال' ? 'success' : t === 'در انتظار تحویل' ? 'warning' : 'danger') as 'success' | 'warning' | 'danger'
+  const F: [typeof st, string, (r: (typeof rows)[number]) => boolean][] = [['all', 'همه', () => true], ['active', 'فعال', (r) => r.t === 'فعال'], ['ending', 'کمتر از ۳۰ روز مانده', (r) => r.t === 'فعال' && r.s.daysLeft <= 30], ['expired', 'منقضی‌شده', (r) => r.t === 'منقضی‌شده'], ['archived', 'بایگانی‌شده', (r) => r.t === 'بایگانی‌شده'], ['invalid', 'نامعتبر', (r) => r.t === 'نامعتبر'], ['manual', 'صدور دستی', (r) => r.c.source === 'manual']]
+  const subCard = sub && d.wcards.find((c) => c.code === sub.code); const key = subCard && cardItemKey(d, subCard)
   return <div className="space-y-4">
     <Card title="استعلام" hint={<span className="text-12 font-normal text-t2">گارانتی، درخواست گارانتی و مرجوعی؛ کارت‌های دستی هم پیدا می‌شوند</span>} actions={<Button size="sm" variant="primary" onClick={() => setIssue(true)}>صدور دستی گارانتی</Button>}>
       <Inquiry onCard={setOpen} />
     </Card>
-    <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2">هر کالایی که در صفحهٔ کالا گارانتی دارد، به‌محض قطعی شدن سفارش برای هر واحد (یا هر عدد) یک کد گارانتی یکتا می‌گیرد. تا تحویل «در انتظار تحویل» است و با تحویل، شروعش همان روز ثبت می‌شود. کد در سفارش، پروفایل مشتری و «گارانتی‌های من» مشتری دیده می‌شود و روی کارت چاپ می‌شود.</p>
+    <p className="rounded-lg bg-neutral-bg px-3 py-2 text-12 text-t2">هر کالایی که در صفحهٔ کالا گارانتی دارد، از لحظهٔ ثبت خرید برای هر واحد (یا هر عدد) یک کد گارانتی یکتا و فعال می‌گیرد. اگر کالا مرجوع شود یا سفارش و مرسوله لغو شود، کد خودکار بایگانی می‌شود؛ به تصمیم شما می‌تواند «فعال بماند». اگر همان کالا دوباره فروخته شود، گارانتی تازه با کد جدید صادر می‌شود.</p>
     <div className="flex flex-wrap gap-1.5">{F.map(([k, l, fn]) => <button key={k} type="button" aria-pressed={st === k} onClick={() => setSt(k)} className={cx('min-h-9 rounded-full border px-3 text-13', st === k ? 'border-brand-solid bg-brand-tint font-semibold text-brand' : 'border-line bg-surface text-t2')}>{l} <span className="text-11">{fa(rows.filter(fn).length)}</span></button>)}</div>
     <DataTable name="گارانتی‌ها" empty={{ title: 'گارانتی‌ای با این فیلتر نیست.' }} rows={rows.filter(F.find((x) => x[0] === st)![2])} rowKey={(r) => r.c.code} onRow={(r) => setOpen(r.c.code)} search={(r) => `${r.c.code} ${cardSerial(d, r.c)} ${cardProduct(d, r.c)} ${cardCustomer(d, r.c)} ${cardMobile(d, r.c)} ${r.c.orderId}`}
       cols={[{ key: 'code', title: 'کد گارانتی', render: (r) => <CopyId v={r.c.code} /> }, { key: 'p', title: 'کالا', render: (r) => <Cell a={cardProduct(d, r.c)} b={serialText(d, r.c)} /> }, { key: 'c', title: 'مشتری', hideMobile: true, render: (r) => r.c.customerId ? <CustLink v={cardCustomer(d, r.c)} id={r.c.customerId} /> : <Cell a={cardCustomer(d, r.c)} b={cardMobile(d, r.c)} /> },
         { key: 'src', title: 'صدور', hideMobile: true, render: (r) => r.c.source === 'manual' ? <Badge tone="info">دستی · {r.c.createdBy}</Badge> : <span className="text-12 text-t2">خودکار{r.c.orderId ? ` · ${r.c.orderId}` : ''}</span> },
-        { key: 't', title: 'نوع و مدت', hideMobile: true, render: (r) => `${r.c.type} · ${fa(r.c.months)} ماه` }, { key: 'e', title: 'تاریخ پایان', render: (r) => r.t === 'نامعتبر' ? '—' : r.c.awaiting ? 'از تاریخ تحویل' : r.s.end.toLocaleDateString('fa-IR'), sort: (r) => r.s.end.getTime() }, { key: 's', title: 'وضعیت', render: (r) => <Badge tone={tone(r.t)}>{r.t}</Badge> }]} />
-    <Drawer open={!!sel} onClose={() => setOpen(null)} width={540} title={sel ? <span className="flex items-center gap-2">جزئیات گارانتی <CopyId v={sel.c.code} /></span> : ''}>
-      {sel && <div className="space-y-4 text-13">
-        <div className="space-y-2"><Row k="کالا">{cardProduct(d, sel.c)}{sel.c.offsite && <Badge tone="warning">خارج از سایت</Badge>}</Row><Row k="سریال">{cardSerial(d, sel.c) ? <span className="ltr font-mono">{cardSerial(d, sel.c)}</span> : serialText(d, sel.c)}</Row><Row k="سفارش">{sel.c.orderId ? <button type="button" className="ltr font-mono text-brand" onClick={() => nav(`/admin/orders/${sel.c.orderId}`)}>{sel.c.orderId}</button> : '—'}</Row>
-          <Row k="مشتری">{sel.c.customerId ? <CustLink v={cardCustomer(d, sel.c)} id={sel.c.customerId} /> : `${cardCustomer(d, sel.c)} · ${cardMobile(d, sel.c)}`}</Row><Row k="نوع گارانتی">{sel.c.type}</Row><Row k="مدت گارانتی">{fa(sel.c.months)} ماه</Row><Row k="ارائه‌دهنده (گارانتی‌کننده)">{sel.c.provider}</Row>
-          <Row k="تاریخ شروع">{sel.c.awaiting ? 'روز تحویل سفارش' : new Date(sel.c.start).toLocaleDateString('fa-IR')}</Row><Row k="تاریخ پایان">{sel.c.awaiting ? `${fa(sel.c.months)} ماه پس از تحویل` : sel.s.end.toLocaleDateString('fa-IR')}</Row>
-          <Row k="وضعیت"><Badge tone={tone(sel.t)}>{sel.t}</Badge>{sel.c.invalidReason && <span className="text-12 text-danger"> · {sel.c.invalidReason}</span>}</Row>
-          <Row k="صدور">{sel.c.source === 'manual' ? `دستی توسط ${sel.c.createdBy}${sel.c.createdAt ? ` · ${rel(sel.c.createdAt)}` : ''}` : 'خودکار هنگام فروش'}</Row></div>
-        {(sel.c.photos ?? []).length > 0 && <div><p className="mb-1 font-semibold">عکس کالا هنگام صدور</p><div className="flex flex-wrap gap-2">{sel.c.photos!.map((ph, i) => <a key={i} href={ph} target="_blank" rel="noreferrer"><img src={ph} alt="" className="size-20 rounded-lg object-cover" /></a>)}</div></div>}
-        <div><p className="mb-1 font-semibold">شرایط پوشش این گارانتی</p><p className="text-12"><b className="text-success">تحت پوشش:</b> {COVERED.join('، ')}</p><p className="text-12"><b className="text-danger">خارج از پوشش:</b> {EXCLUDED.join('، ')}</p>{sel.c.notes.map((n) => <p key={n} className="text-12 text-t2">تبصرهٔ این کالا: {n}</p>)}</div>
-        <div><p className="mb-1 font-semibold">سوابق خدمات و درخواست‌ها</p>{reqs.length ? <ul className="space-y-1">{reqs.map((w) => <li key={w.id}><button type="button" className="flex w-full items-center justify-between rounded-md border border-line px-3 py-2 text-start hover:border-brand/40" onClick={() => nav(`/admin/returns/w/${w.id}`)}><span className="ltr font-mono">{w.id}</span><StatusBadge s={w.status} /></button></li>)}</ul> : <p className="text-12 text-t2">هنوز درخواستی برای این گارانتی ثبت نشده است.</p>}</div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" icon={<Printer size={13} />} onClick={() => nav(`/admin/print?doc=warranty&code=${sel.c.code}`)}>چاپ کارت گارانتی</Button>
-          {sel.s.status === 'active' && !sel.c.awaiting && <Button size="sm" onClick={onRequest}>ثبت درخواست گارانتی</Button>}
-          {sel.s.status !== 'invalid' && <Button size="sm" variant="danger" onClick={async () => { const w = await askReason({ kind: 'warranty', ref: sel.c.code, status: 'نامعتبر کردن گارانتی', title: `علت نامعتبر کردن ${sel.c.code}` }); if (w) { mutate((x) => { const c = x.wcards.find((y) => y.code === sel.c.code); if (c) { c.status = 'invalid'; c.invalidReason = w } }, { action: 'نامعتبر کردن گارانتی', target: sel.c.code, after: w }); toast('گارانتی نامعتبر شد؛ مشتری در تب «نامعتبر» می‌بیند.') } }}>نامعتبر کردن با دلیل</Button>}
-          {sel.s.status === 'invalid' && <Button size="sm" onClick={() => { mutate((x) => { const c = x.wcards.find((y) => y.code === sel.c.code); if (c) { c.status = 'active'; c.invalidReason = undefined } }, { action: 'معتبر کردن دوبارهٔ گارانتی', target: sel.c.code }); toast('گارانتی دوباره معتبر شد.') }}>معتبر کردن دوباره</Button>}
-        </div>
-      </div>}
+        { key: 't', title: 'نوع و مدت', hideMobile: true, render: (r) => `${r.c.type} · ${fa(r.c.months)} ماه` }, { key: 'e', title: 'روزشمار پایان', render: (r) => <Countdown c={r.c} />, sort: (r) => r.s.end.getTime() }, { key: 's', title: 'وضعیت', render: (r) => <Badge tone={statusTone(r.t)}>{r.t}</Badge> }]} />
+    <Drawer open={!!open && !sub} onClose={() => setOpen(null)} width={540} title={open ? <span className="flex items-center gap-2">جزئیات گارانتی <CopyId v={open} /></span> : ''}>
+      {open && <WarrantyDetail code={open} act={{ onPrint: () => setSub({ kind: 'print', code: open }), onRequest: () => setSub({ kind: 'warranty', code: open }), onReturn: () => setSub({ kind: 'return', code: open }) }} />}
     </Drawer>
+    {sub?.kind === 'print' && <WarrantyPrint codes={[sub.code]} onClose={() => setSub(null)} />}
+    {sub && sub.kind !== 'print' && subCard?.orderId && <ManualReturn open defaultKind={sub.kind} preset={{ orderId: subCard.orderId, customerId: subCard.customerId, items: key ? [key] : [], code: subCard.code }} onClose={() => setSub(null)} />}
     {issue && <ManualWarranty open onClose={() => setIssue(false)} onDone={(c) => setOpen(c)} />}
   </div>
 }

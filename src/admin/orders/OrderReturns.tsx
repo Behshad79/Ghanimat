@@ -8,7 +8,7 @@ import type { Order } from '@/shared/data/seed'
 import { ProductImg } from '../pages/_shared'
 import { METHODS, refundLabel, RETURN_STEPS, retItems, retStage } from '../returns/flow'
 import { ManualReturn } from './ReturnTools'
-import { WarrantyList } from '../returns/Warranty'
+import { WarrantyList, WarrantyPrint } from '../returns/Warranty'
 import { ShieldCheck } from 'lucide-react'
 
 /** نوار چهارگام پرونده مرجوعی، کوچک و داخل کارت سفارش */
@@ -70,11 +70,13 @@ export function ReturnShipButton({ o, sid }: { o: Order; sid: string }) {
 
 /** گارانتی‌های این سفارش: برای هر واحد (یا هر عدد) کالای گارانتی‌دار یک کد یکتا؛ همان کدی که روی کارت چاپ و برای مشتری فرستاده می‌شود */
 export function OrderWarranties({ o }: { o: Order }) {
-  const d = useDB(); const nav = useNavigate(); const cards = d.wcards.filter((c) => c.orderId === o.id)
+  const d = useDB(); const [print, setPrint] = useState(false); const cards = d.wcards.filter((c) => c.orderId === o.id)
   if (!cards.length) return null
-  return <Card title={<span className="inline-flex items-center gap-1.5"><ShieldCheck size={15} />گارانتی‌های این سفارش<Badge>{fa(cards.length)} کد</Badge></span>}
-    actions={<Button size="sm" onClick={() => nav(`/admin/print?doc=warranty&code=${cards[0].code}`)}>چاپ کارت‌ها</Button>}>
-    <p className="mb-2 text-12 text-t2">کدها هنگام قطعی شدن سفارش خودکار ساخته شده‌اند و در «گارانتی‌های من» مشتری دیده می‌شوند. شروع گارانتی روز تحویل است. کارت هر کد را چاپ و داخل بسته بگذارید.</p>
+  const live = cards.filter((c) => c.status !== 'archived'); const arch = cards.length - live.length
+  return <Card title={<span className="inline-flex items-center gap-1.5"><ShieldCheck size={15} />گارانتی‌های این سفارش<Badge>{fa(cards.length)} کد</Badge>{arch > 0 && <Badge tone="neutral">{fa(arch)} بایگانی</Badge>}</span>}
+    actions={live.length ? <Button size="sm" onClick={() => setPrint(true)}>چاپ کارت‌ها ({fa(live.length)})</Button> : undefined}>
+    <p className="mb-2 text-12 text-t2">کدها از لحظهٔ ثبت خرید فعال‌اند و در «گارانتی‌های من» مشتری دیده می‌شوند. برای جزئیات، ثبت درخواست گارانتی یا مرجوعی و چاپ، روی هر کد بزنید. با مرجوعی یا لغو، کد خودکار بایگانی می‌شود.</p>
     <WarrantyList cards={cards} empty="" />
+    {print && <WarrantyPrint codes={live.map((c) => c.code)} onClose={() => setPrint(false)} />}
   </Card>
 }

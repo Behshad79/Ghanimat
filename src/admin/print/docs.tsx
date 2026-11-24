@@ -176,16 +176,16 @@ export function CourierLabel({ o, s, opts }: { o: Order; s: Shipment; opts: DocO
 export function WarrantyCard({ unitId, code, opts, bw }: { unitId: string; code?: string; opts: DocOpts; bw?: boolean }) {
   const d = useDB()
   // کارت ثبت‌شده (خودکار یا دستی) منبع اصلی است؛ کد، مدت، تاریخ و کالا از همان می‌آید
-  const wc = code ? d.wcards.find((c) => c.code === code) : d.wcards.find((c) => c.unitId === unitId && c.status !== 'invalid')
+  const wc = code ? d.wcards.find((c) => c.code === code) : d.wcards.find((c) => c.unitId === unitId && c.status !== 'invalid' && c.status !== 'archived')
   const u = d.units.find((x) => x.id === (wc ? wc.unitId : unitId)); const p = d.products.find((x) => x.id === (wc?.productId || u?.productId))
   if (!wc && (!u || !p)) return <p className="text-13 text-danger">واحدی برای کارت گارانتی انتخاب نشده است.</p>
   const order = wc?.orderId ? d.orders.find((o) => o.id === wc.orderId) : u ? d.orders.find((o) => o.shipments.some((s) => s.items.some((i) => i.unitId === u.id))) : undefined
-  const start = wc && !wc.awaiting ? wc.start : order?.deliveredAt ?? order?.createdAt ?? new Date().toISOString(); const months = wc?.months ?? u?.warrantyMonths ?? p?.warrantyMonths ?? 6
+  const start = wc ? wc.start : order?.createdAt ?? new Date().toISOString(); const months = wc?.months ?? u?.warrantyMonths ?? p?.warrantyMonths ?? 6
   const end = new Date(new Date(start).getTime() + months * 30.4 * 864e5).toISOString()
   const wcode = wc?.code ?? d.warranties.find((w) => w.unitId === u?.id)?.code ?? `GW-${(u?.id ?? '0').replace(/\D/g, '').padStart(6, '8')}`
   const title = wc?.productTitle ?? p?.title ?? '—'; const serial = wc?.serial ?? u?.serial ?? '—'
   const dark = !bw
-  const card = (children: ReactNode) => <div className={cx('relative overflow-hidden rounded-[3.2mm]', dark ? 'bg-[#10123d] text-white' : 'border-[0.4mm] border-black bg-white text-black')} style={{ width: '85.6mm', height: '54mm', padding: '4mm', fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }}>{children}</div>
+  const card = (children: ReactNode) => <div data-wcard className={cx('relative overflow-hidden rounded-[3.2mm]', dark ? 'bg-[#10123d] text-white' : 'border-[0.4mm] border-black bg-white text-black')} style={{ width: '85.6mm', height: '54mm', padding: '4mm', fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }}>{children}</div>
   return (
     <div className="flex flex-wrap justify-center gap-[6mm]">
       {card(<>

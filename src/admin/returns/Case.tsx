@@ -16,6 +16,7 @@ import { OriginalOrder } from '../orders/ReturnTools'
 import { PackPhotos } from '../shared/PackPhotos'
 import { cardState, COVERED, EXCLUDED, METHODS, QC_CHECKS, refundLabel, RETURN_STEPS, retItems, retStage, SERVICE_CENTER, SHIP_BACK, warStage, WARRANTY_STEPS, type Stage } from './flow'
 import { RemoteFor } from '@/shared/ui/remoteUpload'
+import { Countdown } from './Warranty'
 import { createRefund } from '../orders/Refunds'
 
 type Kind = 'return' | 'warranty'
@@ -290,7 +291,7 @@ function WarrantySummary({ c }: { c: C }) {
         <Row k="وضعیت کالا">{unit ? `${unit.condition === 'sealed' ? 'آکبند' : 'جعبه‌باز'} · سریال ${unit.serial}` : '—'}</Row>
         <Row k="نوع و مدت">{c.type} · {fa(c.months)} ماه</Row>
         <Row k="مسئول رسیدگی">{c.owner}</Row>
-        {cs && <Row k="اعتبار">{cs.status === 'active' ? `فعال تا ${fday(cs.end.toISOString())} (${fa(Math.max(0, cs.daysLeft))} روز مانده)` : cs.status === 'expired' ? 'منقضی‌شده' : 'نامعتبر'}</Row>}
+        {card && <Row k="اعتبار و روزشمار"><Countdown c={card} /></Row>}
       </div>
       <p className="mt-3 text-12"><b className="text-success">تحت پوشش:</b> {COVERED.join('، ')}</p>
       <p className="mt-1 text-12"><b className="text-danger">خارج از پوشش:</b> {EXCLUDED.join('، ')}</p>
@@ -327,7 +328,7 @@ function WarrantyNext({ c }: { c: C }) {
 
   if (c.status === 'warranty.pending') return <div className="space-y-3">
     <Info>درخواست در صف بررسی است و مشتری «درخواست شما در صف بررسی غنیمت است» را می‌بیند. با شروع بررسی، وضعیت مشتری به «در حال بررسی» تغییر می‌کند.</Info>
-    {cs && cs.status !== 'active' && <Info tone="warning">این گارانتی {cs.status === 'expired' ? 'منقضی شده' : 'نامعتبر است'}.</Info>}
+    {cs && cs.status !== 'active' && <Info tone="warning">این گارانتی {cs.status === 'expired' ? 'منقضی شده' : cs.status === 'archived' ? `بایگانی شده (${card?.archivedReason ?? 'مرجوعی یا لغو'})` : 'نامعتبر است'}.</Info>}
     <Button variant="primary" icon={<PlayCircle size={16} />} onClick={() => act('warranty', id, (x) => { x.status = 'warranty.reviewing' }, 'شروع بررسی توسط واحد گارانتی غنیمت')}>شروع بررسی</Button>
   </div>
 

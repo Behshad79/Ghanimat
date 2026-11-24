@@ -86,7 +86,9 @@ export type Ret = CaseFlow & { id: string; orderId: string; customerId: string; 
 export type War = CaseFlow & { id: string; code: string; customerId: string; unitId: string; type: string; months: number; status: string; issue: string; owner: string; deadline: string; orderId?: string; channel?: string; photos?: string[]; by?: string; productId?: string
   reasonKind?: string; contact?: string; createdAt?: string; shipDeadline?: string; defect?: string; service?: 'تعمیر' | 'تعویض' | 'بازگشت مبلغ'; newSerial?: string; replaceUnitId?: string; repairNote?: string; rejectReason?: string }
 /** کارت گارانتی صادرشده برای هر واحد (گارانتی‌های من / استعلام گارانتی) */
-export type WCard = { code: string; unitId: string; productId: string; customerId: string; orderId: string; type: string; provider: string; months: number; start: string; status: 'active' | 'expired' | 'invalid'; invalidReason?: string; notes: string[]
+export type WCard = { code: string; unitId: string; productId: string; customerId: string; orderId: string; type: string; provider: string; months: number; start: string; status: 'active' | 'expired' | 'invalid' | 'archived'; invalidReason?: string; notes: string[]
+  /** بایگانی: کالا مرجوع شد، مرسوله یا سفارش لغو شد، یا همان واحد دوباره فروخته شد. keep یعنی به تصمیم ما گارانتی با وجود مرجوعی فعال بماند */
+  archivedReason?: string; archivedAt?: string; keep?: boolean
   /** auto: هنگام فروش واحدی که کالایش گارانتی دارد ساخته شد؛ manual: دستی در پنل صادر شد */
   source?: 'auto' | 'manual'; createdAt?: string; createdBy?: string
   /** تا تحویل سفارش، شروع گارانتی معلوم نیست؛ با تحویل، تاریخ شروع همان روز تحویل می‌شود */

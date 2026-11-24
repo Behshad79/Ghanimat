@@ -33,7 +33,7 @@ import { Cell, Money, ProductImg, SlaChip, useLookup, useTab, CustLink } from '.
 import { applyRestock, restockLabel, RestockChoice, type RestockMode } from '../orders/Restock'
 import { createRefund, RefundDest, RefundPanel } from '../orders/Refunds'
 import { OrderPeek } from '../orders/OrderPeek'
-import { OrderReturns, ReturnShipButton } from '../orders/OrderReturns'
+import { OrderReturns, OrderWarranties, ReturnShipButton } from '../orders/OrderReturns'
 import { DeliveredCelebration } from '../orders/Delivered'
 import { DeliverConfirm } from '../orders/DeliverConfirm'
 import { QuickPrint } from '../print/QuickPrint'
@@ -326,6 +326,7 @@ export function OrderDetail() {
               </div>
               </div>
             </section>) })}
+          <OrderWarranties o={o} />
           <OrderReturns o={o} />
           <OrderNotes o={o} />
           <Card title="تاریخچه و یادداشت‌ها" defaultOpen={false}>

@@ -173,13 +173,17 @@ export function CourierLabel({ o, s, opts }: { o: Order; s: Shipment; opts: DocO
 }
 
 /** ۴) کارت گارانتی — هم‌سبک کارت‌های گارانتی پنل مشتری: زمینهٔ تیره، عدد بزرگ مدت، نشان «گارانتی رسمی» */
-export function WarrantyCard({ unitId, opts, bw }: { unitId: string; opts: DocOpts; bw?: boolean }) {
-  const d = useDB(); const u = d.units.find((x) => x.id === unitId); const p = u ? d.products.find((x) => x.id === u.productId) : undefined
-  if (!u || !p) return <p className="text-13 text-danger">واحدی برای کارت گارانتی انتخاب نشده است.</p>
-  const order = d.orders.find((o) => o.shipments.some((s) => s.items.some((i) => i.unitId === u.id)))
-  const start = order?.deliveredAt ?? order?.createdAt ?? new Date().toISOString(); const months = u.warrantyMonths ?? p.warrantyMonths ?? 6
+export function WarrantyCard({ unitId, code, opts, bw }: { unitId: string; code?: string; opts: DocOpts; bw?: boolean }) {
+  const d = useDB()
+  // کارت ثبت‌شده (خودکار یا دستی) منبع اصلی است؛ کد، مدت، تاریخ و کالا از همان می‌آید
+  const wc = code ? d.wcards.find((c) => c.code === code) : d.wcards.find((c) => c.unitId === unitId && c.status !== 'invalid')
+  const u = d.units.find((x) => x.id === (wc ? wc.unitId : unitId)); const p = d.products.find((x) => x.id === (wc?.productId || u?.productId))
+  if (!wc && (!u || !p)) return <p className="text-13 text-danger">واحدی برای کارت گارانتی انتخاب نشده است.</p>
+  const order = wc?.orderId ? d.orders.find((o) => o.id === wc.orderId) : u ? d.orders.find((o) => o.shipments.some((s) => s.items.some((i) => i.unitId === u.id))) : undefined
+  const start = wc && !wc.awaiting ? wc.start : order?.deliveredAt ?? order?.createdAt ?? new Date().toISOString(); const months = wc?.months ?? u?.warrantyMonths ?? p?.warrantyMonths ?? 6
   const end = new Date(new Date(start).getTime() + months * 30.4 * 864e5).toISOString()
-  const wcode = d.warranties.find((w) => w.unitId === u.id)?.code ?? `GW-${u.id.replace(/\D/g, '').padStart(6, '8')}`
+  const wcode = wc?.code ?? d.warranties.find((w) => w.unitId === u?.id)?.code ?? `GW-${(u?.id ?? '0').replace(/\D/g, '').padStart(6, '8')}`
+  const title = wc?.productTitle ?? p?.title ?? '—'; const serial = wc?.serial ?? u?.serial ?? '—'
   const dark = !bw
   const card = (children: ReactNode) => <div className={cx('relative overflow-hidden rounded-[3.2mm]', dark ? 'bg-[#10123d] text-white' : 'border-[0.4mm] border-black bg-white text-black')} style={{ width: '85.6mm', height: '54mm', padding: '4mm', fontFamily: "'PeydaNoEn', 'Vazirmatn', sans-serif" }}>{children}</div>
   return (
@@ -192,18 +196,18 @@ export function WarrantyCard({ unitId, opts, bw }: { unitId: string; opts: DocOp
         </div>
         <div className="relative mt-[2mm] flex items-end gap-[3mm]">
           <div className="leading-none"><span className="text-[30pt] font-black">{fa(months)}</span><span className="mr-1 text-[9pt] font-bold">ماه</span></div>
-          <div className="min-w-0 flex-1 pb-1 text-[6.8pt] leading-[1.45]"><p className="truncate text-[7.5pt] font-bold">{p.title}</p><p className="truncate opacity-85">{[u.color, CONDITION[u.condition], `گرید ${u.grade}‎`].join(' · ')}</p><p className="truncate opacity-85">سریال: <span className="ltr font-mono">{u.serial}</span></p></div>
+          <div className="min-w-0 flex-1 pb-1 text-[6.8pt] leading-[1.45]"><p className="truncate text-[7.5pt] font-bold">{title}</p><p className="truncate opacity-85">{(u ? [u.color, CONDITION[u.condition], `گرید ${u.grade}‎`] : [wc?.offsite ? 'کالای خارج از سایت' : '', wc?.source === 'manual' ? 'صدور دستی' : '']).filter(Boolean).join(' · ')}</p><p className="truncate opacity-85">سریال: <span className="ltr font-mono">{serial}</span></p></div>
         </div>
         <div className="relative mt-[1.6mm] flex items-end justify-between text-[6.5pt]">
-          <div className="space-y-[0.4mm]"><p>کد کالا: <b className="ltr font-mono">{u.code ?? p.code}</b></p><p>کد گارانتی: <b className="ltr font-mono">{wcode}</b></p><p>از {jd(start)} تا {jd(end)}</p></div>
+          <div className="space-y-[0.4mm]">{(u?.code ?? p?.code) && <p>کد کالا: <b className="ltr font-mono">{u?.code ?? p?.code}</b></p>}<p>کد گارانتی: <b className="ltr font-mono">{wcode}</b></p><p>از {jd(start)} تا {jd(end)}</p></div>
           <div className="rounded-[1mm] bg-white p-[0.8mm]"><QR value={`https://ghanimat.ir/warranty/${wcode}`} size={50} /></div>
         </div>
       </>)}
       {card(<div className="flex h-full flex-col text-[6.6pt] leading-[1.55]">
         <p className="mb-[1mm] text-[8pt] font-black">شرایط گارانتی</p>
-        <p className="opacity-90">{p.warrantyTerms ?? 'تعمیر یا تعویض در صورت ایراد فنی؛ آسیب فیزیکی، آب‌خوردگی و باز کردن دستگاه شامل نمی‌شود.'}</p>
+        <p className="opacity-90">{(wc?.note ?? p?.warrantyTerms) ?? 'تعمیر یا تعویض در صورت ایراد فنی؛ آسیب فیزیکی، آب‌خوردگی و باز کردن دستگاه شامل نمی‌شود.'}</p>
         <p className="mt-[1mm] opacity-90">برای استعلام، QR روی کارت را اسکن کنید یا کد گارانتی را در «پنل کاربری › گارانتی‌ها» وارد کنید.</p>
-        <div className="mt-auto flex items-end justify-between"><Barcode value={u.code ?? p.code ?? u.id} height={20} module={1} showText={false} className="h-[8mm] w-[46mm] rounded-[0.6mm]" /><span className="text-[6pt] opacity-80">{d.seller.website}</span></div>
+        <div className="mt-auto flex items-end justify-between"><Barcode value={u?.code ?? p?.code ?? wcode} height={20} module={1} showText={false} className="h-[8mm] w-[46mm] rounded-[0.6mm]" /><span className="text-[6pt] opacity-80">{d.seller.website}</span></div>
       </div>)}
     </div>
   )

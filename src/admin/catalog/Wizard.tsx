@@ -290,7 +290,7 @@ function ProductWizardInner({ quick, onDone, partner, initialTitle }: WizardProp
       <Field label="بیمه"><div className="flex h-9 items-center"><Toggle on={f.insurance} label="بیمه" onChange={(v) => set({ insurance: v })} /></div></Field>
       <Field label="نصب در محل"><div className="flex h-9 items-center"><Toggle on={f.install} label="نصب" onChange={(v) => set({ install: v })} /></div></Field></div>,
     8: <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="نوع گارانتی"><Select value={f.warrantyType} onChange={(v) => set({ warrantyType: v })} options={['گارانتی اختصاصی غنیمت', 'گارانتی شرکتی', 'بدون گارانتی']} /></Field>
+      <Field label="نوع گارانتی" help="با گارانتی، برای هر واحد فروخته‌شده خودکار یک کد یکتا ساخته می‌شود؛ در سفارش، پروفایل و پنل مشتری دیده و روی کارت چاپ می‌شود."><Select value={f.warrantyType} onChange={(v) => set({ warrantyType: v })} options={['گارانتی اختصاصی غنیمت', 'گارانتی شرکتی', 'بدون گارانتی']} /></Field>
       <Field label="مدت (ماه)"><Input type="number" min={0} className="ltr text-left font-mono" value={f.warrantyMonths} onChange={(e) => set({ warrantyMonths: Math.max(0, +e.target.value) })} /></Field>
       <Field label="پوشش داده می‌شود" help="با ویرگول جدا کنید؛ در صفحهٔ کالا تیک سبز می‌گیرد."><Textarea rows={2} value={f.pdp.covered} onChange={(e) => set({ pdp: { ...f.pdp, covered: e.target.value } })} /></Field>
       <Field label="پوشش داده نمی‌شود"><Textarea rows={2} value={f.pdp.notCovered} onChange={(e) => set({ pdp: { ...f.pdp, notCovered: e.target.value } })} /></Field>

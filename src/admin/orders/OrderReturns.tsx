@@ -8,6 +8,8 @@ import type { Order } from '@/shared/data/seed'
 import { ProductImg } from '../pages/_shared'
 import { METHODS, refundLabel, RETURN_STEPS, retItems, retStage } from '../returns/flow'
 import { ManualReturn } from './ReturnTools'
+import { WarrantyList } from '../returns/Warranty'
+import { ShieldCheck } from 'lucide-react'
 
 /** نوار چهارگام پرونده مرجوعی، کوچک و داخل کارت سفارش */
 function MiniSteps({ at }: { at: number }) {
@@ -64,4 +66,15 @@ export function ReturnShipButton({ o, sid }: { o: Order; sid: string }) {
   if (!s) return null
   return <><Button size="sm" icon={<RotateCcw size={13} />} onClick={() => setOpen(true)}>ثبت دستی مرجوعی</Button>
     {open && <ManualReturn open onClose={() => setOpen(false)} preset={{ orderId: o.id, customerId: o.customerId, items: s.items.map((it) => `${s.id}|${it.productId}|${it.unitId}`) }} />}</>
+}
+
+/** گارانتی‌های این سفارش: برای هر واحد (یا هر عدد) کالای گارانتی‌دار یک کد یکتا؛ همان کدی که روی کارت چاپ و برای مشتری فرستاده می‌شود */
+export function OrderWarranties({ o }: { o: Order }) {
+  const d = useDB(); const nav = useNavigate(); const cards = d.wcards.filter((c) => c.orderId === o.id)
+  if (!cards.length) return null
+  return <Card title={<span className="inline-flex items-center gap-1.5"><ShieldCheck size={15} />گارانتی‌های این سفارش<Badge>{fa(cards.length)} کد</Badge></span>}
+    actions={<Button size="sm" onClick={() => nav(`/admin/print?doc=warranty&code=${cards[0].code}`)}>چاپ کارت‌ها</Button>}>
+    <p className="mb-2 text-12 text-t2">کدها هنگام قطعی شدن سفارش خودکار ساخته شده‌اند و در «گارانتی‌های من» مشتری دیده می‌شوند. شروع گارانتی روز تحویل است. کارت هر کد را چاپ و داخل بسته بگذارید.</p>
+    <WarrantyList cards={cards} empty="" />
+  </Card>
 }

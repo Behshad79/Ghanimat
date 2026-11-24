@@ -88,7 +88,7 @@ export function PrintCenter() {
           {doc.id === 'post' && <PostLabel o={ship.order} s={ship} opts={opts} paper={paper} />}
           {doc.id === 'courier' && <CourierLabel o={ship.order} s={ship} opts={opts} />}
           {doc.id === 'qc' && <QCSheet unitId={unitId} opts={opts} />}
-          {doc.id === 'warranty' && <WarrantyCard unitId={unitId} opts={opts} bw={bw} />}
+          {doc.id === 'warranty' && <WarrantyCard unitId={unitId} code={sp.get('code') ?? undefined} opts={opts} bw={bw} />}
           {doc.id === 'pick' && <PickList ships={batch} opts={opts} />}
           {doc.id === 'manifest' && <Manifest ships={batch} opts={opts} />}
           {doc.id === 'return' && retId && <ReturnForm retId={retId} opts={opts} />}

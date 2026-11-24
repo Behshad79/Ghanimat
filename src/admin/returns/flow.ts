@@ -83,6 +83,7 @@ export function warStage(w: War): Stage {
 
 /** وضعیت کارت گارانتی با توجه به تاریخ پایان */
 export function cardState(c: WCard): { status: WCard['status']; end: Date; daysLeft: number } {
+  if (c.awaiting) { const end = new Date(Date.now() + c.months * 30 * 864e5); return { status: c.status === 'invalid' ? 'invalid' : c.status, end, daysLeft: c.months * 30 } }
   const end = new Date(new Date(c.start).getTime() + c.months * 30 * 864e5)
   const daysLeft = Math.ceil((end.getTime() - Date.now()) / 864e5)
   return { status: c.status === 'invalid' ? 'invalid' : daysLeft < 0 ? 'expired' : c.status, end, daysLeft }

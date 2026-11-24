@@ -86,7 +86,17 @@ export type Ret = CaseFlow & { id: string; orderId: string; customerId: string; 
 export type War = CaseFlow & { id: string; code: string; customerId: string; unitId: string; type: string; months: number; status: string; issue: string; owner: string; deadline: string; orderId?: string; channel?: string; photos?: string[]; by?: string; productId?: string
   reasonKind?: string; contact?: string; createdAt?: string; shipDeadline?: string; defect?: string; service?: 'تعمیر' | 'تعویض' | 'بازگشت مبلغ'; newSerial?: string; replaceUnitId?: string; repairNote?: string; rejectReason?: string }
 /** کارت گارانتی صادرشده برای هر واحد (گارانتی‌های من / استعلام گارانتی) */
-export type WCard = { code: string; unitId: string; productId: string; customerId: string; orderId: string; type: string; provider: string; months: number; start: string; status: 'active' | 'expired' | 'invalid'; invalidReason?: string; notes: string[] }
+export type WCard = { code: string; unitId: string; productId: string; customerId: string; orderId: string; type: string; provider: string; months: number; start: string; status: 'active' | 'expired' | 'invalid'; invalidReason?: string; notes: string[]
+  /** auto: هنگام فروش واحدی که کالایش گارانتی دارد ساخته شد؛ manual: دستی در پنل صادر شد */
+  source?: 'auto' | 'manual'; createdAt?: string; createdBy?: string
+  /** تا تحویل سفارش، شروع گارانتی معلوم نیست؛ با تحویل، تاریخ شروع همان روز تحویل می‌شود */
+  awaiting?: boolean
+  /** کالای بدون واحد سریالی (فروش تعدادی) یا کالای خارج از سایت */
+  lineKey?: string; serial?: string; productTitle?: string; offsite?: boolean
+  /** مشتری حضوری یا خارج از سایت */
+  customerName?: string; customerMobile?: string
+  /** عکس کالا هنگام صدور دستی (اجباری) */
+  photos?: string[]; note?: string }
 export type TrashItem = { id: string; kind: string; ek: string; label: string; data: Rec; at: string }
 
 const makeSeedBase = () => ({

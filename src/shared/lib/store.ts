@@ -3,15 +3,16 @@ import { makeSeed, type DB } from '../data/seed'
 import { BASE_ROLES, PARENT_MODULE, type RoleDef } from '../data/roles'
 import { CONDITION, SOURCE } from '../data/statuses'
 import { ledgerHook } from '../data/ledger'
+import { warrantyHook } from './warranty'
 
 // ───── پایگاه‌دادهٔ نمونه: در مرورگر ذخیره می‌شود و با «بازنشانی دادهٔ نمونه» به حالت اول برمی‌گردد ─────
-const DB_KEY = 'ghanimat-demo-db-v100'
+const DB_KEY = 'ghanimat-demo-db-v101'
 const S_KEY = 'ghanimat-demo-session-v2'
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
 /** ذخیره‌سازی مرورگر ممکن است در دسترس نباشد؛ پنل بدون آن هم باید کار کند */
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* فقط در حافظه */ } }
 
-let db: DB = read<DB>(DB_KEY) ?? makeSeed()
+let db: DB = warrantyHook(read<DB>(DB_KEY) ?? makeSeed())
 const dbSubs = new Set<() => void>()
 const subDB = (f: () => void) => { dbSubs.add(f); return () => dbSubs.delete(f) }
 export const getDB = () => db
@@ -50,6 +51,7 @@ export function mutate(fn: (d: DB) => void, log?: { action: string; target: stri
   const next = structuredClone(db)
   fn(next)
   try { ledgerHook(db, next, currentUser()?.name ?? 'سیستم') } catch (e) { console.error('ledger', e) }
+  try { warrantyHook(next) } catch (e) { console.error('warranty', e) }
   if (log) { let changes: string[] = []; try { changes = diffDB(db, next) } catch { /* سند اختیاری است */ }
     const u = currentUser(); next.audit.unshift({ at: new Date().toISOString(), who: u?.name ?? 'سیستم', role: u?.role, before: '-', after: '-', ai: false, ...log, changes, sensitive: SENSITIVE.test(log.action) || changes.some((c) => /^(تسویه|موجودی شرکا|فروش شرکا|بازگشت وجه|قیمت|دسترسی|نقش)/.test(c)) }) }
   db = next
@@ -61,7 +63,7 @@ export function mutate(fn: (d: DB) => void, log?: { action: string; target: stri
 export function snapshot() { const prev = db; return () => { db = prev; syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) } }
 /** دسترسی فقط‌خواندنی برای تست خودکار و پشتیبانی (در نسخهٔ نمایشی) */
 if (typeof window !== 'undefined') (window as unknown as { __ghanimat?: unknown }).__ghanimat = { getDB: () => db }
-export function resetDB() { db = makeSeed(); syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
+export function resetDB() { db = warrantyHook(makeSeed()); syncRoles(); write(DB_KEY, db); dbSubs.forEach((f) => f()) }
 
 // ───── نقش‌ها و حساب‌های نمونه (بخش ۱۸.۳) ─────
 export type { Face } from '../data/roles'
